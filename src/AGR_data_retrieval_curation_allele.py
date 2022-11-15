@@ -977,7 +977,9 @@ class AlleleHandler(object):
         mode_context_list = []
         for phenotype in allele.phenotypes:
             cvterm = phenotype.Cvterm.name
+            # Assess only cases where CV term refers to inheritance mode.
             if cvterm in inheritance_modes.keys():
+                # Now assess genotype complexity using genotype.description.
                 # Start with assumption that it is not a single allele genotype
                 single_allele_genotype = False
                 # First weed out multi locus genotypes.
@@ -985,8 +987,8 @@ class AlleleHandler(object):
                     single_allele_genotype = False
                 elif '_' in phenotype.Genotype.description:
                     single_allele_genotype = False
-                # For single locus genotype, check for hemi- or homo- state.
-                else:
+                # Assess single locus having 2 features: could be homo- or heterozygous.
+                elif '|' in phenotype.Genotype.description:
                     features = phenotype.Genotype.description.split('|')
                     if features[0] == features[1]:
                         single_allele_genotype = True
@@ -996,6 +998,9 @@ class AlleleHandler(object):
                                 single_allele_genotype = True
                             elif feature.endswith('[+]'):
                                 single_allele_genotype = True
+                # If no spaces, underscores or pipes in description, it's a single-feature genotype.
+                else:
+                    single_allele_genotype = True
                 if single_allele_genotype is True:
                     reported_modes.append(inheritance_modes[cvterm])
                     geno = phenotype.Genotype.uniquename
@@ -1028,9 +1033,9 @@ class AlleleHandler(object):
             collection_names = allele.sf_libraries
         if collection_names:
             collection_names = list(set(collection_names))
-            # allele.in_collection = '|'.join(lib.name for lib in collection_names)
             allele.in_collection = collection_names[0].name
-            log.debug(f'\tFound {len(collection_names)} collection(s): {allele.curie}: {allele.in_collection}')
+            if len(collection_names) > 1:
+                log.warning(f'\tFound {len(collection_names)} collection(s) for {allele.curie}: {allele.in_collection}')
         return
 
     def synthesize_info(self):
