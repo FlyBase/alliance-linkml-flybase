@@ -1,0 +1,18 @@
+click>=8.0.3
+jsonschema>=3.0.1
+nested_dict==1.61
+psycopg2>=2.6.2
+strict_rfc3339==0.7
+tqdm>=4.29.0
+git+https://github.com/FlyBase/harvdev-utils.git@master#egg=harvdev_utils
+# Below are additional requirements for harvdev-utils itself (may not be automatically installed by cmd above).
+# bioservices
+# flake8>=3.5.0
+# pubchempy
+retry
+# requests>=2.21.0
+# sqlalchemy
+svn
+# urllib3>=1.24.1
+# virtualenv>=16.2.0
+
