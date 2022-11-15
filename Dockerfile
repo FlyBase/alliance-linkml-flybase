@@ -11,7 +11,7 @@ RUN mkdir /src/temp/
 # The ADD commands assume that repos are in specific folders in GoCD.
 
 # 1. FlyBase scripts.
-ADD git_alliance-linkml-requirements.txt                            /src/requirements.txt
+ADD git_alliance-linkml-flybase/requirements.txt                    /src/requirements.txt
 ADD git_alliance-linkml-flybase/src/AGR*.py                         /src/
 
 # 2. Alliance LinkML schema and validation script.
