@@ -1,0 +1,13 @@
+*.log
+*.json
+*.tsv
+*.gz
+*.out
+*.gaf
+*.gff
+*.gtf
+*vscode*
+*.pyc
+*.jar
+__pycache__
+tmp/
