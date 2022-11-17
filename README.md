@@ -1,6 +1,6 @@
-[![Build Status](https://travis-ci.com/FlyBase/alliance-flybase.svg?token=7Nvc5gEdzuNraK13EL3s&branch=master)](https://travis-ci.com/FlyBase/alliance-flybase)
+[![Build Status](https://travis-ci.com/FlyBase/alliance-linkml-flybase.svg?branch=main)](https://travis-ci.com/FlyBase/alliance-linkml-flybase)
 
-# alliance-flybase
+# alliance-linkml-flybase
 
 <!-- toc -->
 
