@@ -5,198 +5,87 @@
 <!-- toc -->
 
 - [Overview](#Overview)
-- [Credentials](#Credentials)
-  * [S3Access](#S3Access)
-  * [SubmissionAccessToken](#SubmissionAccessToken)
+- [CodeManagement](#CodeManagement)
+- [AllianceResources](#AllianceResources)
+  * [LinkML](#LinkML)
+  * [Credentials](#Credentials)
+  * [PersistentStore](#PersistentStore)
+  * [MoreInfo](#MoreInfo)
 - [FileGeneration](#FileGeneration)
-  * [ReleaseTag](#ReleaseTag)
   * [LocalEnvironment](#LocalEnvironment)
   * [GoCDPipeline](#GoCDPipeline)
 - [DataSubmission](#DataSubmission)
   * [FileUpload](#FileUpload)
   * [FinalCheck](#FinalCheck)
-- [PersistentStore](#PersistentStore)
 
 ## Overview
-FlyBase in-house scripts repackage data from FlyBase for export to the Alliance project.  
-Modifications should be made in new "release" branches corresponding to Alliance schema release branches: e.g., 1.0.1.0.  
+FlyBase in-house scripts export FlyBase data in Alliance LinkML-compliant JSON format.
+Files are uploaded to the Alliance persistent store.
+
+## CodeManagement
+Modifications this repo should be made in new "release" branches corresponding to Alliance LinkML schema release branches: e.g., `v1.3.1`.  
 These release branches should be used to spawn git releases/tags.  
-Once an Alliance version is publicly released, merge the release branch into master.  
-Scripts are run by a GoCD pipeline within docker. See [GoCDPipeline](#GoCDPipeline) section.  
-Some scripts (not all yet) have a "-l" (local) or "-c" option (config) so that script can be run on local machine for development.  
-Validation depends on schema in another Alliance repo, `agr_schemas`.  
-Data is uploaded manually to AWS S3 bucket using curl.  
+These scripts are intended to be run in Docker using GoCD pipelines.
+Files should be validated locally before uploading to the Alliance.
+Use the [Alliance Curation API](https://curation.alliancegenome.org/swagger-ui/#/API%20Version/get_api_version) (details below) to find the latest supported LinkML version.  
+- Write your code to this LinkML version.  
+- Note that different objects may be have different version support as the persistent store develops.  
 
-## Credentials
-Data are stored in AWS S3 bucket. Need credentials to view the bucket.  
-Need another a different API access token to upload files (via curl).  
-  
-### S3Access
-This is a one time set-up.  
-1. Obtain credentials to access Amazon S3 bucket for data dumps.  
-  - Ask Gil or Chris for generic FlyBase developer credentials.  
-  - Can obtain personal credentials from Adam Wright.  
-2. Install AWS command line interface (CLI) software.  
-```
-bash
-workon <python_virtual_env_of_your_choice>
-pip install awscli
-```  
-3. Configure AWS user account (supply keys when prompted).  
-  - Use the `aws configure` command.  
-  - Supply keys when prompted.  
-  - Note: "region name" is "us-east-1"  
-4. Test credentials by listing files in the datadumps S3 bucket:  
-```
-bash
-workon <python_virtual_env_of_your_choice>
-aws s3 ls s3://mod-datadumps
-```  
-  - Note: you should see files with names like <mod>_<release>.tar.gz : e.g., `FB_1.0.4_4.tar.gz`  
-
-### SubmissionAccessToken
-You will need a separate API access token to submit files to the S3 bucket via `curl`.  
-Typically each dev gets their own token - ask Olin Blodgett for one if needed.  
+## AllianceResources
+### LinkML
+The Alliance LinkML-based data schema is held in the [agr_curation_schemas](https://github.com/alliance-genome/agr_curation_schema) repo.
+### Credentials
+Get an OKTA account (through Chris Grove). You will need this to interact with the persistent store.
+### PersistentStore
+The [Alliance Curation Site](https://curation.alliancegenome.org/#/) is the main hub.
+Once logged into the curation site, you'll have access to persistent store data:
+- View/update entries.
+- View file loading.
+- Get your personal `Curation API Token` - required for file uploads and API use.
+You can also access the persistent store using the [Alliance Curation API](https://curation.alliancegenome.org/swagger-ui/#/API%20Version/get_api_version).
+- You will need to log into the API with your personal `Curation API Token`.
+- You can find the `Curation API Token` under your profile (top right corner) in the [Alliance Curation Site](https://curation.alliancegenome.org/#/)
+### MoreInfo
+See the Alliance A-Team [Confluence Site](https://agr-jira.atlassian.net/wiki/spaces/ATEAM/pages/476053508) for more info.
 
 ## FileGeneration
-
-### ReleaseTag
-Start any data submission by making a git release tag (a snapshot of the repo used for data generation).  
-- View this repo, `alliance-flybase` in GitHub.  
-- Go to "release" tab, and choose "Draft a new release".  
-- Choose the appropriate release branch as target source for the new release.  
-- Apply tag name corresponding to Alliance release number: e.g, "1.0.0.3".  
-- Apply title like "Alliance 1.0.0.8".  
-
+Use the `Alliance_LinkML_Submission` pipeline in the `Reporting_Build` pipeline group to generate, validate and upload files.  
+With each run, files generated are stored locally in a directory within `/data/alliance/`.  
+- The directory name will include the LinkML version and date (`MMMDD`), which correspond to the `LINKML_VERSION` and `ITERATION` pipeline values.  
 ### LocalEnvironment
-1. Check for the latest Panther orthology file (user: anonymous, password: password).  
-```
-cd /data/ortholog/panther/
-ftp ftp.pantherdb.org
-cd sequence_classifications/current_release/PANTHER_Sequence_Classification_files/
-ls *fruit_fly*
-get PTRH<release>_fruit_fly
-```  
-  - Save file here if it's new to FlyBase: `/data/ortholog/panther/`
-  - If a new file was downloaded, update the filename in the `/src/AGR_data_retrieval_genes.py` script.  
-  - *Eventually, code should be implemented to automate this step!*  
-2. Double check the HTP metadata tags file available here:
-  - `http://download.alliancegenome.org/<RELEASE>/HTP/TAGS/HTP_TAGS_0.json`
-  - if new one is available, check to see that the `AGR_data_retrieval_datasets.py` script has right URL for the `process_agr_category_tags_file` function.
-3. If running scripts locally:
-  - Get updates and checkout appropriate branches for `alliance-flybase` and `agr_schemas` repos.  
-  - Update the config file here: `/data/credentials/alliance/connection_info.cfg`.  
-  - Move a python3 virtual environment and install requirements:  
-```
-cd <your_local_path>/alliance-flybase/
-bash
-workon <python_virtual_env_of_your_choice>
-pip install -r requirements.txt
-```  
-
+1. Specify pipeline-specific variables.  
+  - Sometimes the FB release used for LinkML submission will not be the latest release build.  
+  - This happens when a release build has just been sent to FB-Indiana, but the public GFF file is not yet available for that release.  
+  - For this reason, do not rely upon the `Reporting_Build` environment values (except for `ALLIANCETOKEN`).  
+  - Specify these variables at the `Alliance_LinkML_Submission` pipeline level.  
+    - `SERVER` - flysql machine where the reporting db is located: e.g., `flysql25`  
+    - `DATABASE` - the name of the db to use (with `audit_chado`): e.g., `production_chado` or `fb_2022_05_reporting_audit`  
+    - `RELEASE` - ensure that the release matches the db used: e.g., `2022_05`.  
+    - `ITERATION` - the date `MMMDD` on which the pipeline is run.  
+    - `LINKML_VERSION` - the LinkML version for the data: e.g., `v1.3.1`.  
 ### GoCDPipeline
-Most of this process is now automated using a GoCD pipeline.  
-See [Alliance_DQM_Submission](http://flysql22:8153/go/admin/pipelines/Alliance_DQM_Submission/general) in "Reporting_Build" pipeline group.  
-See also general [GoCD documentation](https://github.com/FlyBase/harvdev-docs/blob/master/gocd/gocd.md).  
-
-The pipeline automates these steps:  
+The `Alliance_LinkML_Submission` pipeline automates these steps:  
 1. Builds directory for data and log output in `/data/alliance/` folder.  
 2. Gets HarvDev docker container.  
-3. Builds docker image with FB `alliance-flybase` and Alliance `agr_schemas` repos.  
-4. Fetches data using `alliance-flybase` scripts from a specified branch or release tag.  
-5. Validates data files generated against Alliance schema (some specified branch) using `agr_validate.py`.   
-6. Sends e-mail that files are ready for review (size, contents), then upload.
-
-Some manual steps are still required before and after the pipeline runs:  
-1. Download the most recent Panther file. See [LocalEnvironment](#LocalEnvironment) section above.  
-2. Generate the appropriate `alliance-flybase` release git repo tag. See [ReleaseTag](#ReleaseTag) section above.  
-3. Update `Materials`.  
-  - For `alliance-flybase`, choose `master` in materials. During docker build, appropriate tag will be checked out.  
-  - For `agr_schemas`, specify the appropriate release branch: e.g., release-1.0.1.5.  
-4. Review the shared `Reporting_Build` environment.  
-  - In the GoCD interface, look under `Admin`, then `Environments` for the `Reporting_Build` environment.  
-  - This environment is shared by all reporting-related pipelines, including this `Alliance_DQM_Submission` pipeline.  
-  - SERVER - flysql machine where the reporting db is located: e.g., `flysql25`  
-  - DATABASE - the name of the reporting db to use: e.g., `fb_2022_02_reporting`  
-  - ASSEMBLY - the Dmel reference genome assembly, currenty `R6`  
-  - ALLIANCESCHEMA - e.g., `1.0.1.5`  
-  - ALLIANCERELEASE - e.g., `5.2.0`  
-  - TAG - the release tag for `flybase/alliance-flybase` Git repo that is to be used: e.g., `1.0.0.9-hotfix1`  
-  - ITERATION - MMMDD label to use for output file folder in `data/alliance/`: e.g., `JUL22`  
-  - RELEASE - e.g., `2021_02`. Only supply this if using an older release than is currently building for FB public release.  
-  - ANNOTATIONRELEASE - e.g., `R6.46`.  
-5. Update the specific `Environment variables` for this GoCD pipeline.  
-  - Sometimes the FB release used for DQM submission will not be the latest release build.  
-  - This happens when a release build has just been sent to FB-Indiana, but the public GFF file is not yet available for that release.  
-  - In that case, specify pipeline-specific `Environment Variables` values as needed (these will override values for the `Reporting_Build` environment).  
-6. Ensure files are of the correct size before upload (files lacking data can nonetheless validate OK).  
-  - If code has changed, also worthwhile opening files to ensure no odd formatting.  
-  - Particularly important for GFF files, for which there's no validation right now.  
+3. Builds docker image with FB `alliance-linkml-flybase` and Alliance `agr_curation_schemas` repos (the latter for validation).  
+4. Fetches data using `alliance-linkml-flybase` scripts from a specified branch or release tag.  
+5. Validates data files using the Alliance `validate_agr_schema.py` against the `jsonschema/allianceModel.schema` file.  
+6. Sends e-mail that files are ready for review (size, contents), then pauses the pipeline.  
+7. Upon manual unpausing (assuming files look ok), the pipeline resumes to upload the files.  
 
 ## DataSubmission
-
 ### FileUpload
-You will need the API access token. See [SubmissionAccessToken](#SubmissionAccessToken) section above.  
-Each file must now be gzipped before upload (*.json, *.gff, *mitab.tsv).  
-Upload the files, as per these [directions](https://github.com/alliance-genome/agr_chipmunk/blob/master/README.md).  
-For each file, the upload endpoint is `ReleaseVersion_DataType_DataSubType/MOD`, linked by `=@` string to the path to the corresponding file to be uploaded.  
-For example:  
-```
-curl \
--H "Authorization: Bearer <token>" \
--X POST "https://fms.alliancegenome.org/api/data/submit" \
--F "4.0.0_AGM_FB=@FB_1.0.1.4_agm.json.gz" \
--F "4.0.0_ALLELE_FB=@FB_1.0.1.4_allele.json.gz" \
--F "4.0.0_BGI_FB=@FB_1.0.1.4_BGI.json.gz" \
--F "4.0.0_CONSTRUCT_FB=@FB_1.0.1.4_construct.json.gz" \
--F "4.0.0_DAF_FB=@FB_1.0.1.4_disease.json.gz" \
--F "4.0.0_EXPRESSION_FB=@FB_1.0.1.4_expression.json.gz" \
--F "4.0.0_GFF_FB=@FB_1.0.1.4_GFF.gff.gz" \
--F "4.0.0_HTPDATASET_FB=@FB_1.0.1.4_dataset.json.gz" \
--F "4.0.0_HTPDATASAMPLE_FB=@FB_1.0.1.4_dataset_sample.json.gz" \
--F "4.0.0_HTVCF_FB=@dgrp.r6.vcf.gz" \
--F "4.0.0_INTERACTION-SOURCE_FB-GEN=@FB_1.0.1.4_genetic_interactions_mitab.tsv.gz" \
--F "4.0.0_INTERACTION-SOURCE_FB-MOL=@FB_1.0.1.4_physical_interactions_mitab.tsv.gz" \
--F "4.0.0_PHENOTYPE_FB=@FB_1.0.1.4_phenotype.json.gz" \
--F "4.0.0_REFERENCE_FB=@FB_1.0.1.4_reference.json.gz" \
--F "4.0.0_REF-EXCHANGE_FB=@FB_1.0.1.4_reference_exchange.json.gz" \
--F "4.0.0_RESOURCE_FB=@FB_1.0.1.4_resource.json.gz" \
--F "4.0.0_VARIATION_FB=@FB_1.0.1.4_variant.json.gz"
-```
-
-Success is indicated by this type of response:  
-```
-{"status":"success","message":null,"fileStatus": {"2.3.0_VARIATION_FB":"success"}}
-```  
-
-### FinalCheck
-It's good to confirm that files landed in the s3 bucket as expected.  
-One can use the AWS CLI to see recently uploaded files (within an appropriate python virtual environment).
-Files are sorted first by release, then by datatype, then by mod/datasubtype. For example:  
-```
-aws s3 ls s3://mod-datadumps/4.0.0/VARIATION/FB/
-```
-
-## PersistentStore
-DQMs have also started submitting files according to the `agr_curation_schema` LinkML model.  
-Details on upload procedures are [here](https://github.com/alliance-genome/agr_curation#submitting-data).
-
-Here's an overview:
-Validate your JSON files with the [`util/validate_agr_schema.py`](https://github.com/alliance-genome/agr_curation_schema/blob/main/util/validate_agr_schema.py) in the `agr_curation_schema` repo.
-- Be sure to validate against the appropriate release.
-
-To get the API access key for file uploads, log into the requested A-Team curation site (one of the links below):
-[ALPHA](https://alpha-curation.alliancegenome.org)
-[BETA](https://beta-curation.alliancegenome.org)
-[PROD](https://curation.alliancegenome.org)
-- Then click on your profile in the upper right corner to find the key.
-
-You will need to turn on your VPN access to the Alliance. instructions are [here](https://docs.google.com/document/d/1bp-8FP-4vcTOhExWPhlGZPfCa5eqkuIcpEvTT7lpCf4/edit).
-- For me, this only works on my home computer, not on FlyBase workstations (Gil)
-
-This is an example of the command to upload a GENE file.
-```
-curl -H "Authorization: Bearer ABC..." \
--X POST "https://curation.alliancegenome.org/api/data/submit" \
--F "GENE_FB=@gene_curation_fb_2022_02_reporting_audit.json"
-```
+As mentioned above, the GoCD pipeline will upload files to the Alliance.  
+Details of how to upload files are [here](https://github.com/alliance-genome/agr_curation#submitting-data).  
+- Your personal `API Curation Token` is required (available from your profile the [Alliance Curation Site](https://curation.alliancegenome.org/#/)).  
+Expect an `OK` message upon completion of a successful file upload.
+### ConfirmUploads
+Go to the [Alliance Curation Site](https://curation.alliancegenome.org/#/).  
+- From the left options, choose `Other Links` (at the bottom), then `Data Loads`.  
+- For each data type uploaded, there should be a `Direct (LinkML) * Loads` selection on the right.  
+- For each data type, all files ever uploaded are listed.  
+- Click on the most recent one to see if it's been loaded (it can take hours).  
+- Review any errors in loading any of the data objects - may require code or data fix.  
+- Note - there can be load order dependencies: e.g., make sure all alleles are loaded before loading disease annotations.  
+  - If you suspect that load order created problems, click on the pencil icon at the right to initiate a re-load of the file.
+  - If you want to re-load a file, might be best to first check with the A-Team though.
