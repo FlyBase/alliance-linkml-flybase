@@ -17,6 +17,7 @@
 - [DataSubmission](#DataSubmission)
   * [FileUpload](#FileUpload)
   * [FinalCheck](#FinalCheck)
+  * [References](#References)
 
 ## Overview
 FlyBase in-house scripts export FlyBase data in Alliance LinkML-compliant JSON format.
@@ -89,3 +90,11 @@ Go to the [Alliance Curation Site](https://curation.alliancegenome.org/#/).
 - Note - there can be load order dependencies: e.g., make sure all alleles are loaded before loading disease annotations.  
   - If you suspect that load order created problems, click on the pencil icon at the right to initiate a re-load of the file.
   - If you want to re-load a file, might be best to first check with the A-Team though.
+  - There are dependencies on references too (see below).
+### References
+Loading of most LinkML data is dependent on presence of FB references at the Alliance.  
+These references are in a separate database, the Alliance Bibliography Central (ABC), handled by the Alliance Blue Team.  
+The pub schema is based on the distinct [agr_schemas](https://github.com/alliance-genome/agr_schemas/tree/master/ingest/resourcesAndReferences) model.  
+As such, FB code of pub submission is in the related [alliance-flybase](https://github.com/FlyBase/alliance-flybase) repo.  
+- See the README for this repo for details about submission and load issues.  
+Submissions to the ABC are handled by the `Alliance_Pub_Export` pipeline (runs as part of the `Epicycle` pipeline group).  
