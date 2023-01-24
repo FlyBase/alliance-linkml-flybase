@@ -490,7 +490,7 @@ class GeneHandler(object):
         self.get_references(session)
         self.get_genes(session)
         self.get_gene_taxons(session)
-        self.get_gene_dbxrefs(session)
+        # self.get_gene_dbxrefs(session)    # BOB - suppress for faster dev.
         self.get_synonyms(session)
         self.get_gene_snapshots(session)
         self.get_gene_types(session)
