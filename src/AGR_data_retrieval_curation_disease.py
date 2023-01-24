@@ -89,45 +89,45 @@ class DiseaseAnnotation(object):
         """
         # FlyBase data
         self.unique_key = '{}_{}'.format(feature_cvterm.feature_cvterm_id, provenance_prop.rank)
-        self.feature_cvterm = feature_cvterm             # The FeatureCvterm object.
-        self.provenance = provenance_prop                # The "provenance" FeatureCvtermprop.
-        self.evidence_code = None                        # Will be the "evidence_code" FeatureCvtermprop.
-        self.qualifier = None                            # Will be the "qualifier" FeatureCvtermprop.
-        self.timestamps = []                             # Will be a list of audit_chado timestamp lists.
-        # Derived attribures.
-        self.modifier_problem = False                    # Change to true if there's a problem finding the modifier allele.
-        # Attributes for the Alliance AuditedObject.
-        self.obsolete = False                            # Never True. All FB annotations are deleted if no longer current.
-        self.internal = False                            # Will be internal if annotation should not be exported to Alliance for some reason.
-        self.created_by = 'FB:FB_curator'                # Use placeholder value since no Person object at FlyBase.
-        self.updated_by = 'FB:FB_curator'               # Use placeholder value since no Person object at FlyBase.
-        self.date_created = None                         # Not straightforward as half of relevant annotations are derived in the reporting build.
-        self.date_updated = None                         # Not straightforward as half of relevant annotations are derived in the reporting build.
-        # Attributes for the Alliance Association
-        self.subject = None                              # Provide allele curie (slot usage from AlleleDiseaseAnnotation)
-        self.predicate = 'is_implicated_in'              # "Allele disease relations" CV (slot usage from AlleleDiseaseAnnotation)
-        self.object = None                               # Provide DOID (slot usage from DiseaseAnnotation).
-        # Attributes for the Alliance DiseaseAnnotation
-        self.data_provider = 'FB'
-        self.negated = False                             # Change to True for "NOT" annotations.
-        self.evidence_codes = []                         # Set as appropriate.
-        self.single_reference = None                     # Provide FBrf ID.
-        self.annotation_type = 'manually_curated'        # "Annotation types" CV.
-        self.disease_genetic_modifier = None             # Gene, Allele or AGM curie.
-        self.disease_genetic_modifier_relation = None    # "Disease genetic modifier relations" CV.
-        self.unique_id = self.unique_key                 # Use the unique_key (internal ID is ok).
-        self.mod_entity_id = None                        # N/A to FlyBase data.
-        self.inferred_gene = None                        # Gene asserted by curator to be associated with the disease annotation.
-        # self.with = None                               # N/A to FlyBase data.
-        self.disease_qualifiers = []                     # N/A to FlyBase data. "Disease Qualifiers" CV.
-        self.condition_relations = []                    # N/A to FlyBase data.
-        self.genetic_sex = None                          # N/A to FlyBase data. "Genetic sexes" CV.
-        self.related_notes = []                          # N/A to FlyBase data.
-        self.secondary_data_provider = None              # N/A to FlyBase data.
+        self.feature_cvterm = feature_cvterm                  # The FeatureCvterm object.
+        self.provenance = provenance_prop                     # The "provenance" FeatureCvtermprop.
+        self.evidence_code = None                             # Will be the "evidence_code" FeatureCvtermprop.
+        self.qualifier = None                                 # Will be the "qualifier" FeatureCvtermprop.
+        self.timestamps = []                                  # Will be a list of audit_chado timestamp lists.
+        # Derived attributes.
+        self.modifier_problem = False                         # Change to true if there's a problem finding the modifier allele.
+        # Attributes for the Alliance AuditedObjectDTO.
+        self.obsolete = False                                 # Never True. All FB annotations are deleted if no longer current.
+        self.internal = False                                 # Will be internal if annotation should not be exported to Alliance for some reason.
+        self.created_by_curie = 'FB:FB_curator'               # Use placeholder value since no Person object at FlyBase.
+        self.updated_by_curie = 'FB:FB_curator'               # Use placeholder value since no Person object at FlyBase.
+        self.date_created = None                              # Not straightforward as half of relevant annotations are derived in the reporting build.
+        self.date_updated = None                              # Not straightforward as half of relevant annotations are derived in the reporting build.
+        # Attributes for the Alliance DiseaseAnnotationDTO.
+        self.disease_relation_name = 'is_implicated_in'       # "Allele disease relations" CV (slot usage from AlleleDiseaseAnnotation)
+        self.do_term_curie = None                             # Provide DOID (slot usage from DiseaseAnnotation).
+        self.mod_entity_id = None                             # N/A to FlyBase data.
+        self.negated = False                                  # Change to True for "NOT" annotations.
+        self.evidence_curies = []                             # Not sure what these are?
+        self.evidence_code_curies = []                        # Set as appropriate.
+        self.reference_curie = None                           # Provide FBrf ID.
+        self.annotation_type_name = 'manually_curated'        # "Annotation types" CV.
+        self.with_gene_curies = []                            # N/A to FlyBase data.
+        self.disease_qualifier_names = []                     # N/A to FlyBase data. "Disease Qualifiers" CV.
+        self.condition_relation_dtos = []                     # N/A to FlyBase data.
+        self.genetic_sex_name = None                          # N/A to FlyBase data. "Genetic sexes" CV.
+        self.note_dtos = []                                   # N/A to FlyBase data.
+        self.data_provider_name = 'FB'
+        self.secondary_data_provider_name = None              # N/A to FlyBase data.
+        self.disease_genetic_modifier_curie = None            # Gene, Allele or AGM curie.
+        self.disease_genetic_modifier_relation_name = None    # "Disease genetic modifier relations" CV.
+        # Attributes for the Alliance AlleleDiseaseAnnotationDTO.
+        self.allele_curie = None                              # Provide allele curie.
+        self.inferred_gene_curie = None                       # Gene inferred to be associated with the disease annotation based on curated allele.
         # Notes associated with the object.
-        self.for_alliance_export = True         # Change to False if object should be excluded from export.
-        self.internal_reasons = []              # Reasons for marking an object as internal. Will be exported but not necessarily displayed at Alliance.
-        self.export_warnings = []               # Reasons for suppressing an object from the export file.
+        self.for_alliance_export = True                       # Change to False if object should be excluded from export.
+        self.internal_reasons = []                            # Reasons for marking an object as internal (exported but not displayed at Alliance).
+        self.export_warnings = []                             # Reasons for suppressing an object from the export file.
 
     def __str__(self):
         """Succinct text string describing the disease annotation."""
@@ -171,34 +171,33 @@ class DAFMaker(object):
     }
 
     required_fields = [
-        'data_provider',
-        'evidence_codes',
+        'allele_curie',
+        'data_provider_name',
+        'disease_relation_name',
+        'do_term_curie',
+        'evidence_code_curies',
         'internal',
-        'object',
-        'predicate',
-        'single_reference'
-        'subject'
+        'reference_curie',
     ]
 
     output_fields = [
-        'annotation_type',
-        'created_by',
-        'data_provider',
+        'allele_curie',
+        'annotation_type_name',
+        'created_by_curie',
+        'data_provider_name',
         'date_created',
         'date_updated',
-        'disease_genetic_modifier',
-        'disease_genetic_modifier_relation',
-        'evidence_codes',
-        'inferred_gene',
+        'disease_genetic_modifier_curie',
+        'disease_genetic_modifier_relation_name',
+        'disease_relation_name',
+        'do_term_curie',
+        'evidence_code_curies',
+        'inferred_gene_curie',
         'internal',
-        'updated_by',
         'negated',
-        'object',
         'obsolete',
-        'predicate',
-        'single_reference',
-        'subject',
-        'unique_id'    # For derived annotations, feature_cvterm_id+rank changes each release. So, suppress.
+        'reference_curie',
+        'updated_by_curie',
     ]
 
     def get_disease_annotations(self, session):
