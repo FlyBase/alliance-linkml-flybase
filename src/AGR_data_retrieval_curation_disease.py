@@ -429,11 +429,11 @@ class DAFMaker(object):
         log.info('Synthesizing disease annotation info.')
         for dis_anno in self.dis_anno_dict.values():
             log.debug('Evaluating annotation: {}'.format(dis_anno))
-            # Get subject, object and pub.
-            dis_anno.subject = 'FB:{}'.format(dis_anno.feature_cvterm.feature.uniquename)
-            dis_anno.object = 'DOID:{}'.format(dis_anno.feature_cvterm.cvterm.dbxref.accession)
-            dis_anno.single_reference = self.get_pub_xref(session, dis_anno.feature_cvterm.pub.uniquename)
-            dis_anno.inferred_gene = self.get_inferred_gene(session, dis_anno.feature_cvterm.feature.feature_id)
+            # Get allele, DO term and pub.
+            dis_anno.allele_curie = 'FB:{}'.format(dis_anno.feature_cvterm.feature.uniquename)
+            dis_anno.do_term_curie = 'DOID:{}'.format(dis_anno.feature_cvterm.cvterm.dbxref.accession)
+            dis_anno.reference_curie = self.get_pub_xref(session, dis_anno.feature_cvterm.pub.uniquename)
+            dis_anno.inferred_gene_curie = self.get_inferred_gene(session, dis_anno.feature_cvterm.feature.feature_id)
             # Mark negative annotations.
             if dis_anno.qualifier.value == 'DOES NOT model':
                 dis_anno.negated = True
@@ -445,23 +445,23 @@ class DAFMaker(object):
             #         timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(max(dis_anno.timestamps)))
             # Determine evidence_code
             if dis_anno.evidence_code.value.startswith('CEC'):
-                dis_anno.evidence_codes.append(self.evidence_code_xrefs['CEC'])
+                dis_anno.evidence_code_curies.append(self.evidence_code_xrefs['CEC'])
             else:
-                dis_anno.evidence_codes.append(self.evidence_code_xrefs['CEA'])
+                dis_anno.evidence_code_curies.append(self.evidence_code_xrefs['CEA'])
             # Find modifiers and their relations.
             allele_regex = r'FBal[0-9]{7}'
             for fb_term in self.disease_genetic_modifier_terms.keys():
                 if fb_term in dis_anno.evidence_code.value:
-                    dis_anno.disease_genetic_modifier_relation = self.disease_genetic_modifier_terms[fb_term]
+                    dis_anno.disease_genetic_modifier_relation_name = self.disease_genetic_modifier_terms[fb_term]
                     if re.search(allele_regex, dis_anno.evidence_code.value):
                         allele_id = re.search(allele_regex, dis_anno.evidence_code.value).group(0)
                         if self.confirm_current_allele_by_uniquename(session, allele_id):
-                            dis_anno.disease_genetic_modifier = 'FB:{}'.format(allele_id)
+                            dis_anno.disease_genetic_modifier_curie = 'FB:{}'.format(allele_id)
                         else:
                             # Look up current allele by 2o ID. Use that.
                             curr_allele_id = self.get_current_id_for_allele(session, allele_id)
                             if curr_allele_id:
-                                dis_anno.disease_genetic_modifier = 'FB:{}'.format(curr_allele_id)
+                                dis_anno.disease_genetic_modifier_curie = 'FB:{}'.format(curr_allele_id)
                             else:
                                 dis_anno.modifier_problem = True
             # Now check for conditions that prevent export.
