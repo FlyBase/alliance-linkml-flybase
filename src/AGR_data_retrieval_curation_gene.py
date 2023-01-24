@@ -572,17 +572,20 @@ class GeneHandler(object):
         for gene in self.gene_dict.values():
             log.debug(f'Evaluating annotation: {gene}')
             # BOB: Handle synonyms.
-            log.debug(f'Handle synonyms for {gene}')
+            log.debug(f'BOB: Handle symbol for {gene}')
             if gene.curr_fb_symbol:
                 gene.gene_symbol_dto = self.process_feature_synonyms(gene.curr_fb_symbol, 'nomenclature_symbol', True)
             else:
                 gene.gene_symbol_dto = self.process_feature_synonyms(gene.feature.name, 'nomenclature_symbol', True)
+            log.debug(f'BOB: Handle full_name for {gene}')
             if gene.curr_fb_fullname:
                 gene.gene_full_name_dto = self.process_feature_synonyms(gene.curr_fb_fullname, 'full_name', True)
             else:
                 gene.gene_full_name_dto = self.process_feature_synonyms(gene.feature.name, 'full_name', True)
+            log.debug(f'BOB: Handle systematic_name for {gene}')
             if gene.systematic_name:
                 gene.gene_systematic_name_dto = self.process_feature_synonyms(gene.systematic_name, 'systematic_name', True)
+            log.debug(f'BOB: Handle other synonyms for {gene}')
             if gene.other_synonyms:
                 gene.gene_synonym_dtos = self.process_feature_synonyms(gene.other_synonyms, 'unspecified', False)
             # Get timestamps.
