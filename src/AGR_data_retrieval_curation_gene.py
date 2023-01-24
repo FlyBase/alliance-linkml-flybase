@@ -363,7 +363,7 @@ class GeneHandler(object):
             distinct()
         for result in gene_curr_symbol_results:
             # First, build the all_synonyms_dict.
-            self.all_synonyms_dict[result.Synonym.synonym_id] = Synonym
+            self.all_synonyms_dict[result.Synonym.synonym_id] = result.Synonym
             # Second, collect FeatureSynonym objects by type.
             if result.FeatureSynonym.is_current is True:
                 if result.synonym_type.name == 'symbol':
