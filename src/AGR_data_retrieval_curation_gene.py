@@ -32,7 +32,7 @@ from sqlalchemy.orm import aliased, sessionmaker
 from harvdev_utils.char_conversions import sub_sup_sgml_to_html
 from harvdev_utils.production import (
     Cvterm, Db, Dbxref, Feature, FeatureDbxref, FeatureSynonym,
-    Featureloc, Featureprop, Organism, OrganismDbxref, Pub, PubDbxref, Synonym
+    Featureloc, Featureprop, OrganismDbxref, Pub, PubDbxref, Synonym
 )
 from harvdev_utils.psycopg_functions import set_up_db_reading
 
@@ -242,7 +242,7 @@ class GeneHandler(object):
         pub_counter = 0
         for pub in results:
             self.all_pubs_dict[pub.pub_id] = f'FB:{pub.uniquename}'
-            counter += 1
+            pub_counter += 1
         # Next find PMIDs if available and replace the curie in the all_pubs_dict.
         filters = (
             Pub.uniquename.op('~')(fbrf_regex),
@@ -550,7 +550,7 @@ class GeneHandler(object):
             output_synonym_dto = {
                 'name_type_name': name_type_to_use,
                 'format_text': synonym.name,
-                'display_text': synonym.synonym_sgml,
+                'display_text': sub_sup_sgml_to_html(synonym.synonym_sgml),
                 'synonym_scope': 'exact',
                 'evidence_curies': [f'{self.all_pubs_dict[i]}' for i in pub_list if self.all_pubs_dict[i] != 'unattributed'],
                 'internal': False,
