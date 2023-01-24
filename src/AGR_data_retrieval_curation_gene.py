@@ -515,7 +515,7 @@ class GeneHandler(object):
             Raises error if return_single_value set to True, but many synonyms found in the input list.
 
         """
-        if type(input) is not str or type(input) is not list:
+        if type(input) is not str and type(input) is not list:
             log.error('Input must be a string or list of FeatureSynonym objects.')
             raise
         # First handle the simplest case where a string is given as the input.
@@ -570,8 +570,9 @@ class GeneHandler(object):
         """Convert FlyBase gene data into an AllianceGene representation."""
         log.info('Synthesizing gene info.')
         for gene in self.gene_dict.values():
-            log.debug('Evaluating annotation: {}'.format(gene))
+            log.debug(f'Evaluating annotation: {gene}')
             # BOB: Handle synonyms.
+            log.debug(f'Handle synonyms for {gene}')
             if gene.curr_fb_symbol:
                 gene.gene_symbol_dto = self.process_feature_synonyms(gene.curr_fb_symbol, 'nomenclature_symbol', True)
             else:
