@@ -191,8 +191,9 @@ class GeneHandler(object):
     # Export fields.
     required_fields = [
         'curie',
-        'gene_symbol_dto',
         'gene_full_name_dto',
+        'gene_symbol_dto',
+        'gene_systematic_name_dto',
         'internal',
         'taxon_curie',
     ]
@@ -205,6 +206,7 @@ class GeneHandler(object):
         'gene_full_name_dto',
         'gene_symbol_dto',
         'gene_synonym_dtos',
+        'gene_systematic_name_dto',
         'gene_type_curie',
         'genomic_location_dtos',
         'internal',
@@ -347,6 +349,7 @@ class GeneHandler(object):
         filters = (
             Feature.uniquename.op('~')(self.gene_regex),
             Feature.is_analysis.is_(False),
+            Feature.is_obsolete.is_(False),
             Cvterm.name == 'gene',
             FeatureDbxref.is_current.is_(True),
             Db.name == 'FlyBase Annotation IDs'
@@ -361,6 +364,7 @@ class GeneHandler(object):
         counter = 0
         for result in results:
             self.gene_dict[result.Feature.uniquename].curr_anno_id = result.Dbxref.accession
+            log.debug(f'For {self.gene_dict[result.Feature.uniquename]}, anno_id={result.Dbxref.accession}')
             counter += 1
         log.info(f'Found {counter} current annotation IDs for FlyBase genes.')
         return
@@ -620,10 +624,13 @@ class GeneHandler(object):
             placeholder_full_name_dto = feature.gene_symbol_dto.copy()
             placeholder_full_name_dto['name_type_name'] = 'full_name'
             feature.gene_full_name_dto = placeholder_full_name_dto
-        # Full name is required. If none, fill it in. Could be because FB has none, or, it's the same as the symbol.
+        # Systematic name is required. If none, fill it in. Could be because FB has none, or, it's the same as the symbol.
         if feature.gene_systematic_name_dto is None:
             placeholder_systematic_name_dto = feature.gene_symbol_dto.copy()
             placeholder_systematic_name_dto['name_type_name'] = 'systematic_name'
+            if feature.curr_anno_id:
+                placeholder_symbol_dto['format_text'] = feature.curr_anno_id
+                placeholder_symbol_dto['display_text'] = feature.curr_anno_id
             feature.gene_systematic_name_dto = placeholder_systematic_name_dto
         return
 
