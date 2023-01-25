@@ -532,7 +532,7 @@ class GeneHandler(object):
             'name_type_name': 'unspecified',
             'format_text': 'unspecified',
             'display_text': 'unspecified',
-            'synonym_scope': 'exact',
+            'synonym_scope_name': 'exact',
             'evidence_curies': [],
             'internal': False,
             'obsolete': False
@@ -584,7 +584,7 @@ class GeneHandler(object):
                 'name_type_name': name_type_to_use,
                 'format_text': sub_sup_sgml_to_html(syno_name[FORMAT_TEXT]),
                 'display_text': sub_sup_sgml_to_html(syno_name[DISPLAY_TEXT]),
-                'synonym_scope': 'exact',
+                'synonym_scope_name': 'exact',
                 'evidence_curies': [self.all_pubs_dict[i] for i in pub_id_list if self.all_pubs_dict[i] != 'unattributed'],
                 'internal': syno_internal,
                 'obsolete': False
