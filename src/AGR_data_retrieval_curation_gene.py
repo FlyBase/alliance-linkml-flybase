@@ -512,6 +512,7 @@ class GeneHandler(object):
         self.get_gene_taxons(session)
         # self.get_gene_dbxrefs(session)    # BOB - suppress for faster dev.
         self.get_synonyms(session)
+        self.get_annotation_ids(session)
         self.get_gene_snapshots(session)
         self.get_gene_types(session)
         self.get_gene_timestamps(session)
@@ -606,6 +607,7 @@ class GeneHandler(object):
                     log.warning(f"{feature}: Found mistyped curr full_name: type={name_dto['name_type_name']}, anno_id={name_dto['display_text']}")
             else:
                 feature.gene_synonym_dtos.append(name_dto)
+        # LinkML change required: make gene_full_name_dto and gene_systematic_name_dto OPTIONAL.
         # Symbol is required. If none, fill it in.
         if feature.gene_symbol_dto is None:
             placeholder_symbol_dto = default_name_dto.copy()
@@ -618,6 +620,11 @@ class GeneHandler(object):
             placeholder_full_name_dto = feature.gene_symbol_dto.copy()
             placeholder_full_name_dto['name_type_name'] = 'full_name'
             feature.gene_full_name_dto = placeholder_full_name_dto
+        # Full name is required. If none, fill it in. Could be because FB has none, or, it's the same as the symbol.
+        if feature.gene_systematic_name_dto is None:
+            placeholder_systematic_name_dto = feature.gene_symbol_dto.copy()
+            placeholder_systematic_name_dto['name_type_name'] = 'systematic_name'
+            feature.gene_systematic_name_dto = placeholder_full_name_dto
         return
 
     # Synthesis of initial db info.
