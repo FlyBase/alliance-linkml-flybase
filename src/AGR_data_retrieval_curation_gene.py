@@ -325,6 +325,9 @@ class GeneHandler(object):
             distinct()
         counter = 0
         for result in results:
+            # Skip any references to non-current pubs.
+            if result.FeatureSynonym.pub_id not in self.all_pubs_dict.keys():
+                continue
             # First, build the all_synonyms_dict.
             self.all_synonyms_dict[result.Synonym.synonym_id] = result.Synonym
             # Second, collect FeatureSynonyms for each gene.
@@ -335,6 +338,7 @@ class GeneHandler(object):
             elif result.FeatureSynonym.is_current is True and result.Synonym.type.name == 'fullname':
                 self.gene_dict[result.Feature.uniquename].curr_fullname = sub_sup_sgml_to_html(result.Synonym.synonym_sgml)
             counter += 1
+        log.info(f'Found {counter} feature_synonyms (current pubs) for genes.')
         return
 
     def get_annotation_ids(self, session):
