@@ -627,7 +627,7 @@ class GeneHandler(object):
             placeholder_full_name_dto = feature.gene_symbol_dto.copy()
             placeholder_full_name_dto['name_type_name'] = 'full_name'
             feature.gene_full_name_dto = placeholder_full_name_dto
-        # Systematic name is required. If none, fill it in. Could be because FB has none, or, it's the same as the symbol.
+        # Systematic name is required. If none, fill it in. Could be because gene is unannotated, or annotation ID has never been used in pubs.
         if feature.gene_systematic_name_dto is None:
             placeholder_systematic_name_dto = feature.gene_symbol_dto.copy()
             placeholder_systematic_name_dto['name_type_name'] = 'systematic_name'
