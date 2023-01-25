@@ -597,18 +597,20 @@ class GeneHandler(object):
         # Sift through name DTOs for symbol, fullname, systematic_name, etc.
         for name_dto in name_dto_list:
             if name_dto['display_text'] == feature.curr_anno_id:
-                feature.gene_systematic_name_dto = name_dto
                 if name_dto['name_type_name'] != 'systematic_name':
-                    log.warning(f"{feature}: Found mistyped curr anno ID: type={name_dto['name_type_name']}, anno_id={name_dto['display_text']}")
+                    log.warning(f"{feature}: Found mistyped curr anno ID: type={name_dto['name_type_name']}, name={name_dto['display_text']}")
+                    name_dto['name_type_name'] = 'systematic_name'
+                feature.gene_systematic_name_dto = name_dto
             if name_dto['display_text'] == feature.curr_symbol_name:
                 if name_dto['name_type_name'] not in ['systematic_name', 'nomenclature_symbol']:
+                    log.warning(f"{feature}: Found mistyped curr symbol: type={name_dto['name_type_name']}, name={name_dto['display_text']}")
                     name_dto['name_type_name'] = 'nomenclature_symbol'
-                    log.warning(f"{feature}: Found mistyped curr symbol: type={name_dto['name_type_name']}, anno_id={name_dto['display_text']}")
                 feature.gene_symbol_dto = name_dto
             elif name_dto['display_text'] == feature.curr_fullname:
-                feature.gene_full_name_dto = name_dto
                 if name_dto['name_type_name'] != 'full_name':
-                    log.warning(f"{feature}: Found mistyped curr full_name: type={name_dto['name_type_name']}, anno_id={name_dto['display_text']}")
+                    log.warning(f"{feature}: Found mistyped curr full_name: type={name_dto['name_type_name']}, name={name_dto['display_text']}")
+                    name_dto['name_type_name'] = 'full_name'
+                feature.gene_full_name_dto = name_dto
             else:
                 feature.gene_synonym_dtos.append(name_dto)
         # LinkML change required: make gene_full_name_dto and gene_systematic_name_dto OPTIONAL.
