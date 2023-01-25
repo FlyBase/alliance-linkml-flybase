@@ -364,7 +364,6 @@ class GeneHandler(object):
         counter = 0
         for result in results:
             self.gene_dict[result.Feature.uniquename].curr_anno_id = result.Dbxref.accession
-            log.debug(f'For {self.gene_dict[result.Feature.uniquename]}, anno_id={result.Dbxref.accession}')
             counter += 1
         log.info(f'Found {counter} current annotation IDs for FlyBase genes.')
         return
