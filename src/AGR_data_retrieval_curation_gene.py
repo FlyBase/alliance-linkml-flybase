@@ -597,6 +597,7 @@ class GeneHandler(object):
         # Sift through name DTOs for symbol, fullname, systematic_name, etc.
         for name_dto in name_dto_list:
             if name_dto['display_text'] == feature.curr_anno_id:
+                log.debug(f"BOB: Found name_dto annotation match: {name_dto['display_text']}")
                 if name_dto['name_type_name'] != 'systematic_name':
                     log.warning(f"{feature}: Found mistyped curr anno ID: type={name_dto['name_type_name']}, name={name_dto['display_text']}")
                     name_dto['name_type_name'] = 'systematic_name'
@@ -631,8 +632,8 @@ class GeneHandler(object):
             placeholder_systematic_name_dto = feature.gene_symbol_dto.copy()
             placeholder_systematic_name_dto['name_type_name'] = 'systematic_name'
             if feature.curr_anno_id:
-                placeholder_symbol_dto['format_text'] = feature.curr_anno_id
-                placeholder_symbol_dto['display_text'] = feature.curr_anno_id
+                placeholder_systematic_name_dto['format_text'] = feature.curr_anno_id
+                placeholder_systematic_name_dto['display_text'] = feature.curr_anno_id
             feature.gene_systematic_name_dto = placeholder_systematic_name_dto
         return
 
