@@ -634,7 +634,7 @@ class GeneHandler(object):
             if feature.curr_anno_id:
                 placeholder_systematic_name_dto['format_text'] = feature.curr_anno_id
                 placeholder_systematic_name_dto['display_text'] = feature.curr_anno_id
-                log.warning(f"BOB: {feature}: Has anno ID never used as a synonym: {feature.curr_anno_id}")
+                log.warning(f"BOB: {feature}: Has annoID never used as a synonym: {feature.curr_anno_id}")
             feature.gene_systematic_name_dto = placeholder_systematic_name_dto
         return
 
