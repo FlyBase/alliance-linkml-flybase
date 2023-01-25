@@ -624,7 +624,7 @@ class GeneHandler(object):
         if feature.gene_systematic_name_dto is None:
             placeholder_systematic_name_dto = feature.gene_symbol_dto.copy()
             placeholder_systematic_name_dto['name_type_name'] = 'systematic_name'
-            feature.gene_systematic_name_dto = placeholder_full_name_dto
+            feature.gene_systematic_name_dto = placeholder_systematic_name_dto
         return
 
     # Synthesis of initial db info.
