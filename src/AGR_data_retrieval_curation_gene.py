@@ -105,11 +105,10 @@ class AllianceGene(object):
         self.featureloc = None                                # Will be Featureloc object for the gene.
         self.gene_type_name = None                            # Will be the cvterm.name for "promoted_gene_type" featureprop.
         self.gene_snapshot = None                             # Will be the "gene_summary_text" Featureprop object.
+        self.curr_symbol_name = None                          # Will be the current symbol synonym.synonym_sgml.
+        self.curr_fullname = None                             # Will be the current fullname synonym.synonym_sgml.
         self.curr_anno_id = None                              # Will be current annotation ID for the gene (str).
-        self.curr_fb_symbol = []                              # Will be all FeatureSynonym objects in support of the current symbol Synonym object.
-        self.curr_fb_fullname = []                            # Will be all FeatureSynonym objects in support of the current fullname Synonym object.
-        self.systematic_name = []                             # Will be all FeatureSynonym objects using the systematic name of the gene.
-        self.other_synonyms = []                              # Will be all FeatureSynonym objects in support of non-current synonyms.
+        self.feature_synonyms = []                            # Will be list of all FeatureSynonym objects.
         self.dbxrefs = []                                     # Will be list of dbxrefs as sql result groupings: Db, Dbxref, FeatureDbxref.
         self.alt_fb_ids = []                                  # Will be list of Dbxrefs for 2o FlyBase IDs.
         self.annotation_ids = []                              # Will be list of Dbxrefs for annotation IDs.
@@ -158,7 +157,38 @@ class GeneHandler(object):
         self.export_feat_cnt = 0      # Count of all genes exported to file.
         self.internal_feat_cnt = 0    # Count of all genes marked as internal=True in export file.
 
+    # Regexes.
+    gene_regex = r'^FBgn[0-9]{7}$'
+    pthr_regex = r'PTHR[0-9]{5}'
+    pub_regex = r'^(FBrf[0-9]{7}|unattributed)$'
+    systematic_name_regex = r'^(D[a-z]{3}\\|)(CG|CR|G[A-Z])[0-9]{4,5}$'
+    # Reference dicts.
+    internal_gene_types = [
+        'engineered_fusion_gene',
+        'engineered_region',
+        'gene_group',
+        'gene_with_polycistronic_transcript',
+        'insulator',
+        'mitochondrial_sequence',
+        'origin_of_replication',
+        'region',
+        'regulatory_region',
+        'repeat_region',
+        'satellite_DNA',
+        'transposable_element_gene'
+    ]
+    fb_agr_db_dict = {
+        'EntrezGene': 'NCBI_Gene',
+        'FlyBase': 'FB',
+        'FlyBase Annotation IDs': 'FB',
+        'RNAcentral': 'RNAcentral',
+        # 'UniProt/GCRP': 'UniProt/GCRP',
+        'UniProt/Swiss-Prot': 'UniProtKB',
+        'UniProt/TrEMBL': 'UniProtKB'
+    }
+    # Sample set.
     test_genes = ['wg', 'mt:ori', 'lncRNA:roX1', 'CG12656']
+    # Export fields.
     required_fields = [
         'curie',
         'gene_symbol_dto',
@@ -183,29 +213,6 @@ class GeneHandler(object):
         'taxon_curie',
         'updated_by_curie',
     ]
-    internal_gene_types = [
-        'engineered_fusion_gene',
-        'engineered_region',
-        'gene_group',
-        'gene_with_polycistronic_transcript',
-        'insulator',
-        'mitochondrial_sequence',
-        'origin_of_replication',
-        'region',
-        'regulatory_region',
-        'repeat_region',
-        'satellite_DNA',
-        'transposable_element_gene'
-    ]
-    fb_agr_db_dict = {
-        'EntrezGene': 'NCBI_Gene',
-        'FlyBase': 'FB',
-        'FlyBase Annotation IDs': 'FB',
-        'RNAcentral': 'RNAcentral',
-        # 'UniProt/GCRP': 'UniProt/GCRP',
-        'UniProt/Swiss-Prot': 'UniProtKB',
-        'UniProt/TrEMBL': 'UniProtKB'
-    }
 
     def open_panther_file(self):
         """Extract panther information from file."""
@@ -216,24 +223,21 @@ class GeneHandler(object):
             filepath = '/data/ortholog/panther/PTHR17.0_fruit_fly'
         tsv_file = open(filepath, "r")
         tsvin = csv.reader(tsv_file, delimiter='\t')
-        fb_regex = r'FBgn[0-9]{7}'
-        pthr_regex = r'PTHR[0-9]{5}'
         FB = 0
         PTHR = 3
         for row in tsvin:
             fields = len(row)
             if fields:  # Ignore blank lines
-                if re.search(fb_regex, row[FB]) and re.search(pthr_regex, row[PTHR]):
-                    self.pthr_dict[re.search(fb_regex, row[FB]).group(0)] = re.search(pthr_regex, row[PTHR]).group(0)
+                if re.search(self.gene_regex, row[FB]) and re.search(self.pthr_regex, row[PTHR]):
+                    self.pthr_dict[re.search(self.gene_regex, row[FB]).group(0)] = re.search(self.pthr_regex, row[PTHR]).group(0)
         return
 
     def get_references(self, session):
         """Get all references."""
         log.info('Get all references.')
         # First get all current pubs having an FBrf uniquename.
-        fbrf_regex = r'^(FBrf[0-9]{7}|unattributed)$'
         filters = (
-            Pub.uniquename.op('~')(fbrf_regex),
+            Pub.uniquename.op('~')(self.pub_regex),
             Pub.is_obsolete.is_(False)
         )
         results = session.query(Pub).\
@@ -245,7 +249,7 @@ class GeneHandler(object):
             pub_counter += 1
         # Next find PMIDs if available and replace the curie in the all_pubs_dict.
         filters = (
-            Pub.uniquename.op('~')(fbrf_regex),
+            Pub.uniquename.op('~')(self.pub_regex),
             Pub.is_obsolete.is_(False),
             Db.name == 'pubmed',
             PubDbxref.is_current.is_(True)
@@ -267,9 +271,8 @@ class GeneHandler(object):
         """Get all genes."""
         log.info('Querying chado for genes.')
         # First get all gene features from chado.
-        gene_regex = r'^FBgn[0-9]{7}$'
         filters = (
-            Feature.uniquename.op('~')(gene_regex),
+            Feature.uniquename.op('~')(self.gene_regex),
             Feature.is_analysis.is_(False),
             Cvterm.name == 'gene'
         )
@@ -306,17 +309,45 @@ class GeneHandler(object):
                 log.debug('No NCBI taxon ID available for: {}'.format(gene))
         return
 
-    def get_gene_dbxrefs(self, session):
-        """Get all dbxrefs for genes. This will take 10-15 minutes."""
-        log.info('Getting gene dbxrefs.')
-        gene_regex = r'^FBgn[0-9]{7}$'
+    def get_synonyms(self, session):
+        """Get current and non-current symbols and full names for genes."""
+        log.info('Get current and non-current symbols and full names for genes.')
         filters = (
-            Feature.uniquename.op('~')(gene_regex),
+            Feature.uniquename.op('~')(self.gene_regex),
+            Feature.is_analysis.is_(False),
+            Cvterm.name == 'gene'
+        )
+        results = session.query(Feature, FeatureSynonym, Synonym).\
+            join(FeatureSynonym, (FeatureSynonym.synonym_id == Synonym.synonym_id)).\
+            join(Feature, (Feature.feature_id == FeatureSynonym.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            # First, build the all_synonyms_dict.
+            self.all_synonyms_dict[result.Synonym.synonym_id] = result.Synonym
+            # Second, collect FeatureSynonyms for each gene.
+            self.gene_dict[result.Feature.uniquename].feature_synonyms.append(result.FeatureSynonym)
+            # Catch current symbol and fullname strings.
+            if result.FeatureSynonym.is_current is True and result.Synonym.type.name == 'symbol':
+                self.gene_dict[result.Feature.uniquename].curr_symbol_name = sub_sup_sgml_to_html(result.Synonym.synonym_sgml)
+            elif result.FeatureSynonym.is_current is True and result.Synonym.type.name == 'fullname':
+                self.gene_dict[result.Feature.uniquename].curr_fullname = sub_sup_sgml_to_html(result.Synonym.synonym_sgml)
+            counter += 1
+        return
+
+    def get_annotation_ids(self, session):
+        """Get current annotation IDs."""
+        log.info('Get current annotation IDs.')
+        filters = (
+            Feature.uniquename.op('~')(self.gene_regex),
             Feature.is_analysis.is_(False),
             Cvterm.name == 'gene',
-            Db.name.in_((self.fb_agr_db_dict.keys()))
+            FeatureDbxref.is_current.is_(True),
+            Db.name == 'FlyBase Annotation IDs'
         )
-        gene_dbxref_results = session.query(Feature, FeatureDbxref, Dbxref, Db).\
+        results = session.query(Feature, Dbxref).\
             join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
             join(FeatureDbxref, (FeatureDbxref.feature_id == Feature.feature_id)).\
             join(Dbxref, (Dbxref.dbxref_id == FeatureDbxref.dbxref_id)).\
@@ -324,57 +355,45 @@ class GeneHandler(object):
             filter(*filters).\
             distinct()
         counter = 0
-        for result in gene_dbxref_results:
+        for result in results:
+            self.gene_dict[result.Feature.uniquename].curr_anno_id = result.Dbxref.accession
+            counter += 1
+        log.info(f'Found {counter} current annotation IDs for FlyBase genes.')
+        return
+
+    def get_gene_dbxrefs(self, session):
+        """Get all dbxrefs for genes. This will take 10-15 minutes."""
+        log.info('Getting gene dbxrefs.')
+        filters = (
+            Feature.uniquename.op('~')(self.gene_regex),
+            Feature.is_analysis.is_(False),
+            Cvterm.name == 'gene',
+            Db.name.in_((self.fb_agr_db_dict.keys())),
+        )
+        results = session.query(Feature, FeatureDbxref, Dbxref, Db).\
+            join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
+            join(FeatureDbxref, (FeatureDbxref.feature_id == Feature.feature_id)).\
+            join(Dbxref, (Dbxref.dbxref_id == FeatureDbxref.dbxref_id)).\
+            join(Db, (Db.db_id == Dbxref.db_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
             counter += 1
             if counter % 100000 == 0:
                 log.debug('Processing xref #{}'.format(counter))
-            # Skip current FlyBase accessions.
-            # If present, these are same as feature.uniquename.
-            # However, not present for all genes (e.g., FBgn0085177), so cannot be relied upon.
+            # Skip current FlyBase accessions because these are not comprehensive.
+            # When they exist, they're always equal to the feature.uniquename.
+            # But they're not always present, so these dbxrefs can't be relied upon (e.g., FBgn0085177)
             if result.FeatureDbxref.is_current is True and result.Db.name == 'FlyBase':
                 pass
             elif result.FeatureDbxref.is_current is False and result.Db.name == 'FlyBase':
                 self.gene_dict[result.Feature.uniquename].alt_fb_ids.append(result.Dbxref)
             elif result.Db.name == 'FlyBase Annotation IDs':
                 self.gene_dict[result.Feature.uniquename].annotation_ids.append(result.Dbxref)
-                if result.FeatureDbxref.is_current is True:
-                    self.gene_dict[result.Feature.uniquename].curr_anno_id = result.Dbxref.accession
             else:
                 self.gene_dict[result.Feature.uniquename].dbxrefs.append(result)
-        return
-
-    def get_synonyms(self, session):
-        """Get current and non-current symbols and full names for genes."""
-        log.info('Getting gene synonyms.')
-        feature_type = aliased(Cvterm, name='feature_type')
-        synonym_type = aliased(Cvterm, name='synonym_type')
-        gene_regex = r'^FBgn[0-9]{7}$'
-        filters = (
-            Feature.uniquename.op('~')(gene_regex),
-            Feature.is_analysis.is_(False),
-            feature_type.name == 'gene'
-        )
-        gene_curr_symbol_results = session.query(synonym_type, Feature, FeatureSynonym, Synonym).\
-            join(FeatureSynonym, (FeatureSynonym.synonym_id == Synonym.synonym_id)).\
-            join(Feature, (Feature.feature_id == FeatureSynonym.feature_id)).\
-            join(feature_type, (feature_type.cvterm_id == Feature.type_id)).\
-            join(synonym_type, (synonym_type.cvterm_id == Synonym.type_id)).\
-            filter(*filters).\
-            distinct()
-        for result in gene_curr_symbol_results:
-            # First, build the all_synonyms_dict.
-            self.all_synonyms_dict[result.Synonym.synonym_id] = result.Synonym
-            # Second, collect FeatureSynonym objects by type.
-            if result.FeatureSynonym.is_current is True:
-                if result.synonym_type.name == 'symbol':
-                    self.gene_dict[result.Feature.uniquename].curr_fb_symbol.append(result.FeatureSynonym)
-                elif result.synonym_type.name == 'fullname':
-                    self.gene_dict[result.Feature.uniquename].curr_fb_fullname.append(result.FeatureSynonym)
-            else:
-                self.gene_dict[result.Feature.uniquename].other_synonyms.append(result.FeatureSynonym)
-            # Third, catch synonyms that match the annotation ID (aka, systematic_name).
-            if result.Synonym.name == self.gene_dict[result.Feature.uniquename].curr_anno_id:
-                self.gene_dict[result.Feature.uniquename].systematic_name.append(result.FeatureSynonym)
+        log.info(f'Found {counter} gene dbxrefs.')
         return
 
     def get_gene_snapshots(self, session):
@@ -382,9 +401,8 @@ class GeneHandler(object):
         log.info('Getting gene snapshots.')
         feature_type = aliased(Cvterm, name='feature_type')
         prop_type = aliased(Cvterm, name='gene_summary_text')
-        gene_regex = r'^FBgn[0-9]{7}$'
         filters = (
-            Feature.uniquename.op('~')(gene_regex),
+            Feature.uniquename.op('~')(self.gene_regex),
             Feature.is_analysis.is_(False),
             feature_type.name == 'gene',
             prop_type.name == 'gene_summary_text'
@@ -404,9 +422,8 @@ class GeneHandler(object):
         log.info('Getting gene types.')
         feature_type = aliased(Cvterm, name='feature_type')
         prop_type = aliased(Cvterm, name='promoted_gene_type')
-        gene_regex = r'^FBgn[0-9]{7}$'
         filters = (
-            Feature.uniquename.op('~')(gene_regex),
+            Feature.uniquename.op('~')(self.gene_regex),
             Feature.is_analysis.is_(False),
             prop_type.name == 'promoted_gene_type'
         )
@@ -469,9 +486,8 @@ class GeneHandler(object):
         for result in chr_results:
             self.chr_dict[result.feature_id] = result.uniquename
         # Now get gene featureloc.
-        gene_regex = r'^FBgn[0-9]{7}$'
         filters = (
-            Feature.uniquename.op('~')(gene_regex),
+            Feature.uniquename.op('~')(self.gene_regex),
             Feature.is_analysis.is_(False),
             Cvterm.name == 'gene'
         )
@@ -498,22 +514,8 @@ class GeneHandler(object):
         self.get_gene_featureloc(session)
         return
 
-    def process_feature_synonyms(self, input, name_type, return_single_value):
-        """Convert a string or list of FeatureSynonym objects into single or many DTO objects for export.
-
-        Args:
-            arg1 (input): (str or list) A string, or, a list of FeatureSynonym objects.
-            arg2 (name_type): (str) The type of name to return. If "unspecified" is given, go by Synonym type.
-            arg3 (return_single_value): (bool) True if output should be a single DTO, False if a list is to be returned.
-
-        Returns:
-            A single or list of name DTO objects.
-
-        Raises:
-            Raises error if in put is not a string/list.
-            Raises error if return_single_value set to True, but many synonyms found in the input list.
-
-        """
+    def process_feature_synonyms(self, feature):
+        """Generate name/synonym DTOs for a feature that has a list of FeatureSynonym objects."""
         # Dict for converting FB to AGR synonym types.
         synonym_type_conversion = {
             'symbol': 'nomenclature_symbol',
@@ -521,32 +523,21 @@ class GeneHandler(object):
             'nickname': 'nomenclature_symbol',
             'synonym': 'nomenclature_symbol'
         }
-        # Regex for FB systematic names (Dmel or other Dros species).
-        systematic_name_regex = r'^(D[a-z]{3}\\|)(CG|CR|G[A-Z])[0-9]{4,5}$'
-        # Check for correct input.
-        if type(input) is not str and type(input) is not list:
-            log.error('Input must be a string or list of FeatureSynonym objects.')
-            raise
-        # Handle a simple string.
-        if type(input) is str:
-            output_synonym_dto = {
-                'name_type_name': name_type,
-                'format_text': input,
-                'display_text': input,
-                'synonym_scope': 'exact',
-                'evidence_curies': [],
-                'internal': False,
-                'obsolete': False
-            }
-            if return_single_value is False:
-                output_synonym_dto = [output_synonym_dto]
-            return output_synonym_dto
-        # Handle a list of FeatureSynonym objects.
-        # Group by each distinct name/synonym_sgml combination: for each, group pub_id by synonym type.
-        # Have a dict, keyed by tuple of (format_text, display_text)
-        # Value for each key is a dict where synonym type is key for a list of pubs, or, 'internal' key for feature_synonym.is_internal values.
+        default_name_dto = {
+            'name_type_name': 'unspecified',
+            'format_text': 'unspecified',
+            'display_text': 'unspecified',
+            'synonym_scope': 'exact',
+            'evidence_curies': [],
+            'internal': False,
+            'obsolete': False
+        }
+        # Create a dict of all distinct name/synonym_sgml combinations: for each, capture synonym type(s) an pub_ids.
+        # Keys are (synonym.name, synonym.synonym_sgml) tuples.
+        # Values are dicts too where keys are chado synonym types and values are lists of pub_ids.
+        # Value dict also has an "internal" key that stores list of FeatureSynonym.is_internal values.
         feature_synonym_dict = {}
-        for f_s in input:
+        for f_s in feature.feature_synonyms:
             synonym = self.all_synonyms_dict[f_s.synonym_id]
             distinct_synonym_name = (synonym.name, synonym.synonym_sgml)
             if distinct_synonym_name in feature_synonym_dict.keys():
@@ -557,54 +548,73 @@ class GeneHandler(object):
                     feature_synonym_dict[distinct_synonym_name][synonym.type.name] = [f_s.pub_id]
             else:
                 feature_synonym_dict[distinct_synonym_name] = {synonym.type.name: [f_s.pub_id], 'internal': [f_s.is_internal]}
-        # Now convert to AGR DTO object.
-        output_synonym_dto_list = []
+        # Convert to AGR name DTO objects.
+        name_dto_list = []
         FORMAT_TEXT = 0
         DISPLAY_TEXT = 1
-        for syno_name, syno_types_pubs in feature_synonym_dict:
-            # Determine internal status.
-            if True in syno_types_pubs['internal']:
-                syno_internal = True
-            else:
+        for syno_name, syno_attributes in feature_synonym_dict.items():
+            # Determine internal status. False trumps True.
+            if False in set(syno_attributes['internal']):
                 syno_internal = False
+            else:
+                syno_internal = True
             # Collect all pubs.
-            pub_list = []
-            for syno_type, syno_type_pub_list in syno_types_pubs.items():
+            pub_id_list = []
+            for syno_type, syno_type_pub_list in syno_attributes.items():
                 if syno_type == 'internal':
                     continue
-                pub_list.extend(syno_type_pub_list)
-            pub_list = list(set(pub_list))
+                pub_id_list.extend(syno_type_pub_list)
+            pub_id_list = list(set(pub_id_list))
             # Pick correct name type to apply.
-            if re.match(systematic_name_regex, syno_name[FORMAT_TEXT]) and name_type != 'full_name':
+            if re.match(self.systematic_name_regex, syno_name[DISPLAY_TEXT]):
                 name_type_to_use = 'systematic_name'
-            elif name_type != 'unspecified':
-                name_type_to_use = name_type
-            # If name_type is "unspecified", we need to figure this out. Same name can be used in diff ways. Pick most frequent use.
-            # e.g., "wingless" is stored as both symbol and fullname in chado, but more frequently curated as a fullname.
             else:
                 type_tally = {}
-                for syno_type, syno_type_pub_list in syno_types_pubs.items():
+                for syno_type, syno_type_pub_list in syno_attributes.items():
                     if syno_type == 'internal':
                         continue
-                    type_tally[len(set(pub_list))] = syno_type
+                    type_tally[len(set(syno_type_pub_list))] = syno_type
                 name_type_to_use = synonym_type_conversion[type_tally[max(type_tally.keys())]]
             output_synonym_dto = {
                 'name_type_name': name_type_to_use,
-                'format_text': syno_name[FORMAT_TEXT],
+                'format_text': sub_sup_sgml_to_html(syno_name[FORMAT_TEXT]),
                 'display_text': sub_sup_sgml_to_html(syno_name[DISPLAY_TEXT]),
                 'synonym_scope': 'exact',
-                'evidence_curies': [f'{self.all_pubs_dict[i]}' for i in pub_list if self.all_pubs_dict[i] != 'unattributed'],
+                'evidence_curies': [self.all_pubs_dict[i] for i in pub_id_list if self.all_pubs_dict[i] != 'unattributed'],
                 'internal': syno_internal,
                 'obsolete': False
             }
-            output_synonym_dto_list.append(output_synonym_dto)
-        if return_single_value is True and len(output_synonym_dto_list) != 1:
-            log.error('Found many synonyms but was expecting only one.')
-            raise
-        elif return_single_value is True and len(output_synonym_dto_list) == 1:
-            return output_synonym_dto_list[0]
-        else:
-            return output_synonym_dto_list
+            name_dto_list.append(output_synonym_dto)
+        # Sift through name DTOs for symbol, fullname, systematic_name, etc.
+        for name_dto in name_dto_list:
+            if name_dto['display_text'] == feature.curr_anno_id:
+                feature.gene_systematic_name_dto = name_dto
+                if name_dto['name_type_name'] != 'systematic_name':
+                    log.warning(f"{feature}: Found mistyped curr anno ID: type={name_dto['name_type_name']}, anno_id={name_dto['display_text']}")
+            if name_dto['display_text'] == feature.curr_symbol_name:
+                if name_dto['name_type_name'] not in ['systematic_name', 'nomenclature_symbol']:
+                    name_dto['name_type_name'] = 'nomenclature_symbol'
+                    log.warning(f"{feature}: Found mistyped curr symbol: type={name_dto['name_type_name']}, anno_id={name_dto['display_text']}")
+                feature.gene_symbol_dto = name_dto
+            elif name_dto['display_text'] == feature.curr_fullname:
+                feature.gene_full_name_dto = name_dto
+                if name_dto['name_type_name'] != 'full_name':
+                    log.warning(f"{feature}: Found mistyped curr full_name: type={name_dto['name_type_name']}, anno_id={name_dto['display_text']}")
+            else:
+                feature.gene_synonym_dtos.append(name_dto)
+        # Symbol is required. If none, fill it in.
+        if feature.gene_symbol_dto is None:
+            placeholder_symbol_dto = default_name_dto.copy()
+            placeholder_symbol_dto['name_type_name'] = 'nomenclature_symbol'
+            placeholder_symbol_dto['format_text'] = feature.feature.name
+            placeholder_symbol_dto['display_text'] = feature.feature.name
+            feature.gene_symbol_dto = placeholder_symbol_dto
+        # Full name is required. If none, fill it in. Could be because FB has none, or, it's the same as the symbol.
+        if feature.gene_full_name_dto is None:
+            placeholder_full_name_dto = feature.gene_symbol_dto.copy()
+            placeholder_full_name_dto['name_type_name'] = 'full_name'
+            feature.gene_full_name_dto = placeholder_full_name_dto
+        return
 
     # Synthesis of initial db info.
     def synthesize_info(self):
@@ -612,23 +622,7 @@ class GeneHandler(object):
         log.info('Synthesizing gene info.')
         for gene in self.gene_dict.values():
             log.debug(f'Evaluating annotation: {gene}')
-            # BOB: Handle synonyms.
-            log.debug(f'BOB: Handle symbol for {gene}')
-            if gene.curr_fb_symbol:
-                gene.gene_symbol_dto = self.process_feature_synonyms(gene.curr_fb_symbol, 'nomenclature_symbol', True)
-            else:
-                gene.gene_symbol_dto = self.process_feature_synonyms(gene.feature.name, 'nomenclature_symbol', True)
-            log.debug(f'BOB: Handle full_name for {gene}')
-            if gene.curr_fb_fullname:
-                gene.gene_full_name_dto = self.process_feature_synonyms(gene.curr_fb_fullname, 'full_name', True)
-            else:
-                gene.gene_full_name_dto = self.process_feature_synonyms(gene.feature.name, 'full_name', True)
-            log.debug(f'BOB: Handle systematic_name for {gene}')
-            if gene.systematic_name:
-                gene.gene_systematic_name_dto = self.process_feature_synonyms(gene.systematic_name, 'systematic_name', True)
-            log.debug(f'BOB: Handle other synonyms for {gene}')
-            if gene.other_synonyms:
-                gene.gene_synonym_dtos = self.process_feature_synonyms(gene.other_synonyms, 'unspecified', False)
+            self.process_feature_synonyms(gene)
             # Get timestamps.
             if gene.timestamps:
                 gene.date_created = strict_rfc3339.\
