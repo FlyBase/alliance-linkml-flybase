@@ -498,7 +498,6 @@ class GeneHandler(object):
         self.get_gene_featureloc(session)
         return
 
-    # BOB: new method for synonyms.
     def process_feature_synonyms(self, input, name_type, return_single_value):
         """Convert a string or list of FeatureSynonym objects into single or many DTO objects for export.
 
@@ -515,10 +514,20 @@ class GeneHandler(object):
             Raises error if return_single_value set to True, but many synonyms found in the input list.
 
         """
+        # Dict for converting FB to AGR synonym types.
+        synonym_type_conversion = {
+            'symbol': 'nomenclature_symbol',
+            'fullname': 'full_name',
+            'nickname': 'nomenclature_symbol',
+            'synonym': 'nomenclature_symbol'
+        }
+        # Regex for FB systematic names (Dmel or other Dros species).
+        systematic_name_regex = r'^(D[a-z]{3}\\|)(CG|CR|G[A-Z])[0-9]{4,5}$'
+        # Check for correct input.
         if type(input) is not str and type(input) is not list:
             log.error('Input must be a string or list of FeatureSynonym objects.')
             raise
-        # First handle the simplest case where a string is given as the input.
+        # Handle a simple string.
         if type(input) is str:
             output_synonym_dto = {
                 'name_type_name': name_type,
@@ -532,28 +541,60 @@ class GeneHandler(object):
             if return_single_value is False:
                 output_synonym_dto = [output_synonym_dto]
             return output_synonym_dto
-        # Next handle a list of FeatureSynonym objects.
-        # Collect pub_ids for each synonym (keyed by synonym_id).
+        # Handle a list of FeatureSynonym objects.
+        # Group by each distinct name/synonym_sgml combination: for each, group pub_id by synonym type.
+        # Have a dict, keyed by tuple of (format_text, display_text)
+        # Value for each key is a dict where synonym type is key for a list of pubs, or, 'internal' key for feature_synonym.is_internal values.
         feature_synonym_dict = {}
-        output_synonym_dto_list = []
         for f_s in input:
-            try:
-                feature_synonym_dict[f_s.synonym_id].append(f_s.pub_id)
-            except KeyError:
-                feature_synonym_dict[f_s.synonym_id] = [f_s.pub_id]
-        for synonym_id, pub_list in feature_synonym_dict.items():
-            synonym = self.all_synonyms_dict[synonym_id]
-            if name_type == 'unspecified':
-                name_type_to_use = synonym.type.name
+            synonym = self.all_synonyms_dict[f_s.synonym_id]
+            distinct_synonym_name = (synonym.name, synonym.synonym_sgml)
+            if distinct_synonym_name in feature_synonym_dict.keys():
+                feature_synonym_dict[distinct_synonym_name]['internal'].append(f_s.is_internal)
+                if synonym.type.name in feature_synonym_dict[distinct_synonym_name].keys():
+                    feature_synonym_dict[distinct_synonym_name][synonym.type.name].append(f_s.pub_id)
+                else:
+                    feature_synonym_dict[distinct_synonym_name][synonym.type.name] = [f_s.pub_id]
             else:
+                feature_synonym_dict[distinct_synonym_name] = {synonym.type.name: [f_s.pub_id], 'internal': [f_s.is_internal]}
+        # Now convert to AGR DTO object.
+        output_synonym_dto_list = []
+        FORMAT_TEXT = 0
+        DISPLAY_TEXT = 1
+        for syno_name, syno_types_pubs in feature_synonym_dict:
+            # Determine internal status.
+            if True in syno_types_pubs['internal']:
+                syno_internal = True
+            else:
+                syno_internal = False
+            # Collect all pubs.
+            pub_list = []
+            for syno_type, syno_type_pub_list in syno_types_pubs.items():
+                if syno_type == 'internal':
+                    continue
+                pub_list.extend(syno_type_pub_list)
+            pub_list = list(set(pub_list))
+            # Pick correct name type to apply.
+            if re.match(systematic_name_regex, syno_name[FORMAT_TEXT]) and name_type != 'full_name':
+                name_type_to_use = 'systematic_name'
+            elif name_type != 'unspecified':
                 name_type_to_use = name_type
+            # If name_type is "unspecified", we need to figure this out. Same name can be used in diff ways. Pick most frequent use.
+            # e.g., "wingless" is stored as both symbol and fullname in chado, but more frequently curated as a fullname.
+            else:
+                type_tally = {}
+                for syno_type, syno_type_pub_list in syno_types_pubs.items():
+                    if syno_type == 'internal':
+                        continue
+                    type_tally[len(set(pub_list))] = syno_type
+                name_type_to_use = synonym_type_conversion[type_tally[max(type_tally.keys())]]
             output_synonym_dto = {
                 'name_type_name': name_type_to_use,
-                'format_text': synonym.name,
-                'display_text': sub_sup_sgml_to_html(synonym.synonym_sgml),
+                'format_text': syno_name[FORMAT_TEXT],
+                'display_text': sub_sup_sgml_to_html(syno_name[DISPLAY_TEXT]),
                 'synonym_scope': 'exact',
                 'evidence_curies': [f'{self.all_pubs_dict[i]}' for i in pub_list if self.all_pubs_dict[i] != 'unattributed'],
-                'internal': False,
+                'internal': syno_internal,
                 'obsolete': False
             }
             output_synonym_dto_list.append(output_synonym_dto)
