@@ -174,7 +174,7 @@ class AlleleHandler(object):
     gene_regex = r'^FBgn[0-9]{7}$'
     allele_regex = r'^FBal[0-9]{7}$'
     construct_regex = r'^FBtp[0-9]{7}$'
-    ins_regex = r'^FBti[0-9]{7}$'
+    insertion_regex = r'^FBti[0-9]{7}$'
     seqfeat_regex = r'^FBsf[0-9]{10}$'
     feature_regex = r'^FB(tp|ti)[0-9]{7}$'
     lib_regex = r'^FBlc[0-9]{7}$'
