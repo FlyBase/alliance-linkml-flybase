@@ -23,7 +23,6 @@ Notes:
 import argparse
 import datetime
 import json
-import re
 import strict_rfc3339
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import aliased, sessionmaker
@@ -861,28 +860,6 @@ class AlleleHandler(object):
             allele.name = sub_sup_sgml_to_html(allele.curr_fb_symbol.synonym_sgml)
         else:
             allele.name = allele.feature.name
-        return
-
-    def synthesize_synonyms(self, allele):
-        """Process allele synonyms."""
-        internal_synonym_set = set(allele.internal_synonyms)
-        for internal_synonym in internal_synonym_set:
-            internal_synonym_dict = {
-                'name': internal_synonym,
-                'created_by_curie': 'FB:FB_curator',
-                'obsolete': False,
-                'internal': True
-            }
-            allele.synonyms.append(internal_synonym_dict)
-        public_synonym_set = set(allele.public_synonyms)
-        for public_synonym in public_synonym_set:
-            public_synonym_dict = {
-                'name': public_synonym,
-                'created_by_curie': 'FB:FB_curator',
-                'obsolete': False,
-                'internal': False
-            }
-            allele.synonyms.append(public_synonym_dict)
         return
 
     def synthesize_secondary_ids(self, allele):
