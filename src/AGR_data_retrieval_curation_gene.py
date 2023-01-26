@@ -105,8 +105,8 @@ class AllianceGene(object):
         self.featureloc = None                                # Will be Featureloc object for the gene.
         self.gene_type_name = None                            # Will be the cvterm.name for "promoted_gene_type" featureprop.
         self.gene_snapshot = None                             # Will be the "gene_summary_text" Featureprop object.
-        self.curr_symbol_name = None                          # Will be the current symbol synonym.synonym_sgml.
-        self.curr_fullname = None                             # Will be the current fullname synonym.synonym_sgml.
+        self.curr_symbol_name = None                          # Will be the current symbol synonym.synonym_sgml, processed by sub_sup_sgml_to_html().
+        self.curr_fullname = None                             # Will be the current fullname synonym.synonym_sgml, processed by sub_sup_sgml_to_html().
         self.curr_anno_id = None                              # Will be current annotation ID for the gene (str).
         self.feature_synonyms = []                            # Will be list of all FeatureSynonym objects.
         self.dbxrefs = []                                     # Will be list of dbxrefs as sql result groupings: Db, Dbxref, FeatureDbxref.
@@ -129,8 +129,8 @@ class AllianceGene(object):
         self.genomic_location_dtos = []                       # Will need to be list of GenomicLocation objects.
         # Attributes for the Alliance GeneDTO. GeneDTO is_a GenomicEntityDTO.
         self.gene_symbol_dto = None                           # Will be a single SymbolSlotAnnotationDTO.
-        self.gene_full_name_dto = None                        # Will be a single GeneFullNameSlotAnnotation.
-        self.gene_systematic_name_dto = None                  # Will be a single GeneSystematicNameSlotAnnotation.
+        self.gene_full_name_dto = None                        # Will be a single FullNameSlotAnnotation.
+        self.gene_systematic_name_dto = None                  # Will be a single SystematicNameSlotAnnotation.
         self.gene_synonym_dtos = []                           # Will be list of NameSlotAnnotationDTO objects.
         self.gene_type_curie = None                           # Will be the SO term ID corresponding to the gene's promoted_gene_type.
         # Notes associated with the object.
@@ -234,7 +234,7 @@ class GeneHandler(object):
                     self.pthr_dict[re.search(self.gene_regex, row[FB]).group(0)] = re.search(self.pthr_regex, row[PTHR]).group(0)
         return
 
-    def get_references(self, session):
+    def get_all_references(self, session):
         """Get all references."""
         log.info('Get all references.')
         # First get all current pubs having an FBrf uniquename.
@@ -510,10 +510,10 @@ class GeneHandler(object):
     def query_chado(self, session):
         """A wrapper method that runs initial db queries."""
         self.open_panther_file()
-        self.get_references(session)
+        self.get_all_references(session)
         self.get_genes(session)
         self.get_gene_taxons(session)
-        # self.get_gene_dbxrefs(session)    # BOB - suppress for faster dev.
+        self.get_gene_dbxrefs(session)
         self.get_synonyms(session)
         self.get_annotation_ids(session)
         self.get_gene_snapshots(session)
@@ -596,7 +596,6 @@ class GeneHandler(object):
         # Sift through name DTOs for symbol, fullname, systematic_name, etc.
         for name_dto in name_dto_list:
             if name_dto['display_text'] == feature.curr_anno_id:
-                log.debug(f"BOB: Found synonym-annoID match: {name_dto['display_text']}")
                 if name_dto['name_type_name'] != 'systematic_name':
                     log.warning(f"{feature}: Found mistyped curr anno ID: type={name_dto['name_type_name']}, name={name_dto['display_text']}")
                     name_dto['name_type_name'] = 'systematic_name'
@@ -608,7 +607,7 @@ class GeneHandler(object):
                 feature.gene_symbol_dto = name_dto
             elif name_dto['display_text'] == feature.curr_fullname:
                 if name_dto['name_type_name'] != 'full_name':
-                    log.warning(f"BOB: {feature}: Found mistyped curr full_name: type={name_dto['name_type_name']}, name={name_dto['display_text']}")
+                    log.warning(f"{feature}: Found mistyped curr full_name: type={name_dto['name_type_name']}, name={name_dto['display_text']}")
                     name_dto['name_type_name'] = 'full_name'
                 feature.gene_full_name_dto = name_dto
             else:
@@ -633,7 +632,7 @@ class GeneHandler(object):
             if feature.curr_anno_id:
                 placeholder_systematic_name_dto['format_text'] = feature.curr_anno_id
                 placeholder_systematic_name_dto['display_text'] = feature.curr_anno_id
-                log.warning(f"BOB: {feature}: Has annoID never used as a synonym: {feature.curr_anno_id}")
+                log.warning(f"{feature}: Has annoID never used as a synonym: {feature.curr_anno_id}")
             feature.gene_systematic_name_dto = placeholder_systematic_name_dto
         return
 
