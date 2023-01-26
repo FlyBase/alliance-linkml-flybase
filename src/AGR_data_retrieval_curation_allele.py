@@ -173,7 +173,7 @@ class AlleleHandler(object):
     # Regexes.
     gene_regex = r'^FBgn[0-9]{7}$'
     allele_regex = r'^FBal[0-9]{7}$'
-    cons_regex = r'^FBtp[0-9]{7}$'
+    construct_regex = r'^FBtp[0-9]{7}$'
     ins_regex = r'^FBti[0-9]{7}$'
     seqfeat_regex = r'^FBsf[0-9]{10}$'
     feature_regex = r'^FB(tp|ti)[0-9]{7}$'
@@ -780,7 +780,7 @@ class AlleleHandler(object):
         seqfeat_construct = aliased(FeatureRelationship, name='seqfeat_construct')
         filters = (
             allele.uniquename.op('~')(self.allele_regex),
-            construct.uniquename.op('~')(self.cons_regex),
+            construct.uniquename.op('~')(self.construct_regex),
             seqfeat.uniquename.op('~')(self.seqfeat_regex),
             construct.is_obsolete.is_(False),
             seqfeat.is_obsolete.is_(False),
