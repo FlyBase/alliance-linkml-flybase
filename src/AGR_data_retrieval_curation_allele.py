@@ -844,24 +844,6 @@ class AlleleHandler(object):
                 timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(max(allele.timestamps)))
         return
 
-    def synthesize_symbol(self, allele):
-        """Process symbol for an allele."""
-        if allele.curr_fb_symbol:
-            allele.symbol = sub_sup_sgml_to_html(allele.curr_fb_symbol.synonym_sgml)
-        else:
-            allele.symbol = allele.feature.name
-        return
-
-    def synthesize_fullname(self, allele):
-        """Process allele fullname."""
-        if allele.curr_fb_fullname:
-            allele.name = sub_sup_sgml_to_html(allele.curr_fb_fullname.synonym_sgml)
-        elif allele.curr_fb_symbol:
-            allele.name = sub_sup_sgml_to_html(allele.curr_fb_symbol.synonym_sgml)
-        else:
-            allele.name = allele.feature.name
-        return
-
     def synthesize_secondary_ids(self, allele):
         """Process 2o IDs."""
         unique_fb_id_list = list(set(allele.alt_fb_ids))
@@ -1145,8 +1127,6 @@ class AlleleHandler(object):
             log.debug('Evaluating annotation: {}'.format(allele))
             self.synthesize_collections(allele)
             self.synthesize_timestamps(allele)
-            self.synthesize_symbol(allele)
-            self.synthesize_fullname(allele)
             self.synthesize_synonyms(allele)
             self.synthesize_secondary_ids(allele)
             self.synthesize_xrefs(allele)
