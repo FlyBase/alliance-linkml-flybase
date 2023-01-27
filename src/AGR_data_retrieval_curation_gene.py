@@ -36,7 +36,7 @@ from harvdev_utils.production import (
 )
 from harvdev_utils.psycopg_functions import set_up_db_reading
 
-# Now proceed with generic setup.
+# Generic setup.
 report_label = 'gene_curation'
 set_up_dict = set_up_db_reading(report_label)
 server = set_up_dict['server']
@@ -66,10 +66,8 @@ insp = inspect(engine)
 # The main process.
 def main():
     """Run the steps for exporting LinkML-compliant FlyBase Genes."""
-    log.info('Running script "{}"'.format(__file__))
-    log.info('Started main function.')
-    log.info('Output JSON file corresponds to "agr_curation_schema" release: {}'.format(linkml_release))
-
+    log.info('Running main() for script "{}"'.format(__file__))
+    log.info('Output corresponds to "agr_curation_schema" release: {}'.format(linkml_release))
     # Instantiate the object, get the data, synthesize it, export it.
     gene_handler = GeneHandler()
     db_query_transaction(gene_handler)
@@ -227,11 +225,14 @@ class GeneHandler(object):
         tsvin = csv.reader(tsv_file, delimiter='\t')
         FB = 0
         PTHR = 3
+        counter = 0
         for row in tsvin:
             fields = len(row)
             if fields:  # Ignore blank lines
                 if re.search(self.gene_regex, row[FB]) and re.search(self.pthr_regex, row[PTHR]):
                     self.pthr_dict[re.search(self.gene_regex, row[FB]).group(0)] = re.search(self.pthr_regex, row[PTHR]).group(0)
+                    counter += 1
+        log.info(f'Processed {counter} lines from the panther orthology file.')
         return
 
     def get_all_references(self, session):
@@ -302,13 +303,18 @@ class GeneHandler(object):
             filter(*filters).\
             distinct()
         organism_taxon_dict = {}
+        org_counter = 0
+        gene_counter = 0
         for result in organism_dbxref_results:
             organism_taxon_dict[result.OrganismDbxref.organism_id] = result.Dbxref.accession
+            org_counter += 1
         for gene in self.gene_dict.values():
             try:
                 gene.taxon_curie = 'NCBITaxon:{}'.format(organism_taxon_dict[gene.feature.organism_id])
+                gene_counter += 1
             except KeyError:
                 log.debug('No NCBI taxon ID available for: {}'.format(gene))
+        log.info(f'Found {org_counter} distinct NCBITaxon IDs for {gene_counter} genes.')
         return
 
     def get_synonyms(self, session):
@@ -420,8 +426,11 @@ class GeneHandler(object):
             join(prop_type, (prop_type.cvterm_id == Featureprop.type_id)).\
             filter(*filters).\
             distinct()
+        counter = 0
         for result in gene_snapshot_results:
             self.gene_dict[result.feature.uniquename].gene_snapshot = result
+            counter += 1
+        log.info(f'Found {counter} gene snapshots.')
         return
 
     def get_gene_types(self, session):
@@ -440,9 +449,12 @@ class GeneHandler(object):
             join(prop_type, (prop_type.cvterm_id == Featureprop.type_id)).\
             filter(*filters).\
             distinct()
+        counter = 0
         for result in gene_type_results:
             self.gene_dict[result.feature.uniquename].gene_type_curie = result.value[1:10].replace('SO', 'SO:')
             self.gene_dict[result.feature.uniquename].gene_type_name = result.value[11:-1]
+            counter += 1
+        log.info(f'Found {counter} gene types for genes.')
         return
 
     def get_gene_timestamps(self, session):
@@ -490,8 +502,11 @@ class GeneHandler(object):
             filter(*filters).\
             distinct()
         self.chr_dict = {}
+        chr_counter = 0
         for result in chr_results:
             self.chr_dict[result.feature_id] = result.uniquename
+            chr_counter += 1
+        log.info(f'Got basic info for {chr_counter} chr scaffolds.')
         # Now get gene featureloc.
         filters = (
             Feature.uniquename.op('~')(self.gene_regex),
@@ -503,8 +518,11 @@ class GeneHandler(object):
             join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
             filter(*filters).\
             distinct()
+        gene_counter = 0
         for result in gene_featureloc_results:
             self.gene_dict[result.feature.uniquename].featureloc = result
+            gene_counter += 1
+        log.info(f'Found {gene_counter} genomic locations for genes.')
         return
 
     def query_chado(self, session):
@@ -715,18 +733,10 @@ class GeneHandler(object):
                         xref_dict['internal'] = True
                     gene.cross_reference_dtos.append(xref_dict)
             # Flag internal features.
-            if gene.organism_abbr != 'Dmel':
-                gene.internal = True
-                gene.internal_reasons.append('Non-Dmel')
-            if gene.obsolete is True:
+            if gene.feature.is_obsolete is True:
+                gene.obsolete = True
                 gene.internal = True
                 gene.internal_reasons.append('Obsolete')
-            if gene.gene_type_curie is None:
-                gene.internal = True
-                gene.internal_reasons.append('Lacks gene type')
-            if gene.gene_type_name in self.internal_gene_types:
-                gene.internal = True
-                gene.internal_reasons.append('Internal gene type {} ({})'.format(gene.gene_type_name, gene.gene_type_curie))
             for attr in self.required_fields:
                 if attr not in gene.__dict__.keys():
                     gene.for_alliance_export = False
