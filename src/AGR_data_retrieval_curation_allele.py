@@ -135,18 +135,18 @@ class AllianceAllele(object):
         self.allele_symbol_dto = None                          # Will be a single SymbolSlotAnnotationDTO.
         self.allele_full_name_dto = None                       # Will be a single FullNameSlotAnnotation.
         self.allele_synonym_dtos = []                          # Will be list of NameSlotAnnotationDTO objects.
-        self.allele_database_status_dto = None                 # ToDo
-        self.allele_functional_impact_dtos = []                # ToDo
-        self.allele_germline_transmission_status_dto = None    # ToDo
-        self.allele_molecular_mutation_dtos = []               # ToDo
-        self.allele_mutation_type_dtos = []                    # ToDo
-        self.allele_nomenclature_event_dtos = []               # ToDo
-        self.allele_note_dtos = []                             # ToDo
         self.allele_secondary_id_dtos = []                     # Only 2o FlyBase IDs (redundant with GenomicEntity.secondary_identifiers?)
         self.in_collection_name = None                         # Will be library.name.
         self.inheritance_mode_name = 'unknown'                 # Change to one of: dominant, semi-dominant, recessive. If many apply, leave as unknown.
         self.is_extinct = None                                 # Make True if extinction reported; make False is stock exists; leave as None otherwise.
         self.reference_curies = []                             # Will be a list of reference curies (directly or indirectly related).
+        self.allele_database_status_dto = None                 # ToDo - must be CV term: e.g., ? - CV not settled yet?
+        self.allele_functional_impact_dtos = []                # ToDo - must be CV term: e.g., amorph - CV not settled yet?
+        self.allele_germline_transmission_status_dto = None    # ToDo - must be CV term: e.g., ? - CV not settled yet?
+        self.allele_molecular_mutation_dtos = []               # ToDo - must be CV term: e.g., ? - CV not settled yet?
+        self.allele_mutation_type_dtos = []                    # ToDo - must be SO term curies: e.g., ?.
+        self.allele_nomenclature_event_dtos = []               # ToDo - must be CV term: e.g., named, renamed - CV not settled yet?
+        self.allele_note_dtos = []                             # ToDo - must have CV term for note_type_name: e.g., ? - CV not settled yet?
         # Notes associated with the object.
         self.for_alliance_export = True                        # Change to False if object should be excluded from export.
         self.internal_reasons = []                             # Reasons for marking an object as internal in the export file.
