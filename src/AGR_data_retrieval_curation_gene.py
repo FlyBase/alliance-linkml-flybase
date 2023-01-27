@@ -505,9 +505,11 @@ class GeneHandler(object):
         self.chr_dict = {}
         chr_counter = 0
         for result in chr_results:
+            if result.organism.abbreviation != 'Dmel':
+                continue
             self.chr_dict[result.feature_id] = result.uniquename
             chr_counter += 1
-        log.info(f'Got basic info for {chr_counter} chr scaffolds.')
+        log.info(f'Got basic info for {chr_counter} current Dmel chr scaffolds.')
         # Now get gene featureloc.
         filters = (
             Feature.uniquename.op('~')(self.gene_regex),
