@@ -226,7 +226,7 @@ class GeneHandler(object):
         FB = 0
         PTHR = 3
         counter = 0
-        gene_regex = r'FBgn[0-9]{7}'    # Since the FBgn ID does not represent the entire column entry, do not use self.gene_regex here. 
+        gene_regex = r'FBgn[0-9]{7}'    # Since the FBgn ID does not represent the entire column entry, do not use self.gene_regex here.
         for row in tsvin:
             fields = len(row)
             if fields:  # Ignore blank lines
