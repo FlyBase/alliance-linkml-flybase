@@ -226,11 +226,12 @@ class GeneHandler(object):
         FB = 0
         PTHR = 3
         counter = 0
+        gene_regex = r'FBgn[0-9]{7}'    # Since the FBgn ID does not represent the entire column entry, do not use self.gene_regex here. 
         for row in tsvin:
             fields = len(row)
             if fields:  # Ignore blank lines
-                if re.search(self.gene_regex, row[FB]) and re.search(self.pthr_regex, row[PTHR]):
-                    self.pthr_dict[re.search(self.gene_regex, row[FB]).group(0)] = re.search(self.pthr_regex, row[PTHR]).group(0)
+                if re.search(gene_regex, row[FB]) and re.search(self.pthr_regex, row[PTHR]):
+                    self.pthr_dict[re.search(gene_regex, row[FB]).group(0)] = re.search(self.pthr_regex, row[PTHR]).group(0)
                     counter += 1
         log.info(f'Processed {counter} lines from the panther orthology file.')
         return
