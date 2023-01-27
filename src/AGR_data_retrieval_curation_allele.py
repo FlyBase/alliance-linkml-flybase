@@ -136,17 +136,17 @@ class AllianceAllele(object):
         self.allele_full_name_dto = None                       # Will be a single FullNameSlotAnnotation.
         self.allele_synonym_dtos = []                          # Will be list of NameSlotAnnotationDTO objects.
         self.allele_database_status_dto = None                 # ToDo
-        self.allele_functional_impact_dtos = None              # ToDo
+        self.allele_functional_impact_dtos = []                # ToDo
         self.allele_germline_transmission_status_dto = None    # ToDo
-        self.allele_molecular_mutation_dtos = None             # ToDo
-        self.allele_mutation_type_dtos = None                  # ToDo
-        self.allele_nomenclature_event_dtos = None             # ToDo
-        self.allele_note_dtos = None                           # ToDo
-        self.allele_secondary_id_dtos = None                   # Only 2o FlyBase IDs (redundant with GenomicEntity.secondary_identifiers?)
+        self.allele_molecular_mutation_dtos = []               # ToDo
+        self.allele_mutation_type_dtos = []                    # ToDo
+        self.allele_nomenclature_event_dtos = []               # ToDo
+        self.allele_note_dtos = []                             # ToDo
+        self.allele_secondary_id_dtos = []                     # Only 2o FlyBase IDs (redundant with GenomicEntity.secondary_identifiers?)
         self.in_collection_name = None                         # Will be library.name.
         self.inheritance_mode_name = 'unknown'                 # Change to one of: dominant, semi-dominant, recessive. If many apply, leave as unknown.
         self.is_extinct = None                                 # Make True if extinction reported; make False is stock exists; leave as None otherwise.
-        self.reference_curies = None                           # Will be a list of reference curies (directly or indirectly related).
+        self.reference_curies = []                             # Will be a list of reference curies (directly or indirectly related).
         # Notes associated with the object.
         self.for_alliance_export = True                        # Change to False if object should be excluded from export.
         self.internal_reasons = []                             # Reasons for marking an object as internal in the export file.
