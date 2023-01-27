@@ -121,7 +121,7 @@ class AllianceAllele(object):
         self.sf_libraries = []                             # Will be a list of Library objects related to the allele via seq. feature (FBsf).
         # Attributes for the Alliance AuditedObject.
         self.obsolete = feature.is_obsolete                    # Will be the FlyBase value here.
-        self.internal = False                                  # Change to true if allele not intended for display at Alliance website.
+        self.internal = False                                  # Change to true if not public on FlyBase.
         self.created_by_curie = 'FB:FB_curator'                # Use placeholder value since no Person object at FlyBase.
         self.updated_by_curie = 'FB:FB_curator'                # Use placeholder value since no Person object at FlyBase.
         self.date_created = None                               # Earliest timestamp.
@@ -909,16 +909,16 @@ class AlleleHandler(object):
         return
 
     def flag_internal_alleles(self, allele):
-        """Flag alleles as internal and/or obsolete, or not."""
-        if allele.organism_abbr != 'Dmel':
-            allele.internal = True
-            allele.internal_reasons.append('Non-Dmel')
+        """Flag alleles as internal."""
         if allele.obsolete is True:
             allele.internal = True
             allele.internal_reasons.append('Obsolete')
-        if allele.allele_of_internal_gene is True:
-            allele.internal = True
-            allele.internal_reasons.append('Allele of internal Dmel gene type.')
+        # if allele.organism_abbr != 'Dmel':
+        #     allele.internal = True
+        #     allele.internal_reasons.append('Non-Dmel')
+        # if allele.allele_of_internal_gene is True:
+        #     allele.internal = True
+        #     allele.internal_reasons.append('Allele of internal Dmel gene type.')
         return
 
     def flag_unexportable_alleles(self, allele):

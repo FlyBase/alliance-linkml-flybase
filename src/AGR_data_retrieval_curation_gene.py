@@ -112,8 +112,8 @@ class AllianceGene(object):
         self.annotation_ids = []                              # Will be list of Dbxrefs for annotation IDs.
         self.timestamps = []                                  # Add all timestamps here.
         # Attributes for the Alliance AuditedObjectDTO.
-        self.obsolete = False                                 # Never True. All FB annotations are deleted if no longer current.
-        self.internal = False                                 # Will be internal if annotation should not be exported to Alliance for some reason.
+        self.obsolete = feature.is_obsolete                   # Will be the FlyBase value here.
+        self.internal = False                                 # Change to true if not public on FlyBase.
         self.created_by_curie = 'FB:FB_curator'               # Use placeholder value since no Person object at FlyBase.
         self.updated_by_curie = 'FB:FB_curator'               # Use placeholder value since no Person object at FlyBase.
         self.date_created = None                              # Not straightforward as half of relevant annotations are derived in the reporting build.
@@ -736,8 +736,7 @@ class GeneHandler(object):
                         xref_dict['internal'] = True
                     gene.cross_reference_dtos.append(xref_dict)
             # Flag internal features.
-            if gene.feature.is_obsolete is True:
-                gene.obsolete = True
+            if gene.obsolete is True:
                 gene.internal = True
                 gene.internal_reasons.append('Obsolete')
             for attr in self.required_fields:
