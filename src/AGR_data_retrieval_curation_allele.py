@@ -231,10 +231,12 @@ class AlleleHandler(object):
             distinct()
         pub_counter = 0
         for pub in results:
+            if pub.uniquename == 'unattributed':
+                log.info('BOB: Found unattributed pub.')
             self.all_pubs_dict[pub.pub_id] = f'FB:{pub.uniquename}'
             # BOB: DEBUG unattr issue
             if pub.uniquename == 'unattributed':
-                log.debug(f'BOB: Found unattributed pub: pub_id={pub.pub_id}, dict_value={self.all_pubs_dict[pub.pub_id]}')
+                log.info(f'BOB: Found unattributed pub: pub_id={pub.pub_id}, dict_value={self.all_pubs_dict[pub.pub_id]}')
             pub_counter += 1
         # Next find PMIDs if available and replace the curie in the all_pubs_dict.
         filters = (
@@ -254,9 +256,10 @@ class AlleleHandler(object):
             self.all_pubs_dict[xref.Pub.pub_id] = f'PMID:{xref.Dbxref.accession}'
             pmid_counter += 1
         # BOB: DEBUG unattr issue:
+        log.info('BOB: DEBUB UNATTRIBUTED ISSUE')
         for pub_id, curie in self.all_pubs_dict.items():
             if 'unattributed' in curie:
-                log.debug(f'BOB: Found unattributed pub: pub_id={pub_id}, dict_value={curie}')
+                log.info(f'BOB: Found unattributed pub: pub_id={pub_id}, dict_value={curie}')
         log.info(f'Found {pmid_counter} PMID IDs for {pub_counter} current FB publications.')
         return
 
