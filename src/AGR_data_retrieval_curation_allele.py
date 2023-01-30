@@ -1092,7 +1092,7 @@ class AlleleHandler(object):
                 'format_text': sub_sup_sgml_to_html(syno_name[FORMAT_TEXT]),
                 'display_text': sub_sup_sgml_to_html(syno_name[DISPLAY_TEXT]),
                 'synonym_scope_name': 'exact',
-                'evidence_curies': [self.all_pubs_dict[i] for i in pub_id_list if self.all_pubs_dict[i] != 'unattributed'],
+                'evidence_curies': [self.all_pubs_dict[i] for i in pub_id_list if self.all_pubs_dict[i] != 'FB:unattributed'],
                 'internal': syno_internal,
                 'obsolete': False
             }
