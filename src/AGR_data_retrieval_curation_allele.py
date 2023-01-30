@@ -127,7 +127,7 @@ class AllianceAllele(object):
         self.date_created = None                               # Earliest timestamp.
         self.date_updated = None                               # Latest timestamp.
         # Attributes for the Alliance BiologicalEntity. BiologicalEntity is_a AuditedObject.
-        self.curie = 'FB:{}'.format(feature.uniquename)
+        self.curie = 'FB:{}'.format(feature.uniquename)f
         self.taxon_curie = None                                # A string representing the NCBI taxon ID. We have no NCBI taxonID for 223 alleles.
         # Attributes for the Alliance GenomicEntity. GenomicEntity is_a BiologicalEntity.
         self.cross_reference_dtos = []                         # Report only select dbs, using AGR-accepted db_prefix.
@@ -890,7 +890,7 @@ class AlleleHandler(object):
 
     def synthesize_references(self, allele):
         """Process pubs for allele."""
-        allele.reference_curies = [self.all_pubs_dict[i] for i in allele.fb_references if self.all_pubs_dict[i] != 'unattributed']
+        allele.reference_curies = [self.all_pubs_dict[i] for i in allele.fb_references if self.all_pubs_dict[i] != 'FB:unattributed']
         return
 
     def synthesize_insertions(self, allele):
