@@ -127,7 +127,7 @@ class AllianceAllele(object):
         self.date_created = None                               # Earliest timestamp.
         self.date_updated = None                               # Latest timestamp.
         # Attributes for the Alliance BiologicalEntity. BiologicalEntity is_a AuditedObject.
-        self.curie = 'FB:{}'.format(feature.uniquename)f
+        self.curie = 'FB:{}'.format(feature.uniquename)
         self.taxon_curie = None                                # A string representing the NCBI taxon ID. We have no NCBI taxonID for 223 alleles.
         # Attributes for the Alliance GenomicEntity. GenomicEntity is_a BiologicalEntity.
         self.cross_reference_dtos = []                         # Report only select dbs, using AGR-accepted db_prefix.
@@ -232,6 +232,9 @@ class AlleleHandler(object):
         pub_counter = 0
         for pub in results:
             self.all_pubs_dict[pub.pub_id] = f'FB:{pub.uniquename}'
+            # BOB: DEBUG unattr issue
+            if pub.uniquename == 'unattributed':
+                log.debug(f'BOB: Found unattributed pub: pub_id={pub.pub_id}, dict_value={self.all_pubs_dict[pub.pub_id]}')
             pub_counter += 1
         # Next find PMIDs if available and replace the curie in the all_pubs_dict.
         filters = (
@@ -250,6 +253,10 @@ class AlleleHandler(object):
         for xref in pmid_xrefs:
             self.all_pubs_dict[xref.Pub.pub_id] = f'PMID:{xref.Dbxref.accession}'
             pmid_counter += 1
+        # BOB: DEBUG unattr issue:
+        for pub_id, curie in self.all_pubs_dict.items():
+            if 'unattributed' in curie:
+                log.debug(f'BOB: Found unattributed pub: pub_id={pub_id}, dict_value={curie}')
         log.info(f'Found {pmid_counter} PMID IDs for {pub_counter} current FB publications.')
         return
 
