@@ -890,6 +890,7 @@ class AlleleHandler(object):
 
     def synthesize_references(self, allele):
         """Process pubs for allele."""
+        allele.fb_references = list(set(allele.fb_references))
         allele.reference_curies = [self.all_pubs_dict[i] for i in allele.fb_references if self.all_pubs_dict[i] != 'FB:unattributed']
         return
 
