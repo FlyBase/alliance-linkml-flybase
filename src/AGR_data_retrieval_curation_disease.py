@@ -96,6 +96,7 @@ class DiseaseAnnotation(object):
         self.timestamps = []                                  # Will be a list of audit_chado timestamp lists.
         # Derived attributes.
         self.modifier_problem = False                         # Change to true if there's a problem finding the modifier allele.
+        self.agr_uniq_key = None                              # Will be unique key based on Alliance defining features.
         # Attributes for the Alliance AuditedObjectDTO.
         self.obsolete = False                                 # Never True. All FB annotations are deleted if no longer current.
         self.internal = False                                 # Will be internal if annotation should not be exported to Alliance for some reason.
@@ -149,6 +150,7 @@ class DAFMaker(object):
     def __init__(self):
         """Create the DAFMaker object."""
         self.dis_anno_dict = {}       # A dict of DiseaseAnnotations keyed by feature_cvterm_id plus rank (e.g., 1234567_0).
+        self.uniq_dis_dict = {}       # A dict of DiseaseAnnotations keyed by AGR defining features.
         self.total_anno_cnt = 0       # Count of all disease annotations found in starting query.
         self.export_anno_cnt = 0      # Count of all disease annotations exported to file.
         self.internal_anno_cnt = 0    # Count of all disease annotations marked as internal=True in export file.
@@ -466,6 +468,9 @@ class DAFMaker(object):
                                 dis_anno.modifier_problem = True
             # Now check for conditions that prevent export.
             self.evaluate_annot(dis_anno)
+            # Generate the unique AGR key based on AGR defining features for FB disease annotations.
+            self.derive_agr_uniq_key(dis_anno)
+        self.group_dis_annos()
         log.info('Done synthesizing disease annotation info.')
         return
 
@@ -485,6 +490,32 @@ class DAFMaker(object):
                 dis_anno.for_alliance_export = False
                 dis_anno.export_warnings.append(msg)
                 log.debug(msg)
+        return
+
+    def derive_agr_uniq_key(self, dis_anno):
+        """Derive the AGR unique key based on defining features of FB disease annotations."""
+        dis_anno.agr_uniq_key = f'{dis_anno.allele_curie}||{dis_anno.do_term_curie}||{dis_anno.disease_relation_name}'
+        dis_anno.agr_uniq_key += f'||{dis_anno.reference_curie}'
+        evi_codes = list(set(dis_anno.evidence_code_curies)).sorted
+        evi_code_str = '|'.join(evi_codes)
+        dis_anno.agr_uniq_key += f'||{evi_code_str}'
+        dis_anno.agr_uniq_key += f'||{dis_anno.disease_genetic_modifier_curie}'
+        dis_anno.agr_uniq_key += f'||{dis_anno.disease_genetic_modifier_relation_name}'
+        log.debug(f'{dis_anno} HAS AGR_UNIQ_KEY: {dis_anno.agr_uniq_key}')
+        return
+
+    def group_dis_annos(self):
+        """Group redundant disease annotations."""
+        log.info('Group redundant disease annotations.')
+        input_counter = 0
+        for dis_anno in self.dis_anno_dict.values():
+            input_counter += 1
+            try:
+                self.uniq_dis_dict[dis_anno.agr_uniq_key].append(dis_anno)
+            except KeyError:
+                self.uniq_dis_dict[dis_anno.agr_uniq_key] = [dis_anno]
+        grouped_counter = len(self.uniq_dis_dict.keys())
+        log.info(f'Found {grouped_counter} unique keys for {input_counter} disease annotations.')
         return
 
     def generate_export_file(self):
