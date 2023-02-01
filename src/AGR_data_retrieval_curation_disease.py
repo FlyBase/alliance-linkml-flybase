@@ -542,7 +542,9 @@ class DAFMaker(object):
             'linkml_version': linkml_release,
             'disease_allele_ingest_set': []
         }
-        for dis_anno in self.dis_anno_dict.values():
+        # For each AGR unique key, just process the 1st disease annotation in the list of redundant FB annotations.
+        for dis_anno_list in self.uniq_dis_dict.values():
+            dis_anno = dis_anno_list[0]
             if dis_anno.for_alliance_export is False:
                 log.debug('Suppress disease annotation from export: {}. Reasons: {}'.format(dis_anno, '; '.join(dis_anno.export_warnings)))
                 continue
@@ -561,9 +563,8 @@ class DAFMaker(object):
             outfile.close()
         log.info('Done writing data to output file.')
         total_public_anno_cnt = self.export_anno_cnt - self.internal_anno_cnt
-        log.info('Exported {} of {} disease annotations ({} are public).'.
-                 format(self.export_anno_cnt, self.total_anno_cnt, total_public_anno_cnt))
-        log.info('Suppressed {} disease annotations from export.'.format(self.total_anno_cnt - self.export_anno_cnt))
+        log.info(f'Exported {self.export_anno_cnt} of {self.total_anno_cnt} disease annotations ({total_public_anno_cnt} are public).')
+        log.info(f'Suppressed {self.total_anno_cnt - self.export_anno_cnt} disease annotations from export.')
         return
 
 
