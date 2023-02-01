@@ -485,7 +485,8 @@ class DAFMaker(object):
                 'Only "model of|DOES NOT model" is exportable',
             ' with FLYBASE' in dis_anno.evidence_code.value:
                 'Only disease annotations modeled by a single allele are exportable',
-            dis_anno.modifier_problem is True: 'Cannot find current feature for disease modifier.'
+            dis_anno.modifier_problem is True: 'Cannot find current feature for disease modifier.',
+            dis_anno.modifier_id_was_updated is True: 'Modifier referenced by non-current allele ID.'
         }
         for check, msg in export_checks.items():
             if check:
@@ -497,7 +498,7 @@ class DAFMaker(object):
     def derive_agr_uniq_key(self, dis_anno):
         """Derive the AGR unique key based on defining features of FB disease annotations."""
         dis_anno.agr_uniq_key = f'{dis_anno.allele_curie}||{dis_anno.do_term_curie}||{dis_anno.disease_relation_name}'
-        dis_anno.agr_uniq_key += f'||{dis_anno.reference_curie}'
+        dis_anno.agr_uniq_key += f'||{dis_anno.negated}||{dis_anno.reference_curie}'
         evi_codes = sorted(list(set(dis_anno.evidence_code_curies)))
         evi_code_str = '|'.join(evi_codes)
         dis_anno.agr_uniq_key += f'||{evi_code_str}'
