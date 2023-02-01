@@ -496,7 +496,8 @@ class DAFMaker(object):
         """Derive the AGR unique key based on defining features of FB disease annotations."""
         dis_anno.agr_uniq_key = f'{dis_anno.allele_curie}||{dis_anno.do_term_curie}||{dis_anno.disease_relation_name}'
         dis_anno.agr_uniq_key += f'||{dis_anno.reference_curie}'
-        evi_codes = list(set(dis_anno.evidence_code_curies)).sorted
+        evi_codes = sorted(list(set(dis_anno.evidence_code_curies)))
+        log.debug(f'BOB: {evi_codes}')
         evi_code_str = '|'.join(evi_codes)
         dis_anno.agr_uniq_key += f'||{evi_code_str}'
         dis_anno.agr_uniq_key += f'||{dis_anno.disease_genetic_modifier_curie}'
