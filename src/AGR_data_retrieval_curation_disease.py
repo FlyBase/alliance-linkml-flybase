@@ -95,6 +95,7 @@ class DiseaseAnnotation(object):
         self.qualifier = None                                 # Will be the "qualifier" FeatureCvtermprop.
         self.timestamps = []                                  # Will be a list of audit_chado timestamp lists.
         # Derived attributes.
+        self.modifier_id_was_updated = False                  # Change to true if modifier ID in evidence text was updated.
         self.modifier_problem = False                         # Change to true if there's a problem finding the modifier allele.
         self.agr_uniq_key = None                              # Will be unique key based on Alliance defining features.
         # Attributes for the Alliance AuditedObjectDTO.
@@ -416,13 +417,13 @@ class DAFMaker(object):
             distinct()
         curr_uniquenames = [i.uniquename for i in curr_alleles]
         if len(curr_uniquenames) == 1:
-            log.warning('For obsolete {}, found one current allele: {}'.format(old_uniquename, curr_uniquenames[0]))
+            log.debug('For obsolete {}, found one current allele: {}'.format(old_uniquename, curr_uniquenames[0]))
             curr_allele_id = curr_uniquenames[0]
         elif len(curr_uniquenames) > 1:
-            log.warning('For obsolete {}, found many current alleles: {}'.format(old_uniquename, curr_uniquenames))
+            log.debug('For obsolete {}, found many current alleles: {}'.format(old_uniquename, curr_uniquenames))
             curr_allele_id = None
         else:
-            log.warning('For obsolete {}, found no current alleles.'.format(old_uniquename))
+            log.debug('For obsolete {}, found no current alleles.'.format(old_uniquename))
             curr_allele_id = None
         return curr_allele_id
 
@@ -464,6 +465,7 @@ class DAFMaker(object):
                             curr_allele_id = self.get_current_id_for_allele(session, allele_id)
                             if curr_allele_id:
                                 dis_anno.disease_genetic_modifier_curie = 'FB:{}'.format(curr_allele_id)
+                                dis_anno.modifier_id_was_updated = True
                             else:
                                 dis_anno.modifier_problem = True
             # Now check for conditions that prevent export.
@@ -497,7 +499,6 @@ class DAFMaker(object):
         dis_anno.agr_uniq_key = f'{dis_anno.allele_curie}||{dis_anno.do_term_curie}||{dis_anno.disease_relation_name}'
         dis_anno.agr_uniq_key += f'||{dis_anno.reference_curie}'
         evi_codes = sorted(list(set(dis_anno.evidence_code_curies)))
-        log.debug(f'BOB: {evi_codes}')
         evi_code_str = '|'.join(evi_codes)
         dis_anno.agr_uniq_key += f'||{evi_code_str}'
         dis_anno.agr_uniq_key += f'||{dis_anno.disease_genetic_modifier_curie}'
@@ -519,11 +520,18 @@ class DAFMaker(object):
                 self.uniq_dis_dict[dis_anno.agr_uniq_key] = [dis_anno]
         grouped_counter = len(self.uniq_dis_dict.keys())
         log.info(f'Found {grouped_counter} unique keys for {input_counter} exportable disease annotations.')
+        # Report redundant disease annotations in detail.
+        # Also report non-redundant disease annotations that required modifier ID update.
+        update_allele_id_counter = 0
         for uniq_key, anno_list in self.uniq_dis_dict.items():
             if len(anno_list) > 1:
-                log.warning(f'REDUNDANT: {uniq_key}:')
+                log.warning(f'REDUNDANT: AGR_UNIQ_KEY: {uniq_key}')
                 for i in anno_list:
-                    log.warning(f'\t{i}')
+                    log.warning(f'REDUNDANT:\t{i}')
+            elif anno_list[0].modifier_id_was_updated is True:
+                log.warning(f'UPDATED DIS_ANNO: {anno_list[0]}')
+                update_allele_id_counter +=1
+        log.info(f'Found {update_allele_id_counter} non-redundant exportable disease annotations that required modifier ID update.')
         return
 
     def generate_export_file(self):
