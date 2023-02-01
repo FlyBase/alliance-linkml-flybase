@@ -510,13 +510,20 @@ class DAFMaker(object):
         log.info('Group redundant disease annotations.')
         input_counter = 0
         for dis_anno in self.dis_anno_dict.values():
+            if dis_anno.for_alliance_export is False:
+                continue
             input_counter += 1
             try:
                 self.uniq_dis_dict[dis_anno.agr_uniq_key].append(dis_anno)
             except KeyError:
                 self.uniq_dis_dict[dis_anno.agr_uniq_key] = [dis_anno]
         grouped_counter = len(self.uniq_dis_dict.keys())
-        log.info(f'Found {grouped_counter} unique keys for {input_counter} disease annotations.')
+        log.info(f'Found {grouped_counter} unique keys for {input_counter} exportable disease annotations.')
+        for uniq_key, anno_list in self.uniq_dis_dict.items():
+            if len(anno_list) > 1:
+                log.warning(f'REDUNDANT: {uniq_key}:')
+                for i in anno_list:
+                    log.warning(f'\t{i}')
         return
 
     def generate_export_file(self):
