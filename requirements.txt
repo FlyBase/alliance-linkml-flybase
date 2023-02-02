@@ -11,7 +11,7 @@ git+https://github.com/FlyBase/harvdev-utils.git@master#egg=harvdev_utils
 # pubchempy
 retry
 # requests>=2.21.0
-sqlalchemy
+sqlalchemy>=2.0
 svn
 # urllib3>=1.24.1
 # virtualenv>=16.2.0
