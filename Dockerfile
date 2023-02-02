@@ -19,6 +19,6 @@ ADD git_agr_curation_schema/util/validate_agr_schema.py             /src/validat
 ADD git_agr_curation_schema/jsonschema/allianceModel.schema.json    jsonschema/allianceModel.schema.json
 
 # Install required modules.
-RUN pip3 install -r requirements.txt
+RUN pip3 install -r requirements.txt --no-cache-dir
 
 ENTRYPOINT [ "/bin/bash" ]
