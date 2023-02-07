@@ -531,7 +531,7 @@ class DAFMaker(object):
                     log.warning(f'REDUNDANT:\t{i}')
             elif anno_list[0].modifier_id_was_updated is True:
                 log.warning(f'UPDATED DIS_ANNO: {anno_list[0]}')
-                update_allele_id_counter +=1
+                update_allele_id_counter += 1
         log.info(f'Found {update_allele_id_counter} non-redundant exportable disease annotations that required modifier ID update.')
         return
 

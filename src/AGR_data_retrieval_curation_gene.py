@@ -641,12 +641,12 @@ class GeneHandler(object):
             placeholder_symbol_dto['format_text'] = feature.feature.name
             placeholder_symbol_dto['display_text'] = feature.feature.name
             feature.gene_symbol_dto = placeholder_symbol_dto
-        # Full name is required. If none, fill it in. Could be because FB has none, or, it's the same as the symbol.
+        # TEMPORARY: Full name is required for now. If none, fill it in. Could be because FB has none, or, it's the same as the symbol.
         if feature.gene_full_name_dto is None:
             placeholder_full_name_dto = feature.gene_symbol_dto.copy()
             placeholder_full_name_dto['name_type_name'] = 'full_name'
             feature.gene_full_name_dto = placeholder_full_name_dto
-        # Systematic name is required. If none, fill it in. Could be because gene is unannotated, or annotation ID has never been used in pubs.
+        # TEMPORARY: Systematic name is required for now. If none, fill it in. Could be because gene is unannotated, or annotation ID never used in pubs.
         if feature.gene_systematic_name_dto is None:
             placeholder_systematic_name_dto = feature.gene_symbol_dto.copy()
             placeholder_systematic_name_dto['name_type_name'] = 'systematic_name'
