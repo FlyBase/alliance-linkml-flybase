@@ -89,45 +89,47 @@ class DiseaseAnnotation(object):
         """
         # FlyBase data
         self.unique_key = '{}_{}'.format(feature_cvterm.feature_cvterm_id, provenance_prop.rank)
-        self.feature_cvterm = feature_cvterm             # The FeatureCvterm object.
-        self.provenance = provenance_prop                # The "provenance" FeatureCvtermprop.
-        self.evidence_code = None                        # Will be the "evidence_code" FeatureCvtermprop.
-        self.qualifier = None                            # Will be the "qualifier" FeatureCvtermprop.
-        self.timestamps = []                             # Will be a list of audit_chado timestamp lists.
-        # Derived attribures.
-        self.modifier_problem = False                    # Change to true if there's a problem finding the modifier allele.
-        # Attributes for the Alliance AuditedObject.
-        self.obsolete = False                            # Never True. All FB annotations are deleted if no longer current.
-        self.internal = False                            # Will be internal if annotation should not be exported to Alliance for some reason.
-        self.created_by = 'FB:FB_curator'                # Use placeholder value since no Person object at FlyBase.
-        self.updated_by = 'FB:FB_curator'               # Use placeholder value since no Person object at FlyBase.
-        self.date_created = None                         # Not straightforward as half of relevant annotations are derived in the reporting build.
-        self.date_updated = None                         # Not straightforward as half of relevant annotations are derived in the reporting build.
-        # Attributes for the Alliance Association
-        self.subject = None                              # Provide allele curie (slot usage from AlleleDiseaseAnnotation)
-        self.predicate = 'is_implicated_in'              # "Allele disease relations" CV (slot usage from AlleleDiseaseAnnotation)
-        self.object = None                               # Provide DOID (slot usage from DiseaseAnnotation).
-        # Attributes for the Alliance DiseaseAnnotation
-        self.data_provider = 'FB'
-        self.negated = False                             # Change to True for "NOT" annotations.
-        self.evidence_codes = []                         # Set as appropriate.
-        self.single_reference = None                     # Provide FBrf ID.
-        self.annotation_type = 'manually_curated'        # "Annotation types" CV.
-        self.disease_genetic_modifier = None             # Gene, Allele or AGM curie.
-        self.disease_genetic_modifier_relation = None    # "Disease genetic modifier relations" CV.
-        self.unique_id = self.unique_key                 # Use the unique_key (internal ID is ok).
-        self.mod_entity_id = None                        # N/A to FlyBase data.
-        self.inferred_gene = None                        # Gene asserted by curator to be associated with the disease annotation.
-        # self.with = None                               # N/A to FlyBase data.
-        self.disease_qualifiers = []                     # N/A to FlyBase data. "Disease Qualifiers" CV.
-        self.condition_relations = []                    # N/A to FlyBase data.
-        self.genetic_sex = None                          # N/A to FlyBase data. "Genetic sexes" CV.
-        self.related_notes = []                          # N/A to FlyBase data.
-        self.secondary_data_provider = None              # N/A to FlyBase data.
+        self.feature_cvterm = feature_cvterm                  # The FeatureCvterm object.
+        self.provenance = provenance_prop                     # The "provenance" FeatureCvtermprop.
+        self.evidence_code = None                             # Will be the "evidence_code" FeatureCvtermprop.
+        self.qualifier = None                                 # Will be the "qualifier" FeatureCvtermprop.
+        self.timestamps = []                                  # Will be a list of audit_chado timestamp lists.
+        # Derived attributes.
+        self.modifier_id_was_updated = False                  # Change to true if modifier ID in evidence text was updated.
+        self.modifier_problem = False                         # Change to true if there's a problem finding the modifier allele.
+        self.agr_uniq_key = None                              # Will be unique key based on Alliance defining features.
+        # Attributes for the Alliance AuditedObjectDTO.
+        self.obsolete = False                                 # Never True. All FB annotations are deleted if no longer current.
+        self.internal = False                                 # Will be internal if annotation should not be exported to Alliance for some reason.
+        self.created_by_curie = 'FB:FB_curator'               # Use placeholder value since no Person object at FlyBase.
+        self.updated_by_curie = 'FB:FB_curator'               # Use placeholder value since no Person object at FlyBase.
+        self.date_created = None                              # Not straightforward as half of relevant annotations are derived in the reporting build.
+        self.date_updated = None                              # Not straightforward as half of relevant annotations are derived in the reporting build.
+        # Attributes for the Alliance DiseaseAnnotationDTO.
+        self.disease_relation_name = 'is_implicated_in'       # "Allele disease relations" CV (slot usage from AlleleDiseaseAnnotation)
+        self.do_term_curie = None                             # Provide DOID (slot usage from DiseaseAnnotation).
+        self.mod_entity_id = None                             # N/A to FlyBase data.
+        self.negated = False                                  # Change to True for "NOT" annotations.
+        self.evidence_curies = []                             # Not sure what these are?
+        self.evidence_code_curies = []                        # Set as appropriate.
+        self.reference_curie = None                           # Provide FBrf ID.
+        self.annotation_type_name = 'manually_curated'        # "Annotation types" CV.
+        self.with_gene_curies = []                            # N/A to FlyBase data.
+        self.disease_qualifier_names = []                     # N/A to FlyBase data. "Disease Qualifiers" CV.
+        self.condition_relation_dtos = []                     # N/A to FlyBase data.
+        self.genetic_sex_name = None                          # N/A to FlyBase data. "Genetic sexes" CV.
+        self.note_dtos = []                                   # N/A to FlyBase data.
+        self.data_provider_name = 'FB'
+        self.secondary_data_provider_name = None              # N/A to FlyBase data.
+        self.disease_genetic_modifier_curie = None            # Gene, Allele or AGM curie.
+        self.disease_genetic_modifier_relation_name = None    # "Disease genetic modifier relations" CV.
+        # Attributes for the Alliance AlleleDiseaseAnnotationDTO.
+        self.allele_curie = None                              # Provide allele curie.
+        self.inferred_gene_curie = None                       # Gene inferred to be associated with the disease annotation based on curated allele.
         # Notes associated with the object.
-        self.for_alliance_export = True         # Change to False if object should be excluded from export.
-        self.internal_reasons = []              # Reasons for marking an object as internal. Will be exported but not necessarily displayed at Alliance.
-        self.export_warnings = []               # Reasons for suppressing an object from the export file.
+        self.for_alliance_export = True                       # Change to False if object should be excluded from export.
+        self.internal_reasons = []                            # Reasons for marking an object as internal (exported but not displayed at Alliance).
+        self.export_warnings = []                             # Reasons for suppressing an object from the export file.
 
     def __str__(self):
         """Succinct text string describing the disease annotation."""
@@ -149,6 +151,7 @@ class DAFMaker(object):
     def __init__(self):
         """Create the DAFMaker object."""
         self.dis_anno_dict = {}       # A dict of DiseaseAnnotations keyed by feature_cvterm_id plus rank (e.g., 1234567_0).
+        self.uniq_dis_dict = {}       # A dict of DiseaseAnnotations keyed by AGR defining features.
         self.total_anno_cnt = 0       # Count of all disease annotations found in starting query.
         self.export_anno_cnt = 0      # Count of all disease annotations exported to file.
         self.internal_anno_cnt = 0    # Count of all disease annotations marked as internal=True in export file.
@@ -171,34 +174,33 @@ class DAFMaker(object):
     }
 
     required_fields = [
-        'data_provider',
-        'evidence_codes',
+        'allele_curie',
+        'data_provider_name',
+        'disease_relation_name',
+        'do_term_curie',
+        'evidence_code_curies',
         'internal',
-        'object',
-        'predicate',
-        'single_reference'
-        'subject'
+        'reference_curie',
     ]
 
     output_fields = [
-        'annotation_type',
-        'created_by',
-        'data_provider',
+        'allele_curie',
+        'annotation_type_name',
+        'created_by_curie',
+        'data_provider_name',
         'date_created',
         'date_updated',
-        'disease_genetic_modifier',
-        'disease_genetic_modifier_relation',
-        'evidence_codes',
-        'inferred_gene',
+        'disease_genetic_modifier_curie',
+        'disease_genetic_modifier_relation_name',
+        'disease_relation_name',
+        'do_term_curie',
+        'evidence_code_curies',
+        'inferred_gene_curie',
         'internal',
-        'updated_by',
         'negated',
-        'object',
         'obsolete',
-        'predicate',
-        'single_reference',
-        'subject',
-        'unique_id'    # For derived annotations, feature_cvterm_id+rank changes each release. So, suppress.
+        'reference_curie',
+        'updated_by_curie',
     ]
 
     def get_disease_annotations(self, session):
@@ -415,13 +417,13 @@ class DAFMaker(object):
             distinct()
         curr_uniquenames = [i.uniquename for i in curr_alleles]
         if len(curr_uniquenames) == 1:
-            log.warning('For obsolete {}, found one current allele: {}'.format(old_uniquename, curr_uniquenames[0]))
+            log.debug('For obsolete {}, found one current allele: {}'.format(old_uniquename, curr_uniquenames[0]))
             curr_allele_id = curr_uniquenames[0]
         elif len(curr_uniquenames) > 1:
-            log.warning('For obsolete {}, found many current alleles: {}'.format(old_uniquename, curr_uniquenames))
+            log.debug('For obsolete {}, found many current alleles: {}'.format(old_uniquename, curr_uniquenames))
             curr_allele_id = None
         else:
-            log.warning('For obsolete {}, found no current alleles.'.format(old_uniquename))
+            log.debug('For obsolete {}, found no current alleles.'.format(old_uniquename))
             curr_allele_id = None
         return curr_allele_id
 
@@ -430,11 +432,11 @@ class DAFMaker(object):
         log.info('Synthesizing disease annotation info.')
         for dis_anno in self.dis_anno_dict.values():
             log.debug('Evaluating annotation: {}'.format(dis_anno))
-            # Get subject, object and pub.
-            dis_anno.subject = 'FB:{}'.format(dis_anno.feature_cvterm.feature.uniquename)
-            dis_anno.object = 'DOID:{}'.format(dis_anno.feature_cvterm.cvterm.dbxref.accession)
-            dis_anno.single_reference = self.get_pub_xref(session, dis_anno.feature_cvterm.pub.uniquename)
-            dis_anno.inferred_gene = self.get_inferred_gene(session, dis_anno.feature_cvterm.feature.feature_id)
+            # Get allele, DO term and pub.
+            dis_anno.allele_curie = 'FB:{}'.format(dis_anno.feature_cvterm.feature.uniquename)
+            dis_anno.do_term_curie = 'DOID:{}'.format(dis_anno.feature_cvterm.cvterm.dbxref.accession)
+            dis_anno.reference_curie = self.get_pub_xref(session, dis_anno.feature_cvterm.pub.uniquename)
+            dis_anno.inferred_gene_curie = self.get_inferred_gene(session, dis_anno.feature_cvterm.feature.feature_id)
             # Mark negative annotations.
             if dis_anno.qualifier.value == 'DOES NOT model':
                 dis_anno.negated = True
@@ -446,27 +448,31 @@ class DAFMaker(object):
             #         timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(max(dis_anno.timestamps)))
             # Determine evidence_code
             if dis_anno.evidence_code.value.startswith('CEC'):
-                dis_anno.evidence_codes.append(self.evidence_code_xrefs['CEC'])
+                dis_anno.evidence_code_curies.append(self.evidence_code_xrefs['CEC'])
             else:
-                dis_anno.evidence_codes.append(self.evidence_code_xrefs['CEA'])
+                dis_anno.evidence_code_curies.append(self.evidence_code_xrefs['CEA'])
             # Find modifiers and their relations.
             allele_regex = r'FBal[0-9]{7}'
             for fb_term in self.disease_genetic_modifier_terms.keys():
                 if fb_term in dis_anno.evidence_code.value:
-                    dis_anno.disease_genetic_modifier_relation = self.disease_genetic_modifier_terms[fb_term]
+                    dis_anno.disease_genetic_modifier_relation_name = self.disease_genetic_modifier_terms[fb_term]
                     if re.search(allele_regex, dis_anno.evidence_code.value):
                         allele_id = re.search(allele_regex, dis_anno.evidence_code.value).group(0)
                         if self.confirm_current_allele_by_uniquename(session, allele_id):
-                            dis_anno.disease_genetic_modifier = 'FB:{}'.format(allele_id)
+                            dis_anno.disease_genetic_modifier_curie = 'FB:{}'.format(allele_id)
                         else:
                             # Look up current allele by 2o ID. Use that.
                             curr_allele_id = self.get_current_id_for_allele(session, allele_id)
                             if curr_allele_id:
-                                dis_anno.disease_genetic_modifier = 'FB:{}'.format(curr_allele_id)
+                                dis_anno.disease_genetic_modifier_curie = 'FB:{}'.format(curr_allele_id)
+                                dis_anno.modifier_id_was_updated = True
                             else:
                                 dis_anno.modifier_problem = True
             # Now check for conditions that prevent export.
             self.evaluate_annot(dis_anno)
+            # Generate the unique AGR key based on AGR defining features for FB disease annotations.
+            self.derive_agr_uniq_key(dis_anno)
+        self.group_dis_annos()
         log.info('Done synthesizing disease annotation info.')
         return
 
@@ -479,13 +485,54 @@ class DAFMaker(object):
                 'Only "model of|DOES NOT model" is exportable',
             ' with FLYBASE' in dis_anno.evidence_code.value:
                 'Only disease annotations modeled by a single allele are exportable',
-            dis_anno.modifier_problem is True: 'Cannot find current feature for disease modifier.'
+            dis_anno.modifier_problem is True: 'Cannot find current feature for disease modifier.',
+            dis_anno.modifier_id_was_updated is True: 'Modifier referenced by non-current allele ID.'
         }
         for check, msg in export_checks.items():
             if check:
                 dis_anno.for_alliance_export = False
                 dis_anno.export_warnings.append(msg)
                 log.debug(msg)
+        return
+
+    def derive_agr_uniq_key(self, dis_anno):
+        """Derive the AGR unique key based on defining features of FB disease annotations."""
+        dis_anno.agr_uniq_key = f'{dis_anno.allele_curie}||{dis_anno.do_term_curie}||{dis_anno.disease_relation_name}'
+        dis_anno.agr_uniq_key += f'||{dis_anno.negated}||{dis_anno.reference_curie}'
+        evi_codes = sorted(list(set(dis_anno.evidence_code_curies)))
+        evi_code_str = '|'.join(evi_codes)
+        dis_anno.agr_uniq_key += f'||{evi_code_str}'
+        dis_anno.agr_uniq_key += f'||{dis_anno.disease_genetic_modifier_curie}'
+        dis_anno.agr_uniq_key += f'||{dis_anno.disease_genetic_modifier_relation_name}'
+        log.debug(f'{dis_anno} HAS AGR_UNIQ_KEY: {dis_anno.agr_uniq_key}')
+        return
+
+    def group_dis_annos(self):
+        """Group redundant disease annotations."""
+        log.info('Group redundant disease annotations.')
+        input_counter = 0
+        for dis_anno in self.dis_anno_dict.values():
+            if dis_anno.for_alliance_export is False:
+                continue
+            input_counter += 1
+            try:
+                self.uniq_dis_dict[dis_anno.agr_uniq_key].append(dis_anno)
+            except KeyError:
+                self.uniq_dis_dict[dis_anno.agr_uniq_key] = [dis_anno]
+        grouped_counter = len(self.uniq_dis_dict.keys())
+        log.info(f'Found {grouped_counter} unique keys for {input_counter} exportable disease annotations.')
+        # Report redundant disease annotations in detail.
+        # Also report non-redundant disease annotations that required modifier ID update.
+        update_allele_id_counter = 0
+        for uniq_key, anno_list in self.uniq_dis_dict.items():
+            if len(anno_list) > 1:
+                log.warning(f'REDUNDANT: AGR_UNIQ_KEY: {uniq_key}')
+                for i in anno_list:
+                    log.warning(f'REDUNDANT:\t{i}')
+            elif anno_list[0].modifier_id_was_updated is True:
+                log.warning(f'UPDATED DIS_ANNO: {anno_list[0]}')
+                update_allele_id_counter += 1
+        log.info(f'Found {update_allele_id_counter} non-redundant exportable disease annotations that required modifier ID update.')
         return
 
     def generate_export_file(self):
@@ -495,7 +542,9 @@ class DAFMaker(object):
             'linkml_version': linkml_release,
             'disease_allele_ingest_set': []
         }
-        for dis_anno in self.dis_anno_dict.values():
+        # For each AGR unique key, just process the 1st disease annotation in the list of redundant FB annotations.
+        for dis_anno_list in self.uniq_dis_dict.values():
+            dis_anno = dis_anno_list[0]
             if dis_anno.for_alliance_export is False:
                 log.debug('Suppress disease annotation from export: {}. Reasons: {}'.format(dis_anno, '; '.join(dis_anno.export_warnings)))
                 continue
@@ -514,9 +563,8 @@ class DAFMaker(object):
             outfile.close()
         log.info('Done writing data to output file.')
         total_public_anno_cnt = self.export_anno_cnt - self.internal_anno_cnt
-        log.info('Exported {} of {} disease annotations ({} are public).'.
-                 format(self.export_anno_cnt, self.total_anno_cnt, total_public_anno_cnt))
-        log.info('Suppressed {} disease annotations from export.'.format(self.total_anno_cnt - self.export_anno_cnt))
+        log.info(f'Exported {self.export_anno_cnt} of {self.total_anno_cnt} disease annotations ({total_public_anno_cnt} are public).')
+        log.info(f'Suppressed {self.total_anno_cnt - self.export_anno_cnt} disease annotations from export.')
         return
 
 
