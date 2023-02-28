@@ -951,12 +951,10 @@ class AlleleHandler(object):
             if fprop_type.startswith('derived_stock_'):
                 has_stocks = True
         # Synthesize these two pieces of info.
-        if reported_extinct is True:
-            allele.is_extinct = True
-            if has_stocks is True:
-                log.warning(f'{allele}: stated to be lost, but has stocks.')
-        elif has_stocks is True:
+        if has_stocks is True:
             allele.is_extinct = False
+        elif reported_extinct is True:
+            allele.is_extinct = True
         return
 
     def synthesize_inheritance_mode(self, allele):
