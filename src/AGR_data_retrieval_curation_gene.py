@@ -594,6 +594,11 @@ class GeneHandler(object):
                     continue
                 pub_id_list.extend(syno_type_pub_list)
             pub_id_list = list(set(pub_id_list))
+            # Out of curiosity, report cases where same synonym used as both symbol and fullname.
+            if 'symbol' in syno_attributes.keys() and 'fullname' in syno_attributes.keys():
+                n_symb = len(syno_attributes['symbol'])
+                n_full = len(syno_attributes['fullname'])
+                log.warning(f"RATIO = {round(n_symb/n_full)}, SYMBOL_USAGE: n={n_symb}, FULLNAME_USAGE: n={n_full}, GENE={feature}, SYNONYM={syno_name}.")
             # Pick correct name type to apply.
             if re.match(self.systematic_name_regex, syno_name[DISPLAY_TEXT]):
                 name_type_to_use = 'systematic_name'
@@ -641,19 +646,13 @@ class GeneHandler(object):
             placeholder_symbol_dto['format_text'] = feature.feature.name
             placeholder_symbol_dto['display_text'] = feature.feature.name
             feature.gene_symbol_dto = placeholder_symbol_dto
-        # TEMPORARY: Full name is required for now. If none, fill it in. Could be because FB has none, or, it's the same as the symbol.
-        if feature.gene_full_name_dto is None:
-            placeholder_full_name_dto = feature.gene_symbol_dto.copy()
-            placeholder_full_name_dto['name_type_name'] = 'full_name'
-            feature.gene_full_name_dto = placeholder_full_name_dto
-        # TEMPORARY: Systematic name is required for now. If none, fill it in. Could be because gene is unannotated, or annotation ID never used in pubs.
-        if feature.gene_systematic_name_dto is None:
-            placeholder_systematic_name_dto = feature.gene_symbol_dto.copy()
+        # In rare cases, a gene's annotation ID has never been used as a synonym. For these, fill in the annotation ID.
+        if feature.gene_systematic_name_dto is None and feature.curr_anno_id:
+            placeholder_systematic_name_dto = default_name_dto.copy()
             placeholder_systematic_name_dto['name_type_name'] = 'systematic_name'
-            if feature.curr_anno_id:
-                placeholder_systematic_name_dto['format_text'] = feature.curr_anno_id
-                placeholder_systematic_name_dto['display_text'] = feature.curr_anno_id
-                log.warning(f"{feature}: Has annoID never used as a synonym: {feature.curr_anno_id}")
+            placeholder_systematic_name_dto['format_text'] = feature.curr_anno_id
+            placeholder_systematic_name_dto['display_text'] = feature.curr_anno_id
+            log.warning(f"{feature}: Has annoID never used as a synonym: {feature.curr_anno_id}")
             feature.gene_systematic_name_dto = placeholder_systematic_name_dto
         return
 
