@@ -151,7 +151,7 @@ class DAFMaker(object):
     def __init__(self):
         """Create the DAFMaker object."""
         self.dis_anno_dict = {}       # A dict of DiseaseAnnotations keyed by feature_cvterm_id plus rank (e.g., 1234567_0).
-        self.uniq_dis_dict = {}       # A dict of DiseaseAnnotations keyed by AGR defining features.
+        self.uniq_dis_dict = {}       # A dict of DiseaseAnnotations keyed by AGR defining features - groups redundant annotations.
         self.total_anno_cnt = 0       # Count of all disease annotations found in starting query.
         self.export_anno_cnt = 0      # Count of all disease annotations exported to file.
         self.internal_anno_cnt = 0    # Count of all disease annotations marked as internal=True in export file.
@@ -513,6 +513,7 @@ class DAFMaker(object):
         input_counter = 0
         for dis_anno in self.dis_anno_dict.values():
             if dis_anno.for_alliance_export is False:
+                log.debug('Suppress disease annotation from export: {}. Reasons: {}'.format(dis_anno, '; '.join(dis_anno.export_warnings)))
                 continue
             input_counter += 1
             try:
@@ -546,7 +547,6 @@ class DAFMaker(object):
         for dis_anno_list in self.uniq_dis_dict.values():
             dis_anno = dis_anno_list[0]
             if dis_anno.for_alliance_export is False:
-                log.debug('Suppress disease annotation from export: {}. Reasons: {}'.format(dis_anno, '; '.join(dis_anno.export_warnings)))
                 continue
             self.export_anno_cnt += 1
             if dis_anno.internal is True:
