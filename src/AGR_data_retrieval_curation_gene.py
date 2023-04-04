@@ -203,7 +203,6 @@ class GeneHandler(object):
         'gene_synonym_dtos',
         'gene_systematic_name_dto',
         'gene_type_curie',
-        'genomic_location_dtos',
         'internal',
         'obsolete',
         'secondary_identifiers',
