@@ -695,10 +695,10 @@ class GeneHandler(object):
             # Get crossreferences.
             # Start by adding gene uniquename as an xref.
             xref_dict = {
-                'curie': 'FB:{}'.format(gene.feature.uniquename),
+                'referenced_curie': 'FB:{}'.format(gene.feature.uniquename),
                 'display_name': 'FB:{}'.format(gene.feature.uniquename),
                 'prefix': 'FB',
-                'page_areas': ['gene'],
+                'page_area': 'gene',
                 'created_by_curie': 'FB:FB_curator',
                 'obsolete': False,
                 'internal': False
@@ -707,10 +707,10 @@ class GeneHandler(object):
             # Then add PANTHER xref (from file).
             if gene.feature.uniquename in self.pthr_dict.keys():
                 pthr_xref_dict = {
-                    'curie': 'PANTHER:{}'.format(self.pthr_dict[gene.feature.uniquename]),
+                    'referenced_curie': 'PANTHER:{}'.format(self.pthr_dict[gene.feature.uniquename]),
                     'display_name': 'PANTHER:{}'.format(self.pthr_dict[gene.feature.uniquename]),
                     'prefix': 'PANTHER',
-                    'page_areas': ['gene'],
+                    'page_area': 'gene',
                     'obsolete': False,
                     'internal': False
                 }
@@ -719,10 +719,10 @@ class GeneHandler(object):
             for result in gene.dbxrefs:
                 if result.Db.name in self.fb_agr_db_dict.keys():
                     xref_dict = {
-                        'curie': '{}:{}'.format(self.fb_agr_db_dict[result.Db.name], result.Dbxref.accession),
+                        'referenced_curie': '{}:{}'.format(self.fb_agr_db_dict[result.Db.name], result.Dbxref.accession),
                         'display_name': '{}:{}'.format(self.fb_agr_db_dict[result.Db.name], result.Dbxref.accession),
                         'prefix': self.fb_agr_db_dict[result.Db.name],
-                        'page_areas': ['gene'],
+                        'page_area': 'gene',
                         'created_by_curie': 'FB:FB_curator',
                         'obsolete': False,
                         'internal': False

@@ -861,10 +861,10 @@ class AlleleHandler(object):
         """Process xrefs."""
         # Start by adding allele uniquename as an xref.
         xref_dict = {
-            'curie': 'FB:{}'.format(allele.feature.uniquename),
+            'referenced_curie': 'FB:{}'.format(allele.feature.uniquename),
             'display_name': 'FB:{}'.format(allele.feature.uniquename),
             'prefix': 'FB',
-            'page_areas': ['allele'],
+            'page_area': 'allele',
             'created_by_curie': 'FB:FB_curator',
             'obsolete': False,
             'internal': False
@@ -875,10 +875,10 @@ class AlleleHandler(object):
             if result.Db.name not in self.fb_agr_db_dict.keys():
                 continue
             xref_dict = {
-                'curie': '{}:{}'.format(self.fb_agr_db_dict[result.Db.name], result.Dbxref.accession),
+                'referenced_curie': '{}:{}'.format(self.fb_agr_db_dict[result.Db.name], result.Dbxref.accession),
                 'display_name': '{}:{}'.format(self.fb_agr_db_dict[result.Db.name], result.Dbxref.accession),
                 'prefix': self.fb_agr_db_dict[result.Db.name],
-                'page_areas': ['allele'],
+                'page_area': 'allele',
                 'created_by_curie': 'FB:FB_curator',
                 'obsolete': False,
                 'internal': False
@@ -898,10 +898,10 @@ class AlleleHandler(object):
         """Process insertions."""
         for insertion in allele.dmel_insertions:
             xref_dict = {
-                'curie': '{}:{}'.format('FB', insertion.uniquename),
+                'referenced_curie': '{}:{}'.format('FB', insertion.uniquename),
                 'display_name': '{}:{}'.format('FB', insertion.uniquename),
                 'prefix': 'FB',
-                'page_areas': ['allele'],
+                'page_area': 'allele',
                 'created_by_curie': 'FB:FB_curator',
                 'obsolete': False,
                 'internal': False
