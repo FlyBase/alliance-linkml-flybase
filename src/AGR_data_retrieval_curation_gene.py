@@ -95,11 +95,10 @@ class AllianceGene(object):
         # ALLELE: curie, taxon, symbol, description.
         # Problems with Gene LinkML:
         # 1. Gene.name is requested (not required), but not all genes have a fullname.
-        # 2. Gene.taxon is required, but even after updating NCBITaxon info at FlyBase, not all genes will have NCBI taxon ID.
+        # 2. Gene.taxon_curie is required, but even after updating NCBITaxon info at FlyBase, not all genes will have NCBI taxon ID.
         # 3. GenomicLocation lacks strand info.
         self.feature = feature                                # The Feature object corresponding to the FlyBase gene.
         self.organism_abbr = None                             # Will be the organism.abbreviation for the gene's species of origin.
-        # self.taxon_dbxref = None                              # Will be the NCBITaxon (Db, Dbxref) tuple for the organism.    # BOB - superfluous? - delete once confirmed
         self.featureloc = None                                # Will be Featureloc object for the gene.
         self.gene_type_name = None                            # Will be the cvterm.name for "promoted_gene_type" featureprop.
         self.gene_snapshot = None                             # Will be the "gene_summary_text" Featureprop object.
@@ -534,7 +533,7 @@ class GeneHandler(object):
         self.get_all_references(session)
         self.get_genes(session)
         self.get_gene_taxons(session)
-        self.get_gene_dbxrefs(session)
+        # self.get_gene_dbxrefs(session)    # BOB - suppress for faster test iterations.
         self.get_synonyms(session)
         self.get_annotation_ids(session)
         self.get_gene_snapshots(session)
