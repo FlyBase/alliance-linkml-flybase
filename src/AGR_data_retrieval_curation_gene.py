@@ -99,7 +99,7 @@ class AllianceGene(object):
         # 3. GenomicLocation lacks strand info.
         self.feature = feature                                # The Feature object corresponding to the FlyBase gene.
         self.organism_abbr = None                             # Will be the organism.abbreviation for the gene's species of origin.
-        self.taxon_dbxref = None                              # Will be the NCBITaxon (Db, Dbxref) tuple for the organism.
+        # self.taxon_dbxref = None                              # Will be the NCBITaxon (Db, Dbxref) tuple for the organism.    # BOB - superfluous? - delete once confirmed
         self.featureloc = None                                # Will be Featureloc object for the gene.
         self.gene_type_name = None                            # Will be the cvterm.name for "promoted_gene_type" featureprop.
         self.gene_snapshot = None                             # Will be the "gene_summary_text" Featureprop object.
@@ -738,6 +738,11 @@ class GeneHandler(object):
             if gene.obsolete is True:
                 gene.internal = True
                 gene.internal_reasons.append('Obsolete')
+            # TEMPORARY: Suppress non-Dmel genes from export.
+            if gene.taxon_curie != 'NCBITaxon:7227':
+                    gene.for_alliance_export = False
+                    gene.export_warnings.append('Suppress non-Dmel genes from export.')
+            # Suppress objects missing required information from export.
             for attr in self.required_fields:
                 if attr not in gene.__dict__.keys():
                     gene.for_alliance_export = False
