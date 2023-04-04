@@ -530,7 +530,7 @@ class GeneHandler(object):
         self.get_all_references(session)
         self.get_genes(session)
         self.get_gene_taxons(session)
-        # self.get_gene_dbxrefs(session)    # BOB - suppress for faster test iterations.
+        self.get_gene_dbxrefs(session)
         self.get_synonyms(session)
         self.get_annotation_ids(session)
         self.get_gene_snapshots(session)
