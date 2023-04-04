@@ -96,7 +96,7 @@ class AllianceAllele(object):
         # Problems with Allele LinkML:
         # 1. Allele.taxon_curie is required, but even after updating NCBITaxon info at FlyBase, not all alleles will have NCBI taxon ID.
         # 2. Allele.inheritance_mode_name is singular, but some FB alleles have many documented modes.
-        self.feature = feature                             # The Feature object corresponding to the FlyBase allele.
+        self.feature = feature                             # The Feature object corresponding to the FlyBase allele, insertion or aberration/balancer.
         self.organism_abbr = None                          # Will be the organism.abbreviation for the allele's species of origin.
         self.adj_organism_abbr = 'Dmel'                    # Assume allele is Dmel (classical/transgenic) unless allele is of classical type in another insect.
         self.in_vitro = False                              # Change to True if allele associated with "in vitro%" cvterm.
@@ -147,6 +147,7 @@ class AllianceAllele(object):
         self.allele_mutation_type_dtos = []                    # ToDo - must be SO term curies: e.g., ?.
         self.allele_nomenclature_event_dtos = []               # ToDo - must be CV term: e.g., named, renamed - CV not settled yet?
         self.allele_note_dtos = []                             # ToDo - must have CV term for note_type_name: e.g., ? - CV not settled yet?
+        self.transgene_chromosome_location_curie = None        # ToDo - the curie string of the chromosome to which the allele has been mapped.
         # Notes associated with the object.
         self.for_alliance_export = True                        # Change to False if object should be excluded from export.
         self.internal_reasons = []                             # Reasons for marking an object as internal in the export file.
@@ -173,8 +174,9 @@ class AlleleHandler(object):
     # Regexes.
     gene_regex = r'^FBgn[0-9]{7}$'
     allele_regex = r'^FBal[0-9]{7}$'
-    construct_regex = r'^FBtp[0-9]{7}$'
     insertion_regex = r'^FBti[0-9]{7}$'
+    aberration_regex = r'^FB(ab|ba)[0-9]{7}$'
+    construct_regex = r'^FBtp[0-9]{7}$'
     seqfeat_regex = r'^FBsf[0-9]{10}$'
     feature_regex = r'^FB(tp|ti)[0-9]{7}$'
     lib_regex = r'^FBlc[0-9]{7}$'
@@ -208,7 +210,7 @@ class AlleleHandler(object):
         'in_collection_name',
         # 'inheritance_mode_name',    # BOB: FIX THIS "allele_inheritance_mode_dtos"
         'internal',
-        'is_extinct',    # BOB: Suppressed from allele DTO?
+        'is_extinct',
         'obsolete',
         'reference_curies',
         'taxon_curie',
@@ -926,7 +928,7 @@ class AlleleHandler(object):
     def flag_unexportable_alleles(self, allele):
         """Flag alleles missing data required for export."""
         # TEMPORARY: Suppress non-Dmel alleles from export.
-        if allele.organism_abbr != 'Dmel':
+        if allele.adj_organism_abbr != 'Dmel':
             allele.for_alliance_export = False
             allele.export_warnings.append(f'Suppress non-Dmel allele from export: ORG={allele.organism_abbr}')
         # Suppress objects missing required information from export.
