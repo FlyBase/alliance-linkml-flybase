@@ -189,7 +189,6 @@ class GeneHandler(object):
     required_fields = [
         'curie',
         'gene_symbol_dto',
-        'gene_systematic_name_dto',
         'internal',
         'taxon_curie',
     ]
