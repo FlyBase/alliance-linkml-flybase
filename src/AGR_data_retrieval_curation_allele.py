@@ -925,6 +925,11 @@ class AlleleHandler(object):
 
     def flag_unexportable_alleles(self, allele):
         """Flag alleles missing data required for export."""
+        # TEMPORARY: Suppress non-Dmel alleles from export.
+        if allele.organism_abbr != 'Dmel':
+            allele.for_alliance_export = False
+            allele.export_warnings.append(f'Suppress non-Dmel allele from export: ORG={allele.organism_abbr}')
+        # Suppress objects missing required information from export.
         for attr in self.required_fields:
             if attr not in allele.__dict__.keys():
                 allele.for_alliance_export = False
