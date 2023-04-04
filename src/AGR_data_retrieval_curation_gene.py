@@ -740,8 +740,8 @@ class GeneHandler(object):
                 gene.internal_reasons.append('Obsolete')
             # TEMPORARY: Suppress non-Dmel genes from export.
             if gene.taxon_curie != 'NCBITaxon:7227':
-                    gene.for_alliance_export = False
-                    gene.export_warnings.append('Suppress non-Dmel genes from export.')
+                gene.for_alliance_export = False
+                gene.export_warnings.append(f'Suppress non-Dmel genes from export: {gene.taxon_curie}.')
             # Suppress objects missing required information from export.
             for attr in self.required_fields:
                 if attr not in gene.__dict__.keys():
