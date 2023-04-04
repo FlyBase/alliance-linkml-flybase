@@ -188,7 +188,6 @@ class GeneHandler(object):
     # Export fields.
     required_fields = [
         'curie',
-        'gene_full_name_dto',
         'gene_symbol_dto',
         'gene_systematic_name_dto',
         'internal',
