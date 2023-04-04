@@ -191,12 +191,12 @@ class AlleleHandler(object):
     output_fields = [
         'allele_database_status_dto',
         'allele_full_name_dto',
-        'allele_functional_impact_dtos',
-        'allele_germline_transmission_status_dto',
-        'allele_molecular_mutation_dtos',
-        'allele_mutation_type_dtos',
-        'allele_nomenclature_event_dtos',
-        'allele_note_dtos',
+        # 'allele_functional_impact_dtos',    # BOB: Add this?
+        # 'allele_germline_transmission_status_dto',    # BOB: Add this?
+        # 'allele_molecular_mutation_dtos',    # BOB: Add this?
+        # 'allele_mutation_type_dtos',    # BOB: Add this?
+        # 'allele_nomenclature_event_dtos',    # BOB: Add this?
+        # 'allele_note_dtos',    # BOB: Add this?
         'allele_secondary_id_dtos',
         'allele_symbol_dto',
         'allele_synonym_dtos',
@@ -206,12 +206,13 @@ class AlleleHandler(object):
         'date_created',
         'date_updated',
         'in_collection_name',
-        'inheritance_mode_name',
+        # 'inheritance_mode_name',    # BOB: FIX THIS "allele_inheritance_mode_dtos"
         'internal',
-        'is_extinct',
+        'is_extinct',    # BOB: Suppressed from allele DTO?
         'obsolete',
         'reference_curies',
         'taxon_curie',
+        # 'transgene_chromosome_location_curie',    # BOB: Add this?
         'updated_by_curie',
     ]
     fb_agr_db_dict = {
