@@ -15,6 +15,7 @@ Notes:
     This script exports disease annotations to a JSON file conforming to LinkML
     specs for the curation (i.e., "persistent") database; distinct from DAF
     file specs for the original Neo4j drop-and-reload database.
+    To Do - convert multi-allele annotations into AGM annotations.
 
 """
 
