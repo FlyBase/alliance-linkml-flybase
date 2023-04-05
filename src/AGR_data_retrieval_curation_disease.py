@@ -401,7 +401,11 @@ class DAFMaker(object):
             for result in mod_curies:
                 counter += 1
             if counter == 1:
-                gene_curie = f'{mod_organisms[parent_gene.organism.abbreviation]}:{mod_curies[0].accession}'.replace('WormBase', 'WB')
+                gene_curie = f'{mod_organisms[parent_gene.organism.abbreviation]}:{mod_curies[0].accession}'
+                if {mod_organisms[parent_gene.organism.abbreviation]} == 'WormBase':
+                    gene_curie = gene_curie.replace('WormBase', 'WB')
+                elif {mod_organisms[parent_gene.organism.abbreviation]} == 'MGI':
+                    gene_curie = gene_curie.replace('MGI:MGI:', 'MGI:')
         return gene_curie
 
     def confirm_current_allele_by_uniquename(self, session, uniquename):
