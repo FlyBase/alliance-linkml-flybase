@@ -407,6 +407,10 @@ class DAFMaker(object):
                 gene_curie = f'{mod_organisms[parent_gene.organism.abbreviation]}:{mod_curies[0].accession}'
                 gene_curie = gene_curie.replace('WormBase', 'WB')
                 gene_curie = gene_curie.replace('MGI:MGI:', 'MGI:')
+            else:
+                log.warning(f'Cannot get MOD curie for feature_id={allele_feature_id}')
+        else:
+            log.warning(f'Cannot get curie for non-MOD feature_id={allele_feature_id}')
         return gene_curie
 
     def confirm_current_allele_by_uniquename(self, session, uniquename):
@@ -484,7 +488,6 @@ class DAFMaker(object):
             this_data_provider_dto['cross_reference_dto']['referenced_curie'] = dis_anno.do_term_curie
             this_data_provider_dto['cross_reference_dto']['display_name'] = dis_anno.do_term_curie
             dis_anno.data_provider_dto = this_data_provider_dto
-
 
             # Mark negative annotations.
             if dis_anno.qualifier.value == 'DOES NOT model':
