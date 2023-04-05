@@ -407,9 +407,12 @@ class DAFMaker(object):
                 gene_curie = gene_curie.replace('WormBase', 'WB')
                 gene_curie = gene_curie.replace('MGI:MGI:', 'MGI:')
             else:
-                log.warning(f'Cannot get MOD curie for feature_id={allele_feature_id}')
+                log.warning(f'Cannot get MOD curie for feature_id={allele_feature_id}; use FBgn ID.')
+                gene_curie = f'FB:{parent_gene.uniquename}'
         else:
-            log.warning(f'Cannot get curie for non-MOD feature_id={allele_feature_id}')
+            log.warning(f'Cannot get curie for non-MOD feature_id={allele_feature_id}; use FBgn ID.')
+            gene_curie = f'FB:{parent_gene.uniquename}'
+
         return gene_curie
 
     def confirm_current_allele_by_uniquename(self, session, uniquename):
