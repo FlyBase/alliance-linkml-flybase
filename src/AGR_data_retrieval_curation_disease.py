@@ -119,8 +119,9 @@ class DiseaseAnnotation(object):
         self.condition_relation_dtos = []                     # N/A to FlyBase data.
         self.genetic_sex_name = None                          # N/A to FlyBase data. "Genetic sexes" CV.
         self.note_dtos = []                                   # N/A to FlyBase data.
-        self.secondary_data_provider_dto = None               # N/A to FlyBase data.
+        self.data_provider_name = 'FB'                        # Retired in v1.6.0.
         self.data_provider_dto = None                         # Generate DataProviderDTO object once we have the do_term_curie.
+        self.secondary_data_provider_dto = None               # N/A to FlyBase data.
         self.disease_genetic_modifier_curie = None            # Gene, Allele or AGM curie.
         self.disease_genetic_modifier_relation_name = None    # "Disease genetic modifier relations" CV.
         # Attributes for the Alliance AlleleDiseaseAnnotationDTO.
@@ -187,7 +188,8 @@ class DAFMaker(object):
 
     required_fields = [
         'allele_curie',
-        'data_provider_dto',
+        # 'data_provider_dto',
+        'data_provider_name',
         'disease_relation_name',
         'do_term_curie',
         'evidence_code_curies',
@@ -199,7 +201,8 @@ class DAFMaker(object):
         'allele_curie',
         'annotation_type_name',
         'created_by_curie',
-        'data_provider_dto',
+        # 'data_provider_dto',
+        'data_provider_name',
         'date_created',
         'date_updated',
         'disease_genetic_modifier_curie',
