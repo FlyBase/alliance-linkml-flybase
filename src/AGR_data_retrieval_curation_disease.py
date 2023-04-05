@@ -15,6 +15,7 @@ Notes:
     This script exports disease annotations to a JSON file conforming to LinkML
     specs for the curation (i.e., "persistent") database; distinct from DAF
     file specs for the original Neo4j drop-and-reload database.
+    To Do - report non-MOD inferred_gene_curie once supported by Alliance again (v1.7.0?)
     To Do - convert multi-allele annotations into AGM annotations.
 
 """
@@ -408,10 +409,10 @@ class DAFMaker(object):
                 gene_curie = gene_curie.replace('MGI:MGI:', 'MGI:')
             else:
                 log.warning(f'Cannot get MOD curie for feature_id={allele_feature_id}; use FBgn ID.')
-                gene_curie = f'FB:{parent_gene.uniquename}'
+                # gene_curie = f'FB:{parent_gene.uniquename}'
         else:
             log.warning(f'Cannot get curie for non-MOD feature_id={allele_feature_id}; use FBgn ID.')
-            gene_curie = f'FB:{parent_gene.uniquename}'
+            # gene_curie = f'FB:{parent_gene.uniquename}'
 
         return gene_curie
 
