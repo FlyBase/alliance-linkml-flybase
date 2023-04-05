@@ -401,7 +401,7 @@ class DAFMaker(object):
             for result in mod_curies:
                 counter += 1
             if counter == 1:
-                gene_curie = f'{mod_organisms[parent_gene.organism.abbreviation]}:{result[0].accession}'.replace('WormBase', 'WB')
+                gene_curie = f'{mod_organisms[parent_gene.organism.abbreviation]}:{mod_curies[0].accession}'.replace('WormBase', 'WB')
         return gene_curie
 
     def confirm_current_allele_by_uniquename(self, session, uniquename):
