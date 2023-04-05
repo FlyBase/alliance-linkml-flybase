@@ -389,7 +389,6 @@ class DAFMaker(object):
             filters = (
                 FeatureDbxref.feature_id == parent_gene.feature_id,
                 FeatureDbxref.is_current.is_(True),
-                Feature.organism.name == parent_gene.organism.abbreviation,
                 Db.name == mod_organisms[parent_gene.organism.abbreviation]
             )
             mod_curies = session.query(Dbxref).\
