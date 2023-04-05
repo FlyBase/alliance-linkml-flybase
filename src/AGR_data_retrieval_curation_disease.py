@@ -188,8 +188,8 @@ class DAFMaker(object):
 
     required_fields = [
         'allele_curie',
-        # 'data_provider_dto',
-        'data_provider_name',
+        'data_provider_dto',
+        # 'data_provider_name',
         'disease_relation_name',
         'do_term_curie',
         'evidence_code_curies',
@@ -201,8 +201,8 @@ class DAFMaker(object):
         'allele_curie',
         'annotation_type_name',
         'created_by_curie',
-        # 'data_provider_dto',
-        'data_provider_name',
+        'data_provider_dto',
+        # 'data_provider_name',
         'date_created',
         'date_updated',
         'disease_genetic_modifier_curie',
