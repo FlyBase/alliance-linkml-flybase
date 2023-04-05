@@ -476,7 +476,7 @@ class DAFMaker(object):
             dis_anno.reference_curie = self.get_pub_xref(session, dis_anno.feature_cvterm.pub.uniquename)
             dis_anno.inferred_gene_curie = self.get_inferred_gene(session, dis_anno.feature_cvterm.feature.feature_id)
             this_data_provider_dto = self.data_provider_dto.copy()
-            this_data_provider_dto['cross_reference_dto']['reference_curie'] = dis_anno.do_term_curie
+            this_data_provider_dto['cross_reference_dto']['referenced_curie'] = dis_anno.do_term_curie
             this_data_provider_dto['cross_reference_dto']['display_name'] = dis_anno.do_term_curie
             dis_anno.data_provider_dto = this_data_provider_dto
 
