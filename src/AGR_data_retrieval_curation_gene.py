@@ -120,6 +120,7 @@ class AllianceGene(object):
         # Attributes for the Alliance BiologicalEntityDTO. BiologicalEntityDTO is_a AuditedObjectDTO.
         self.curie = 'FB:{}'.format(feature.uniquename)
         self.taxon_curie = None                               # A string representing the NCBI taxon ID. We have no NCBI taxonID for 561 genes (72 species).
+        self.data_provider_dto = None                         # Fill in with DataProviderDTO info.
         # Attributes for the Alliance GenomicEntityDTO. GenomicEntityDTO is_a BiologicalEntityDTO.
         self.cross_reference_dtos = []                        # Report only select dbs, using AGR-accepted db_prefix.
         self.secondary_identifiers = []                       # Annotation IDs and 2o FlyBase IDs.
@@ -730,6 +731,20 @@ class GeneHandler(object):
                     if result.FeatureDbxref.is_current is False:
                         xref_dict['internal'] = True
                     gene.cross_reference_dtos.append(xref_dict)
+            # Add data provider info.
+            gene.data_provider_dto = {
+                'internal': False,
+                'obsolete': False,
+                'source_organization_abbreviation': 'FB',
+                'cross_reference_dto': {
+                    'internal': False,
+                    'obsolete': False,
+                    'referenced_curie': f'FB:{gene.feature.uniquename}',
+                    'prefix': 'FB',
+                    'page_area': 'gene',
+                    'display_name': gene.curr_symbol_name
+                }
+            }
             # Flag internal features.
             if gene.obsolete is True:
                 gene.internal = True
