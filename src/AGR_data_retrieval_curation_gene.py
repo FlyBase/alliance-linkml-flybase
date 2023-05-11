@@ -189,6 +189,7 @@ class GeneHandler(object):
     # Export fields.
     required_fields = [
         'curie',
+        'data_provider_dto',
         'gene_symbol_dto',
         'internal',
         'taxon_curie',
@@ -197,6 +198,7 @@ class GeneHandler(object):
         'created_by_curie',
         'cross_reference_dtos',
         'curie',
+        'data_provider_dto',
         'date_created',
         'date_updated',
         'gene_full_name_dto',
