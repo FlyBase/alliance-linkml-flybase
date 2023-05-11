@@ -155,6 +155,18 @@ class GeneHandler(object):
         self.export_feat_cnt = 0      # Count of all genes exported to file.
         self.internal_feat_cnt = 0    # Count of all genes marked as internal=True in export file.
 
+    # Generic data_provider_dto to which gene-specific details are later added.
+    generic_data_provider_dto = {
+        'internal': False,
+        'obsolete': False,
+        'source_organization_abbreviation': 'FB',
+        'cross_reference_dto': {
+            'internal': False,
+            'obsolete': False,
+            'prefix': 'FB',
+            'page_area': 'gene'
+        }
+    }
     # Regexes.
     gene_regex = r'^FBgn[0-9]{7}$'
     pthr_regex = r'PTHR[0-9]{5}'
@@ -713,7 +725,7 @@ class GeneHandler(object):
                     'referenced_curie': 'PANTHER:{}'.format(self.pthr_dict[gene.feature.uniquename]),
                     'display_name': 'PANTHER:{}'.format(self.pthr_dict[gene.feature.uniquename]),
                     'prefix': 'PANTHER',
-                    'page_area': 'gene',
+                    'page_area': 'FB',
                     'obsolete': False,
                     'internal': False
                 }
@@ -734,19 +746,9 @@ class GeneHandler(object):
                         xref_dict['internal'] = True
                     gene.cross_reference_dtos.append(xref_dict)
             # Add data provider info.
-            gene.data_provider_dto = {
-                'internal': False,
-                'obsolete': False,
-                'source_organization_abbreviation': 'FB',
-                'cross_reference_dto': {
-                    'internal': False,
-                    'obsolete': False,
-                    'referenced_curie': f'FB:{gene.feature.uniquename}',
-                    'prefix': 'FB',
-                    'page_area': 'gene',
-                    'display_name': gene.gene_symbol_dto['display_text']
-                }
-            }
+            gene.data_provider_dto = self.generic_data_provider_dto.copy()
+            gene.data_provider_dto['cross_reference_dto']['referenced_curie'] = f'FB:{gene.feature.uniquename}'
+            gene.data_provider_dto['cross_reference_dto']['display_name'] = gene.gene_symbol_dto['display_text']
             # Flag internal features.
             if gene.obsolete is True:
                 gene.internal = True
