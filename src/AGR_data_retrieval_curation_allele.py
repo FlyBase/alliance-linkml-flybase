@@ -95,7 +95,6 @@ class AllianceAllele(object):
         # Note: use attribute names that do not match an Alliance LinkML slot name.
         # Problems with Allele LinkML:
         # 1. Allele.taxon_curie is required, but even after updating NCBITaxon info at FlyBase, not all alleles will have NCBI taxon ID.
-        # 2. Allele.inheritance_mode_name is singular, but some FB alleles have many documented modes.
         self.feature = feature                             # The Feature object corresponding to the FlyBase allele, insertion or aberration/balancer.
         self.organism_abbr = None                          # Will be the organism.abbreviation for the allele's species of origin.
         self.adj_organism_abbr = 'Dmel'                    # Assume allele is Dmel (classical/transgenic) unless allele is of classical type in another insect.
@@ -129,25 +128,31 @@ class AllianceAllele(object):
         # Attributes for the Alliance BiologicalEntity. BiologicalEntity is_a AuditedObject.
         self.curie = 'FB:{}'.format(feature.uniquename)
         self.taxon_curie = None                                # A string representing the NCBI taxon ID. We have no NCBI taxonID for 223 alleles.
+        self.data_provider_dto = None                          # Will be DataProviderDTO object.
         # Attributes for the Alliance GenomicEntity. GenomicEntity is_a BiologicalEntity.
         self.cross_reference_dtos = []                         # Report only select dbs, using AGR-accepted db_prefix.
+        self.secondary_identifiers = []                        # N/A. Redundant with allele_secondary_id_dtos, to be deprecated soon.
+        self.genomic_location_association_dtos = []            # N/A.
         # Attributes for the Alliance Allele. Allele is_a GenomicEntity.
         self.allele_symbol_dto = None                          # Will be a single SymbolSlotAnnotationDTO.
         self.allele_full_name_dto = None                       # Will be a single FullNameSlotAnnotation.
         self.allele_synonym_dtos = []                          # Will be list of NameSlotAnnotationDTO objects.
         self.allele_secondary_id_dtos = []                     # Only 2o FlyBase IDs (redundant with GenomicEntity.secondary_identifiers?)
         self.in_collection_name = None                         # Will be library.name.
-        self.inheritance_mode_name = 'unknown'                 # Change to one of: dominant, semi-dominant, recessive. If many apply, leave as unknown.
         self.is_extinct = None                                 # Make True if extinction reported; make False is stock exists; leave as None otherwise.
         self.reference_curies = []                             # Will be a list of reference curies (directly or indirectly related).
         self.allele_database_status_dto = None                 # ToDo - must be CV term: e.g., ? - CV not settled yet?
         self.allele_functional_impact_dtos = []                # ToDo - must be CV term: e.g., amorph - CV not settled yet?
         self.allele_germline_transmission_status_dto = None    # ToDo - must be CV term: e.g., ? - CV not settled yet?
+        self.allele_inheritance_mode_dtos = []                 # ToDo - will be SlotAnnotations.
         self.allele_molecular_mutation_dtos = []               # ToDo - must be CV term: e.g., ? - CV not settled yet?
         self.allele_mutation_type_dtos = []                    # ToDo - must be SO term curies: e.g., ?.
         self.allele_nomenclature_event_dtos = []               # ToDo - must be CV term: e.g., named, renamed - CV not settled yet?
         self.allele_note_dtos = []                             # ToDo - must have CV term for note_type_name: e.g., ? - CV not settled yet?
         self.transgene_chromosome_location_curie = None        # ToDo - the curie string of the chromosome to which the allele has been mapped.
+        self.laboratory_of_origin_curie = None                 # N/A.
+        self.is_extrachromosomal = None                        # N/A.
+        self.is_integrated = None                              # N/A.
         # Notes associated with the object.
         self.for_alliance_export = True                        # Change to False if object should be excluded from export.
         self.internal_reasons = []                             # Reasons for marking an object as internal in the export file.
@@ -171,7 +176,18 @@ class AlleleHandler(object):
         self.export_feat_cnt = 0      # Count of all alleles exported to file.
         self.internal_feat_cnt = 0    # Count of all alleles marked as internal=True in export file.
 
-    # Regexes.
+    # Generic data_provider_dto to which allele-specific details are later added.
+    generic_data_provider_dto = {
+        'internal': False,
+        'obsolete': False,
+        'source_organization_abbreviation': 'FB',
+        'cross_reference_dto': {
+            'internal': False,
+            'obsolete': False,
+            'prefix': 'FB',
+            'page_area': 'allele'
+        }
+    }    # Regexes.
     gene_regex = r'^FBgn[0-9]{7}$'
     allele_regex = r'^FBal[0-9]{7}$'
     insertion_regex = r'^FBti[0-9]{7}$'
@@ -187,6 +203,7 @@ class AlleleHandler(object):
     required_fields = [
         'allele_symbol_dto',
         'curie',
+        'data_provider_dto',
         'internal',
         'taxon_curie',
     ]
@@ -205,6 +222,7 @@ class AlleleHandler(object):
         'created_by_curie',
         'cross_reference_dtos',
         'curie',
+        'data_provider_dto',
         'date_created',
         'date_updated',
         'in_collection_name',
@@ -1127,6 +1145,13 @@ class AlleleHandler(object):
             feature.allele_symbol_dto = placeholder_symbol_dto
         return
 
+    def add_data_provider_info(self, allele):
+        """Add data_provider info."""
+        allele.data_provider_dto = self.generic_data_provider_dto.copy()
+        allele.data_provider_dto['cross_reference_dto']['referenced_curie'] = f'FB:{allele.feature.uniquename}'
+        allele.data_provider_dto['cross_reference_dto']['display_name'] = allele.allele_symbol_dto['display_text']
+        return
+
     def synthesize_info(self):
         """Convert FlyBase allele data into an AllianceAllele representation."""
         log.info('Synthesizing allele info.')
@@ -1143,6 +1168,7 @@ class AlleleHandler(object):
             self.flag_unexportable_alleles(allele)
             self.synthesize_extinction(allele)
             self.synthesize_inheritance_mode(allele)
+            self.add_data_provider_info(allele)
         log.info('Done synthesizing allele info.')
         return
 

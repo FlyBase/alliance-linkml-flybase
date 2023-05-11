@@ -120,7 +120,7 @@ class AllianceGene(object):
         # Attributes for the Alliance BiologicalEntityDTO. BiologicalEntityDTO is_a AuditedObjectDTO.
         self.curie = 'FB:{}'.format(feature.uniquename)
         self.taxon_curie = None                               # A string representing the NCBI taxon ID. We have no NCBI taxonID for 561 genes (72 species).
-        self.data_provider_dto = None                         # Fill in with DataProviderDTO info.
+        self.data_provider_dto = None                         # Will be DataProviderDTO object.
         # Attributes for the Alliance GenomicEntityDTO. GenomicEntityDTO is_a BiologicalEntityDTO.
         self.cross_reference_dtos = []                        # Report only select dbs, using AGR-accepted db_prefix.
         self.secondary_identifiers = []                       # Annotation IDs and 2o FlyBase IDs.
