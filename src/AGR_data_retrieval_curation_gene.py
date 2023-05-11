@@ -744,7 +744,7 @@ class GeneHandler(object):
                     'referenced_curie': f'FB:{gene.feature.uniquename}',
                     'prefix': 'FB',
                     'page_area': 'gene',
-                    'display_name': gene.curr_symbol_name
+                    'display_name': gene.gene_symbol_dto['display_text']
                 }
             }
             # Flag internal features.
