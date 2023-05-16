@@ -141,18 +141,24 @@ class AllianceAllele(object):
         self.in_collection_name = None                         # Will be library.name.
         self.is_extinct = None                                 # Make True if extinction reported; make False is stock exists; leave as None otherwise.
         self.reference_curies = []                             # Will be a list of reference curies (directly or indirectly related).
-        self.allele_database_status_dto = None                 # ToDo - must be CV term: e.g., ? - CV not settled yet?
+        self.allele_database_status_dto = None                 # Will be "public" or "private" slot annotation.
+
+        # ToDo: work on these attributes.
+        self.allele_inheritance_mode_dtos = []                 # ToDo - group data by inheritance mode, curie phen text - report evidence curies.
+        self.transgene_chromosome_location_curie = None        # ToDo - get chr via FBtp from FBti floc, derived_chromosome_location featureprop, or dock site.
+
+        # Assess these.
         self.allele_functional_impact_dtos = []                # ToDo - must be CV term: e.g., amorph - CV not settled yet?
         self.allele_germline_transmission_status_dto = None    # ToDo - must be CV term: e.g., ? - CV not settled yet?
-        self.allele_inheritance_mode_dtos = []                 # ToDo - will be SlotAnnotations.
-        self.allele_molecular_mutation_dtos = []               # ToDo - must be CV term: e.g., ? - CV not settled yet?
         self.allele_mutation_type_dtos = []                    # ToDo - must be SO term curies: e.g., ?.
-        self.allele_nomenclature_event_dtos = []               # ToDo - must be CV term: e.g., named, renamed - CV not settled yet?
-        self.allele_note_dtos = []                             # ToDo - must have CV term for note_type_name: e.g., ? - CV not settled yet?
-        self.transgene_chromosome_location_curie = None        # ToDo - the curie string of the chromosome to which the allele has been mapped.
-        self.laboratory_of_origin_curie = None                 # N/A.
+
+        # Needs work to define Allele Note Types.
+        self.allele_note_dtos = []                             # Waiting on "Allele Note Type" vocabulary.
+        # These do not apply to FlyBase.
+        self.allele_nomenclature_event_dtos = []               # N/A.
         self.is_extrachromosomal = None                        # N/A.
         self.is_integrated = None                              # N/A.
+        self.laboratory_of_origin_curie = None                 # N/A.
         # Notes associated with the object.
         self.for_alliance_export = True                        # Change to False if object should be excluded from export.
         self.internal_reasons = []                             # Reasons for marking an object as internal in the export file.
@@ -210,12 +216,12 @@ class AlleleHandler(object):
     output_fields = [
         'allele_database_status_dto',
         'allele_full_name_dto',
-        # 'allele_functional_impact_dtos',    # BOB: Add this?
-        # 'allele_germline_transmission_status_dto',    # BOB: Add this?
-        # 'allele_molecular_mutation_dtos',    # BOB: Add this?
-        # 'allele_mutation_type_dtos',    # BOB: Add this?
-        # 'allele_nomenclature_event_dtos',    # BOB: Add this?
-        # 'allele_note_dtos',    # BOB: Add this?
+        # 'allele_functional_impact_dtos',
+        # 'allele_germline_transmission_status_dto',
+        # 'allele_inheritance_mode_dtos',
+        # 'allele_mutation_type_dtos',
+        # 'allele_nomenclature_event_dtos',
+        # 'allele_note_dtos',
         'allele_secondary_id_dtos',
         'allele_symbol_dto',
         'allele_synonym_dtos',
@@ -226,13 +232,12 @@ class AlleleHandler(object):
         'date_created',
         'date_updated',
         'in_collection_name',
-        # 'inheritance_mode_name',    # BOB: FIX THIS "allele_inheritance_mode_dtos"
         'internal',
         'is_extinct',
         'obsolete',
         'reference_curies',
         'taxon_curie',
-        # 'transgene_chromosome_location_curie',    # BOB: Add this?
+        # 'transgene_chromosome_location_curie',
         'updated_by_curie',
     ]
     fb_agr_db_dict = {
@@ -401,11 +406,14 @@ class AlleleHandler(object):
             allele.is_obsolete.is_(False),
             allele.uniquename.op('~')(self.allele_regex),
             construct.is_obsolete.is_(False),
-            construct.uniquename.op('~')(self.construct_regex)
+            construct.uniquename.op('~')(self.construct_regex),
+            Cvterm.name == 'derived_tp_assoc_alleles'
         )
         construct_results = session.query(allele, construct).\
+            select_from(construct).\
             join(FeatureRelationship, (FeatureRelationship.object_id == construct.feature_id)).\
             join(allele, (allele.feature_id == FeatureRelationship.subject_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
             filter(*filters).\
             distinct()
         counter = 0
@@ -424,12 +432,14 @@ class AlleleHandler(object):
             allele.is_obsolete.is_(False),
             allele.uniquename.op('~')(self.allele_regex),
             insertion.is_obsolete.is_(False),
-            insertion.uniquename.op('~')(self.insertion_regex)
+            insertion.uniquename.op('~')(self.insertion_regex),
+            Cvterm.name == 'associated_with'
         )
         insertion_results = session.query(Organism, allele, insertion).\
             join(FeatureRelationship, (FeatureRelationship.object_id == insertion.feature_id)).\
             join(allele, (allele.feature_id == FeatureRelationship.subject_id)).\
             join(Organism, (Organism.organism_id == insertion.organism_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
             filter(*filters).\
             distinct()
         dmel_counter = 0
@@ -699,9 +709,11 @@ class AlleleHandler(object):
         log.info('Get phenotypes related to alleles.')
         filters = (
             Feature.uniquename.op('~')(self.allele_regex),
-            Genotype.is_obsolete.is_(False)
+            Genotype.is_obsolete.is_(False),
+            Pub.is_obsolete.is_(False),
+            Pub.uniquename.op('~')(self.pub_regex)
         )
-        results = session.query(Feature, Genotype, Phenotype, Cvterm).\
+        results = session.query(Feature, Genotype, Phenotype, Cvterm, Pub).\
             join(FeatureGenotype, (FeatureGenotype.feature_id == Feature.feature_id)).\
             join(Genotype, (Genotype.genotype_id == FeatureGenotype.genotype_id)).\
             join(Phenstatement, (Phenstatement.genotype_id == Genotype.genotype_id)).\
@@ -711,8 +723,8 @@ class AlleleHandler(object):
             filter(*filters).\
             distinct()
         counter = 0
-        for rst in results:
-            self.allele_dict[rst.Feature.uniquename].phenotypes.append(rst)
+        for result in results:
+            self.allele_dict[result.Feature.uniquename].phenotypes.append(result)
             counter += 1
         log.info(f'Found {counter} allele-phenotype associations.')
         return
@@ -935,12 +947,17 @@ class AlleleHandler(object):
         if allele.obsolete is True:
             allele.internal = True
             allele.internal_reasons.append('Obsolete')
-        # if allele.organism_abbr != 'Dmel':
-        #     allele.internal = True
-        #     allele.internal_reasons.append('Non-Dmel')
-        # if allele.allele_of_internal_gene is True:
-        #     allele.internal = True
-        #     allele.internal_reasons.append('Allele of internal Dmel gene type.')
+        if allele.organism_abbr != 'Dmel':
+            allele.internal = True
+            allele.internal_reasons.append('Non-Dmel')
+        if allele.allele_of_internal_gene is True:
+            allele.internal = True
+            allele.internal_reasons.append('Allele of internal Dmel gene type.')
+        allele_status = {False: 'public', True: 'private'}
+        allele.allele_database_status_dto = {
+            'internal': False,
+            'database_status_name': allele_status[allele.internal]
+        }
         return
 
     def flag_unexportable_alleles(self, allele):
@@ -985,55 +1002,74 @@ class AlleleHandler(object):
 
     def synthesize_inheritance_mode(self, allele):
         """Determine inheritance mode for the allele."""
-        inheritance_modes = {
+        # We convert the FlyBase terms to Alliance terms as follows.
+        inheritance_mode_terms = {
             'recessive': 'recessive',
             'dominant': 'dominant',
             'semidominant': 'semi-dominant',
             'codominant': 'codominant'
         }
-        reported_modes = []
-        mode_context_list = []
+        # Gather phenotype data relevant to inheritance mode as a dict.
+        # Keys will be tuple of (inheritance_mode, phenotype_curie, phenotype_statement)
+        # Value for each key will be a list of pub_ids in support of each key.
+        # Map the phenotype_cvterm.cvterm_id to "inheritance_mode_name".
+        # Map the phenotype.cvalue_id to phenotype_term_curie.
+        # Map the phenotype.description to phenotype_statement.
+        inheritance_data = {}
         for phenotype in allele.phenotypes:
+            # First, filter out phenotype entries that are not relevant to inheritance mode.
             cvterm = phenotype.Cvterm.name
-            # Assess only cases where CV term refers to inheritance mode.
-            if cvterm in inheritance_modes.keys():
-                # Now assess genotype complexity using genotype.description.
-                # Start with assumption that it is not a single allele genotype
+            if cvterm not in inheritance_mode_terms.keys():
+                continue
+            # Second, filter out complex genotypes. Start by assuming that genotype is complex.
+            single_allele_genotype = False
+            # Weed out multi-locus genotypes.
+            if ' ' in phenotype.Genotype.uniquename:
                 single_allele_genotype = False
-                # First weed out multi locus genotypes.
-                if ' ' in phenotype.Genotype.uniquename:
-                    single_allele_genotype = False
-                elif '_' in phenotype.Genotype.description:
-                    single_allele_genotype = False
-                # Assess single locus having 2 features: could be homo- or heterozygous.
-                elif '|' in phenotype.Genotype.description:
-                    features = phenotype.Genotype.description.split('|')
-                    if features[0] == features[1]:
-                        single_allele_genotype = True
-                    else:
-                        for feature in features:
-                            if feature == '+':
-                                single_allele_genotype = True
-                            elif feature.endswith('[+]'):
-                                single_allele_genotype = True
-                # If no spaces, underscores or pipes in description, it's a single-feature genotype.
-                else:
+            elif '_' in phenotype.Genotype.description:
+                single_allele_genotype = False
+            # Assess single locus having 2 features: could be homo- or heterozygous.
+            elif '|' in phenotype.Genotype.description:
+                features = phenotype.Genotype.description.split('|')
+                if features[0] == features[1]:
                     single_allele_genotype = True
-                if single_allele_genotype is True:
-                    reported_modes.append(inheritance_modes[cvterm])
-                    geno = phenotype.Genotype.uniquename
-                    pheno = phenotype.Phenotype.uniquename
-                    mode_context = f'{allele.curie}\t{cvterm}\t{geno}\t{pheno}'
-                    mode_context_list.append(mode_context)
-        reported_modes = list(set(reported_modes))
-        mode_context_list = list(set(mode_context_list))
-        # Update inheritance_mode_name if unambiguous.
-        if len(reported_modes) == 1:
-            allele.inheritance_mode_name = reported_modes[0]
-        # If ambiguous, change from "unknown" to None.
-        elif len(reported_modes) > 1:
-            allele.inheritance_mode_name = None
-            log.warning(f"{allele}: Found {len(reported_modes)} inheritance modes: {'|'.join(reported_modes)}. Context: {mode_context_list}")
+                else:
+                    for feature in features:
+                        if feature == '+':
+                            single_allele_genotype = True
+                        elif feature.endswith('[+]'):
+                            single_allele_genotype = True
+            # If no spaces, underscores or pipes in description, it's a single-feature genotype.
+            else:
+                single_allele_genotype = True
+            if single_allele_genotype is False:
+                continue
+            # For relevant phenotypes of simple genotypes, we parse out the data.
+            inheritance_mode_name = inheritance_mode_terms[cvterm]
+            phenotype_term_curie = f'FB:{phenotype.cvalue.dbxref.db.name}:{phenotype.cvalue.dbxref.accession}'
+            phenotype_statement = phenotype.Phenotype.uniquename
+            pheno_key = (inheritance_mode_name, phenotype_term_curie, phenotype_statement)
+            pub_id = phenotype.Pub.pub_id
+            pub_curie = self.all_pubs_dict[pub_id]
+            try:
+                inheritance_data[pheno_key].append(pub_curie)
+            except KeyError:
+                inheritance_data[pheno_key] = [pub_curie]
+        # Convert data into Alliance slot annotations.
+        INHERITANCE_MODE_NAME = 0
+        PHENOTYPE_CURIE_NAME = 1
+        PHENOTYPE_STATEMENT = 2
+        for pheno_key, pub_curie_list in inheritance_data.items():
+            allele_inheritance_mode_slot_annotation_dto = {
+                "created_by_curie": "FB:FB_curator",
+                "internal": False,
+                "obsolete": False,
+                "inheritance_mode_name": pheno_key[INHERITANCE_MODE_NAME],
+                "phenotype_term_curie": pheno_key[PHENOTYPE_CURIE_NAME],
+                "phenotype_statement": pheno_key[PHENOTYPE_STATEMENT],
+                "evidence_curies": pub_curie_list
+            }
+            allele.allele_inheritance_mode_dtos.append(allele_inheritance_mode_slot_annotation_dto)
         return
 
     def synthesize_collections(self, allele):
