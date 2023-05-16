@@ -17,6 +17,7 @@ Notes:
     file specs for the original Neo4j drop-and-reload database.
     To Do - report non-MOD inferred_gene_curie once supported by Alliance again (v1.7.0?)
     To Do - convert multi-allele annotations into AGM annotations.
+    To Do - for v1.7.1, disease_genetic_modifier_curie becomes multivalued: convert to list; consolidate?
 
 """
 
