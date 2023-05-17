@@ -218,7 +218,7 @@ class AlleleHandler(object):
         'allele_full_name_dto',
         # 'allele_functional_impact_dtos',
         # 'allele_germline_transmission_status_dto',
-        # 'allele_inheritance_mode_dtos',
+        'allele_inheritance_mode_dtos',
         # 'allele_mutation_type_dtos',
         # 'allele_nomenclature_event_dtos',
         # 'allele_note_dtos',
