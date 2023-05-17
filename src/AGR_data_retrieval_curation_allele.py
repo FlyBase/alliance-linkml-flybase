@@ -38,7 +38,7 @@ from harvdev_utils.production import (
 from harvdev_utils.psycopg_functions import set_up_db_reading
 
 # Now proceed with generic setup.
-report_label = 'allele_curation'
+report_label = 'BOBallele_curation'
 set_up_dict = set_up_db_reading(report_label)
 server = set_up_dict['server']
 database = set_up_dict['database']
@@ -720,6 +720,7 @@ class AlleleHandler(object):
             join(Phenotype, (Phenotype.phenotype_id == Phenstatement.phenotype_id)).\
             join(PhenotypeCvterm, (PhenotypeCvterm.phenotype_id == Phenotype.phenotype_id)).\
             join(Cvterm, (Cvterm.cvterm_id == PhenotypeCvterm.cvterm_id)).\
+            join(Pub, (Pub.pub_id == Phenstatement.pub_id)).\
             filter(*filters).\
             distinct()
         counter = 0
