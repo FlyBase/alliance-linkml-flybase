@@ -113,7 +113,7 @@ class AllianceAllele(object):
         self.timestamps = []                               # Add all timestamps here.
         self.fb_references = []                            # Will be list of pub_ids from feature_pub, feature_synonym.
         self.featureprops = {}                             # A CVterm-keyed dict of Featureprop lists.
-        self.phenotypes = []                               # Will be a list of SQLAlchemy (Feature, Genotype, Phenotype, Cvterm) results.
+        self.phenstatements = []                           # Will be a list of SQLAlchemy (Feature, Genotype, Phenotype, Cvterm, Pub) results from Phenstatement.
         self.direct_libraries = []                         # Will be a list of Library objects directly related to the allele.
         self.ins_libraries = []                            # Will be a list of Library objects related to the allele via insertion (FBti).
         self.cons_libraries = []                           # Will be a list of Library objects related to the allele via construct (FBtp).
@@ -725,7 +725,7 @@ class AlleleHandler(object):
             distinct()
         counter = 0
         for result in results:
-            self.allele_dict[result.Feature.uniquename].phenotypes.append(result)
+            self.allele_dict[result.Feature.uniquename].phenstatements.append(result)
             counter += 1
         log.info(f'Found {counter} allele-phenotype associations.')
         return
@@ -1017,21 +1017,21 @@ class AlleleHandler(object):
         # Map the phenotype.cvalue_id to phenotype_term_curie.
         # Map the phenotype.description to phenotype_statement.
         inheritance_data = {}
-        for phenotype in allele.phenotypes:
+        for phenstmt in allele.phenstatements:
             # First, filter out phenotype entries that are not relevant to inheritance mode.
-            cvterm = phenotype.Cvterm.name
+            cvterm = phenstmt.Cvterm.name
             if cvterm not in inheritance_mode_terms.keys():
                 continue
             # Second, filter out complex genotypes. Start by assuming that genotype is complex.
             single_allele_genotype = False
             # Weed out multi-locus genotypes.
-            if ' ' in phenotype.Genotype.uniquename:
+            if ' ' in phenstmt.Genotype.uniquename:
                 single_allele_genotype = False
-            elif '_' in phenotype.Genotype.description:
+            elif '_' in phenstmt.Genotype.description:
                 single_allele_genotype = False
             # Assess single locus having 2 features: could be homo- or heterozygous.
-            elif '|' in phenotype.Genotype.description:
-                features = phenotype.Genotype.description.split('|')
+            elif '|' in phenstmt.Genotype.description:
+                features = phenstmt.Genotype.description.split('|')
                 if features[0] == features[1]:
                     single_allele_genotype = True
                 else:
@@ -1047,10 +1047,10 @@ class AlleleHandler(object):
                 continue
             # For relevant phenotypes of simple genotypes, we parse out the data.
             inheritance_mode_name = inheritance_mode_terms[cvterm]
-            phenotype_term_curie = f'FB:{phenotype.cvalue_id.dbxref.db.name}:{phenotype.cvalue_id.dbxref.accession}'
-            phenotype_statement = phenotype.Phenotype.uniquename
+            phenotype_term_curie = f'FB:{phenstmt.Phenotype.cvalue.dbxref.db.name}:{phenstmt.Phenotype.cvalue.dbxref.accession}'
+            phenotype_statement = phenstmt.Phenotype.uniquename
             pheno_key = (inheritance_mode_name, phenotype_term_curie, phenotype_statement)
-            pub_id = phenotype.Pub.pub_id
+            pub_id = phenstmt.Pub.pub_id
             pub_curie = self.all_pubs_dict[pub_id]
             try:
                 inheritance_data[pheno_key].append(pub_curie)
