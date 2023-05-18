@@ -1047,7 +1047,7 @@ class AlleleHandler(object):
                 continue
             # For relevant phenotypes of simple genotypes, we parse out the data.
             inheritance_mode_name = inheritance_mode_terms[cvterm]
-            phenotype_term_curie = f'FB:{phenstmt.Phenotype.cvalue.dbxref.db.name}:{phenstmt.Phenotype.cvalue.dbxref.accession}'
+            phenotype_term_curie = f'{phenstmt.Phenotype.cvalue.dbxref.db.name}:{phenstmt.Phenotype.cvalue.dbxref.accession}'
             phenotype_statement = phenstmt.Phenotype.uniquename
             pheno_key = (inheritance_mode_name, phenotype_term_curie, phenotype_statement)
             pub_id = phenstmt.Pub.pub_id
