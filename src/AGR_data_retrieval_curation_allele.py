@@ -38,7 +38,7 @@ from harvdev_utils.production import (
 from harvdev_utils.psycopg_functions import set_up_db_reading
 
 # Now proceed with generic setup.
-report_label = 'BOBallele_curation'
+report_label = 'allele_curation'
 set_up_dict = set_up_db_reading(report_label)
 server = set_up_dict['server']
 database = set_up_dict['database']
@@ -1201,11 +1201,11 @@ class AlleleHandler(object):
             self.synthesize_xrefs(allele)
             self.synthesize_references(allele)
             self.synthesize_insertions(allele)
-            self.flag_internal_alleles(allele)
-            self.flag_unexportable_alleles(allele)
             self.synthesize_extinction(allele)
             self.synthesize_inheritance_mode(allele)
             self.add_data_provider_info(allele)
+            self.flag_internal_alleles(allele)
+            self.flag_unexportable_alleles(allele)
         log.info('Done synthesizing allele info.')
         return
 
