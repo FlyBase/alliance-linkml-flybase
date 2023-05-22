@@ -196,9 +196,7 @@ class AlleleHandler(object):
         'internal': False,
         'obsolete': False,
         'created_by_curie': 'FB:FB_curator',
-        'updated_by_curie': 'FB:FB_curator',
-        'date_created': None,
-        'date_updated': None
+        'updated_by_curie': 'FB:FB_curator'
     }
     generic_data_provider_dto = generic_audited_object.copy()
     generic_data_provider_dto['source_organization_abbreviation'] = 'FB'
