@@ -338,17 +338,15 @@ class AlleleHandler(object):
         recursive_query_total_results = session.query(recursive_query_total)
         # Build the list from the results.
         cvterm_id_list = [i[0] for i in recursive_query_total_results]
+        log.info(f'Found {len(cvterm_id_list)} terms under "{starting_cvterm_name}" ("{starting_cvterm_cv_name}")')
         cvterm_id_list.append(starting_cvterm.cvterm_id)
-        for cvterm_id in cvterm_id_list:
-            log.debug(f'BOB: cvterm_id={cvterm_id}, name={self.cvterm_dict[cvterm_id]["name"]}, curie={self.cvterm_dict[cvterm_id]["curie"]}')
-        quit()    # BILLY - TMP DEV
-        return cvterm_list
+        return cvterm_id_list
 
     def get_key_cvterm_sets(self, session):
         """Get key CV term sets from chado."""
         log.info('Get key CV term sets from chado.')
-        # self.allele_class_terms.extend(self.__get_child_cvterms(session, 'allele class', 'FlyBase miscellaneous CV'))
-        # self.allele_mutant_type_terms.extend(self.__get_child_cvterms(session, 'chromosome_structure_variation', 'SO'))
+        self.allele_class_terms.extend(self.__get_child_cvterms(session, 'allele class', 'FlyBase miscellaneous CV'))
+        self.allele_mutant_type_terms.extend(self.__get_child_cvterms(session, 'chromosome_structure_variation', 'SO'))
         self.allele_mutant_type_terms.extend(self.__get_child_cvterms(session, 'sequence_alteration', 'SO'))
         return
 
