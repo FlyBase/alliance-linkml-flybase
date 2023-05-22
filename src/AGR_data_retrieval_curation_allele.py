@@ -102,7 +102,7 @@ class AllianceAllele(object):
         self.constructs = []                               # Will be a list of FBtp IDs for this allele's constructs.
         self.dmel_insertions = []                          # Will be a list of FBti IDs for this allele's Dmel insertions.
         self.non_dmel_insertions = []                      # Will be a list of FBti IDs for this allele's non-Dmel insertions.
-        self.args = []                                     # Will be a list of ARGs Features (variants).
+        self.args = []                                     # Will be a list of (ARGs Features (variants).
         self.parent_gene = None                            # Will be the FBgn ID of the allele's gene.
         self.allele_of_internal_gene = False               # Will change to True if is allele of Dmel internal-type gene (e.g., origin_of_replication).
         self.curr_symbol_name = None                       # Will be the current symbol synonym.synonym_sgml, processed by sub_sup_sgml_to_html().
@@ -143,9 +143,7 @@ class AllianceAllele(object):
         self.reference_curies = []                             # Will be a list of reference curies (directly or indirectly related).
         self.allele_database_status_dto = None                 # Will be "public" or "private" slot annotation.
         self.allele_inheritance_mode_dtos = []                 # Will be list of slot annotations.
-
-        # Mutation types.
-        self.allele_mutation_type_dtos = []                    # ToDo - must be SO term curies: e.g., ?.
+        self.allele_mutation_type_dtos = []                    # Will be list of slot annotations.
         # Relevant SO terms in two branches:
         #     chromosome_structure_variation (SO:1000183)
         #     sequence_alteration (SO:0001059)
@@ -153,14 +151,16 @@ class AllianceAllele(object):
         # Even though mutation_type_curies is multivalued, I will report only single SO term per annotation.
         # This data will be found in many places.
         # 1. If related to an ARGs, take ARGs feature.type.
-        # 2. If related to some type of FBti, take feature.type.
+        #     Where to get attribution?
+        # 2. If related to some type of FBti, depends on type:
+        #     "transposable_element_insertion_site" => "transgenic_insertion" (SO:0001218).
+        #     "transposable_element"                => "mobile_element_insertion" (SO:0001837).
+        #     "insertion"                           => "insertion" (SO:0000667).
         # 3. If an aberration, look in feature_cvterm.
 
-
-        self.allele_functional_impact_dtos = []                # ToDo - must be CV term: e.g., amorph - CV not settled yet?
-
         # Future ToDo:
-        self.allele_note_dtos = []                             # Waiting on "Allele Note Type" vocabulary.
+        self.allele_functional_impact_dtos = []                # ToDo - Waiting on "Functional Impact" vobabulary. Get from feature_cvterm.
+        self.allele_note_dtos = []                             # ToDo - Waiting on "Allele Note Type" vocabulary. Get from featureprop.
         self.transgene_chromosome_location_curie = None        # ToDo - get chr via FBtp from FBti floc, derived_chromosome_location featureprop, or dock site.
         # These do not apply to FlyBase.
         self.allele_nomenclature_event_dtos = []               # N/A.
@@ -443,6 +443,7 @@ class AlleleHandler(object):
             allele.is_obsolete.is_(False),
             allele.uniquename.op('~')(self.allele_regex),
             insertion.is_obsolete.is_(False),
+            insertion.is_analysis.is_(False),
             insertion.uniquename.op('~')(self.insertion_regex),
             Cvterm.name == 'associated_with'
         )
