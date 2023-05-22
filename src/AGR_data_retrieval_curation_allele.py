@@ -26,10 +26,10 @@ import json
 import strict_rfc3339
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import aliased, sessionmaker
-# from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm.exc import NoResultFound
 from harvdev_utils.char_conversions import sub_sup_sgml_to_html
 from harvdev_utils.production import (
-    Cvterm, Db, Dbxref, Feature, FeatureCvterm, FeatureDbxref, FeatureGenotype,
+    Cv, Cvterm, CvtermRelationship, Db, Dbxref, Feature, FeatureCvterm, FeatureDbxref, FeatureGenotype,
     FeaturePub, FeatureRelationship, FeatureSynonym, Featureprop, Genotype,
     Library, LibraryFeature, LibraryFeatureprop, Organism, Organismprop,
     OrganismDbxref, Phenotype, PhenotypeCvterm, Phenstatement, Pub, PubDbxref,
@@ -159,8 +159,8 @@ class AllianceAllele(object):
         # 3. If an aberration, look in feature_cvterm.
 
         # Future ToDo:
-        self.allele_functional_impact_dtos = []                # ToDo - Waiting on "Functional Impact" vobabulary. Get from feature_cvterm.
-        self.allele_note_dtos = []                             # ToDo - Waiting on "Allele Note Type" vocabulary. Get from featureprop.
+        self.allele_functional_impact_dtos = []                # ToDo - Waiting on "Functional Impact" CV. Get feature_cvterm, child of "allele class" term.
+        self.allele_note_dtos = []                             # ToDo - Waiting on "Allele Note Type" CV. Get from featureprop.
         self.transgene_chromosome_location_curie = None        # ToDo - get chr via FBtp from FBti floc, derived_chromosome_location featureprop, or dock site.
         # These do not apply to FlyBase.
         self.allele_nomenclature_event_dtos = []               # N/A.
@@ -190,6 +190,9 @@ class AlleleHandler(object):
         self.total_feat_cnt = 0       # Count of all alleles found in starting query.
         self.export_feat_cnt = 0      # Count of all alleles exported to file.
         self.internal_feat_cnt = 0    # Count of all alleles marked as internal=True in export file.
+    # Key chado CV term sets.
+    allele_class_terms = []           # Will be cvterm_ids for child terms of "allele_class" (FBcv:0000286).
+    allele_mutant_type_terms = []     # Will be cvterm_ids: child of chromosome_structure_variation or sequence_alteration.
 
     # Generic objects with which to build Alliance DTOs.
     generic_audited_object = {
@@ -201,7 +204,6 @@ class AlleleHandler(object):
     generic_data_provider_dto = generic_audited_object.copy()
     generic_data_provider_dto['source_organization_abbreviation'] = 'FB'
     generic_data_provider_dto['cross_reference_dto'] = {'prefix': 'FB', 'page_area': 'allele', 'internal': False}
-
     # Regexes.
     gene_regex = r'^FBgn[0-9]{7}$'
     allele_regex = r'^FBal[0-9]{7}$'
@@ -252,6 +254,87 @@ class AlleleHandler(object):
     fb_agr_db_dict = {
         'FlyBase': 'FB'
     }
+
+    def __get_child_cvterms(self, session, starting_cvterm_name, starting_cvterm_cv_name):
+        """Get all cvterm_ids for some branch of an ontology defined by the parent term.
+
+        Args:
+            arg1 (self): (AlleleHandler) The object that runs the method.
+            arg2 (session): (SQLAlchemy session)
+            arg3 (starting_cvterm_name): (str) The name of the parent CV term.
+            arg4 (starting_cvterm_cv_name): (str) The name of the parent CV term's CV.
+
+        Returns:
+            List of cvterm.cvterm_ids, including that of the starting parent CV term.
+
+        Raises:
+            Raise NoResultFound if starting CV term cannot be found in chado.
+
+        """
+        log.info(f'Get all child terms of "{starting_cvterm_name}" ("{starting_cvterm_cv_name}")')
+        # 1. Get the parent CV term.
+        filters = (
+            Cvterm.name == starting_cvterm_name,
+            Cv.name == starting_cvterm_cv_name)
+        try:
+            starting_cvterm = session.query(Cvterm).\
+                join(Cv, (Cv.cv_id == Cvterm.cv_id)).\
+                filter(*filters).\
+                one()
+            log.debug(f'Found chado CV term found for "{starting_cvterm_name}" ("{starting_cvterm_cv_name}")')
+        except NoResultFound:
+            log.error(f'No chado CV term found for "{starting_cvterm_name}" ("{starting_cvterm_cv_name}")')
+            raise NoResultFound
+        # 2. Define the start of the recursive query for child terms of the starting term.
+        # Recursive query built up using the sorta helpful instructions here:
+        # https://docs.sqlalchemy.org/en/13/orm/query.html
+        # https://sanjayasubedi.com.np/python/sqlalchemy/recursive-query-in-postgresql-with-sqlalchemy/
+        cvterm_subject1, cvterm_subject2, cvterm_object = aliased(Cvterm), aliased(Cvterm), aliased(Cvterm)
+        cvterm_relationship1, cvterm_relationship2 = aliased(CvtermRelationship), aliased(CvtermRelationship)
+        cv1, cv2 = aliased(Cv), aliased(Cv)
+        # 2a. Define the starting point of the query (output of which to be used recursively to get more results).
+        # Basically, looking for all child terms (subject) of the initial CV term (object) in cvterm_relationship.
+        # The "recursive_query_start" below is not actually results, but a 'sqlalchemy.sql.base.ImmutableColumnCollection' class.
+        filters = (cvterm_object.cvterm_id == starting_cvterm.cvterm_id,
+                   cv1.name == starting_cvterm_cv_name)
+        recursive_query_start = session.query(cvterm_subject1).\
+            join(cvterm_relationship1, (cvterm_relationship1.subject_id == cvterm_subject1.cvterm_id)).\
+            join(cvterm_object, (cvterm_object.cvterm_id == cvterm_relationship1.object_id)).\
+            join(cv1, (cv1.cv_id == cvterm_subject1.cv_id)).\
+            filter(*filters).\
+            cte(recursive=True)    # Important bit here.
+        # 3. Define the second part of the recursive query.
+        # Essentially, we want child terms of child terms in the starting query, recursively.
+        # So, subject_ids in "recursive_query_start" results will be the objects in our query of cvterm_relationship.
+        # Importantly, the columns of the initial "recursive_query_start" query are accessed by the ".c" attribute.
+        filters2 = (cv2.name == starting_cvterm_cv_name,)
+        recursive_query_repeat = session.query(cvterm_subject2).\
+            join(cvterm_relationship2, (cvterm_relationship2.subject_id == cvterm_subject2.cvterm_id)).\
+            join(recursive_query_start, (recursive_query_start.c.cvterm_id == cvterm_relationship2.object_id)).\
+            join(cv2, (cv2.cv_id == cvterm_subject2.cv_id)).\
+            filter(*filters2)
+        # 4. Define a query that takes the union of the starting and recursive queries.
+        recursive_query_total = recursive_query_start.union(recursive_query_repeat)
+        # 5. And finally, get the result for the start and recursive query parts). Piece of cake ;)
+        recursive_query_total_results = session.query(recursive_query_total)
+        for result in recursive_query_total_results:
+            log.info(f'BOB: result is type {type(result)}')
+        # For ease of use, just take the cvterm_ids in the ontology branch of interest.
+        # And then, append the starting cvterm_id (which doesn't get returned by the recursive query)
+        cvterm_list = []
+        cvterm_list = [i[0] for i in recursive_query_total_results]
+        cvterm_list.append(starting_cvterm.cvterm_id)
+        log.info('TEMP DONE FOR DEBUG DEV.')
+        quit()
+        return cvterm_list
+
+    def get_key_cvterm_sets(self, session):
+        """Get key CV term sets from chado."""
+        log.info('Get key CV term sets from chado.')
+        self.allele_class_terms = self.__get_child_cvterms(session, 'allele class', 'FlyBase miscellaneous CV')
+        # self.allele_mutant_type_terms = self.__get_child_cvterms(session, 'chromosome_structure_variation', 'SO')
+        # self.allele_mutant_type_terms.extend(self.__get_child_cvterms(session, 'sequence_alteration', 'SO'))
+        return
 
     def get_all_references(self, session):
         """Get all references."""
@@ -856,6 +939,7 @@ class AlleleHandler(object):
 
     def query_chado(self, session):
         """A wrapper method that runs initial db queries."""
+        self.get_key_cvterm_sets(session)
         self.get_all_references(session)
         self.get_alleles(session)
         self.get_direct_collections(session)
