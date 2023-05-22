@@ -160,8 +160,8 @@ class AllianceAllele(object):
 
         # Future ToDo:
         self.allele_functional_impact_dtos = []                # ToDo - Waiting on "Functional Impact" CV. Get feature_cvterm, child of "allele class" term.
-        self.allele_note_dtos = []                             # ToDo - Waiting on "Allele Note Type" CV. Get from featureprop.
         self.transgene_chromosome_location_curie = None        # ToDo - get chr via FBtp from FBti floc, derived_chromosome_location featureprop, or dock site.
+        self.allele_note_dtos = []                             # ToDo - Waiting on "Allele Note Type" CV. Get from featureprop.
         # These do not apply to FlyBase.
         self.allele_nomenclature_event_dtos = []               # N/A.
         self.allele_germline_transmission_status_dto = None    # N/A (MGI).
@@ -229,10 +229,8 @@ class AlleleHandler(object):
         'allele_database_status_dto',
         'allele_full_name_dto',
         # 'allele_functional_impact_dtos',
-        # 'allele_germline_transmission_status_dto',
         'allele_inheritance_mode_dtos',
         # 'allele_mutation_type_dtos',
-        # 'allele_nomenclature_event_dtos',
         # 'allele_note_dtos',
         'allele_secondary_id_dtos',
         'allele_symbol_dto',
