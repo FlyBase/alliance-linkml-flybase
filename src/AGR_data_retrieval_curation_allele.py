@@ -113,7 +113,7 @@ class AllianceAllele(object):
         self.timestamps = []                               # Add all timestamps here.
         self.fb_references = []                            # Will be list of pub_ids from feature_pub, feature_synonym.
         self.featureprops = {}                             # A CVterm-keyed dict of Featureprop lists.
-        self.phenstatements = []                           # Will be a list of SQLAlchemy (Feature, Genotype, Phenotype, Cvterm, Pub) results from Phenstatement.
+        self.phenstatements = []                           # Will be a list of SQLAlchemy (Feature, Genotype, Phenotype, Cvterm, Pub) from Phenstatements.
         self.direct_libraries = []                         # Will be a list of Library objects directly related to the allele.
         self.ins_libraries = []                            # Will be a list of Library objects related to the allele via insertion (FBti).
         self.cons_libraries = []                           # Will be a list of Library objects related to the allele via construct (FBtp).
@@ -142,18 +142,16 @@ class AllianceAllele(object):
         self.is_extinct = None                                 # Make True if extinction reported; make False is stock exists; leave as None otherwise.
         self.reference_curies = []                             # Will be a list of reference curies (directly or indirectly related).
         self.allele_database_status_dto = None                 # Will be "public" or "private" slot annotation.
-
-        # ToDo: work on these attributes.
-        self.allele_inheritance_mode_dtos = []                 # ToDo - group data by inheritance mode, curie phen text - report evidence curies.
-        self.transgene_chromosome_location_curie = None        # ToDo - get chr via FBtp from FBti floc, derived_chromosome_location featureprop, or dock site.
+        self.allele_inheritance_mode_dtos = []                 # Will be list of slot annotations.
 
         # Assess these.
+        self.allele_mutation_type_dtos = []                    # ToDo - must be SO term curies: e.g., ?.
         self.allele_functional_impact_dtos = []                # ToDo - must be CV term: e.g., amorph - CV not settled yet?
         self.allele_germline_transmission_status_dto = None    # ToDo - must be CV term: e.g., ? - CV not settled yet?
-        self.allele_mutation_type_dtos = []                    # ToDo - must be SO term curies: e.g., ?.
 
-        # Needs work to define Allele Note Types.
+        # Future ToDo:
         self.allele_note_dtos = []                             # Waiting on "Allele Note Type" vocabulary.
+        self.transgene_chromosome_location_curie = None        # ToDo - get chr via FBtp from FBti floc, derived_chromosome_location featureprop, or dock site.
         # These do not apply to FlyBase.
         self.allele_nomenclature_event_dtos = []               # N/A.
         self.is_extrachromosomal = None                        # N/A.
@@ -182,18 +180,20 @@ class AlleleHandler(object):
         self.export_feat_cnt = 0      # Count of all alleles exported to file.
         self.internal_feat_cnt = 0    # Count of all alleles marked as internal=True in export file.
 
-    # Generic data_provider_dto to which allele-specific details are later added.
-    generic_data_provider_dto = {
+    # Generic objects with which to build Alliance DTOs.
+    generic_audited_object = {
         'internal': False,
         'obsolete': False,
-        'source_organization_abbreviation': 'FB',
-        'cross_reference_dto': {
-            'internal': False,
-            'obsolete': False,
-            'prefix': 'FB',
-            'page_area': 'allele'
-        }
-    }    # Regexes.
+        'created_by_curie': 'FB:FB_curator',
+        'update_by_curie': 'FB:FB_curator',
+        'date_created': None,
+        'date_updated': None
+    }
+    generic_data_provider_dto = generic_audited_object.copy()
+    generic_data_provider_dto['source_organization_abbreviation'] = 'FB'
+    generic_data_provider_dto['cross_reference_dto'] = {'prefix': 'FB', 'page_area': 'allele'}
+
+    # Regexes.
     gene_regex = r'^FBgn[0-9]{7}$'
     allele_regex = r'^FBal[0-9]{7}$'
     insertion_regex = r'^FBti[0-9]{7}$'
@@ -882,41 +882,29 @@ class AlleleHandler(object):
         """Process 2o IDs."""
         unique_fb_id_list = list(set(allele.alt_fb_ids))
         for fb_id in unique_fb_id_list:
-            secondary_id_dict = {
-                'secondary_id': f'FB:{fb_id.accession}',
-                'created_by_curie': 'FB:FB_curator',
-                'obsolete': False,
-                'internal': False
-            }
+            secondary_id_dict = self.generic_audited_object.copy()
+            secondary_id_dict['secondary_id'] = f'FB:{fb_id.accession}'
             allele.allele_secondary_id_dtos.append(secondary_id_dict)
         return
 
     def synthesize_xrefs(self, allele):
         """Process xrefs."""
         # Start by adding allele uniquename as an xref.
-        xref_dict = {
-            'referenced_curie': 'FB:{}'.format(allele.feature.uniquename),
-            'display_name': 'FB:{}'.format(allele.feature.uniquename),
-            'prefix': 'FB',
-            'page_area': 'allele',
-            'created_by_curie': 'FB:FB_curator',
-            'obsolete': False,
-            'internal': False
-        }
+        xref_dict = self.generic_audited_object.copy()
+        xref_dict['referenced_curie'] = f'FB:{allele.feature.uniquename}'
+        xref_dict['display_name'] = f'FB:{allele.feature.uniquename}'
+        xref_dict['prefix'] = 'FB'
+        xref_dict['page_area'] = 'allele'
         allele.cross_reference_dtos.append(xref_dict)
-        # Add other xrefs.
+        # Add other xrefs: code below assumes xrefs are all 'FB' at the moment.
         for result in allele.dbxrefs:
             if result.Db.name not in self.fb_agr_db_dict.keys():
                 continue
-            xref_dict = {
-                'referenced_curie': '{}:{}'.format(self.fb_agr_db_dict[result.Db.name], result.Dbxref.accession),
-                'display_name': '{}:{}'.format(self.fb_agr_db_dict[result.Db.name], result.Dbxref.accession),
-                'prefix': self.fb_agr_db_dict[result.Db.name],
-                'page_area': 'allele',
-                'created_by_curie': 'FB:FB_curator',
-                'obsolete': False,
-                'internal': False
-            }
+            xref_dict = self.generic_audited_object.copy()
+            xref_dict['referenced_curie'] = f'{self.fb_agr_db_dict[result.Db.name]}:{result.Dbxref.accession}'
+            xref_dict['display_name'] = f'{self.fb_agr_db_dict[result.Db.name]}:{result.Dbxref.accession}'
+            xref_dict['prefix'] = self.fb_agr_db_dict[result.Db.name]
+            xref_dict['page_area'] = 'allele'
             if result.FeatureDbxref.is_current is False:
                 xref_dict['internal'] = True
             allele.cross_reference_dtos.append(xref_dict)
@@ -931,15 +919,11 @@ class AlleleHandler(object):
     def synthesize_insertions(self, allele):
         """Process insertions."""
         for insertion in allele.dmel_insertions:
-            xref_dict = {
-                'referenced_curie': '{}:{}'.format('FB', insertion.uniquename),
-                'display_name': '{}:{}'.format('FB', insertion.uniquename),
-                'prefix': 'FB',
-                'page_area': 'allele',
-                'created_by_curie': 'FB:FB_curator',
-                'obsolete': False,
-                'internal': False
-            }
+            xref_dict = self.generic_audited_object.copy()
+            xref_dict['referenced_curie'] = f'FB:{insertion.uniquename}'
+            xref_dict['display_name'] = insertion.name
+            xref_dict['prefix'] = 'FB'
+            xref_dict['page_area'] = 'allele'
             allele.cross_reference_dtos.append(xref_dict)
         return
 
@@ -955,10 +939,8 @@ class AlleleHandler(object):
             allele.internal = True
             allele.internal_reasons.append('Allele of internal Dmel gene type.')
         allele_status = {False: 'public', True: 'private'}
-        allele.allele_database_status_dto = {
-            'internal': False,
-            'database_status_name': allele_status[allele.internal]
-        }
+        allele.allele_database_status_dto = self.generic_audited_object.copy()
+        allele.allele_database_status_dto['database_status_name'] = allele_status[allele.internal]
         return
 
     def flag_unexportable_alleles(self, allele):
@@ -1061,15 +1043,11 @@ class AlleleHandler(object):
         PHENOTYPE_CURIE_NAME = 1
         PHENOTYPE_STATEMENT = 2
         for pheno_key, pub_curie_list in inheritance_data.items():
-            allele_inheritance_mode_slot_annotation_dto = {
-                "created_by_curie": "FB:FB_curator",
-                "internal": False,
-                "obsolete": False,
-                "inheritance_mode_name": pheno_key[INHERITANCE_MODE_NAME],
-                "phenotype_term_curie": pheno_key[PHENOTYPE_CURIE_NAME],
-                "phenotype_statement": pheno_key[PHENOTYPE_STATEMENT],
-                "evidence_curies": pub_curie_list
-            }
+            allele_inheritance_mode_slot_annotation_dto = self.generic_audited_object.copy()
+            allele_inheritance_mode_slot_annotation_dto['inheritance_mode_name'] = pheno_key[INHERITANCE_MODE_NAME]
+            allele_inheritance_mode_slot_annotation_dto['phenotype_term_curie'] = pheno_key[PHENOTYPE_CURIE_NAME]
+            allele_inheritance_mode_slot_annotation_dto['phenotype_statement'] = pheno_key[PHENOTYPE_STATEMENT]
+            allele_inheritance_mode_slot_annotation_dto['evidence_curies'] = list(set(pub_curie_list))
             allele.allele_inheritance_mode_dtos.append(allele_inheritance_mode_slot_annotation_dto)
         return
 
@@ -1100,15 +1078,11 @@ class AlleleHandler(object):
             'nickname': 'nomenclature_symbol',
             'synonym': 'nomenclature_symbol'
         }
-        default_name_dto = {
-            'name_type_name': 'unspecified',
-            'format_text': 'unspecified',
-            'display_text': 'unspecified',
-            'synonym_scope_name': 'exact',
-            'evidence_curies': [],
-            'internal': False,
-            'obsolete': False
-        }
+        default_name_dto = self.generic_audited_object.copy()
+        default_name_dto['name_type_name'] = 'unspecified'
+        default_name_dto['format_text'] = 'unspecified'
+        default_name_dto['display_text'] = 'unspecified'
+        default_name_dto['synonym_scope_name'] = 'exact'
         # Create a dict of all distinct name/synonym_sgml combinations: for each, capture synonym type(s) an pub_ids.
         # Keys are (synonym.name, synonym.synonym_sgml) tuples.
         # Values are dicts too where keys are chado synonym types and values are lists of pub_ids.
@@ -1138,6 +1112,7 @@ class AlleleHandler(object):
             # Collect all pubs.
             pub_id_list = []
             for syno_type, syno_type_pub_list in syno_attributes.items():
+                # Skip over the 'internal' attribute, which is not actually a synonym type.
                 if syno_type == 'internal':
                     continue
                 pub_id_list.extend(syno_type_pub_list)
@@ -1149,15 +1124,13 @@ class AlleleHandler(object):
                     continue
                 type_tally[len(set(syno_type_pub_list))] = syno_type
             name_type_to_use = synonym_type_conversion[type_tally[max(type_tally.keys())]]
-            output_synonym_dto = {
-                'name_type_name': name_type_to_use,
-                'format_text': sub_sup_sgml_to_html(syno_name[FORMAT_TEXT]),
-                'display_text': sub_sup_sgml_to_html(syno_name[DISPLAY_TEXT]),
-                'synonym_scope_name': 'exact',
-                'evidence_curies': [self.all_pubs_dict[i] for i in pub_id_list if self.all_pubs_dict[i] != 'FB:unattributed'],
-                'internal': syno_internal,
-                'obsolete': False
-            }
+            output_synonym_dto = self.generic_audited_object.copy()
+            output_synonym_dto['name_type_name'] = name_type_to_use
+            output_synonym_dto['format_text'] = sub_sup_sgml_to_html(syno_name[FORMAT_TEXT])
+            output_synonym_dto['display_text'] = sub_sup_sgml_to_html(syno_name[DISPLAY_TEXT])
+            output_synonym_dto['synonym_scope_name'] = 'exact'
+            output_synonym_dto['evidence_curies'] = [self.all_pubs_dict[i] for i in pub_id_list if self.all_pubs_dict[i] != 'FB:unattributed']
+            output_synonym_dto['internal'] = syno_internal
             name_dto_list.append(output_synonym_dto)
         # Sift through name DTOs for symbol, fullname, systematic_name, etc.
         for name_dto in name_dto_list:
@@ -1179,6 +1152,7 @@ class AlleleHandler(object):
             placeholder_symbol_dto['name_type_name'] = 'nomenclature_symbol'
             placeholder_symbol_dto['format_text'] = feature.feature.name
             placeholder_symbol_dto['display_text'] = feature.feature.name
+            placeholder_symbol_dto['evidence_curies'] = []
             feature.allele_symbol_dto = placeholder_symbol_dto
         return
 
