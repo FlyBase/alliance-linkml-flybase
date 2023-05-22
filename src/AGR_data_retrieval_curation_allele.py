@@ -187,6 +187,7 @@ class AlleleHandler(object):
         self.all_pubs_dict = {}       # A pub_id-keyed dict of pub curies (PMID or FBrf).
         self.all_synonyms_dict = {}   # A synonym_id-keyed dict of Synonym objects.
         self.drosophilid_list = []    # A list of organism_ids for "Drosophilid" species in chado.
+        self.cvterm_dict = {}         # Will be cvterm_id-keyed dicts: {'name': 'cvterm.name', 'curie': db.name:dbx.accession}
         self.total_feat_cnt = 0       # Count of all alleles found in starting query.
         self.export_feat_cnt = 0      # Count of all alleles exported to file.
         self.internal_feat_cnt = 0    # Count of all alleles marked as internal=True in export file.
@@ -255,6 +256,24 @@ class AlleleHandler(object):
         'FlyBase': 'FB'
     }
 
+    def get_cvterm_info(self, session):
+        """Get all CV terms in chado and their curies."""
+        results = session.query(Cvterm, Db, Dbxref).\
+            select_from(Cvterm).\
+            join(Dbxref, (Dbxref.dbxref_id == Cvterm.dbxref_id)).\
+            join(Db, (Db.db_id == Dbxref.db_id)).\
+            distinct()
+        counter = 0
+        for result in results:
+            cvterm = {
+                'name': result.Cvterm.name,
+                'curie': f'{result.Db.name}:{result.Dbxref.accession}'
+            }
+            self.cvterm_dict[result.Cvterm.cvterm_id] = cvterm
+            counter += 1
+        log.info(f'Found {counter} CV terms in chado.')
+        return
+
     def __get_child_cvterms(self, session, starting_cvterm_name, starting_cvterm_cv_name):
         """Get all cvterm_ids for some branch of an ontology defined by the parent term.
 
@@ -317,15 +336,12 @@ class AlleleHandler(object):
         recursive_query_total = recursive_query_start.union(recursive_query_repeat)
         # 5. And finally, get the result for the start and recursive query parts). Piece of cake ;)
         recursive_query_total_results = session.query(recursive_query_total)
-        for result in recursive_query_total_results:
-            log.info(f'BOB: result is type {type(result)}')
-        # For ease of use, just take the cvterm_ids in the ontology branch of interest.
-        # And then, append the starting cvterm_id (which doesn't get returned by the recursive query)
-        cvterm_list = []
-        cvterm_list = [i[0] for i in recursive_query_total_results]
-        cvterm_list.append(starting_cvterm.cvterm_id)
-        log.info('TEMP DONE FOR DEBUG DEV.')
-        quit()
+        # Build the list from the results.
+        cvterm_id_list = [i[0] for i in recursive_query_total_results]
+        cvterm_id_list.append(starting_cvterm.cvterm_id)
+        for cvterm_id in cvterm_id_list:
+            log.debug(f'BOB: cvterm_id={cvterm_id_list}, name={self.cvterm_dict[cvterm_id]["name"]}, curie={self.cvterm_dict[cvterm_id]["curie"]}')
+        quit()    # BILLY - TMP DEV
         return cvterm_list
 
     def get_key_cvterm_sets(self, session):
@@ -939,6 +955,7 @@ class AlleleHandler(object):
 
     def query_chado(self, session):
         """A wrapper method that runs initial db queries."""
+        self.get_cvterm_info(session)
         self.get_key_cvterm_sets(session)
         self.get_all_references(session)
         self.get_alleles(session)
