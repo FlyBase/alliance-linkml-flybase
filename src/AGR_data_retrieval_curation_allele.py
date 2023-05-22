@@ -74,7 +74,6 @@ def main():
     # Instantiate the object, get the data, synthesize it, export it.
     allele_handler = AlleleHandler()
     db_query_transaction(allele_handler)
-    allele_handler.synthesize_info()
     allele_handler.generate_export_file()
     log.info('Ended main function.\n')
 
@@ -102,7 +101,7 @@ class AllianceAllele(object):
         self.constructs = []                               # Will be a list of FBtp IDs for this allele's constructs.
         self.dmel_insertions = []                          # Will be a list of FBti IDs for this allele's Dmel insertions.
         self.non_dmel_insertions = []                      # Will be a list of FBti IDs for this allele's non-Dmel insertions.
-        self.args = []                                     # Will be a list of (ARGs Features (variants).
+        self.args = []                                     # Will be a list of ARG Features.
         self.parent_gene = None                            # Will be the FBgn ID of the allele's gene.
         self.allele_of_internal_gene = False               # Will change to True if is allele of Dmel internal-type gene (e.g., origin_of_replication).
         self.curr_symbol_name = None                       # Will be the current symbol synonym.synonym_sgml, processed by sub_sup_sgml_to_html().
@@ -144,20 +143,6 @@ class AllianceAllele(object):
         self.allele_database_status_dto = None                 # Will be "public" or "private" slot annotation.
         self.allele_inheritance_mode_dtos = []                 # Will be list of slot annotations.
         self.allele_mutation_type_dtos = []                    # Will be list of slot annotations.
-        # Relevant SO terms in two branches:
-        #     chromosome_structure_variation (SO:1000183)
-        #     sequence_alteration (SO:0001059)
-        # Make slot annotation like this: {'internal' False, 'mutation_type_curies': [], 'evidence_curies': []}
-        # Even though mutation_type_curies is multivalued, I will report only single SO term per annotation.
-        # This data will be found in many places.
-        # 1. If related to an ARGs, take ARGs feature.type.
-        #     Where to get attribution?
-        # 2. If related to some type of FBti, depends on type:
-        #     "transposable_element_insertion_site" => "transgenic_insertion" (SO:0001218).
-        #     "transposable_element"                => "mobile_element_insertion" (SO:0001837).
-        #     "insertion"                           => "insertion" (SO:0000667).
-        # 3. If an aberration, look in feature_cvterm.
-
         # Future ToDo:
         self.allele_functional_impact_dtos = []                # ToDo - Waiting on "Functional Impact" CV. Get feature_cvterm, child of "allele class" term.
         self.transgene_chromosome_location_curie = None        # ToDo - get chr via FBtp from FBti floc, derived_chromosome_location featureprop, or dock site.
@@ -230,7 +215,7 @@ class AlleleHandler(object):
         'allele_full_name_dto',
         # 'allele_functional_impact_dtos',
         'allele_inheritance_mode_dtos',
-        # 'allele_mutation_type_dtos',
+        'allele_mutation_type_dtos',
         # 'allele_note_dtos',
         'allele_secondary_id_dtos',
         'allele_symbol_dto',
@@ -949,32 +934,6 @@ class AlleleHandler(object):
         log.info(f'Found {counter} sequence feature-mediated allele-library associations.')
         return
 
-    def query_chado(self, session):
-        """A wrapper method that runs initial db queries."""
-        self.get_cvterm_info(session)
-        self.get_key_cvterm_sets(session)
-        self.get_all_references(session)
-        self.get_alleles(session)
-        self.get_direct_collections(session)
-        self.get_indirect_collections(session)
-        self.get_sf_collections(session)
-        self.get_allele_gene(session)
-        self.flag_alleles_of_internal_genes(session)
-        self.flag_in_vitro_alleles(session)
-        self.get_allele_constructs(session)
-        self.get_allele_insertions(session)
-        self.get_drosophilid_organisms(session)
-        self.adjust_allele_org(session)
-        self.get_allele_taxons(session)
-        self.get_synonyms(session)
-        self.get_allele_timestamps(session)
-        self.get_allele_dbxrefs(session)
-        self.get_allele_references(session)
-        self.get_allele_featureprops(session)
-        self.get_args(session)
-        self.get_phenotypes(session)
-        return
-
     # Synthesis of initial db info.
     def synthesize_timestamps(self, allele):
         """Process timestamps for an allele."""
@@ -1032,40 +991,6 @@ class AlleleHandler(object):
             xref_dict['prefix'] = 'FB'
             xref_dict['page_area'] = 'allele'
             allele.cross_reference_dtos.append(xref_dict)
-        return
-
-    def flag_internal_alleles(self, allele):
-        """Flag alleles as internal."""
-        if allele.obsolete is True:
-            allele.internal = True
-            allele.internal_reasons.append('Obsolete')
-        if allele.organism_abbr != 'Dmel':
-            allele.internal = True
-            allele.internal_reasons.append('Non-Dmel')
-        if allele.allele_of_internal_gene is True:
-            allele.internal = True
-            allele.internal_reasons.append('Allele of internal Dmel gene type.')
-        allele_status = {False: 'public', True: 'private'}
-        allele.allele_database_status_dto = self.generic_audited_object.copy()
-        allele.allele_database_status_dto['database_status_name'] = allele_status[allele.internal]
-        return
-
-    def flag_unexportable_alleles(self, allele):
-        """Flag alleles missing data required for export."""
-        # TEMPORARY: Suppress non-Dmel alleles from export.
-        if allele.adj_organism_abbr != 'Dmel':
-            allele.for_alliance_export = False
-            allele.export_warnings.append(f'Suppress non-Dmel allele from export: ORG={allele.organism_abbr}')
-        # Suppress objects missing required information from export.
-        for attr in self.required_fields:
-            if attr not in allele.__dict__.keys():
-                allele.for_alliance_export = False
-                allele.export_warnings.append('Missing "{}" attribute'.format(attr))
-            elif getattr(allele, attr) is None:
-                allele.for_alliance_export = False
-                allele.export_warnings.append('Missing value for "{}" attribute'.format(attr))
-        if allele.internal is False and allele.for_alliance_export is True:
-            log.debug('EXPORT {}'.format(allele.curie))
         return
 
     def synthesize_extinction(self, allele):
@@ -1263,6 +1188,51 @@ class AlleleHandler(object):
             feature.allele_symbol_dto = placeholder_symbol_dto
         return
 
+    def synthesize_mutation_type(self, session, allele):
+        """Determine mutation type."""
+        # Convert term for insertions.
+        insertion_conversion = {
+            'transposable_element_insertion_site': 'SO:0001218',    # transgenic_insertion
+            'transposable_element': 'SO:0001837',                   # mobile_element_insertion
+            'insertion': 'SO:0000667'                               # insertion
+        }
+        relevant_features = []
+        relevant_features.extend(allele.args)
+        relevant_features.extend(allele.dmel_insertions)
+        relevant_features.extend(allele.non_dmel_insertions)
+        mutation_types = {}
+        for relevant_feature in relevant_features:
+            # Check insertions
+            if relevant_feature.type.name in insertion_conversion.keys():
+                mutation_type = insertion_conversion[relevant_feature.type.name]
+            # Check ARGs.
+            elif relevant_feature.type_id in self.allele_mutant_type_terms:
+                mutation_type = self.cvterm_dict[relevant_feature.type_id]['curie']
+            else:
+                continue
+            # Get pubs.
+            filters = (
+                Feature.feature_id == relevant_feature.feature_id,
+                Pub.is_obsolete.is_(False)
+            )
+            pub_results = session.query(Pub).\
+                select_from(Feature).\
+                join(FeaturePub, (FeaturePub.feature_id == Feature.feature_id)).\
+                join(Pub, (Pub.pub_id == FeaturePub.pub_id)).\
+                filter(*filters).\
+                distinct()
+            pub_curies = [self.all_pubs_dict[i.pub_id] for i in pub_results]
+            try:
+                mutation_types[mutation_type].extend(pub_curies)
+            except KeyError:
+                mutation_types[mutation_type] = pub_curies
+        for mutation_type, pub_curies in mutation_types.items():
+            mutant_type_annotation = self.generic_audited_object.copy()
+            mutant_type_annotation['mutation_type_curies'] = [mutation_type]
+            mutant_type_annotation['evidence_curies'] = list(set(pub_curies))
+            allele.allele_mutation_type_dtos.append(mutant_type_annotation)
+        return
+
     def add_data_provider_info(self, allele):
         """Add data_provider info."""
         allele.data_provider_dto = self.generic_data_provider_dto.copy()
@@ -1270,7 +1240,41 @@ class AlleleHandler(object):
         allele.data_provider_dto['cross_reference_dto']['display_name'] = allele.allele_symbol_dto['display_text']
         return
 
-    def synthesize_info(self):
+    def flag_internal_alleles(self, allele):
+        """Flag alleles as internal."""
+        if allele.obsolete is True:
+            allele.internal = True
+            allele.internal_reasons.append('Obsolete')
+        if allele.organism_abbr != 'Dmel':
+            allele.internal = True
+            allele.internal_reasons.append('Non-Dmel')
+        if allele.allele_of_internal_gene is True:
+            allele.internal = True
+            allele.internal_reasons.append('Allele of internal Dmel gene type.')
+        allele_status = {False: 'public', True: 'private'}
+        allele.allele_database_status_dto = self.generic_audited_object.copy()
+        allele.allele_database_status_dto['database_status_name'] = allele_status[allele.internal]
+        return
+
+    def flag_unexportable_alleles(self, allele):
+        """Flag alleles missing data required for export."""
+        # TEMPORARY: Suppress non-Dmel alleles from export.
+        if allele.adj_organism_abbr != 'Dmel':
+            allele.for_alliance_export = False
+            allele.export_warnings.append(f'Suppress non-Dmel allele from export: ORG={allele.organism_abbr}')
+        # Suppress objects missing required information from export.
+        for attr in self.required_fields:
+            if attr not in allele.__dict__.keys():
+                allele.for_alliance_export = False
+                allele.export_warnings.append('Missing "{}" attribute'.format(attr))
+            elif getattr(allele, attr) is None:
+                allele.for_alliance_export = False
+                allele.export_warnings.append('Missing value for "{}" attribute'.format(attr))
+        if allele.internal is False and allele.for_alliance_export is True:
+            log.debug('EXPORT {}'.format(allele.curie))
+        return
+
+    def synthesize_info(self, session):
         """Convert FlyBase allele data into an AllianceAllele representation."""
         log.info('Synthesizing allele info.')
         for allele in self.allele_dict.values():
@@ -1284,10 +1288,38 @@ class AlleleHandler(object):
             self.synthesize_insertions(allele)
             self.synthesize_extinction(allele)
             self.synthesize_inheritance_mode(allele)
+            self.synthesize_mutation_type(session, allele)
             self.add_data_provider_info(allele)
             self.flag_internal_alleles(allele)
             self.flag_unexportable_alleles(allele)
         log.info('Done synthesizing allele info.')
+        return
+
+    def query_chado(self, session):
+        """A wrapper method that runs initial db queries."""
+        self.get_cvterm_info(session)
+        self.get_key_cvterm_sets(session)
+        self.get_all_references(session)
+        self.get_alleles(session)
+        self.get_direct_collections(session)
+        self.get_indirect_collections(session)
+        self.get_sf_collections(session)
+        self.get_allele_gene(session)
+        self.flag_alleles_of_internal_genes(session)
+        self.flag_in_vitro_alleles(session)
+        self.get_allele_constructs(session)
+        self.get_allele_insertions(session)
+        self.get_drosophilid_organisms(session)
+        self.adjust_allele_org(session)
+        self.get_allele_taxons(session)
+        self.get_synonyms(session)
+        self.get_allele_timestamps(session)
+        self.get_allele_dbxrefs(session)
+        self.get_allele_references(session)
+        self.get_allele_featureprops(session)
+        self.get_args(session)
+        self.get_phenotypes(session)
+        self.synthesize_info(session)
         return
 
     def generate_export_file(self):
