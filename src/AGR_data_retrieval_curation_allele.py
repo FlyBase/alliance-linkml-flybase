@@ -347,9 +347,9 @@ class AlleleHandler(object):
     def get_key_cvterm_sets(self, session):
         """Get key CV term sets from chado."""
         log.info('Get key CV term sets from chado.')
-        # self.allele_class_terms = self.__get_child_cvterms(session, 'allele class', 'FlyBase miscellaneous CV')
-        self.allele_mutant_type_terms = self.__get_child_cvterms(session, 'chromosome_structure_variation', 'SO')
-        # self.allele_mutant_type_terms.extend(self.__get_child_cvterms(session, 'sequence_alteration', 'SO'))
+        # self.allele_class_terms.extend(self.__get_child_cvterms(session, 'allele class', 'FlyBase miscellaneous CV'))
+        # self.allele_mutant_type_terms.extend(self.__get_child_cvterms(session, 'chromosome_structure_variation', 'SO'))
+        self.allele_mutant_type_terms.extend(self.__get_child_cvterms(session, 'sequence_alteration', 'SO'))
         return
 
     def get_all_references(self, session):
