@@ -200,7 +200,7 @@ class AlleleHandler(object):
     }
     generic_data_provider_dto = generic_audited_object.copy()
     generic_data_provider_dto['source_organization_abbreviation'] = 'FB'
-    generic_data_provider_dto['cross_reference_dto'] = {'prefix': 'FB', 'page_area': 'allele'}
+    generic_data_provider_dto['cross_reference_dto'] = {'prefix': 'FB', 'page_area': 'allele', 'internal': True}
 
     # Regexes.
     gene_regex = r'^FBgn[0-9]{7}$'
