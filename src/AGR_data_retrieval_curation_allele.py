@@ -144,19 +144,30 @@ class AllianceAllele(object):
         self.allele_database_status_dto = None                 # Will be "public" or "private" slot annotation.
         self.allele_inheritance_mode_dtos = []                 # Will be list of slot annotations.
 
-        # Assess these.
+        # Mutation types.
         self.allele_mutation_type_dtos = []                    # ToDo - must be SO term curies: e.g., ?.
+        # Relevant SO terms in two branches:
+        #     chromosome_structure_variation (SO:1000183)
+        #     sequence_alteration (SO:0001059)
+        # Make slot annotation like this: {'internal' False, 'mutation_type_curies': [], 'evidence_curies': []}
+        # Even though mutation_type_curies is multivalued, I will report only single SO term per annotation.
+        # This data will be found in many places.
+        # 1. If related to an ARGs, take ARGs feature.type.
+        # 2. If related to some type of FBti, take feature.type.
+        # 3. If an aberration, look in feature_cvterm.
+
+
         self.allele_functional_impact_dtos = []                # ToDo - must be CV term: e.g., amorph - CV not settled yet?
-        self.allele_germline_transmission_status_dto = None    # ToDo - must be CV term: e.g., ? - CV not settled yet?
 
         # Future ToDo:
         self.allele_note_dtos = []                             # Waiting on "Allele Note Type" vocabulary.
         self.transgene_chromosome_location_curie = None        # ToDo - get chr via FBtp from FBti floc, derived_chromosome_location featureprop, or dock site.
         # These do not apply to FlyBase.
         self.allele_nomenclature_event_dtos = []               # N/A.
-        self.is_extrachromosomal = None                        # N/A.
-        self.is_integrated = None                              # N/A.
-        self.laboratory_of_origin_curie = None                 # N/A.
+        self.allele_germline_transmission_status_dto = None    # N/A (MGI).
+        self.is_extrachromosomal = None                        # N/A (WB).
+        self.is_integrated = None                              # N/A (WB).
+        self.laboratory_of_origin_curie = None                 # N/A (WB).
         # Notes associated with the object.
         self.for_alliance_export = True                        # Change to False if object should be excluded from export.
         self.internal_reasons = []                             # Reasons for marking an object as internal in the export file.
@@ -185,7 +196,7 @@ class AlleleHandler(object):
         'internal': False,
         'obsolete': False,
         'created_by_curie': 'FB:FB_curator',
-        'update_by_curie': 'FB:FB_curator',
+        'updated_by_curie': 'FB:FB_curator',
         'date_created': None,
         'date_updated': None
     }
