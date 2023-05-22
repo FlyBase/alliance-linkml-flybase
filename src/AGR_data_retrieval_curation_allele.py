@@ -340,7 +340,7 @@ class AlleleHandler(object):
         cvterm_id_list = [i[0] for i in recursive_query_total_results]
         cvterm_id_list.append(starting_cvterm.cvterm_id)
         for cvterm_id in cvterm_id_list:
-            log.debug(f'BOB: cvterm_id={cvterm_id_list}, name={self.cvterm_dict[cvterm_id]["name"]}, curie={self.cvterm_dict[cvterm_id]["curie"]}')
+            log.debug(f'BOB: cvterm_id={cvterm_id}, name={self.cvterm_dict[cvterm_id]["name"]}, curie={self.cvterm_dict[cvterm_id]["curie"]}')
         quit()    # BILLY - TMP DEV
         return cvterm_list
 
