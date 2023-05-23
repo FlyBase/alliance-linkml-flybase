@@ -1213,6 +1213,7 @@ class AlleleHandler(object):
             # Get pubs.
             filters = (
                 Feature.feature_id == relevant_feature.feature_id,
+                Pub.uniquename.op('~')(self.pub_regex),
                 Pub.is_obsolete.is_(False)
             )
             pub_results = session.query(Pub).\
