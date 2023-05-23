@@ -1072,12 +1072,14 @@ class AlleleHandler(object):
                 inheritance_data[pheno_key] = [pub_curie]
         # Convert data into Alliance slot annotations.
         INHERITANCE_MODE_NAME = 0
-        PHENOTYPE_CURIE_NAME = 1
+        # PHENOTYPE_CURIE_NAME = 1    # TEMPORARY: Suppress until AGR has FBcv
         PHENOTYPE_STATEMENT = 2
         for pheno_key, pub_curie_list in inheritance_data.items():
+            if 'FB:unattributed' in pub_curie_list:
+                pub_curie_list.remove('FB:unattributed')
             allele_inheritance_mode_slot_annotation_dto = self.generic_audited_object.copy()
             allele_inheritance_mode_slot_annotation_dto['inheritance_mode_name'] = pheno_key[INHERITANCE_MODE_NAME]
-            allele_inheritance_mode_slot_annotation_dto['phenotype_term_curie'] = pheno_key[PHENOTYPE_CURIE_NAME]
+            # allele_inheritance_mode_slot_annotation_dto['phenotype_term_curie'] = pheno_key[PHENOTYPE_CURIE_NAME]    # TEMPORARY: Suppress until AGR has FBcv
             allele_inheritance_mode_slot_annotation_dto['phenotype_statement'] = pheno_key[PHENOTYPE_STATEMENT]
             allele_inheritance_mode_slot_annotation_dto['evidence_curies'] = list(set(pub_curie_list))
             allele.allele_inheritance_mode_dtos.append(allele_inheritance_mode_slot_annotation_dto)
@@ -1222,15 +1224,17 @@ class AlleleHandler(object):
                 join(Pub, (Pub.pub_id == FeaturePub.pub_id)).\
                 filter(*filters).\
                 distinct()
-            pub_curies = [self.all_pubs_dict[i.pub_id] for i in pub_results]
+            pub_curie_list = [self.all_pubs_dict[i.pub_id] for i in pub_results]
             try:
-                mutation_types[mutation_type].extend(pub_curies)
+                mutation_types[mutation_type].extend(pub_curie_list)
             except KeyError:
-                mutation_types[mutation_type] = pub_curies
-        for mutation_type, pub_curies in mutation_types.items():
+                mutation_types[mutation_type] = pub_curie_list
+        for mutation_type, full_pub_curie_list in mutation_types.items():
+            if 'FB:unattributed' in full_pub_curie_list:
+                pub_curie_list.remove('FB:unattributed')
             mutant_type_annotation = self.generic_audited_object.copy()
             mutant_type_annotation['mutation_type_curies'] = [mutation_type]
-            mutant_type_annotation['evidence_curies'] = list(set(pub_curies))
+            mutant_type_annotation['evidence_curies'] = list(set(full_pub_curie_list))
             allele.allele_mutation_type_dtos.append(mutant_type_annotation)
         return
 
