@@ -1075,8 +1075,9 @@ class AlleleHandler(object):
         # PHENOTYPE_CURIE_NAME = 1    # TEMPORARY: Suppress until AGR has FBcv
         PHENOTYPE_STATEMENT = 2
         for pheno_key, pub_curie_list in inheritance_data.items():
-            if 'FB:unattributed' in pub_curie_list:
-                pub_curie_list.remove('FB:unattributed')
+            for pub_curie in pub_curie_list:
+                if pub_curie == 'FB:unattributed':
+                    pub_curie_list.remove('FB:unattributed')
             allele_inheritance_mode_slot_annotation_dto = self.generic_audited_object.copy()
             allele_inheritance_mode_slot_annotation_dto['inheritance_mode_name'] = pheno_key[INHERITANCE_MODE_NAME]
             # allele_inheritance_mode_slot_annotation_dto['phenotype_term_curie'] = pheno_key[PHENOTYPE_CURIE_NAME]    # TEMPORARY: Suppress until AGR has FBcv
@@ -1230,8 +1231,9 @@ class AlleleHandler(object):
             except KeyError:
                 mutation_types[mutation_type] = this_pub_curie_list
         for mutation_type, full_pub_curie_list in mutation_types.items():
-            if 'FB:unattributed' in full_pub_curie_list:
-                full_pub_curie_list.remove('FB:unattributed')
+            for pub_curie in full_pub_curie_list:
+                if pub_curie == 'FB:unattributed':
+                    full_pub_curie_list.remove('FB:unattributed')
             mutant_type_annotation = self.generic_audited_object.copy()
             mutant_type_annotation['mutation_type_curies'] = [mutation_type]
             mutant_type_annotation['evidence_curies'] = list(set(full_pub_curie_list))
