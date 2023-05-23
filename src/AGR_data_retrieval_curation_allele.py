@@ -141,7 +141,7 @@ class AllianceAllele(object):
         self.is_extinct = None                                 # Make True if extinction reported; make False is stock exists; leave as None otherwise.
         self.reference_curies = []                             # Will be a list of reference curies (directly or indirectly related).
         self.allele_database_status_dto = None                 # Will be "public" or "private" slot annotation.
-        self.allele_inheritance_mode_dtos = []                 # Will be list of slot annotations.
+        self.allele_inheritance_mode_dtos = []                 # Will be list of slot annotations. TEMPORARY: Suppress phenotype_curie_term.
         self.allele_mutation_type_dtos = []                    # Will be list of slot annotations.
         # Future ToDo:
         self.allele_functional_impact_dtos = []                # ToDo - Waiting on "Functional Impact" CV. Get feature_cvterm, child of "allele class" term.
@@ -1231,7 +1231,7 @@ class AlleleHandler(object):
                 mutation_types[mutation_type] = pub_curie_list
         for mutation_type, full_pub_curie_list in mutation_types.items():
             if 'FB:unattributed' in full_pub_curie_list:
-                pub_curie_list.remove('FB:unattributed')
+                full_pub_curie_list.remove('FB:unattributed')
             mutant_type_annotation = self.generic_audited_object.copy()
             mutant_type_annotation['mutation_type_curies'] = [mutation_type]
             mutant_type_annotation['evidence_curies'] = list(set(full_pub_curie_list))
