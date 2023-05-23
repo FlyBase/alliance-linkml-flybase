@@ -1224,11 +1224,11 @@ class AlleleHandler(object):
                 join(Pub, (Pub.pub_id == FeaturePub.pub_id)).\
                 filter(*filters).\
                 distinct()
-            pub_curie_list = [self.all_pubs_dict[i.pub_id] for i in pub_results]
+            this_pub_curie_list = [self.all_pubs_dict[i.pub_id] for i in pub_results]
             try:
-                mutation_types[mutation_type].extend(pub_curie_list)
+                mutation_types[mutation_type].extend(this_pub_curie_list)
             except KeyError:
-                mutation_types[mutation_type] = pub_curie_list
+                mutation_types[mutation_type] = this_pub_curie_list
         for mutation_type, full_pub_curie_list in mutation_types.items():
             if 'FB:unattributed' in full_pub_curie_list:
                 full_pub_curie_list.remove('FB:unattributed')
