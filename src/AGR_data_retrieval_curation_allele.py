@@ -145,6 +145,11 @@ class AllianceAllele(object):
         self.allele_mutation_type_dtos = []                    # Will be list of slot annotations.
         # Future ToDo:
         self.allele_functional_impact_dtos = []                # ToDo - Waiting on "Functional Impact" CV. Get feature_cvterm, child of "allele class" term.
+        # Possibly relevant
+        # cvterms from "FlyBase miscellaneous CV" in the "allele class" branch.
+        # cvterms from "FlyBase miscellaneous CV" having "tool_uses" feature_cvtermprop type.
+        # cvterms from "SO" having "transgenic_product_class" feature_cvtermprop type.
+
         self.transgene_chromosome_location_curie = None        # ToDo - get chr via FBtp from FBti floc, derived_chromosome_location featureprop, or dock site.
         self.allele_note_dtos = []                             # ToDo - Waiting on "Allele Note Type" CV. Get from featureprop.
         # These do not apply to FlyBase.
