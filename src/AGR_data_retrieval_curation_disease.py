@@ -90,7 +90,7 @@ class DiseaseAnnotation(object):
 
         """
         # FlyBase data
-        self.unique_key = '{}_{}'.format(feature_cvterm.feature_cvterm_id, provenance_prop.rank)
+        self.mod_internal_id = '{}_{}'.format(feature_cvterm.feature_cvterm_id, provenance_prop.rank)
         self.feature_cvterm = feature_cvterm                  # The FeatureCvterm object.
         self.provenance = provenance_prop                     # The "provenance" FeatureCvtermprop.
         self.evidence_code = None                             # Will be the "evidence_code" FeatureCvtermprop.
@@ -213,6 +213,7 @@ class DAFMaker(object):
         'evidence_code_curies',
         'inferred_gene_curie',
         'internal',
+        'mod_internal_id',
         'negated',
         'obsolete',
         'reference_curie',
@@ -257,7 +258,7 @@ class DAFMaker(object):
         for result in dis_annos:
             self.total_anno_cnt += 1
             dis_anno = DiseaseAnnotation(result.FeatureCvterm, result.FeatureCvtermprop)
-            self.dis_anno_dict[dis_anno.unique_key] = dis_anno
+            self.dis_anno_dict[dis_anno.mod_internal_id] = dis_anno
         log.info('Found {} disease annotations.'.format(self.total_anno_cnt))
 
         # Get qualifiers for each disease annotation.
@@ -271,9 +272,9 @@ class DAFMaker(object):
             distinct()
         qualifier_count = 0
         for qualifier in fcvt_qualifiers:
-            unique_key = '{}_{}'.format(qualifier.feature_cvterm_id, qualifier.rank)
+            mod_internal_id = '{}_{}'.format(qualifier.feature_cvterm_id, qualifier.rank)
             try:
-                self.dis_anno_dict[unique_key].qualifier = qualifier
+                self.dis_anno_dict[mod_internal_id].qualifier = qualifier
                 qualifier_count += 1
             except KeyError:
                 pass
@@ -290,9 +291,9 @@ class DAFMaker(object):
             distinct()
         evidence_code_count = 0
         for evidence_code in fcvt_evidence_codes:
-            unique_key = '{}_{}'.format(evidence_code.feature_cvterm_id, evidence_code.rank)
+            mod_internal_id = '{}_{}'.format(evidence_code.feature_cvterm_id, evidence_code.rank)
             try:
-                self.dis_anno_dict[unique_key].evidence_code = evidence_code
+                self.dis_anno_dict[mod_internal_id].evidence_code = evidence_code
                 evidence_code_count += 1
             except KeyError:
                 pass
@@ -318,12 +319,12 @@ class DAFMaker(object):
         """
         audit_results = session.execute(audit_chado_query).fetchall()
         log.info('Got {} audit_chado results. Will parse them out now.'.format(len(audit_results)))
-        UNIQUE_KEY = 0
+        MOD_INTERNAL_ID = 0
         TIMESTAMP = 1
         for row in audit_results:
             try:
-                log.debug('For unique_key={}, have timestamp={}'.format(row[UNIQUE_KEY], row[TIMESTAMP]))
-                self.dis_anno_dict[row[UNIQUE_KEY]].timestamps.append(row[TIMESTAMP])
+                log.debug('For mod_internal_id={}, have timestamp={}'.format(row[MOD_INTERNAL_ID], row[TIMESTAMP]))
+                self.dis_anno_dict[row[MOD_INTERNAL_ID]].timestamps.append(row[TIMESTAMP])
             except KeyError:
                 log.debug('Could not put this in anno dict: {}'.format(row))
         log.info('Timestamps have been retrieved.')
@@ -558,7 +559,10 @@ class DAFMaker(object):
         evi_codes = sorted(list(set(dis_anno.evidence_code_curies)))
         evi_code_str = '|'.join(evi_codes)
         dis_anno.agr_uniq_key += f'||{evi_code_str}'
-        dis_anno.agr_uniq_key += f'||{dis_anno.disease_genetic_modifier_curies[0]}'
+        if dis_anno.disease_genetic_modifier_curies:
+            dis_anno.agr_uniq_key += f'||{dis_anno.disease_genetic_modifier_curies[0]}'
+        else:
+            dis_anno.agr_uniq_key += f'{None}'
         dis_anno.agr_uniq_key += f'||{dis_anno.disease_genetic_modifier_relation_name}'
         log.debug(f'{dis_anno} HAS AGR_UNIQ_KEY: {dis_anno.agr_uniq_key}')
         return
