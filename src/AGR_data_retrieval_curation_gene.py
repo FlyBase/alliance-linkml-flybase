@@ -123,7 +123,6 @@ class AllianceGene(object):
         self.data_provider_dto = None                         # Will be DataProviderDTO object.
         # Attributes for the Alliance GenomicEntityDTO. GenomicEntityDTO is_a BiologicalEntityDTO.
         self.cross_reference_dtos = []                        # Report only select dbs, using AGR-accepted db_prefix.
-        self.secondary_identifiers = []                       # Annotation IDs and 2o FlyBase IDs.
         self.genomic_location_dtos = []                       # Will need to be list of GenomicLocation objects.
         # Attributes for the Alliance GeneDTO. GeneDTO is_a GenomicEntityDTO.
         self.gene_symbol_dto = None                           # Will be a single SymbolSlotAnnotationDTO.
@@ -131,6 +130,7 @@ class AllianceGene(object):
         self.gene_systematic_name_dto = None                  # Will be a single SystematicNameSlotAnnotation.
         self.gene_synonym_dtos = []                           # Will be list of NameSlotAnnotationDTO objects.
         self.gene_type_curie = None                           # Will be the SO term ID corresponding to the gene's promoted_gene_type.
+        self.gene_secondary_id_dtos = []                      # Annotation IDs and 2o FlyBase IDs.
         # Notes associated with the object.
         self.for_alliance_export = True                       # Change to False if object should be excluded from export.
         self.internal_reasons = []                            # Reasons for marking an object as internal in the export file.
@@ -155,18 +155,16 @@ class GeneHandler(object):
         self.export_feat_cnt = 0      # Count of all genes exported to file.
         self.internal_feat_cnt = 0    # Count of all genes marked as internal=True in export file.
 
-    # Generic data_provider_dto to which gene-specific details are later added.
-    generic_data_provider_dto = {
+    # Generic objects with which to build Alliance DTOs.
+    generic_audited_object = {
         'internal': False,
         'obsolete': False,
-        'source_organization_abbreviation': 'FB',
-        'cross_reference_dto': {
-            'internal': False,
-            'obsolete': False,
-            'prefix': 'FB',
-            'page_area': 'gene'
-        }
+        'created_by_curie': 'FB:FB_curator',
+        'updated_by_curie': 'FB:FB_curator'
     }
+    generic_data_provider_dto = generic_audited_object.copy()
+    generic_data_provider_dto['source_organization_abbreviation'] = 'FB'
+    generic_data_provider_dto['cross_reference_dto'] = {'prefix': 'FB', 'page_area': 'gene', 'internal': False}
     # Regexes.
     gene_regex = r'^FBgn[0-9]{7}$'
     pthr_regex = r'PTHR[0-9]{5}'
@@ -217,10 +215,10 @@ class GeneHandler(object):
         'gene_symbol_dto',
         'gene_synonym_dtos',
         'gene_systematic_name_dto',
+        'gene_secondary_id_dtos'
         'gene_type_curie',
         'internal',
         'obsolete',
-        'secondary_identifiers',
         'taxon_curie',
         'updated_by_curie',
     ]
@@ -704,9 +702,13 @@ class GeneHandler(object):
                 gene.gene_synopsis = gene.gene_snapshot.value
             # Get secondary IDs (FBgn and annotation IDs).
             for fb_id in gene.alt_fb_ids:
-                gene.secondary_identifiers.append('FB:{}'.format(fb_id.accession))
+                secondary_id_dict = self.generic_audited_object.copy()
+                secondary_id_dict['secondary_id'] = f'FB:{fb_id.accession}'
+                gene.gene_secondary_id_dtos.append(secondary_id_dict)
             for anno_id in gene.annotation_ids:
-                gene.secondary_identifiers.append('FB:{}'.format(anno_id.accession))
+                secondary_id_dict = self.generic_audited_object.copy()
+                secondary_id_dict['secondary_id'] = f'FB:{anno_id.accession}'
+                gene.gene_secondary_id_dtos.append(secondary_id_dict)
             # Get crossreferences.
             # Start by adding gene uniquename as an xref.
             xref_dict = {

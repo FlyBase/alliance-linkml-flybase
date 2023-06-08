@@ -130,13 +130,12 @@ class AllianceAllele(object):
         self.data_provider_dto = None                          # Will be DataProviderDTO object.
         # Attributes for the Alliance GenomicEntity. GenomicEntity is_a BiologicalEntity.
         self.cross_reference_dtos = []                         # Report only select dbs, using AGR-accepted db_prefix.
-        self.secondary_identifiers = []                        # N/A. Redundant with allele_secondary_id_dtos, to be deprecated soon.
         self.genomic_location_association_dtos = []            # N/A.
         # Attributes for the Alliance Allele. Allele is_a GenomicEntity.
         self.allele_symbol_dto = None                          # Will be a single SymbolSlotAnnotationDTO.
         self.allele_full_name_dto = None                       # Will be a single FullNameSlotAnnotation.
         self.allele_synonym_dtos = []                          # Will be list of NameSlotAnnotationDTO objects.
-        self.allele_secondary_id_dtos = []                     # Only 2o FlyBase IDs (redundant with GenomicEntity.secondary_identifiers?)
+        self.allele_secondary_id_dtos = []                     # Only 2o FlyBase IDs
         self.in_collection_name = None                         # Will be library.name.
         self.is_extinct = None                                 # Make True if extinction reported; make False is stock exists; leave as None otherwise.
         self.reference_curies = []                             # Will be a list of reference curies (directly or indirectly related).
