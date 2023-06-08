@@ -215,7 +215,7 @@ class GeneHandler(object):
         'gene_symbol_dto',
         'gene_synonym_dtos',
         'gene_systematic_name_dto',
-        'gene_secondary_id_dtos'
+        'gene_secondary_id_dtos',
         'gene_type_curie',
         'internal',
         'obsolete',
