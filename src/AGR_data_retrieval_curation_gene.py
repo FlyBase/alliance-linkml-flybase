@@ -95,11 +95,10 @@ class AllianceGene(object):
         # ALLELE: curie, taxon, symbol, description.
         # Problems with Gene LinkML:
         # 1. Gene.name is requested (not required), but not all genes have a fullname.
-        # 2. Gene.taxon is required, but even after updating NCBITaxon info at FlyBase, not all genes will have NCBI taxon ID.
+        # 2. Gene.taxon_curie is required, but even after updating NCBITaxon info at FlyBase, not all genes will have NCBI taxon ID.
         # 3. GenomicLocation lacks strand info.
         self.feature = feature                                # The Feature object corresponding to the FlyBase gene.
         self.organism_abbr = None                             # Will be the organism.abbreviation for the gene's species of origin.
-        self.taxon_dbxref = None                              # Will be the NCBITaxon (Db, Dbxref) tuple for the organism.
         self.featureloc = None                                # Will be Featureloc object for the gene.
         self.gene_type_name = None                            # Will be the cvterm.name for "promoted_gene_type" featureprop.
         self.gene_snapshot = None                             # Will be the "gene_summary_text" Featureprop object.
@@ -121,6 +120,7 @@ class AllianceGene(object):
         # Attributes for the Alliance BiologicalEntityDTO. BiologicalEntityDTO is_a AuditedObjectDTO.
         self.curie = 'FB:{}'.format(feature.uniquename)
         self.taxon_curie = None                               # A string representing the NCBI taxon ID. We have no NCBI taxonID for 561 genes (72 species).
+        self.data_provider_dto = None                         # Will be DataProviderDTO object.
         # Attributes for the Alliance GenomicEntityDTO. GenomicEntityDTO is_a BiologicalEntityDTO.
         self.cross_reference_dtos = []                        # Report only select dbs, using AGR-accepted db_prefix.
         self.secondary_identifiers = []                       # Annotation IDs and 2o FlyBase IDs.
@@ -155,6 +155,18 @@ class GeneHandler(object):
         self.export_feat_cnt = 0      # Count of all genes exported to file.
         self.internal_feat_cnt = 0    # Count of all genes marked as internal=True in export file.
 
+    # Generic data_provider_dto to which gene-specific details are later added.
+    generic_data_provider_dto = {
+        'internal': False,
+        'obsolete': False,
+        'source_organization_abbreviation': 'FB',
+        'cross_reference_dto': {
+            'internal': False,
+            'obsolete': False,
+            'prefix': 'FB',
+            'page_area': 'gene'
+        }
+    }
     # Regexes.
     gene_regex = r'^FBgn[0-9]{7}$'
     pthr_regex = r'PTHR[0-9]{5}'
@@ -189,9 +201,8 @@ class GeneHandler(object):
     # Export fields.
     required_fields = [
         'curie',
-        'gene_full_name_dto',
+        'data_provider_dto',
         'gene_symbol_dto',
-        'gene_systematic_name_dto',
         'internal',
         'taxon_curie',
     ]
@@ -199,6 +210,7 @@ class GeneHandler(object):
         'created_by_curie',
         'cross_reference_dtos',
         'curie',
+        'data_provider_dto',
         'date_created',
         'date_updated',
         'gene_full_name_dto',
@@ -206,7 +218,6 @@ class GeneHandler(object):
         'gene_synonym_dtos',
         'gene_systematic_name_dto',
         'gene_type_curie',
-        'genomic_location_dtos',
         'internal',
         'obsolete',
         'secondary_identifiers',
@@ -594,6 +605,11 @@ class GeneHandler(object):
                     continue
                 pub_id_list.extend(syno_type_pub_list)
             pub_id_list = list(set(pub_id_list))
+            # Out of curiosity, report cases where same synonym used as both symbol and fullname.
+            if 'symbol' in syno_attributes.keys() and 'fullname' in syno_attributes.keys():
+                n_symb = len(syno_attributes['symbol'])
+                n_full = len(syno_attributes['fullname'])
+                log.warning(f"RATIO = {round(n_symb/n_full)}, SYMBOL_USAGE: n={n_symb}, FULLNAME_USAGE: n={n_full}, GENE={feature}, SYNONYM={syno_name}.")
             # Pick correct name type to apply.
             if re.match(self.systematic_name_regex, syno_name[DISPLAY_TEXT]):
                 name_type_to_use = 'systematic_name'
@@ -641,19 +657,13 @@ class GeneHandler(object):
             placeholder_symbol_dto['format_text'] = feature.feature.name
             placeholder_symbol_dto['display_text'] = feature.feature.name
             feature.gene_symbol_dto = placeholder_symbol_dto
-        # TEMPORARY: Full name is required for now. If none, fill it in. Could be because FB has none, or, it's the same as the symbol.
-        if feature.gene_full_name_dto is None:
-            placeholder_full_name_dto = feature.gene_symbol_dto.copy()
-            placeholder_full_name_dto['name_type_name'] = 'full_name'
-            feature.gene_full_name_dto = placeholder_full_name_dto
-        # TEMPORARY: Systematic name is required for now. If none, fill it in. Could be because gene is unannotated, or annotation ID never used in pubs.
-        if feature.gene_systematic_name_dto is None:
-            placeholder_systematic_name_dto = feature.gene_symbol_dto.copy()
+        # In rare cases, a gene's annotation ID has never been used as a synonym. For these, fill in the annotation ID.
+        if feature.gene_systematic_name_dto is None and feature.curr_anno_id:
+            placeholder_systematic_name_dto = default_name_dto.copy()
             placeholder_systematic_name_dto['name_type_name'] = 'systematic_name'
-            if feature.curr_anno_id:
-                placeholder_systematic_name_dto['format_text'] = feature.curr_anno_id
-                placeholder_systematic_name_dto['display_text'] = feature.curr_anno_id
-                log.warning(f"{feature}: Has annoID never used as a synonym: {feature.curr_anno_id}")
+            placeholder_systematic_name_dto['format_text'] = feature.curr_anno_id
+            placeholder_systematic_name_dto['display_text'] = feature.curr_anno_id
+            log.warning(f"{feature}: Has annoID never used as a synonym: {feature.curr_anno_id}")
             feature.gene_systematic_name_dto = placeholder_systematic_name_dto
         return
 
@@ -700,10 +710,10 @@ class GeneHandler(object):
             # Get crossreferences.
             # Start by adding gene uniquename as an xref.
             xref_dict = {
-                'curie': 'FB:{}'.format(gene.feature.uniquename),
+                'referenced_curie': 'FB:{}'.format(gene.feature.uniquename),
                 'display_name': 'FB:{}'.format(gene.feature.uniquename),
                 'prefix': 'FB',
-                'page_areas': ['gene'],
+                'page_area': 'gene',
                 'created_by_curie': 'FB:FB_curator',
                 'obsolete': False,
                 'internal': False
@@ -712,10 +722,10 @@ class GeneHandler(object):
             # Then add PANTHER xref (from file).
             if gene.feature.uniquename in self.pthr_dict.keys():
                 pthr_xref_dict = {
-                    'curie': 'PANTHER:{}'.format(self.pthr_dict[gene.feature.uniquename]),
+                    'referenced_curie': 'PANTHER:{}'.format(self.pthr_dict[gene.feature.uniquename]),
                     'display_name': 'PANTHER:{}'.format(self.pthr_dict[gene.feature.uniquename]),
                     'prefix': 'PANTHER',
-                    'page_areas': ['gene'],
+                    'page_area': 'FB',
                     'obsolete': False,
                     'internal': False
                 }
@@ -724,10 +734,10 @@ class GeneHandler(object):
             for result in gene.dbxrefs:
                 if result.Db.name in self.fb_agr_db_dict.keys():
                     xref_dict = {
-                        'curie': '{}:{}'.format(self.fb_agr_db_dict[result.Db.name], result.Dbxref.accession),
+                        'referenced_curie': '{}:{}'.format(self.fb_agr_db_dict[result.Db.name], result.Dbxref.accession),
                         'display_name': '{}:{}'.format(self.fb_agr_db_dict[result.Db.name], result.Dbxref.accession),
                         'prefix': self.fb_agr_db_dict[result.Db.name],
-                        'page_areas': ['gene'],
+                        'page_area': 'gene',
                         'created_by_curie': 'FB:FB_curator',
                         'obsolete': False,
                         'internal': False
@@ -735,10 +745,19 @@ class GeneHandler(object):
                     if result.FeatureDbxref.is_current is False:
                         xref_dict['internal'] = True
                     gene.cross_reference_dtos.append(xref_dict)
+            # Add data provider info.
+            gene.data_provider_dto = self.generic_data_provider_dto.copy()
+            gene.data_provider_dto['cross_reference_dto']['referenced_curie'] = f'FB:{gene.feature.uniquename}'
+            gene.data_provider_dto['cross_reference_dto']['display_name'] = gene.gene_symbol_dto['display_text']
             # Flag internal features.
             if gene.obsolete is True:
                 gene.internal = True
                 gene.internal_reasons.append('Obsolete')
+            # TEMPORARY: Suppress non-Dmel genes from export.
+            if gene.organism_abbr != 'Dmel':
+                gene.for_alliance_export = False
+                gene.export_warnings.append(f'Suppress non-Dmel genes from export: ORG={gene.organism_abbr}')
+            # Suppress objects missing required information from export.
             for attr in self.required_fields:
                 if attr not in gene.__dict__.keys():
                     gene.for_alliance_export = False

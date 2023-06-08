@@ -26,10 +26,10 @@ import json
 import strict_rfc3339
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import aliased, sessionmaker
-# from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm.exc import NoResultFound
 from harvdev_utils.char_conversions import sub_sup_sgml_to_html
 from harvdev_utils.production import (
-    Cvterm, Db, Dbxref, Feature, FeatureCvterm, FeatureDbxref, FeatureGenotype,
+    Cv, Cvterm, CvtermRelationship, Db, Dbxref, Feature, FeatureCvterm, FeatureDbxref, FeatureGenotype,
     FeaturePub, FeatureRelationship, FeatureSynonym, Featureprop, Genotype,
     Library, LibraryFeature, LibraryFeatureprop, Organism, Organismprop,
     OrganismDbxref, Phenotype, PhenotypeCvterm, Phenstatement, Pub, PubDbxref,
@@ -74,7 +74,6 @@ def main():
     # Instantiate the object, get the data, synthesize it, export it.
     allele_handler = AlleleHandler()
     db_query_transaction(allele_handler)
-    allele_handler.synthesize_info()
     allele_handler.generate_export_file()
     log.info('Ended main function.\n')
 
@@ -95,15 +94,14 @@ class AllianceAllele(object):
         # Note: use attribute names that do not match an Alliance LinkML slot name.
         # Problems with Allele LinkML:
         # 1. Allele.taxon_curie is required, but even after updating NCBITaxon info at FlyBase, not all alleles will have NCBI taxon ID.
-        # 2. Allele.inheritance_mode_name is singular, but some FB alleles have many documented modes.
-        self.feature = feature                             # The Feature object corresponding to the FlyBase allele.
+        self.feature = feature                             # The Feature object corresponding to the FlyBase allele, insertion or aberration/balancer.
         self.organism_abbr = None                          # Will be the organism.abbreviation for the allele's species of origin.
         self.adj_organism_abbr = 'Dmel'                    # Assume allele is Dmel (classical/transgenic) unless allele is of classical type in another insect.
         self.in_vitro = False                              # Change to True if allele associated with "in vitro%" cvterm.
         self.constructs = []                               # Will be a list of FBtp IDs for this allele's constructs.
         self.dmel_insertions = []                          # Will be a list of FBti IDs for this allele's Dmel insertions.
         self.non_dmel_insertions = []                      # Will be a list of FBti IDs for this allele's non-Dmel insertions.
-        self.args = []                                     # Will be a list of ARGs Features (variants).
+        self.args = []                                     # Will be a list of ARG Features.
         self.parent_gene = None                            # Will be the FBgn ID of the allele's gene.
         self.allele_of_internal_gene = False               # Will change to True if is allele of Dmel internal-type gene (e.g., origin_of_replication).
         self.curr_symbol_name = None                       # Will be the current symbol synonym.synonym_sgml, processed by sub_sup_sgml_to_html().
@@ -114,7 +112,7 @@ class AllianceAllele(object):
         self.timestamps = []                               # Add all timestamps here.
         self.fb_references = []                            # Will be list of pub_ids from feature_pub, feature_synonym.
         self.featureprops = {}                             # A CVterm-keyed dict of Featureprop lists.
-        self.phenotypes = []                               # Will be a list of SQLAlchemy (Feature, Genotype, Phenotype, Cvterm) results.
+        self.phenstatements = []                           # Will be a list of SQLAlchemy (Feature, Genotype, Phenotype, Cvterm, Pub) from Phenstatements.
         self.direct_libraries = []                         # Will be a list of Library objects directly related to the allele.
         self.ins_libraries = []                            # Will be a list of Library objects related to the allele via insertion (FBti).
         self.cons_libraries = []                           # Will be a list of Library objects related to the allele via construct (FBtp).
@@ -129,24 +127,37 @@ class AllianceAllele(object):
         # Attributes for the Alliance BiologicalEntity. BiologicalEntity is_a AuditedObject.
         self.curie = 'FB:{}'.format(feature.uniquename)
         self.taxon_curie = None                                # A string representing the NCBI taxon ID. We have no NCBI taxonID for 223 alleles.
+        self.data_provider_dto = None                          # Will be DataProviderDTO object.
         # Attributes for the Alliance GenomicEntity. GenomicEntity is_a BiologicalEntity.
         self.cross_reference_dtos = []                         # Report only select dbs, using AGR-accepted db_prefix.
+        self.secondary_identifiers = []                        # N/A. Redundant with allele_secondary_id_dtos, to be deprecated soon.
+        self.genomic_location_association_dtos = []            # N/A.
         # Attributes for the Alliance Allele. Allele is_a GenomicEntity.
         self.allele_symbol_dto = None                          # Will be a single SymbolSlotAnnotationDTO.
         self.allele_full_name_dto = None                       # Will be a single FullNameSlotAnnotation.
         self.allele_synonym_dtos = []                          # Will be list of NameSlotAnnotationDTO objects.
         self.allele_secondary_id_dtos = []                     # Only 2o FlyBase IDs (redundant with GenomicEntity.secondary_identifiers?)
         self.in_collection_name = None                         # Will be library.name.
-        self.inheritance_mode_name = 'unknown'                 # Change to one of: dominant, semi-dominant, recessive. If many apply, leave as unknown.
         self.is_extinct = None                                 # Make True if extinction reported; make False is stock exists; leave as None otherwise.
         self.reference_curies = []                             # Will be a list of reference curies (directly or indirectly related).
-        self.allele_database_status_dto = None                 # ToDo - must be CV term: e.g., ? - CV not settled yet?
-        self.allele_functional_impact_dtos = []                # ToDo - must be CV term: e.g., amorph - CV not settled yet?
-        self.allele_germline_transmission_status_dto = None    # ToDo - must be CV term: e.g., ? - CV not settled yet?
-        self.allele_molecular_mutation_dtos = []               # ToDo - must be CV term: e.g., ? - CV not settled yet?
-        self.allele_mutation_type_dtos = []                    # ToDo - must be SO term curies: e.g., ?.
-        self.allele_nomenclature_event_dtos = []               # ToDo - must be CV term: e.g., named, renamed - CV not settled yet?
-        self.allele_note_dtos = []                             # ToDo - must have CV term for note_type_name: e.g., ? - CV not settled yet?
+        self.allele_database_status_dto = None                 # Will be "public" or "private" slot annotation.
+        self.allele_inheritance_mode_dtos = []                 # Will be list of slot annotations. TEMPORARY: Suppress phenotype_curie_term.
+        self.allele_mutation_type_dtos = []                    # Will be list of slot annotations.
+        # Future ToDo:
+        self.allele_functional_impact_dtos = []                # ToDo - Waiting on "Functional Impact" CV. Get feature_cvterm, child of "allele class" term.
+        # Possibly relevant
+        # cvterms from "FlyBase miscellaneous CV" in the "allele class" branch.
+        # cvterms from "FlyBase miscellaneous CV" having "tool_uses" feature_cvtermprop type.
+        # cvterms from "SO" having "transgenic_product_class" feature_cvtermprop type.
+
+        self.transgene_chromosome_location_curie = None        # ToDo - get chr via FBtp from FBti floc, derived_chromosome_location featureprop, or dock site.
+        self.allele_note_dtos = []                             # ToDo - Waiting on "Allele Note Type" CV. Get from featureprop.
+        # These do not apply to FlyBase.
+        self.allele_nomenclature_event_dtos = []               # N/A.
+        self.allele_germline_transmission_status_dto = None    # N/A (MGI).
+        self.is_extrachromosomal = None                        # N/A (WB).
+        self.is_integrated = None                              # N/A (WB).
+        self.laboratory_of_origin_curie = None                 # N/A (WB).
         # Notes associated with the object.
         self.for_alliance_export = True                        # Change to False if object should be excluded from export.
         self.internal_reasons = []                             # Reasons for marking an object as internal in the export file.
@@ -166,15 +177,30 @@ class AlleleHandler(object):
         self.all_pubs_dict = {}       # A pub_id-keyed dict of pub curies (PMID or FBrf).
         self.all_synonyms_dict = {}   # A synonym_id-keyed dict of Synonym objects.
         self.drosophilid_list = []    # A list of organism_ids for "Drosophilid" species in chado.
+        self.cvterm_dict = {}         # Will be cvterm_id-keyed dicts: {'name': 'cvterm.name', 'curie': db.name:dbx.accession}
         self.total_feat_cnt = 0       # Count of all alleles found in starting query.
         self.export_feat_cnt = 0      # Count of all alleles exported to file.
         self.internal_feat_cnt = 0    # Count of all alleles marked as internal=True in export file.
+    # Key chado CV term sets.
+    allele_class_terms = []           # Will be cvterm_ids for child terms of "allele_class" (FBcv:0000286).
+    allele_mutant_type_terms = []     # Will be cvterm_ids: child of chromosome_structure_variation or sequence_alteration.
 
+    # Generic objects with which to build Alliance DTOs.
+    generic_audited_object = {
+        'internal': False,
+        'obsolete': False,
+        'created_by_curie': 'FB:FB_curator',
+        'updated_by_curie': 'FB:FB_curator'
+    }
+    generic_data_provider_dto = generic_audited_object.copy()
+    generic_data_provider_dto['source_organization_abbreviation'] = 'FB'
+    generic_data_provider_dto['cross_reference_dto'] = {'prefix': 'FB', 'page_area': 'allele', 'internal': False}
     # Regexes.
     gene_regex = r'^FBgn[0-9]{7}$'
     allele_regex = r'^FBal[0-9]{7}$'
-    construct_regex = r'^FBtp[0-9]{7}$'
     insertion_regex = r'^FBti[0-9]{7}$'
+    aberration_regex = r'^FB(ab|ba)[0-9]{7}$'
+    construct_regex = r'^FBtp[0-9]{7}$'
     seqfeat_regex = r'^FBsf[0-9]{10}$'
     feature_regex = r'^FB(tp|ti)[0-9]{7}$'
     lib_regex = r'^FBlc[0-9]{7}$'
@@ -185,38 +211,132 @@ class AlleleHandler(object):
     required_fields = [
         'allele_symbol_dto',
         'curie',
+        'data_provider_dto',
         'internal',
         'taxon_curie',
     ]
     output_fields = [
         'allele_database_status_dto',
         'allele_full_name_dto',
-        'allele_functional_impact_dtos',
-        'allele_germline_transmission_status_dto',
-        'allele_molecular_mutation_dtos',
+        # 'allele_functional_impact_dtos',
+        'allele_inheritance_mode_dtos',
         'allele_mutation_type_dtos',
-        'allele_nomenclature_event_dtos',
-        'allele_note_dtos',
+        # 'allele_note_dtos',
         'allele_secondary_id_dtos',
         'allele_symbol_dto',
         'allele_synonym_dtos',
         'created_by_curie',
         'cross_reference_dtos',
         'curie',
+        'data_provider_dto',
         'date_created',
         'date_updated',
         'in_collection_name',
-        'inheritance_mode_name',
         'internal',
         'is_extinct',
         'obsolete',
         'reference_curies',
         'taxon_curie',
+        # 'transgene_chromosome_location_curie',
         'updated_by_curie',
     ]
     fb_agr_db_dict = {
         'FlyBase': 'FB'
     }
+
+    def get_cvterm_info(self, session):
+        """Get all CV terms in chado and their curies."""
+        results = session.query(Cvterm, Db, Dbxref).\
+            select_from(Cvterm).\
+            join(Dbxref, (Dbxref.dbxref_id == Cvterm.dbxref_id)).\
+            join(Db, (Db.db_id == Dbxref.db_id)).\
+            distinct()
+        counter = 0
+        for result in results:
+            cvterm = {
+                'name': result.Cvterm.name,
+                'curie': f'{result.Db.name}:{result.Dbxref.accession}'
+            }
+            self.cvterm_dict[result.Cvterm.cvterm_id] = cvterm
+            counter += 1
+        log.info(f'Found {counter} CV terms in chado.')
+        return
+
+    def __get_child_cvterms(self, session, starting_cvterm_name, starting_cvterm_cv_name):
+        """Get all cvterm_ids for some branch of an ontology defined by the parent term.
+
+        Args:
+            arg1 (self): (AlleleHandler) The object that runs the method.
+            arg2 (session): (SQLAlchemy session)
+            arg3 (starting_cvterm_name): (str) The name of the parent CV term.
+            arg4 (starting_cvterm_cv_name): (str) The name of the parent CV term's CV.
+
+        Returns:
+            List of cvterm.cvterm_ids, including that of the starting parent CV term.
+
+        Raises:
+            Raise NoResultFound if starting CV term cannot be found in chado.
+
+        """
+        log.info(f'Get all child terms of "{starting_cvterm_name}" ("{starting_cvterm_cv_name}")')
+        # 1. Get the parent CV term.
+        filters = (
+            Cvterm.name == starting_cvterm_name,
+            Cv.name == starting_cvterm_cv_name)
+        try:
+            starting_cvterm = session.query(Cvterm).\
+                join(Cv, (Cv.cv_id == Cvterm.cv_id)).\
+                filter(*filters).\
+                one()
+            log.debug(f'Found chado CV term found for "{starting_cvterm_name}" ("{starting_cvterm_cv_name}")')
+        except NoResultFound:
+            log.error(f'No chado CV term found for "{starting_cvterm_name}" ("{starting_cvterm_cv_name}")')
+            raise NoResultFound
+        # 2. Define the start of the recursive query for child terms of the starting term.
+        # Recursive query built up using the sorta helpful instructions here:
+        # https://docs.sqlalchemy.org/en/13/orm/query.html
+        # https://sanjayasubedi.com.np/python/sqlalchemy/recursive-query-in-postgresql-with-sqlalchemy/
+        cvterm_subject1, cvterm_subject2, cvterm_object = aliased(Cvterm), aliased(Cvterm), aliased(Cvterm)
+        cvterm_relationship1, cvterm_relationship2 = aliased(CvtermRelationship), aliased(CvtermRelationship)
+        cv1, cv2 = aliased(Cv), aliased(Cv)
+        # 2a. Define the starting point of the query (output of which to be used recursively to get more results).
+        # Basically, looking for all child terms (subject) of the initial CV term (object) in cvterm_relationship.
+        # The "recursive_query_start" below is not actually results, but a 'sqlalchemy.sql.base.ImmutableColumnCollection' class.
+        filters = (cvterm_object.cvterm_id == starting_cvterm.cvterm_id,
+                   cv1.name == starting_cvterm_cv_name)
+        recursive_query_start = session.query(cvterm_subject1).\
+            join(cvterm_relationship1, (cvterm_relationship1.subject_id == cvterm_subject1.cvterm_id)).\
+            join(cvterm_object, (cvterm_object.cvterm_id == cvterm_relationship1.object_id)).\
+            join(cv1, (cv1.cv_id == cvterm_subject1.cv_id)).\
+            filter(*filters).\
+            cte(recursive=True)    # Important bit here.
+        # 3. Define the second part of the recursive query.
+        # Essentially, we want child terms of child terms in the starting query, recursively.
+        # So, subject_ids in "recursive_query_start" results will be the objects in our query of cvterm_relationship.
+        # Importantly, the columns of the initial "recursive_query_start" query are accessed by the ".c" attribute.
+        filters2 = (cv2.name == starting_cvterm_cv_name,)
+        recursive_query_repeat = session.query(cvterm_subject2).\
+            join(cvterm_relationship2, (cvterm_relationship2.subject_id == cvterm_subject2.cvterm_id)).\
+            join(recursive_query_start, (recursive_query_start.c.cvterm_id == cvterm_relationship2.object_id)).\
+            join(cv2, (cv2.cv_id == cvterm_subject2.cv_id)).\
+            filter(*filters2)
+        # 4. Define a query that takes the union of the starting and recursive queries.
+        recursive_query_total = recursive_query_start.union(recursive_query_repeat)
+        # 5. And finally, get the result for the start and recursive query parts). Piece of cake ;)
+        recursive_query_total_results = session.query(recursive_query_total)
+        # Build the list from the results.
+        cvterm_id_list = [i[0] for i in recursive_query_total_results]
+        log.info(f'Found {len(cvterm_id_list)} terms under "{starting_cvterm_name}" ("{starting_cvterm_cv_name}")')
+        cvterm_id_list.append(starting_cvterm.cvterm_id)
+        return cvterm_id_list
+
+    def get_key_cvterm_sets(self, session):
+        """Get key CV term sets from chado."""
+        log.info('Get key CV term sets from chado.')
+        self.allele_class_terms.extend(self.__get_child_cvterms(session, 'allele class', 'FlyBase miscellaneous CV'))
+        self.allele_mutant_type_terms.extend(self.__get_child_cvterms(session, 'chromosome_structure_variation', 'SO'))
+        self.allele_mutant_type_terms.extend(self.__get_child_cvterms(session, 'sequence_alteration', 'SO'))
+        return
 
     def get_all_references(self, session):
         """Get all references."""
@@ -380,11 +500,14 @@ class AlleleHandler(object):
             allele.is_obsolete.is_(False),
             allele.uniquename.op('~')(self.allele_regex),
             construct.is_obsolete.is_(False),
-            construct.uniquename.op('~')(self.construct_regex)
+            construct.uniquename.op('~')(self.construct_regex),
+            Cvterm.name == 'derived_tp_assoc_alleles'
         )
         construct_results = session.query(allele, construct).\
+            select_from(construct).\
             join(FeatureRelationship, (FeatureRelationship.object_id == construct.feature_id)).\
             join(allele, (allele.feature_id == FeatureRelationship.subject_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
             filter(*filters).\
             distinct()
         counter = 0
@@ -403,12 +526,15 @@ class AlleleHandler(object):
             allele.is_obsolete.is_(False),
             allele.uniquename.op('~')(self.allele_regex),
             insertion.is_obsolete.is_(False),
-            insertion.uniquename.op('~')(self.insertion_regex)
+            insertion.is_analysis.is_(False),
+            insertion.uniquename.op('~')(self.insertion_regex),
+            Cvterm.name == 'associated_with'
         )
         insertion_results = session.query(Organism, allele, insertion).\
             join(FeatureRelationship, (FeatureRelationship.object_id == insertion.feature_id)).\
             join(allele, (allele.feature_id == FeatureRelationship.subject_id)).\
             join(Organism, (Organism.organism_id == insertion.organism_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
             filter(*filters).\
             distinct()
         dmel_counter = 0
@@ -678,20 +804,23 @@ class AlleleHandler(object):
         log.info('Get phenotypes related to alleles.')
         filters = (
             Feature.uniquename.op('~')(self.allele_regex),
-            Genotype.is_obsolete.is_(False)
+            Genotype.is_obsolete.is_(False),
+            Pub.is_obsolete.is_(False),
+            Pub.uniquename.op('~')(self.pub_regex)
         )
-        results = session.query(Feature, Genotype, Phenotype, Cvterm).\
+        results = session.query(Feature, Genotype, Phenotype, Cvterm, Pub).\
             join(FeatureGenotype, (FeatureGenotype.feature_id == Feature.feature_id)).\
             join(Genotype, (Genotype.genotype_id == FeatureGenotype.genotype_id)).\
             join(Phenstatement, (Phenstatement.genotype_id == Genotype.genotype_id)).\
             join(Phenotype, (Phenotype.phenotype_id == Phenstatement.phenotype_id)).\
             join(PhenotypeCvterm, (PhenotypeCvterm.phenotype_id == Phenotype.phenotype_id)).\
             join(Cvterm, (Cvterm.cvterm_id == PhenotypeCvterm.cvterm_id)).\
+            join(Pub, (Pub.pub_id == Phenstatement.pub_id)).\
             filter(*filters).\
             distinct()
         counter = 0
-        for rst in results:
-            self.allele_dict[rst.Feature.uniquename].phenotypes.append(rst)
+        for result in results:
+            self.allele_dict[result.Feature.uniquename].phenstatements.append(result)
             counter += 1
         log.info(f'Found {counter} allele-phenotype associations.')
         return
@@ -810,30 +939,6 @@ class AlleleHandler(object):
         log.info(f'Found {counter} sequence feature-mediated allele-library associations.')
         return
 
-    def query_chado(self, session):
-        """A wrapper method that runs initial db queries."""
-        self.get_all_references(session)
-        self.get_alleles(session)
-        self.get_direct_collections(session)
-        self.get_indirect_collections(session)
-        self.get_sf_collections(session)
-        self.get_allele_gene(session)
-        self.flag_alleles_of_internal_genes(session)
-        self.flag_in_vitro_alleles(session)
-        self.get_allele_constructs(session)
-        self.get_allele_insertions(session)
-        self.get_drosophilid_organisms(session)
-        self.adjust_allele_org(session)
-        self.get_allele_taxons(session)
-        self.get_synonyms(session)
-        self.get_allele_timestamps(session)
-        self.get_allele_dbxrefs(session)
-        self.get_allele_references(session)
-        self.get_allele_featureprops(session)
-        self.get_args(session)
-        self.get_phenotypes(session)
-        return
-
     # Synthesis of initial db info.
     def synthesize_timestamps(self, allele):
         """Process timestamps for an allele."""
@@ -848,41 +953,29 @@ class AlleleHandler(object):
         """Process 2o IDs."""
         unique_fb_id_list = list(set(allele.alt_fb_ids))
         for fb_id in unique_fb_id_list:
-            secondary_id_dict = {
-                'secondary_id': f'FB:{fb_id.accession}',
-                'created_by_curie': 'FB:FB_curator',
-                'obsolete': False,
-                'internal': False
-            }
+            secondary_id_dict = self.generic_audited_object.copy()
+            secondary_id_dict['secondary_id'] = f'FB:{fb_id.accession}'
             allele.allele_secondary_id_dtos.append(secondary_id_dict)
         return
 
     def synthesize_xrefs(self, allele):
         """Process xrefs."""
         # Start by adding allele uniquename as an xref.
-        xref_dict = {
-            'curie': 'FB:{}'.format(allele.feature.uniquename),
-            'display_name': 'FB:{}'.format(allele.feature.uniquename),
-            'prefix': 'FB',
-            'page_areas': ['allele'],
-            'created_by_curie': 'FB:FB_curator',
-            'obsolete': False,
-            'internal': False
-        }
+        xref_dict = self.generic_audited_object.copy()
+        xref_dict['referenced_curie'] = f'FB:{allele.feature.uniquename}'
+        xref_dict['display_name'] = f'FB:{allele.feature.uniquename}'
+        xref_dict['prefix'] = 'FB'
+        xref_dict['page_area'] = 'allele'
         allele.cross_reference_dtos.append(xref_dict)
-        # Add other xrefs.
+        # Add other xrefs: code below assumes xrefs are all 'FB' at the moment.
         for result in allele.dbxrefs:
             if result.Db.name not in self.fb_agr_db_dict.keys():
                 continue
-            xref_dict = {
-                'curie': '{}:{}'.format(self.fb_agr_db_dict[result.Db.name], result.Dbxref.accession),
-                'display_name': '{}:{}'.format(self.fb_agr_db_dict[result.Db.name], result.Dbxref.accession),
-                'prefix': self.fb_agr_db_dict[result.Db.name],
-                'page_areas': ['allele'],
-                'created_by_curie': 'FB:FB_curator',
-                'obsolete': False,
-                'internal': False
-            }
+            xref_dict = self.generic_audited_object.copy()
+            xref_dict['referenced_curie'] = f'{self.fb_agr_db_dict[result.Db.name]}:{result.Dbxref.accession}'
+            xref_dict['display_name'] = f'{self.fb_agr_db_dict[result.Db.name]}:{result.Dbxref.accession}'
+            xref_dict['prefix'] = self.fb_agr_db_dict[result.Db.name]
+            xref_dict['page_area'] = 'allele'
             if result.FeatureDbxref.is_current is False:
                 xref_dict['internal'] = True
             allele.cross_reference_dtos.append(xref_dict)
@@ -897,42 +990,12 @@ class AlleleHandler(object):
     def synthesize_insertions(self, allele):
         """Process insertions."""
         for insertion in allele.dmel_insertions:
-            xref_dict = {
-                'curie': '{}:{}'.format('FB', insertion.uniquename),
-                'display_name': '{}:{}'.format('FB', insertion.uniquename),
-                'prefix': 'FB',
-                'page_areas': ['allele'],
-                'created_by_curie': 'FB:FB_curator',
-                'obsolete': False,
-                'internal': False
-            }
+            xref_dict = self.generic_audited_object.copy()
+            xref_dict['referenced_curie'] = f'FB:{insertion.uniquename}'
+            xref_dict['display_name'] = insertion.name
+            xref_dict['prefix'] = 'FB'
+            xref_dict['page_area'] = 'allele'
             allele.cross_reference_dtos.append(xref_dict)
-        return
-
-    def flag_internal_alleles(self, allele):
-        """Flag alleles as internal."""
-        if allele.obsolete is True:
-            allele.internal = True
-            allele.internal_reasons.append('Obsolete')
-        # if allele.organism_abbr != 'Dmel':
-        #     allele.internal = True
-        #     allele.internal_reasons.append('Non-Dmel')
-        # if allele.allele_of_internal_gene is True:
-        #     allele.internal = True
-        #     allele.internal_reasons.append('Allele of internal Dmel gene type.')
-        return
-
-    def flag_unexportable_alleles(self, allele):
-        """Flag alleles missing data required for export."""
-        for attr in self.required_fields:
-            if attr not in allele.__dict__.keys():
-                allele.for_alliance_export = False
-                allele.export_warnings.append('Missing "{}" attribute'.format(attr))
-            elif getattr(allele, attr) is None:
-                allele.for_alliance_export = False
-                allele.export_warnings.append('Missing value for "{}" attribute'.format(attr))
-        if allele.internal is False and allele.for_alliance_export is True:
-            log.debug('EXPORT {}'.format(allele.curie))
         return
 
     def synthesize_extinction(self, allele):
@@ -951,65 +1014,81 @@ class AlleleHandler(object):
             if fprop_type.startswith('derived_stock_'):
                 has_stocks = True
         # Synthesize these two pieces of info.
-        if reported_extinct is True:
-            allele.is_extinct = True
-            if has_stocks is True:
-                log.warning(f'{allele}: stated to be lost, but has stocks.')
-        elif has_stocks is True:
+        if has_stocks is True:
             allele.is_extinct = False
+        elif reported_extinct is True:
+            allele.is_extinct = True
         return
 
     def synthesize_inheritance_mode(self, allele):
         """Determine inheritance mode for the allele."""
-        inheritance_modes = {
+        # We convert the FlyBase terms to Alliance terms as follows.
+        inheritance_mode_terms = {
             'recessive': 'recessive',
             'dominant': 'dominant',
             'semidominant': 'semi-dominant',
             'codominant': 'codominant'
         }
-        reported_modes = []
-        mode_context_list = []
-        for phenotype in allele.phenotypes:
-            cvterm = phenotype.Cvterm.name
-            # Assess only cases where CV term refers to inheritance mode.
-            if cvterm in inheritance_modes.keys():
-                # Now assess genotype complexity using genotype.description.
-                # Start with assumption that it is not a single allele genotype
+        # Gather phenotype data relevant to inheritance mode as a dict.
+        # Keys will be tuple of (inheritance_mode, phenotype_curie, phenotype_statement)
+        # Value for each key will be a list of pub_ids in support of each key.
+        # Map the phenotype_cvterm.cvterm_id to "inheritance_mode_name".
+        # Map the phenotype.cvalue_id to phenotype_term_curie.
+        # Map the phenotype.description to phenotype_statement.
+        inheritance_data = {}
+        for phenstmt in allele.phenstatements:
+            # First, filter out phenotype entries that are not relevant to inheritance mode.
+            cvterm = phenstmt.Cvterm.name
+            if cvterm not in inheritance_mode_terms.keys():
+                continue
+            # Second, filter out complex genotypes. Start by assuming that genotype is complex.
+            single_allele_genotype = False
+            # Weed out multi-locus genotypes.
+            if ' ' in phenstmt.Genotype.uniquename:
                 single_allele_genotype = False
-                # First weed out multi locus genotypes.
-                if ' ' in phenotype.Genotype.uniquename:
-                    single_allele_genotype = False
-                elif '_' in phenotype.Genotype.description:
-                    single_allele_genotype = False
-                # Assess single locus having 2 features: could be homo- or heterozygous.
-                elif '|' in phenotype.Genotype.description:
-                    features = phenotype.Genotype.description.split('|')
-                    if features[0] == features[1]:
-                        single_allele_genotype = True
-                    else:
-                        for feature in features:
-                            if feature == '+':
-                                single_allele_genotype = True
-                            elif feature.endswith('[+]'):
-                                single_allele_genotype = True
-                # If no spaces, underscores or pipes in description, it's a single-feature genotype.
-                else:
+            elif '_' in phenstmt.Genotype.description:
+                single_allele_genotype = False
+            # Assess single locus having 2 features: could be homo- or heterozygous.
+            elif '|' in phenstmt.Genotype.description:
+                features = phenstmt.Genotype.description.split('|')
+                if features[0] == features[1]:
                     single_allele_genotype = True
-                if single_allele_genotype is True:
-                    reported_modes.append(inheritance_modes[cvterm])
-                    geno = phenotype.Genotype.uniquename
-                    pheno = phenotype.Phenotype.uniquename
-                    mode_context = f'{allele.curie}\t{cvterm}\t{geno}\t{pheno}'
-                    mode_context_list.append(mode_context)
-        reported_modes = list(set(reported_modes))
-        mode_context_list = list(set(mode_context_list))
-        # Update inheritance_mode_name if unambiguous.
-        if len(reported_modes) == 1:
-            allele.inheritance_mode_name = reported_modes[0]
-        # If ambiguous, change from "unknown" to None.
-        elif len(reported_modes) > 1:
-            allele.inheritance_mode_name = None
-            log.warning(f"{allele}: Found {len(reported_modes)} inheritance modes: {'|'.join(reported_modes)}. Context: {mode_context_list}")
+                else:
+                    for feature in features:
+                        if feature == '+':
+                            single_allele_genotype = True
+                        elif feature.endswith('[+]'):
+                            single_allele_genotype = True
+            # If no spaces, underscores or pipes in description, it's a single-feature genotype.
+            else:
+                single_allele_genotype = True
+            if single_allele_genotype is False:
+                continue
+            # For relevant phenotypes of simple genotypes, we parse out the data.
+            inheritance_mode_name = inheritance_mode_terms[cvterm]
+            phenotype_term_curie = f'{phenstmt.Phenotype.cvalue.dbxref.db.name}:{phenstmt.Phenotype.cvalue.dbxref.accession}'
+            phenotype_statement = phenstmt.Phenotype.uniquename
+            pheno_key = (inheritance_mode_name, phenotype_term_curie, phenotype_statement)
+            pub_id = phenstmt.Pub.pub_id
+            pub_curie = self.all_pubs_dict[pub_id]
+            try:
+                inheritance_data[pheno_key].append(pub_curie)
+            except KeyError:
+                inheritance_data[pheno_key] = [pub_curie]
+        # Convert data into Alliance slot annotations.
+        INHERITANCE_MODE_NAME = 0
+        PHENOTYPE_CURIE_NAME = 1    # TEMPORARY: Suppress until AGR has FBcv
+        PHENOTYPE_STATEMENT = 2
+        for pheno_key, pub_curie_list in inheritance_data.items():
+            for pub_curie in pub_curie_list:
+                if pub_curie == 'FB:unattributed':
+                    pub_curie_list.remove('FB:unattributed')
+            allele_inheritance_mode_slot_annotation_dto = self.generic_audited_object.copy()
+            allele_inheritance_mode_slot_annotation_dto['inheritance_mode_name'] = pheno_key[INHERITANCE_MODE_NAME]
+            allele_inheritance_mode_slot_annotation_dto['phenotype_term_curie'] = pheno_key[PHENOTYPE_CURIE_NAME]    # TEMPORARY: Suppress until AGR has FBcv
+            allele_inheritance_mode_slot_annotation_dto['phenotype_statement'] = pheno_key[PHENOTYPE_STATEMENT]
+            allele_inheritance_mode_slot_annotation_dto['evidence_curies'] = list(set(pub_curie_list))
+            allele.allele_inheritance_mode_dtos.append(allele_inheritance_mode_slot_annotation_dto)
         return
 
     def synthesize_collections(self, allele):
@@ -1039,15 +1118,11 @@ class AlleleHandler(object):
             'nickname': 'nomenclature_symbol',
             'synonym': 'nomenclature_symbol'
         }
-        default_name_dto = {
-            'name_type_name': 'unspecified',
-            'format_text': 'unspecified',
-            'display_text': 'unspecified',
-            'synonym_scope_name': 'exact',
-            'evidence_curies': [],
-            'internal': False,
-            'obsolete': False
-        }
+        default_name_dto = self.generic_audited_object.copy()
+        default_name_dto['name_type_name'] = 'unspecified'
+        default_name_dto['format_text'] = 'unspecified'
+        default_name_dto['display_text'] = 'unspecified'
+        default_name_dto['synonym_scope_name'] = 'exact'
         # Create a dict of all distinct name/synonym_sgml combinations: for each, capture synonym type(s) an pub_ids.
         # Keys are (synonym.name, synonym.synonym_sgml) tuples.
         # Values are dicts too where keys are chado synonym types and values are lists of pub_ids.
@@ -1077,6 +1152,7 @@ class AlleleHandler(object):
             # Collect all pubs.
             pub_id_list = []
             for syno_type, syno_type_pub_list in syno_attributes.items():
+                # Skip over the 'internal' attribute, which is not actually a synonym type.
                 if syno_type == 'internal':
                     continue
                 pub_id_list.extend(syno_type_pub_list)
@@ -1088,15 +1164,13 @@ class AlleleHandler(object):
                     continue
                 type_tally[len(set(syno_type_pub_list))] = syno_type
             name_type_to_use = synonym_type_conversion[type_tally[max(type_tally.keys())]]
-            output_synonym_dto = {
-                'name_type_name': name_type_to_use,
-                'format_text': sub_sup_sgml_to_html(syno_name[FORMAT_TEXT]),
-                'display_text': sub_sup_sgml_to_html(syno_name[DISPLAY_TEXT]),
-                'synonym_scope_name': 'exact',
-                'evidence_curies': [self.all_pubs_dict[i] for i in pub_id_list if self.all_pubs_dict[i] != 'FB:unattributed'],
-                'internal': syno_internal,
-                'obsolete': False
-            }
+            output_synonym_dto = self.generic_audited_object.copy()
+            output_synonym_dto['name_type_name'] = name_type_to_use
+            output_synonym_dto['format_text'] = sub_sup_sgml_to_html(syno_name[FORMAT_TEXT])
+            output_synonym_dto['display_text'] = sub_sup_sgml_to_html(syno_name[DISPLAY_TEXT])
+            output_synonym_dto['synonym_scope_name'] = 'exact'
+            output_synonym_dto['evidence_curies'] = [self.all_pubs_dict[i] for i in pub_id_list if self.all_pubs_dict[i] != 'FB:unattributed']
+            output_synonym_dto['internal'] = syno_internal
             name_dto_list.append(output_synonym_dto)
         # Sift through name DTOs for symbol, fullname, systematic_name, etc.
         for name_dto in name_dto_list:
@@ -1118,10 +1192,101 @@ class AlleleHandler(object):
             placeholder_symbol_dto['name_type_name'] = 'nomenclature_symbol'
             placeholder_symbol_dto['format_text'] = feature.feature.name
             placeholder_symbol_dto['display_text'] = feature.feature.name
+            placeholder_symbol_dto['evidence_curies'] = []
             feature.allele_symbol_dto = placeholder_symbol_dto
         return
 
-    def synthesize_info(self):
+    def synthesize_mutation_type(self, session, allele):
+        """Determine mutation type."""
+        # Convert term for insertions.
+        insertion_conversion = {
+            'transposable_element_insertion_site': 'SO:0001218',    # transgenic_insertion
+            'transposable_element': 'SO:0001837',                   # mobile_element_insertion
+            'insertion': 'SO:0000667'                               # insertion
+        }
+        relevant_features = []
+        relevant_features.extend(allele.args)
+        relevant_features.extend(allele.dmel_insertions)
+        relevant_features.extend(allele.non_dmel_insertions)
+        mutation_types = {}
+        for relevant_feature in relevant_features:
+            # Check insertions
+            if relevant_feature.type.name in insertion_conversion.keys():
+                mutation_type = insertion_conversion[relevant_feature.type.name]
+            # Check ARGs.
+            elif relevant_feature.type_id in self.allele_mutant_type_terms:
+                mutation_type = self.cvterm_dict[relevant_feature.type_id]['curie']
+            else:
+                continue
+            # Get pubs.
+            filters = (
+                Feature.feature_id == relevant_feature.feature_id,
+                Pub.uniquename.op('~')(self.pub_regex),
+                Pub.is_obsolete.is_(False)
+            )
+            pub_results = session.query(Pub).\
+                select_from(Feature).\
+                join(FeaturePub, (FeaturePub.feature_id == Feature.feature_id)).\
+                join(Pub, (Pub.pub_id == FeaturePub.pub_id)).\
+                filter(*filters).\
+                distinct()
+            this_pub_curie_list = [self.all_pubs_dict[i.pub_id] for i in pub_results]
+            try:
+                mutation_types[mutation_type].extend(this_pub_curie_list)
+            except KeyError:
+                mutation_types[mutation_type] = this_pub_curie_list
+        for mutation_type, full_pub_curie_list in mutation_types.items():
+            for pub_curie in full_pub_curie_list:
+                if pub_curie == 'FB:unattributed':
+                    full_pub_curie_list.remove('FB:unattributed')
+            mutant_type_annotation = self.generic_audited_object.copy()
+            mutant_type_annotation['mutation_type_curies'] = [mutation_type]
+            mutant_type_annotation['evidence_curies'] = list(set(full_pub_curie_list))
+            allele.allele_mutation_type_dtos.append(mutant_type_annotation)
+        return
+
+    def add_data_provider_info(self, allele):
+        """Add data_provider info."""
+        allele.data_provider_dto = self.generic_data_provider_dto.copy()
+        allele.data_provider_dto['cross_reference_dto']['referenced_curie'] = f'FB:{allele.feature.uniquename}'
+        allele.data_provider_dto['cross_reference_dto']['display_name'] = allele.allele_symbol_dto['display_text']
+        return
+
+    def flag_internal_alleles(self, allele):
+        """Flag alleles as internal."""
+        if allele.obsolete is True:
+            allele.internal = True
+            allele.internal_reasons.append('Obsolete')
+        if allele.organism_abbr != 'Dmel':
+            allele.internal = True
+            allele.internal_reasons.append('Non-Dmel')
+        if allele.allele_of_internal_gene is True:
+            allele.internal = True
+            allele.internal_reasons.append('Allele of internal Dmel gene type.')
+        allele_status = {False: 'public', True: 'private'}
+        allele.allele_database_status_dto = self.generic_audited_object.copy()
+        allele.allele_database_status_dto['database_status_name'] = allele_status[allele.internal]
+        return
+
+    def flag_unexportable_alleles(self, allele):
+        """Flag alleles missing data required for export."""
+        # TEMPORARY: Suppress non-Dmel alleles from export.
+        if allele.adj_organism_abbr != 'Dmel':
+            allele.for_alliance_export = False
+            allele.export_warnings.append(f'Suppress non-Dmel allele from export: ORG={allele.organism_abbr}')
+        # Suppress objects missing required information from export.
+        for attr in self.required_fields:
+            if attr not in allele.__dict__.keys():
+                allele.for_alliance_export = False
+                allele.export_warnings.append('Missing "{}" attribute'.format(attr))
+            elif getattr(allele, attr) is None:
+                allele.for_alliance_export = False
+                allele.export_warnings.append('Missing value for "{}" attribute'.format(attr))
+        if allele.internal is False and allele.for_alliance_export is True:
+            log.debug('EXPORT {}'.format(allele.curie))
+        return
+
+    def synthesize_info(self, session):
         """Convert FlyBase allele data into an AllianceAllele representation."""
         log.info('Synthesizing allele info.')
         for allele in self.allele_dict.values():
@@ -1133,11 +1298,40 @@ class AlleleHandler(object):
             self.synthesize_xrefs(allele)
             self.synthesize_references(allele)
             self.synthesize_insertions(allele)
-            self.flag_internal_alleles(allele)
-            self.flag_unexportable_alleles(allele)
             self.synthesize_extinction(allele)
             self.synthesize_inheritance_mode(allele)
+            self.synthesize_mutation_type(session, allele)
+            self.add_data_provider_info(allele)
+            self.flag_internal_alleles(allele)
+            self.flag_unexportable_alleles(allele)
         log.info('Done synthesizing allele info.')
+        return
+
+    def query_chado(self, session):
+        """A wrapper method that runs initial db queries."""
+        self.get_cvterm_info(session)
+        self.get_key_cvterm_sets(session)
+        self.get_all_references(session)
+        self.get_alleles(session)
+        self.get_direct_collections(session)
+        self.get_indirect_collections(session)
+        self.get_sf_collections(session)
+        self.get_allele_gene(session)
+        self.flag_alleles_of_internal_genes(session)
+        self.flag_in_vitro_alleles(session)
+        self.get_allele_constructs(session)
+        self.get_allele_insertions(session)
+        self.get_drosophilid_organisms(session)
+        self.adjust_allele_org(session)
+        self.get_allele_taxons(session)
+        self.get_synonyms(session)
+        self.get_allele_timestamps(session)
+        self.get_allele_dbxrefs(session)
+        self.get_allele_references(session)
+        self.get_allele_featureprops(session)
+        self.get_args(session)
+        self.get_phenotypes(session)
+        self.synthesize_info(session)
         return
 
     def generate_export_file(self):
