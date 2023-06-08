@@ -17,7 +17,6 @@ Notes:
     file specs for the original Neo4j drop-and-reload database.
     To Do - report non-MOD inferred_gene_curie once supported by Alliance again (v1.7.0?)
     To Do - convert multi-allele annotations into AGM annotations.
-    To Do - for v1.7.1, disease_genetic_modifier_curie becomes multivalued: convert to list; consolidate?
 
 """
 
@@ -125,7 +124,7 @@ class DiseaseAnnotation(object):
         self.data_provider_name = 'FB'                        # Retired in v1.6.0.
         self.data_provider_dto = None                         # Generate DataProviderDTO object once we have the do_term_curie.
         self.secondary_data_provider_dto = None               # N/A to FlyBase data.
-        self.disease_genetic_modifier_curie = None            # Gene, Allele or AGM curie.
+        self.disease_genetic_modifier_curies = None           # Gene, Allele or AGM curie.
         self.disease_genetic_modifier_relation_name = None    # "Disease genetic modifier relations" CV.
         # Attributes for the Alliance AlleleDiseaseAnnotationDTO.
         self.allele_curie = None                              # Provide allele curie.
@@ -207,7 +206,7 @@ class DAFMaker(object):
         'data_provider_dto',
         'date_created',
         'date_updated',
-        'disease_genetic_modifier_curie',
+        'disease_genetic_modifier_curies',
         'disease_genetic_modifier_relation_name',
         'disease_relation_name',
         'do_term_curie',
@@ -516,12 +515,12 @@ class DAFMaker(object):
                     if re.search(allele_regex, dis_anno.evidence_code.value):
                         allele_id = re.search(allele_regex, dis_anno.evidence_code.value).group(0)
                         if self.confirm_current_allele_by_uniquename(session, allele_id):
-                            dis_anno.disease_genetic_modifier_curie = 'FB:{}'.format(allele_id)
+                            dis_anno.disease_genetic_modifier_curies = ['FB:{}'.format(allele_id)]
                         else:
                             # Look up current allele by 2o ID. Use that.
                             curr_allele_id = self.get_current_id_for_allele(session, allele_id)
                             if curr_allele_id:
-                                dis_anno.disease_genetic_modifier_curie = 'FB:{}'.format(curr_allele_id)
+                                dis_anno.disease_genetic_modifier_curies = ['FB:{}'.format(curr_allele_id)]
                                 dis_anno.modifier_id_was_updated = True
                             else:
                                 dis_anno.modifier_problem = True
@@ -559,7 +558,7 @@ class DAFMaker(object):
         evi_codes = sorted(list(set(dis_anno.evidence_code_curies)))
         evi_code_str = '|'.join(evi_codes)
         dis_anno.agr_uniq_key += f'||{evi_code_str}'
-        dis_anno.agr_uniq_key += f'||{dis_anno.disease_genetic_modifier_curie}'
+        dis_anno.agr_uniq_key += f'||{dis_anno.disease_genetic_modifier_curies[0]}'
         dis_anno.agr_uniq_key += f'||{dis_anno.disease_genetic_modifier_relation_name}'
         log.debug(f'{dis_anno} HAS AGR_UNIQ_KEY: {dis_anno.agr_uniq_key}')
         return
