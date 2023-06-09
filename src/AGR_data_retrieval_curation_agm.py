@@ -29,8 +29,8 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
 # from sqlalchemy.orm.exc import NoResultFound
 from harvdev_utils.production import (
-    Cvterm, Db, Dbxref, OrganismDbxref, Strain, StrainDbxref, StrainSynonym,
-    Synonym
+    Cvterm, Db, Dbxref, OrganismDbxref, Pub, PubDbxref, Strain, StrainDbxref,
+    StrainPub, StrainSynonym, Synonym
 )
 from harvdev_utils.psycopg_functions import set_up_db_reading
 
@@ -101,6 +101,7 @@ class AllianceStrainAGM(object):
         self.dbxrefs = []                          # Will be list of dbxrefs as sql result groupings: Db, Dbxref, StrainDbxref.
         self.alt_fb_ids = []                       # Will be list of Dbxrefs for 2o FlyBase IDs.
         self.timestamps = []                       # Add all timestamps here.
+        self.fb_references = []                    # Will be list of pub_ids from strain_pub.
         # Attributes for the Alliance AuditedObject.
         self.obsolete = strain.is_obsolete         # Will be the FlyBase value here.
         self.internal = False                      # Change to true if strain not intended for display at Alliance website.
@@ -136,6 +137,7 @@ class AGMHandler(object):
     def __init__(self):
         """Create the AGMHandler object."""
         self.strain_dict = {}        # An FBsnID-keyed dict of AllianceStrainAGM objects.
+        self.all_pubs_dict = {}      # A pub_id-keyed dict of pub curies (PMID or FBrf).
         self.total_agm_cnt = 0       # Count of all strains found in starting query.
         self.export_agm_cnt = 0      # Count of all strains exported to file.
         self.internal_agm_cnt = 0    # Count of all strains marked as internal=True in export file.
@@ -150,6 +152,10 @@ class AGMHandler(object):
     generic_data_provider_dto = generic_audited_object.copy()
     generic_data_provider_dto['source_organization_abbreviation'] = 'FB'
     generic_data_provider_dto['cross_reference_dto'] = {'prefix': 'FB', 'internal': False}
+    # Regexes.
+    strain_regex = r'^FBsn[0-9]{7}'
+    pub_regex = r'^(FBrf[0-9]{7}|unattributed)$'
+    # Export fields.
     required_fields = [
         'curie',
         'data_provider_dto',
@@ -171,20 +177,53 @@ class AGMHandler(object):
         'obsolete',
         'reference_curies',
         'subtype_name',
-        'synonyms',
         'taxon_curie'
     ]
     fb_agr_db_dict = {
         'FlyBase': 'FB'
     }
 
+    def get_all_references(self, session):
+        """Get all references."""
+        log.info('Get all references.')
+        # First get all current pubs having an FBrf uniquename.
+        filters = (
+            Pub.uniquename.op('~')(self.pub_regex),
+            Pub.is_obsolete.is_(False)
+        )
+        results = session.query(Pub).\
+            filter(*filters).\
+            distinct()
+        pub_counter = 0
+        for pub in results:
+            self.all_pubs_dict[pub.pub_id] = f'FB:{pub.uniquename}'
+            pub_counter += 1
+        # Next find PMIDs if available and replace the curie in the all_pubs_dict.
+        filters = (
+            Pub.uniquename.op('~')(self.pub_regex),
+            Pub.is_obsolete.is_(False),
+            Db.name == 'pubmed',
+            PubDbxref.is_current.is_(True)
+        )
+        pmid_xrefs = session.query(Pub, Dbxref).\
+            join(PubDbxref, (PubDbxref.pub_id == Pub.pub_id)).\
+            join(Dbxref, (Dbxref.dbxref_id == PubDbxref.dbxref_id)).\
+            join(Db, (Db.db_id == Dbxref.db_id)).\
+            filter(*filters).\
+            distinct()
+        pmid_counter = 0
+        for xref in pmid_xrefs:
+            self.all_pubs_dict[xref.Pub.pub_id] = f'PMID:{xref.Dbxref.accession}'
+            pmid_counter += 1
+        log.info(f'Found {pmid_counter} PMID IDs for {pub_counter} current FB publications.')
+        return
+
     def get_strains(self, session):
         """Get all strains."""
         log.info('Querying chado for strains.')
         # First get all strains
-        strain_regex = r'^FBsn[0-9]{7}$'
         filters = (
-            Strain.uniquename.op('~')(strain_regex),
+            Strain.uniquename.op('~')(self.strain_regex),
         )
         strain_results = session.query(Strain).\
             filter(*filters).\
@@ -313,6 +352,27 @@ class AGMHandler(object):
                 self.strain_dict[result.Strain.uniquename].dbxrefs.append(result)
         return
 
+    def get_strain_references(self, session):
+        """Get references for strains."""
+        log.info('Get strain references.')
+        filters = (
+            Strain.uniquename.op('~')(self.strain_regex),
+            Pub.uniquename.op('~')(self.pub_regex),
+            Pub.is_obsolete.is_(False)
+        )
+        strain_pubs = session.query(Strain, Pub).\
+            select_from(Strain).\
+            join(StrainPub, (StrainPub.strain_id == Strain.strain_id)).\
+            join(Pub, (Pub.pub_id == StrainPub.pub_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in strain_pubs:
+            self.strain_dict[result.Strain.uniquename].fb_references.append(result.Pub.pub_id)
+            counter += 1
+        log.info(f'Found {counter} strain-pub relationships.')
+        return
+
     # Synthesis of initial db info.
     def synthesize_timestamps(self, agm):
         """Process timestamps for an AGM."""
@@ -368,6 +428,12 @@ class AGMHandler(object):
             agm.cross_reference_dtos.append(xref_dict)
         return
 
+    def synthesize_references(self, agm):
+        """Process pubs for agm."""
+        agm.fb_references = list(set(agm.fb_references))
+        agm.reference_curies = [self.all_pubs_dict[i] for i in agm.fb_references if self.all_pubs_dict[i] != 'FB:unattributed']
+        return
+
     def add_data_provider_info(self, agm):
         """Add data_provider info."""
         agm.data_provider_dto = self.generic_data_provider_dto.copy()
@@ -413,6 +479,7 @@ class AGMHandler(object):
             self.synthesize_synonyms(strain)
             self.synthesize_secondary_ids(strain)
             self.synthesize_xrefs(strain)
+            self.synthesize_references(strain)
             self.add_data_provider_info(strain)
             self.flag_internal_agms(strain)
             self.flag_unexportable_agms(strain)
@@ -421,11 +488,13 @@ class AGMHandler(object):
 
     def query_chado(self, session):
         """A wrapper method that runs initial db queries."""
+        self.get_all_references(session)
         self.get_strains(session)
         self.get_strain_taxons(session)
         self.get_synonyms(session)
         self.get_strain_timestamps(session)
         self.get_strain_dbxrefs(session)
+        self.get_strain_references(session)
         self.synthesize_info()
         return
 
