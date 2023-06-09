@@ -94,7 +94,6 @@ class AllianceStrainAGM(object):
         # AGM: curie, taxon, name, subtype.
         self.strain = strain                       # The Strain object corresponding to the FlyBase strain.
         self.organism_abbr = None                  # Will be the organism.abbreviation for the strain's species of origin.
-        self.taxon_dbxref = None                   # Will be the NCBITaxon (Db, Dbxref) tuple for the organism.
         self.curr_fb_symbol = None                 # Will be the current symbol Synonym object.
         self.curr_fb_fullname = None               # Will be the current fullname Synonym object.
         self.internal_synonyms = []                # Will be list of internal synonym names (and synonym_sgml if different).
@@ -214,7 +213,7 @@ class AGMHandler(object):
             organism_taxon_dict[result.OrganismDbxref.organism_id] = result.Dbxref.accession
         for strain in self.strain_dict.values():
             try:
-                strain.taxon = 'NCBITaxon:{}'.format(organism_taxon_dict[strain.strain.organism_id])
+                strain.taxon_curie = f'NCBITaxon:{organism_taxon_dict[strain.strain.organism_id]}'
             except KeyError:
                 log.debug('No NCBI taxon ID available for: {}'.format(strain))
         return
