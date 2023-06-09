@@ -404,12 +404,10 @@ class AGMHandler(object):
         """Process xrefs."""
         # Start by adding AGM uniquename as an xref.
         xref_dict = self.generic_audited_object.copy()
-        xref_dict['referenced_curie'] = f'FB:{agm.curie}'
-        xref_dict['display_name'] = f'FB:{agm.curie}'
+        xref_dict['referenced_curie'] = agm.curie
+        xref_dict['display_name'] = agm.name
         xref_dict['prefix'] = 'FB'
-        # Can only fill in page_area for strains (no genotype pages).
-        if agm.subtype_name == 'strain':
-            xref_dict['page_area'] = agm.subtype_name
+        xref_dict['page_area'] = agm.subtype_name
         agm.cross_reference_dtos.append(xref_dict)
         # Add other xrefs: code below assumes xrefs are all 'FB' at the moment.
         for result in agm.dbxrefs:
@@ -417,12 +415,13 @@ class AGMHandler(object):
             if result.Db.name not in self.fb_agr_db_dict.keys():
                 continue
             # Skip 1o FB xref (already handled above).
-            if result.Dbxref.accession == agm.curie:
+            if f'FB:{result.Dbxref.accession}' == agm.curie:
                 continue
             xref_dict = self.generic_audited_object.copy()
             xref_dict['referenced_curie'] = f'{self.fb_agr_db_dict[result.Db.name]}:{result.Dbxref.accession}'
             xref_dict['display_name'] = f'{self.fb_agr_db_dict[result.Db.name]}:{result.Dbxref.accession}'
             xref_dict['prefix'] = self.fb_agr_db_dict[result.Db.name]
+            xref_dict['page_area'] = agm.subtype_name
             if result.StrainDbxref.is_current is False:
                 xref_dict['internal'] = True
             agm.cross_reference_dtos.append(xref_dict)
