@@ -1281,7 +1281,7 @@ class AlleleHandler(object):
             elif getattr(allele, attr) is None:
                 allele.for_alliance_export = False
                 allele.export_warnings.append('Missing value for "{}" attribute'.format(attr))
-        if allele.internal is False and allele.for_alliance_export is True:
+        if allele.for_alliance_export is True:
             log.debug('EXPORT {}'.format(allele.curie))
         return
 

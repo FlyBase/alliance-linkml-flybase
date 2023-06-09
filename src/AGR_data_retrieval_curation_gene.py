@@ -767,7 +767,7 @@ class GeneHandler(object):
                 elif getattr(gene, attr) is None:
                     gene.for_alliance_export = False
                     gene.export_warnings.append('Missing value for "{}" attribute'.format(attr))
-            if gene.internal is False and gene.for_alliance_export is True:
+            if gene.for_alliance_export is True:
                 log.debug('EXPORT {}'.format(gene.curie))
         log.info('Done synthesizing gene info.')
         return

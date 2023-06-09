@@ -390,7 +390,7 @@ class AGMHandler(object):
     def flag_unexportable_agms(self, agm):
         """Flag agms missing data required for export."""
         # TEMPORARY: Suppress non-Dmel AGMs from export.
-        if agm.org_abbr != 'Dmel':
+        if agm.organism_abbr != 'Dmel':
             agm.for_alliance_export = False
             agm.export_warnings.append(f'Suppress non-Dmel AGM from export: ORG={agm.organism_abbr}')
         # Suppress objects missing required information from export.
@@ -401,7 +401,7 @@ class AGMHandler(object):
             elif getattr(agm, attr) is None:
                 agm.for_alliance_export = False
                 agm.export_warnings.append('Missing value for "{}" attribute'.format(attr))
-        if agm.internal is False and agm.for_alliance_export is True:
+        if agm.for_alliance_export is True:
             log.debug('EXPORT {}'.format(agm.curie))
         return
 
