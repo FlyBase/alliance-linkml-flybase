@@ -1084,7 +1084,7 @@ class AlleleHandler(object):
                     pub_curie_list.remove('FB:unattributed')
             allele_inheritance_mode_slot_annotation_dto = self.generic_audited_object.copy()
             allele_inheritance_mode_slot_annotation_dto['inheritance_mode_name'] = pheno_key[INHERITANCE_MODE_NAME]
-            allele_inheritance_mode_slot_annotation_dto['phenotype_term_curie'] = pheno_key[PHENOTYPE_CURIE_NAME]    # TEMPORARY: Suppress until AGR has FBcv
+            # allele_inheritance_mode_slot_annotation_dto['phenotype_term_curie'] = pheno_key[PHENOTYPE_CURIE_NAME]    # TEMPORARY: Suppress until AGR has FBcv
             allele_inheritance_mode_slot_annotation_dto['phenotype_statement'] = pheno_key[PHENOTYPE_STATEMENT]
             allele_inheritance_mode_slot_annotation_dto['evidence_curies'] = list(set(pub_curie_list))
             allele.allele_inheritance_mode_dtos.append(allele_inheritance_mode_slot_annotation_dto)
