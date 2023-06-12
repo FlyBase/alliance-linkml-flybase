@@ -269,7 +269,7 @@ class DAFMaker(object):
             qual_type.name == 'qualifier',
         )
         fcvt_qualifiers = session.query(FeatureCvtermprop).\
-            join(Cvterm, (Cvterm.cvterm_id == FeatureCvtermprop.type_id)).\
+            join(qual_type, (qual_type.cvterm_id == FeatureCvtermprop.type_id)).\
             filter(*filters).\
             distinct()
         qualifier_count = 0
@@ -288,7 +288,7 @@ class DAFMaker(object):
             evi_type.name == 'evidence_code',
         )
         fcvt_evidence_codes = session.query(FeatureCvtermprop).\
-            join(Cvterm, (Cvterm.cvterm_id == FeatureCvtermprop.type_id)).\
+            join(evi_type, (evi_type.cvterm_id == FeatureCvtermprop.type_id)).\
             filter(*filters).\
             distinct()
         evidence_code_count = 0
