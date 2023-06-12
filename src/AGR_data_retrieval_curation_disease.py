@@ -222,8 +222,7 @@ class DAFMaker(object):
 
     def get_disease_annotations(self, session):
         """Get all allele-level disease annotations."""
-        log.info('Querying chado for feature-level disease annotations.')
-
+        log.info('Querying chado for allele-level disease annotations.')
         # First get feature_cvterm and related provenance props (each combo is a distinct annotation).
         # This will ignore orthology-computed disease annotations, which are at the gene level.
         allele_regex = r'^FBal[0-9]{7}$'
@@ -263,13 +262,14 @@ class DAFMaker(object):
             self.dis_anno_dict[dis_anno.mod_internal_id] = dis_anno
         log.info('Found {} disease annotations.'.format(self.total_anno_cnt))
 
-        # Get qualifiers for each disease annotation.
-        log.info('Getting disease annotation qualifiers.')
+    def get_disease_qualifiers(self, session):
+        """Get disease annotation qualifiers."""
+        log.info('Querying chado for disease annotation qualifiers.')
         filters = (
-            qual_type.name == 'qualifier',
+            Cvterm.name == 'qualifier',
         )
         fcvt_qualifiers = session.query(FeatureCvtermprop).\
-            join(qual_type, (qual_type.cvterm_id == FeatureCvtermprop.type_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureCvtermprop.type_id)).\
             filter(*filters).\
             distinct()
         qualifier_count = 0
@@ -281,14 +281,16 @@ class DAFMaker(object):
             except KeyError:
                 pass
         log.info('Found {} disease annotation qualifiers.'.format(qualifier_count))
+        return
 
-        # Get evidence_code for each disease annotation.
-        log.info('Getting disease annotation evidence codes.')
+    def get_disease_evidence_code(self, session):
+        """Get disease annotation evidence codes."""
+        log.info('Querying chado for disease annotation evidence codes.')
         filters = (
-            evi_type.name == 'evidence_code',
+            Cvterm.name == 'evidence_code',
         )
         fcvt_evidence_codes = session.query(FeatureCvtermprop).\
-            join(evi_type, (evi_type.cvterm_id == FeatureCvtermprop.type_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureCvtermprop.type_id)).\
             filter(*filters).\
             distinct()
         evidence_code_count = 0
