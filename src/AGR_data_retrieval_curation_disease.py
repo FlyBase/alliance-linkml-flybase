@@ -90,7 +90,7 @@ class DiseaseAnnotation(object):
 
         """
         # FlyBase data
-        self.mod_internal_id = 'FB:{}_{}'.format(feature_cvterm.feature_cvterm_id, provenance_prop.rank)
+        self.mod_internal_id = f'FB:{feature_cvterm.feature_cvterm_id}_{provenance_prop.rank}'
         self.feature_cvterm = feature_cvterm                  # The FeatureCvterm object.
         self.provenance = provenance_prop                     # The "provenance" FeatureCvtermprop.
         self.evidence_code = None                             # Will be the "evidence_code" FeatureCvtermprop.
