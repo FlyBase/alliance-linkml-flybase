@@ -231,6 +231,8 @@ class DAFMaker(object):
         disease_term = aliased(Cvterm, name='disease_term')
         feature_type = aliased(Cvterm, name='feature_type')
         prop_type = aliased(Cvterm, name='prop_type')
+        qual_type = aliased(Cvterm, name='qual_type')
+        evi_type = aliased(Cvterm, name='evi_type')
         filters = (
             Feature.uniquename.op('~')(allele_regex),
             Feature.is_obsolete.is_(False),
@@ -264,7 +266,7 @@ class DAFMaker(object):
         # Get qualifiers for each disease annotation.
         log.info('Getting disease annotation qualifiers.')
         filters = (
-            Cvterm.name == 'qualifier',
+            qual_type.name == 'qualifier',
         )
         fcvt_qualifiers = session.query(FeatureCvtermprop).\
             join(Cvterm, (Cvterm.cvterm_id == FeatureCvtermprop.type_id)).\
@@ -283,7 +285,7 @@ class DAFMaker(object):
         # Get evidence_code for each disease annotation.
         log.info('Getting disease annotation evidence codes.')
         filters = (
-            Cvterm.name == 'evidence_code',
+            evi_type.name == 'evidence_code',
         )
         fcvt_evidence_codes = session.query(FeatureCvtermprop).\
             join(Cvterm, (Cvterm.cvterm_id == FeatureCvtermprop.type_id)).\
