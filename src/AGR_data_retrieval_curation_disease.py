@@ -274,7 +274,7 @@ class DAFMaker(object):
             distinct()
         qualifier_count = 0
         for qualifier in fcvt_qualifiers:
-            mod_internal_id = '{}_{}'.format(qualifier.feature_cvterm_id, qualifier.rank)
+            mod_internal_id = 'FB:{}_{}'.format(qualifier.feature_cvterm_id, qualifier.rank)
             try:
                 self.dis_anno_dict[mod_internal_id].qualifier = qualifier
                 qualifier_count += 1
@@ -283,7 +283,7 @@ class DAFMaker(object):
         log.info('Found {} disease annotation qualifiers.'.format(qualifier_count))
         return
 
-    def get_disease_evidence_code(self, session):
+    def get_disease_evidence_codes(self, session):
         """Get disease annotation evidence codes."""
         log.info('Querying chado for disease annotation evidence codes.')
         filters = (
@@ -295,14 +295,13 @@ class DAFMaker(object):
             distinct()
         evidence_code_count = 0
         for evidence_code in fcvt_evidence_codes:
-            mod_internal_id = '{}_{}'.format(evidence_code.feature_cvterm_id, evidence_code.rank)
+            mod_internal_id = 'FB:{}_{}'.format(evidence_code.feature_cvterm_id, evidence_code.rank)
             try:
                 self.dis_anno_dict[mod_internal_id].evidence_code = evidence_code
                 evidence_code_count += 1
             except KeyError:
                 pass
         log.info('Found {} disease annotation evidence codes.'.format(evidence_code_count))
-
         # Print out annotations for review and development.
         for dis_anno in self.dis_anno_dict.values():
             log.debug('\nANNOTATION: {}'.format(dis_anno))
@@ -337,6 +336,8 @@ class DAFMaker(object):
     def query_chado(self, session):
         """A wrapper method that runs initial db queries."""
         self.get_disease_annotations(session)
+        self.get_disease_qualifiers(session)
+        self.get_disease_evidence_codes(session)
         # self.get_dis_anno_timestamps(session)   # Suppress since half of annotations are derived during the release build.
         return
 
