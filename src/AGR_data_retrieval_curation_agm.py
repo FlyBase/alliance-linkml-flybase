@@ -29,8 +29,8 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
 # from sqlalchemy.orm.exc import NoResultFound
 from harvdev_utils.production import (
-    Cvterm, Db, Dbxref, OrganismDbxref, Strain, StrainDbxref, StrainSynonym,
-    Synonym
+    Cvterm, Db, Dbxref, OrganismDbxref, Pub, PubDbxref, Strain, StrainDbxref,
+    StrainPub, StrainSynonym, Synonym
 )
 from harvdev_utils.psycopg_functions import set_up_db_reading
 
@@ -76,57 +76,58 @@ def main():
     log.info('Ended main function.\n')
 
 
-class AllianceAGM(object):
+class AllianceStrainAGM(object):
     """A strain with it's associated FlyBase data and Alliance LinkML properties."""
     def __init__(self, strain):
-        """Create a base AllianceAGM object.
+        """Create a base AllianceStrainAGM object.
 
         Args:
-            arg1 (strain): (Strain) The Strain object corresponding to the strain.
+            arg1 (strain): (Strain) The chado Strain object corresponding to the strain.
 
         Returns:
-            An object of the AllianceAGM class.
+            An object of the AllianceStrainAGM class.
 
         """
         # Attributes representing unprocessed FlyBase data.
         # Note: use attribute names that do not match an Alliance LinkML slot name.
         # For initial load, the Alliance A-Team just needs minimum info:
         # AGM: curie, taxon, name, subtype.
-        self.strain = strain                    # The Strain object corresponding to the FlyBase strain.
-        self.organism_abbr = None               # Will be the organism.abbreviation for the strain's species of origin.
-        self.taxon_dbxref = None                # Will be the NCBITaxon (Db, Dbxref) tuple for the organism.
-        self.curr_fb_symbol = None              # Will be the current symbol Synonym object.
-        self.curr_fb_fullname = None            # Will be the current fullname Synonym object.
-        self.internal_synonyms = []             # Will be list of internal synonym names (and synonym_sgml if different).
-        self.public_synonyms = []               # Will be list of public synonym names (and synonym_sgml if different).
-        self.dbxrefs = []                       # Will be list of dbxrefs as sql result groupings: Db, Dbxref, StrainDbxref.
-        self.alt_fb_ids = []                    # Will be list of Dbxrefs for 2o FlyBase IDs.
-        self.timestamps = []                    # Add all timestamps here.
+        self.strain = strain                       # The Strain object corresponding to the FlyBase strain.
+        self.organism_abbr = None                  # Will be the organism.abbreviation for the strain's species of origin.
+        self.curr_fb_symbol = None                 # Will be the current symbol Synonym object.
+        self.curr_fb_fullname = None               # Will be the current fullname Synonym object.
+        self.internal_synonyms = []                # Will be list of internal synonym names (and synonym_sgml if different).
+        self.public_synonyms = []                  # Will be list of public synonym names (and synonym_sgml if different).
+        self.dbxrefs = []                          # Will be list of dbxrefs as sql result groupings: Db, Dbxref, StrainDbxref.
+        self.alt_fb_ids = []                       # Will be list of Dbxrefs for 2o FlyBase IDs.
+        self.timestamps = []                       # Add all timestamps here.
+        self.fb_references = []                    # Will be list of pub_ids from strain_pub.
         # Attributes for the Alliance AuditedObject.
-        self.obsolete = strain.is_obsolete      # Will be the FlyBase value here.
-        self.internal = False                   # Change to true if strain not intended for display at Alliance website.
-        self.created_by = 'FB:FB_curator'       # Use placeholder value since no Person object at FlyBase.
-        self.updated_by = 'FB:FB_curator'      # Use placeholder value since no Person object at FlyBase.
-        self.date_created = None                # Earliest timestamp.
-        self.date_updated = None                # Latest timestamp.
-        # Attributes for the Alliance BiologicalEntity. BiologicalEntity is_a AuditedObject.
+        self.obsolete = strain.is_obsolete         # Will be the FlyBase value here.
+        self.internal = False                      # Change to true if strain not intended for display at Alliance website.
+        self.created_by_curie = 'FB:FB_curator'    # Use placeholder value since no Person object at FlyBase.
+        self.updated_by_curie = 'FB:FB_curator'    # Use placeholder value since no Person object at FlyBase.
+        self.date_created = None                   # Earliest timestamp.
+        self.date_updated = None                   # Latest timestamp.
+        # Attributes for the Alliance BiologicalEntityDTO. BiologicalEntityDTO is_a AuditedObjectDTO.
         self.curie = 'FB:{}'.format(strain.uniquename)
-        self.taxon = None                       # A string representing the NCBI taxon ID.
-        # Attributes for the Alliance GenomicEntity. GenomicEntity is_a BiologicalEntity.
-        self.name = None                        # Will be current fullname synonym - report ascii or utf8 (sgml) version?
-        self.synonyms = []                      # All current and non-current ASCII and SGML synonyms.
-        self.cross_references = []              # Report only select dbs, using AGR-accepted db_prefix.
-        self.secondary_identifiers = []         # Annotation IDs and 2o FlyBase IDs.
-        # Attributes for the Alliance AffectedGenomicModel. AffectedGenomicModel is_a GenomicEntity.
-        self.data_provider = 'FB'               # The MOD abbreviation.
-        self.subtype = 'strain'                 # Here we only get strains, for now.
+        self.taxon_curie = None                    # A string representing the NCBI taxon ID.
+        self.data_provider_dto = None              # Will be DataProviderDTO object.
+        # Attributes for the Alliance GenomicEntityDTO. GenomicEntity is_a BiologicalEntityDTO.
+        self.cross_reference_dtos = []             # Report only select dbs, using AGR-accepted db_prefix.
+        self.genomic_location_dtos = []            # Not applicable to strains or genotypes.
+        # Attributes for the Alliance AffectedGenomicModelDTO. AffectedGenomicModelDTO is_a GenomicEntityDTO.
+        self.name = None                           # Will be current fullname synonym - report ascii or utf8 (sgml) version?
+        self.subtype_name = 'strain'               # Here we only get strains, for now.
+        self.agm_secondary_id_dtos = []            # Annotation IDs and 2o FlyBase IDs.
+        self.reference_curies = []
         # Notes associated with the object.
         self.for_alliance_export = True         # Change to False if object should be excluded from export.
         self.internal_reasons = []              # Reasons for marking an object as internal in the export file.
         self.export_warnings = []               # Reasons for suppressing an object from the export file.
 
     def __str__(self):
-        """Succinct text string describing the AllianceAGM object."""
+        """Succinct text string describing the AllianceStrainAGM object."""
         desc = '{} ({})'.format(self.strain.name, self.strain.uniquename)
         return desc
 
@@ -135,43 +136,94 @@ class AGMHandler(object):
     """This object gets strains, synthesizes/filters the data, then exports it as LinkML JSON."""
     def __init__(self):
         """Create the AGMHandler object."""
-        self.strain_dict = {}        # An FBsnID-keyed dict of AllianceAGM objects.
+        self.strain_dict = {}        # An FBsnID-keyed dict of AllianceStrainAGM objects.
+        self.all_pubs_dict = {}      # A pub_id-keyed dict of pub curies (PMID or FBrf).
         self.total_agm_cnt = 0       # Count of all strains found in starting query.
         self.export_agm_cnt = 0      # Count of all strains exported to file.
         self.internal_agm_cnt = 0    # Count of all strains marked as internal=True in export file.
 
+    # Generic objects with which to build Alliance DTOs.
+    generic_audited_object = {
+        'internal': False,
+        'obsolete': False,
+        'created_by_curie': 'FB:FB_curator',
+        'updated_by_curie': 'FB:FB_curator'
+    }
+    generic_data_provider_dto = generic_audited_object.copy()
+    generic_data_provider_dto['source_organization_abbreviation'] = 'FB'
+    generic_data_provider_dto['cross_reference_dto'] = {'prefix': 'FB', 'internal': False}
+    # Regexes.
+    strain_regex = r'^FBsn[0-9]{7}'
+    pub_regex = r'^(FBrf[0-9]{7}|unattributed)$'
+    # Export fields.
     required_fields = [
         'curie',
-        'taxon',
-        'subtype',
-        'internal'
+        'data_provider_dto',
+        'internal',
+        'subtype_name',
+        'taxon_curie'
     ]
     output_fields = [
-        'created_by',
-        'cross_references',
+        'agm_secondary_id_dtos',
+        'created_by_curie',
+        'cross_reference_dtos',
         'curie',
+        'data_provider_dto',
         'date_created',
         'date_updated',
         'internal',
-        'updated_by',
+        'updated_by_curie',
         'name',
         'obsolete',
-        'secondary_identifiers',
-        'subtype',
-        'synonyms',
-        'taxon'
+        'reference_curies',
+        'subtype_name',
+        'taxon_curie'
     ]
     fb_agr_db_dict = {
         'FlyBase': 'FB'
     }
 
+    def get_all_references(self, session):
+        """Get all references."""
+        log.info('Get all references.')
+        # First get all current pubs having an FBrf uniquename.
+        filters = (
+            Pub.uniquename.op('~')(self.pub_regex),
+            Pub.is_obsolete.is_(False)
+        )
+        results = session.query(Pub).\
+            filter(*filters).\
+            distinct()
+        pub_counter = 0
+        for pub in results:
+            self.all_pubs_dict[pub.pub_id] = f'FB:{pub.uniquename}'
+            pub_counter += 1
+        # Next find PMIDs if available and replace the curie in the all_pubs_dict.
+        filters = (
+            Pub.uniquename.op('~')(self.pub_regex),
+            Pub.is_obsolete.is_(False),
+            Db.name == 'pubmed',
+            PubDbxref.is_current.is_(True)
+        )
+        pmid_xrefs = session.query(Pub, Dbxref).\
+            join(PubDbxref, (PubDbxref.pub_id == Pub.pub_id)).\
+            join(Dbxref, (Dbxref.dbxref_id == PubDbxref.dbxref_id)).\
+            join(Db, (Db.db_id == Dbxref.db_id)).\
+            filter(*filters).\
+            distinct()
+        pmid_counter = 0
+        for xref in pmid_xrefs:
+            self.all_pubs_dict[xref.Pub.pub_id] = f'PMID:{xref.Dbxref.accession}'
+            pmid_counter += 1
+        log.info(f'Found {pmid_counter} PMID IDs for {pub_counter} current FB publications.')
+        return
+
     def get_strains(self, session):
         """Get all strains."""
         log.info('Querying chado for strains.')
         # First get all strains
-        strain_regex = r'^FBsn[0-9]{7}$'
         filters = (
-            Strain.uniquename.op('~')(strain_regex),
+            Strain.uniquename.op('~')(self.strain_regex),
         )
         strain_results = session.query(Strain).\
             filter(*filters).\
@@ -179,7 +231,7 @@ class AGMHandler(object):
         self.total_agm_cnt = 0
         for result in strain_results:
             self.total_agm_cnt += 1
-            self.strain_dict[result.uniquename] = AllianceAGM(result)
+            self.strain_dict[result.uniquename] = AllianceStrainAGM(result)
             self.strain_dict[result.uniquename].organism_abbr = result.organism.abbreviation
         log.info('Found {} strains.'.format(self.total_agm_cnt))
 
@@ -200,7 +252,7 @@ class AGMHandler(object):
             organism_taxon_dict[result.OrganismDbxref.organism_id] = result.Dbxref.accession
         for strain in self.strain_dict.values():
             try:
-                strain.taxon = 'NCBITaxon:{}'.format(organism_taxon_dict[strain.strain.organism_id])
+                strain.taxon_curie = f'NCBITaxon:{organism_taxon_dict[strain.strain.organism_id]}'
             except KeyError:
                 log.debug('No NCBI taxon ID available for: {}'.format(strain))
         return
@@ -300,91 +352,149 @@ class AGMHandler(object):
                 self.strain_dict[result.Strain.uniquename].dbxrefs.append(result)
         return
 
+    def get_strain_references(self, session):
+        """Get references for strains."""
+        log.info('Get strain references.')
+        filters = (
+            Strain.uniquename.op('~')(self.strain_regex),
+            Pub.uniquename.op('~')(self.pub_regex),
+            Pub.is_obsolete.is_(False)
+        )
+        strain_pubs = session.query(Strain, Pub).\
+            select_from(Strain).\
+            join(StrainPub, (StrainPub.strain_id == Strain.strain_id)).\
+            join(Pub, (Pub.pub_id == StrainPub.pub_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in strain_pubs:
+            self.strain_dict[result.Strain.uniquename].fb_references.append(result.Pub.pub_id)
+            counter += 1
+        log.info(f'Found {counter} strain-pub relationships.')
+        return
+
+    # Synthesis of initial db info.
+    def synthesize_timestamps(self, agm):
+        """Process timestamps for an AGM."""
+        if agm.timestamps:
+            agm.date_created_curie = strict_rfc3339.\
+                timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(min(agm.timestamps)))
+            agm.date_updated_curie = strict_rfc3339.\
+                timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(max(agm.timestamps)))
+        return
+
+    def synthesize_synonyms(self, agm):
+        """Determine name for AGM."""
+        if agm.curr_fb_symbol:
+            agm.name = agm.curr_fb_symbol.synonym_sgml
+        else:
+            agm.name = agm.strain.name
+        return
+
+    def synthesize_secondary_ids(self, agm):
+        """Process 2o IDs."""
+        unique_fb_id_list = list(set(agm.alt_fb_ids))
+        for fb_id in unique_fb_id_list:
+            secondary_id_dict = self.generic_audited_object.copy()
+            secondary_id_dict['secondary_id'] = f'FB:{fb_id.accession}'
+            agm.agm_secondary_id_dtos.append(secondary_id_dict)
+        return
+
+    def synthesize_xrefs(self, agm):
+        """Process xrefs."""
+        # Start by adding AGM uniquename as an xref.
+        xref_dict = self.generic_audited_object.copy()
+        xref_dict['referenced_curie'] = agm.curie
+        xref_dict['display_name'] = agm.name
+        xref_dict['prefix'] = 'FB'
+        xref_dict['page_area'] = agm.subtype_name
+        agm.cross_reference_dtos.append(xref_dict)
+        # Add other xrefs: code below assumes xrefs are all 'FB' at the moment.
+        for result in agm.dbxrefs:
+            # Skip irrelevant xrefs.
+            if result.Db.name not in self.fb_agr_db_dict.keys():
+                continue
+            # Skip 1o FB xref (already handled above).
+            if f'FB:{result.Dbxref.accession}' == agm.curie:
+                continue
+            xref_dict = self.generic_audited_object.copy()
+            xref_dict['referenced_curie'] = f'{self.fb_agr_db_dict[result.Db.name]}:{result.Dbxref.accession}'
+            xref_dict['display_name'] = f'{self.fb_agr_db_dict[result.Db.name]}:{result.Dbxref.accession}'
+            xref_dict['prefix'] = self.fb_agr_db_dict[result.Db.name]
+            xref_dict['page_area'] = agm.subtype_name
+            if result.StrainDbxref.is_current is False:
+                xref_dict['internal'] = True
+            agm.cross_reference_dtos.append(xref_dict)
+        return
+
+    def synthesize_references(self, agm):
+        """Process pubs for agm."""
+        agm.fb_references = list(set(agm.fb_references))
+        agm.reference_curies = [self.all_pubs_dict[i] for i in agm.fb_references if self.all_pubs_dict[i] != 'FB:unattributed']
+        return
+
+    def add_data_provider_info(self, agm):
+        """Add data_provider info."""
+        agm.data_provider_dto = self.generic_data_provider_dto.copy()
+        agm.data_provider_dto['cross_reference_dto']['page_area'] = agm.subtype_name
+        agm.data_provider_dto['cross_reference_dto']['referenced_curie'] = f'FB:{agm.curie}'
+        agm.data_provider_dto['cross_reference_dto']['display_name'] = agm.name
+        return
+
+    def flag_internal_agms(self, agm):
+        """Flag agms as internal."""
+        if agm.obsolete is True:
+            agm.internal = True
+            agm.internal_reasons.append('Obsolete')
+        if agm.organism_abbr != 'Dmel':
+            agm.internal = True
+            agm.internal_reasons.append('Non-Dmel')
+        return
+
+    def flag_unexportable_agms(self, agm):
+        """Flag agms missing data required for export."""
+        # TEMPORARY: Suppress non-Dmel AGMs from export.
+        if agm.organism_abbr != 'Dmel':
+            agm.for_alliance_export = False
+            agm.export_warnings.append(f'Suppress non-Dmel AGM from export: ORG={agm.organism_abbr}')
+        # Suppress objects missing required information from export.
+        for attr in self.required_fields:
+            if attr not in agm.__dict__.keys():
+                agm.for_alliance_export = False
+                agm.export_warnings.append('Missing "{}" attribute'.format(attr))
+            elif getattr(agm, attr) is None:
+                agm.for_alliance_export = False
+                agm.export_warnings.append('Missing value for "{}" attribute'.format(attr))
+        if agm.for_alliance_export is True:
+            log.debug('EXPORT {}'.format(agm.curie))
+        return
+
+    def synthesize_info(self):
+        """Convert FlyBase strain data into an AllianceAGM representation."""
+        log.info('Synthesizing AGM info.')
+        for strain in self.strain_dict.values():
+            log.debug('Evaluating annotation: {}'.format(strain))
+            self.synthesize_timestamps(strain)
+            self.synthesize_synonyms(strain)
+            self.synthesize_secondary_ids(strain)
+            self.synthesize_xrefs(strain)
+            self.synthesize_references(strain)
+            self.add_data_provider_info(strain)
+            self.flag_internal_agms(strain)
+            self.flag_unexportable_agms(strain)
+        log.info('Done synthesizing strain info.')
+        return
+
     def query_chado(self, session):
         """A wrapper method that runs initial db queries."""
+        self.get_all_references(session)
         self.get_strains(session)
         self.get_strain_taxons(session)
         self.get_synonyms(session)
         self.get_strain_timestamps(session)
         self.get_strain_dbxrefs(session)
-        return
-
-    # Synthesis of initial db info.
-    def synthesize_info(self):
-        """Convert FlyBase strain data into an AllianceAGM representation."""
-        log.info('Synthesizing strain info.')
-        for strain in self.strain_dict.values():
-            log.debug('Evaluating annotation: {}'.format(strain))
-            # Get timestamps.
-            if strain.timestamps:
-                strain.date_created = strict_rfc3339.\
-                    timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(min(strain.timestamps)))
-                strain.date_updated = strict_rfc3339.\
-                    timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(max(strain.timestamps)))
-            # Get the symbol.
-            if strain.curr_fb_symbol:
-                strain.symbol = strain.curr_fb_symbol.synonym_sgml
-            else:
-                strain.symbol = strain.strain.name
-            # Get the fullname.
-            if strain.curr_fb_fullname:
-                strain.name = strain.curr_fb_fullname.synonym_sgml
-            else:
-                strain.name = strain.strain.name
-            # Get synonyms.
-            internal_synonym_set = set(strain.internal_synonyms)
-            for internal_synonym in internal_synonym_set:
-                internal_synonym_dict = {
-                    'name': internal_synonym,
-                    'created_by': 'FB:FB_curator',
-                    'obsolete': False,
-                    'internal': True
-                }
-                strain.synonyms.append(internal_synonym_dict)
-            public_synonym_set = set(strain.public_synonyms)
-            for public_synonym in public_synonym_set:
-                public_synonym_dict = {
-                    'name': public_synonym,
-                    'created_by': 'FB:FB_curator',
-                    'obsolete': False,
-                    'internal': False
-                }
-                strain.synonyms.append(public_synonym_dict)
-            # Get secondary IDs.
-            for fb_id in strain.alt_fb_ids:
-                strain.secondary_identifiers.append('FB:{}'.format(fb_id.accession))
-            # Get crossreferences.
-            for result in strain.dbxrefs:
-                if result.Db.name in self.fb_agr_db_dict.keys():
-                    xref_dict = {
-                        'curie': '{}:{}'.format(self.fb_agr_db_dict[result.Db.name], result.Dbxref.accession),
-                        'display_name': '{}:{}'.format(self.fb_agr_db_dict[result.Db.name], result.Dbxref.accession),
-                        'prefix': self.fb_agr_db_dict[result.Db.name],
-                        'page_areas': ['strain'],
-                        'created_by': 'FB:FB_curator',
-                        'obsolete': False,
-                        'internal': False
-                    }
-                    if result.StrainDbxref.is_current is False:
-                        xref_dict['internal'] = True
-                    strain.cross_references.append(xref_dict)
-            # Flag internal strains.
-            if strain.organism_abbr != 'Dmel':
-                strain.internal = True
-                strain.internal_reasons.append('Non-Dmel')
-            if strain.obsolete is True:
-                strain.internal = True
-                strain.internal_reasons.append('Obsolete')
-            for attr in self.required_fields:
-                if attr not in strain.__dict__.keys():
-                    strain.for_alliance_export = False
-                    strain.export_warnings.append('Missing "{}" attribute'.format(attr))
-                elif getattr(strain, attr) is None:
-                    strain.for_alliance_export = False
-                    strain.export_warnings.append('Missing value for "{}" attribute'.format(attr))
-            if strain.internal is False and strain.for_alliance_export is True:
-                log.debug('EXPORT {}'.format(strain.curie))
-        log.info('Done synthesizing strain info.')
+        self.get_strain_references(session)
+        self.synthesize_info()
         return
 
     def generate_export_file(self):

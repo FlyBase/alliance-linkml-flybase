@@ -130,13 +130,12 @@ class AllianceAllele(object):
         self.data_provider_dto = None                          # Will be DataProviderDTO object.
         # Attributes for the Alliance GenomicEntity. GenomicEntity is_a BiologicalEntity.
         self.cross_reference_dtos = []                         # Report only select dbs, using AGR-accepted db_prefix.
-        self.secondary_identifiers = []                        # N/A. Redundant with allele_secondary_id_dtos, to be deprecated soon.
         self.genomic_location_association_dtos = []            # N/A.
         # Attributes for the Alliance Allele. Allele is_a GenomicEntity.
         self.allele_symbol_dto = None                          # Will be a single SymbolSlotAnnotationDTO.
         self.allele_full_name_dto = None                       # Will be a single FullNameSlotAnnotation.
         self.allele_synonym_dtos = []                          # Will be list of NameSlotAnnotationDTO objects.
-        self.allele_secondary_id_dtos = []                     # Only 2o FlyBase IDs (redundant with GenomicEntity.secondary_identifiers?)
+        self.allele_secondary_id_dtos = []                     # Only 2o FlyBase IDs
         self.in_collection_name = None                         # Will be library.name.
         self.is_extinct = None                                 # Make True if extinction reported; make False is stock exists; leave as None otherwise.
         self.reference_curies = []                             # Will be a list of reference curies (directly or indirectly related).
@@ -1085,7 +1084,7 @@ class AlleleHandler(object):
                     pub_curie_list.remove('FB:unattributed')
             allele_inheritance_mode_slot_annotation_dto = self.generic_audited_object.copy()
             allele_inheritance_mode_slot_annotation_dto['inheritance_mode_name'] = pheno_key[INHERITANCE_MODE_NAME]
-            allele_inheritance_mode_slot_annotation_dto['phenotype_term_curie'] = pheno_key[PHENOTYPE_CURIE_NAME]    # TEMPORARY: Suppress until AGR has FBcv
+            # allele_inheritance_mode_slot_annotation_dto['phenotype_term_curie'] = pheno_key[PHENOTYPE_CURIE_NAME]    # TEMPORARY: Suppress until AGR has FBcv
             allele_inheritance_mode_slot_annotation_dto['phenotype_statement'] = pheno_key[PHENOTYPE_STATEMENT]
             allele_inheritance_mode_slot_annotation_dto['evidence_curies'] = list(set(pub_curie_list))
             allele.allele_inheritance_mode_dtos.append(allele_inheritance_mode_slot_annotation_dto)
@@ -1282,7 +1281,7 @@ class AlleleHandler(object):
             elif getattr(allele, attr) is None:
                 allele.for_alliance_export = False
                 allele.export_warnings.append('Missing value for "{}" attribute'.format(attr))
-        if allele.internal is False and allele.for_alliance_export is True:
+        if allele.for_alliance_export is True:
             log.debug('EXPORT {}'.format(allele.curie))
         return
 
