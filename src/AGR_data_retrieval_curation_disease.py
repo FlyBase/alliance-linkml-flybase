@@ -230,8 +230,6 @@ class DAFMaker(object):
         disease_term = aliased(Cvterm, name='disease_term')
         feature_type = aliased(Cvterm, name='feature_type')
         prop_type = aliased(Cvterm, name='prop_type')
-        qual_type = aliased(Cvterm, name='qual_type')
-        evi_type = aliased(Cvterm, name='evi_type')
         filters = (
             Feature.uniquename.op('~')(allele_regex),
             Feature.is_obsolete.is_(False),
