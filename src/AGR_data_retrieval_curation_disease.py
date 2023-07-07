@@ -160,35 +160,29 @@ class DAFMaker(object):
         self.internal_anno_cnt = 0    # Count of all disease annotations marked as internal=True in export file.
 
     # Generic data_provider_dto to which annotation-specific details are later added.
-    generic_data_provider_dto = {
+    generic_audited_object = {
         'internal': False,
         'obsolete': False,
-        'source_organization_abbreviation': 'FB'
+        'created_by_curie': 'FB:FB_curator',
+        'updated_by_curie': 'FB:FB_curator'
     }
-    generic_cross_reference_dto = {
-        'internal': False,
-        'obsolete': False,
-        'prefix': 'DOID',
-        'page_area': 'disease/fb'
-    }
-
+    generic_data_provider_dto = generic_audited_object.copy()
+    generic_data_provider_dto['source_organization_abbreviation'] = 'FB'
+    generic_cross_reference_dto = {'prefix': 'FB', 'page_area': 'disease/fb', 'internal': False}
     relevant_qualifiers = [
         'model of',
         'DOES NOT model'
     ]
-
     disease_genetic_modifier_terms = {
         'is ameliorated by': 'ameliorated_by',
         'is NOT ameliorated by': 'not_ameliorated_by',
         'is exacerbated by': 'exacerbated_by',
         'is NOT exacerbated by': 'not_exacerbated_by'
     }
-
     evidence_code_xrefs = {
         'CEA': 'ECO:0007013',
         'CEC': 'ECO:0007014'
     }
-
     required_fields = [
         'allele_curie',
         'data_provider_dto',
@@ -198,7 +192,6 @@ class DAFMaker(object):
         'internal',
         'reference_curie',
     ]
-
     output_fields = [
         'allele_curie',
         'annotation_type_name',

@@ -193,7 +193,7 @@ class AlleleHandler(object):
     }
     generic_data_provider_dto = generic_audited_object.copy()
     generic_data_provider_dto['source_organization_abbreviation'] = 'FB'
-    generic_data_provider_dto['cross_reference_dto'] = {'prefix': 'FB', 'page_area': 'allele', 'internal': False}
+    generic_cross_reference_dto = {'prefix': 'FB', 'page_area': 'allele', 'internal': False}
     # Regexes.
     gene_regex = r'^FBgn[0-9]{7}$'
     allele_regex = r'^FBal[0-9]{7}$'
@@ -1247,6 +1247,7 @@ class AlleleHandler(object):
     def add_data_provider_info(self, allele):
         """Add data_provider info."""
         allele.data_provider_dto = self.generic_data_provider_dto.copy()
+        allele.data_provider_dto['cross_reference_dto'] = self.generic_cross_reference_dto.copy()
         allele.data_provider_dto['cross_reference_dto']['referenced_curie'] = f'FB:{allele.feature.uniquename}'
         allele.data_provider_dto['cross_reference_dto']['display_name'] = allele.allele_symbol_dto['display_text']
         return
