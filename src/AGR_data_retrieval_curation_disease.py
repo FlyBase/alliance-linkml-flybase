@@ -17,7 +17,6 @@ Notes:
     file specs for the original Neo4j drop-and-reload database.
     To Do - report non-MOD inferred_gene_curie once supported by Alliance again (v1.7.0?)
     To Do - convert multi-allele annotations into AGM annotations.
-    To Do - for v1.7.1, disease_genetic_modifier_curie becomes multivalued: convert to list; consolidate?
 
 """
 
@@ -91,7 +90,7 @@ class DiseaseAnnotation(object):
 
         """
         # FlyBase data
-        self.unique_key = '{}_{}'.format(feature_cvterm.feature_cvterm_id, provenance_prop.rank)
+        self.mod_internal_id = f'FB:{feature_cvterm.feature_cvterm_id}_{provenance_prop.rank}'
         self.feature_cvterm = feature_cvterm                  # The FeatureCvterm object.
         self.provenance = provenance_prop                     # The "provenance" FeatureCvtermprop.
         self.evidence_code = None                             # Will be the "evidence_code" FeatureCvtermprop.
@@ -125,7 +124,7 @@ class DiseaseAnnotation(object):
         self.data_provider_name = 'FB'                        # Retired in v1.6.0.
         self.data_provider_dto = None                         # Generate DataProviderDTO object once we have the do_term_curie.
         self.secondary_data_provider_dto = None               # N/A to FlyBase data.
-        self.disease_genetic_modifier_curie = None            # Gene, Allele or AGM curie.
+        self.disease_genetic_modifier_curies = None           # Gene, Allele or AGM curie.
         self.disease_genetic_modifier_relation_name = None    # "Disease genetic modifier relations" CV.
         # Attributes for the Alliance AlleleDiseaseAnnotationDTO.
         self.allele_curie = None                              # Provide allele curie.
@@ -164,13 +163,13 @@ class DAFMaker(object):
     generic_data_provider_dto = {
         'internal': False,
         'obsolete': False,
-        'source_organization_abbreviation': 'FB',
-        'cross_reference_dto': {
-            'internal': False,
-            'obsolete': False,
-            'prefix': 'DOID',
-            'page_area': 'disease/fb'
-        }
+        'source_organization_abbreviation': 'FB'
+    }
+    generic_cross_reference_dto = {
+        'internal': False,
+        'obsolete': False,
+        'prefix': 'DOID',
+        'page_area': 'disease/fb'
     }
 
     relevant_qualifiers = [
@@ -207,13 +206,14 @@ class DAFMaker(object):
         'data_provider_dto',
         'date_created',
         'date_updated',
-        'disease_genetic_modifier_curie',
+        'disease_genetic_modifier_curies',
         'disease_genetic_modifier_relation_name',
         'disease_relation_name',
         'do_term_curie',
         'evidence_code_curies',
         'inferred_gene_curie',
         'internal',
+        'mod_internal_id',
         'negated',
         'obsolete',
         'reference_curie',
@@ -222,8 +222,7 @@ class DAFMaker(object):
 
     def get_disease_annotations(self, session):
         """Get all allele-level disease annotations."""
-        log.info('Querying chado for feature-level disease annotations.')
-
+        log.info('Querying chado for allele-level disease annotations.')
         # First get feature_cvterm and related provenance props (each combo is a distinct annotation).
         # This will ignore orthology-computed disease annotations, which are at the gene level.
         allele_regex = r'^FBal[0-9]{7}$'
@@ -258,11 +257,12 @@ class DAFMaker(object):
         for result in dis_annos:
             self.total_anno_cnt += 1
             dis_anno = DiseaseAnnotation(result.FeatureCvterm, result.FeatureCvtermprop)
-            self.dis_anno_dict[dis_anno.unique_key] = dis_anno
+            self.dis_anno_dict[dis_anno.mod_internal_id] = dis_anno
         log.info('Found {} disease annotations.'.format(self.total_anno_cnt))
 
-        # Get qualifiers for each disease annotation.
-        log.info('Getting disease annotation qualifiers.')
+    def get_disease_qualifiers(self, session):
+        """Get disease annotation qualifiers."""
+        log.info('Querying chado for disease annotation qualifiers.')
         filters = (
             Cvterm.name == 'qualifier',
         )
@@ -272,16 +272,18 @@ class DAFMaker(object):
             distinct()
         qualifier_count = 0
         for qualifier in fcvt_qualifiers:
-            unique_key = '{}_{}'.format(qualifier.feature_cvterm_id, qualifier.rank)
+            mod_internal_id = 'FB:{}_{}'.format(qualifier.feature_cvterm_id, qualifier.rank)
             try:
-                self.dis_anno_dict[unique_key].qualifier = qualifier
+                self.dis_anno_dict[mod_internal_id].qualifier = qualifier
                 qualifier_count += 1
             except KeyError:
                 pass
         log.info('Found {} disease annotation qualifiers.'.format(qualifier_count))
+        return
 
-        # Get evidence_code for each disease annotation.
-        log.info('Getting disease annotation evidence codes.')
+    def get_disease_evidence_codes(self, session):
+        """Get disease annotation evidence codes."""
+        log.info('Querying chado for disease annotation evidence codes.')
         filters = (
             Cvterm.name == 'evidence_code',
         )
@@ -291,14 +293,13 @@ class DAFMaker(object):
             distinct()
         evidence_code_count = 0
         for evidence_code in fcvt_evidence_codes:
-            unique_key = '{}_{}'.format(evidence_code.feature_cvterm_id, evidence_code.rank)
+            mod_internal_id = 'FB:{}_{}'.format(evidence_code.feature_cvterm_id, evidence_code.rank)
             try:
-                self.dis_anno_dict[unique_key].evidence_code = evidence_code
+                self.dis_anno_dict[mod_internal_id].evidence_code = evidence_code
                 evidence_code_count += 1
             except KeyError:
                 pass
         log.info('Found {} disease annotation evidence codes.'.format(evidence_code_count))
-
         # Print out annotations for review and development.
         for dis_anno in self.dis_anno_dict.values():
             log.debug('\nANNOTATION: {}'.format(dis_anno))
@@ -319,12 +320,12 @@ class DAFMaker(object):
         """
         audit_results = session.execute(audit_chado_query).fetchall()
         log.info('Got {} audit_chado results. Will parse them out now.'.format(len(audit_results)))
-        UNIQUE_KEY = 0
+        MOD_INTERNAL_ID = 0
         TIMESTAMP = 1
         for row in audit_results:
             try:
-                log.debug('For unique_key={}, have timestamp={}'.format(row[UNIQUE_KEY], row[TIMESTAMP]))
-                self.dis_anno_dict[row[UNIQUE_KEY]].timestamps.append(row[TIMESTAMP])
+                log.debug('For mod_internal_id={}, have timestamp={}'.format(row[MOD_INTERNAL_ID], row[TIMESTAMP]))
+                self.dis_anno_dict[row[MOD_INTERNAL_ID]].timestamps.append(row[TIMESTAMP])
             except KeyError:
                 log.debug('Could not put this in anno dict: {}'.format(row))
         log.info('Timestamps have been retrieved.')
@@ -333,6 +334,8 @@ class DAFMaker(object):
     def query_chado(self, session):
         """A wrapper method that runs initial db queries."""
         self.get_disease_annotations(session)
+        self.get_disease_qualifiers(session)
+        self.get_disease_evidence_codes(session)
         # self.get_dis_anno_timestamps(session)   # Suppress since half of annotations are derived during the release build.
         return
 
@@ -490,6 +493,7 @@ class DAFMaker(object):
             dis_anno.reference_curie = self.get_pub_xref(session, dis_anno.feature_cvterm.pub.uniquename)
             dis_anno.inferred_gene_curie = self.get_inferred_gene(session, dis_anno.feature_cvterm.feature.feature_id)
             this_data_provider_dto = self.generic_data_provider_dto.copy()
+            this_data_provider_dto['cross_reference_dto'] = self.generic_cross_reference_dto.copy()
             this_data_provider_dto['cross_reference_dto']['referenced_curie'] = dis_anno.do_term_curie
             this_data_provider_dto['cross_reference_dto']['display_name'] = dis_anno.feature_cvterm.cvterm.name
             dis_anno.data_provider_dto = this_data_provider_dto
@@ -516,12 +520,12 @@ class DAFMaker(object):
                     if re.search(allele_regex, dis_anno.evidence_code.value):
                         allele_id = re.search(allele_regex, dis_anno.evidence_code.value).group(0)
                         if self.confirm_current_allele_by_uniquename(session, allele_id):
-                            dis_anno.disease_genetic_modifier_curie = 'FB:{}'.format(allele_id)
+                            dis_anno.disease_genetic_modifier_curies = ['FB:{}'.format(allele_id)]
                         else:
                             # Look up current allele by 2o ID. Use that.
                             curr_allele_id = self.get_current_id_for_allele(session, allele_id)
                             if curr_allele_id:
-                                dis_anno.disease_genetic_modifier_curie = 'FB:{}'.format(curr_allele_id)
+                                dis_anno.disease_genetic_modifier_curies = ['FB:{}'.format(curr_allele_id)]
                                 dis_anno.modifier_id_was_updated = True
                             else:
                                 dis_anno.modifier_problem = True
@@ -559,7 +563,10 @@ class DAFMaker(object):
         evi_codes = sorted(list(set(dis_anno.evidence_code_curies)))
         evi_code_str = '|'.join(evi_codes)
         dis_anno.agr_uniq_key += f'||{evi_code_str}'
-        dis_anno.agr_uniq_key += f'||{dis_anno.disease_genetic_modifier_curie}'
+        if dis_anno.disease_genetic_modifier_curies:
+            dis_anno.agr_uniq_key += f'||{dis_anno.disease_genetic_modifier_curies[0]}'
+        else:
+            dis_anno.agr_uniq_key += f'{None}'
         dis_anno.agr_uniq_key += f'||{dis_anno.disease_genetic_modifier_relation_name}'
         log.debug(f'{dis_anno} HAS AGR_UNIQ_KEY: {dis_anno.agr_uniq_key}')
         return
