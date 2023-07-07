@@ -164,7 +164,7 @@ class GeneHandler(object):
     }
     generic_data_provider_dto = generic_audited_object.copy()
     generic_data_provider_dto['source_organization_abbreviation'] = 'FB'
-    generic_data_provider_dto['cross_reference_dto'] = {'prefix': 'FB', 'page_area': 'gene', 'internal': False}
+    generic_cross_reference_dto = {'prefix': 'FB', 'page_area': 'gene', 'internal': False}
     # Regexes.
     gene_regex = r'^FBgn[0-9]{7}$'
     pthr_regex = r'PTHR[0-9]{5}'
@@ -749,6 +749,7 @@ class GeneHandler(object):
                     gene.cross_reference_dtos.append(xref_dict)
             # Add data provider info.
             gene.data_provider_dto = self.generic_data_provider_dto.copy()
+            gene.data_provider_dto['cross_reference_dto'] = self.generic_cross_reference_dto.copy()
             gene.data_provider_dto['cross_reference_dto']['referenced_curie'] = f'FB:{gene.feature.uniquename}'
             gene.data_provider_dto['cross_reference_dto']['display_name'] = gene.gene_symbol_dto['display_text']
             # Flag internal features.

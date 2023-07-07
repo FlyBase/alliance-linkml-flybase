@@ -151,7 +151,7 @@ class AGMHandler(object):
     }
     generic_data_provider_dto = generic_audited_object.copy()
     generic_data_provider_dto['source_organization_abbreviation'] = 'FB'
-    generic_data_provider_dto['cross_reference_dto'] = {'prefix': 'FB', 'internal': False}
+    generic_cross_reference_dto = {'prefix': 'FB', 'internal': False}
     # Regexes.
     strain_regex = r'^FBsn[0-9]{7}'
     pub_regex = r'^(FBrf[0-9]{7}|unattributed)$'
@@ -436,6 +436,7 @@ class AGMHandler(object):
     def add_data_provider_info(self, agm):
         """Add data_provider info."""
         agm.data_provider_dto = self.generic_data_provider_dto.copy()
+        agm.data_provider_dto['cross_reference_dto'] = self.generic_cross_reference_dto.copy()
         agm.data_provider_dto['cross_reference_dto']['page_area'] = agm.subtype_name
         agm.data_provider_dto['cross_reference_dto']['referenced_curie'] = f'FB:{agm.curie}'
         agm.data_provider_dto['cross_reference_dto']['display_name'] = agm.name
