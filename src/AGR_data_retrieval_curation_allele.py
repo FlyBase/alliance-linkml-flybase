@@ -139,7 +139,7 @@ class AllianceAllele(object):
         self.in_collection_name = None                         # Will be library.name.
         self.is_extinct = None                                 # Make True if extinction reported; make False is stock exists; leave as None otherwise.
         self.reference_curies = []                             # Will be a list of reference curies (directly or indirectly related).
-        self.allele_database_status_dto = None                 # Will be "public" or "private" slot annotation.
+        self.allele_database_status_dto = None                 # Will be "approved" or "private" slot annotation.
         self.allele_inheritance_mode_dtos = []                 # Will be list of slot annotations. TEMPORARY: Suppress phenotype_curie_term.
         self.allele_mutation_type_dtos = []                    # Will be list of slot annotations.
         # Future ToDo:
@@ -1263,7 +1263,7 @@ class AlleleHandler(object):
         if allele.allele_of_internal_gene is True:
             allele.internal = True
             allele.internal_reasons.append('Allele of internal Dmel gene type.')
-        allele_status = {False: 'public', True: 'private'}
+        allele_status = {False: 'approved', True: 'private'}
         allele.allele_database_status_dto = self.generic_audited_object.copy()
         allele.allele_database_status_dto['database_status_name'] = allele_status[allele.internal]
         return
