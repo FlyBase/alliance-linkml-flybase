@@ -1076,7 +1076,7 @@ class AlleleHandler(object):
                 inheritance_data[pheno_key] = [pub_curie]
         # Convert data into Alliance slot annotations.
         INHERITANCE_MODE_NAME = 0
-        PHENOTYPE_CURIE_NAME = 1    # TEMPORARY: Suppress until AGR has FBcv
+        # PHENOTYPE_CURIE_NAME = 1    # TEMPORARY: Suppress until AGR has FBcv
         PHENOTYPE_STATEMENT = 2
         for pheno_key, pub_curie_list in inheritance_data.items():
             for pub_curie in pub_curie_list:
