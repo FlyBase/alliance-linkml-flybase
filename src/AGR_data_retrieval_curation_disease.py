@@ -168,7 +168,7 @@ class DAFMaker(object):
     }
     generic_data_provider_dto = generic_audited_object.copy()
     generic_data_provider_dto['source_organization_abbreviation'] = 'FB'
-    generic_cross_reference_dto = {'prefix': 'FB', 'page_area': 'disease/fb', 'internal': False}
+    generic_cross_reference_dto = {'prefix': 'DOID', 'page_area': 'disease/fb', 'internal': False}
     relevant_qualifiers = [
         'model of',
         'DOES NOT model'

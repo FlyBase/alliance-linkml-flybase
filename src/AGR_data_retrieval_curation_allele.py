@@ -139,7 +139,7 @@ class AllianceAllele(object):
         self.in_collection_name = None                         # Will be library.name.
         self.is_extinct = None                                 # Make True if extinction reported; make False is stock exists; leave as None otherwise.
         self.reference_curies = []                             # Will be a list of reference curies (directly or indirectly related).
-        self.allele_database_status_dto = None                 # Will be "public" or "private" slot annotation.
+        self.allele_database_status_dto = None                 # Use term from "allele database status" CV.
         self.allele_inheritance_mode_dtos = []                 # Will be list of slot annotations. TEMPORARY: Suppress phenotype_curie_term.
         self.allele_mutation_type_dtos = []                    # Will be list of slot annotations.
         # Future ToDo:
@@ -1076,7 +1076,7 @@ class AlleleHandler(object):
                 inheritance_data[pheno_key] = [pub_curie]
         # Convert data into Alliance slot annotations.
         INHERITANCE_MODE_NAME = 0
-        PHENOTYPE_CURIE_NAME = 1    # TEMPORARY: Suppress until AGR has FBcv
+        # PHENOTYPE_CURIE_NAME = 1    # TEMPORARY: Suppress until AGR has FBcv
         PHENOTYPE_STATEMENT = 2
         for pheno_key, pub_curie_list in inheritance_data.items():
             for pub_curie in pub_curie_list:
@@ -1254,18 +1254,19 @@ class AlleleHandler(object):
 
     def flag_internal_alleles(self, allele):
         """Flag alleles as internal."""
+        allele.allele_database_status_dto = self.generic_audited_object.copy()
+        allele.allele_database_status_dto['database_status_name'] = 'approved'
+        # Allele database status may change depending on checks below.
         if allele.obsolete is True:
             allele.internal = True
             allele.internal_reasons.append('Obsolete')
+            allele.allele_database_status_dto['database_status_name'] = 'deleted'
         if allele.organism_abbr != 'Dmel':
             allele.internal = True
             allele.internal_reasons.append('Non-Dmel')
         if allele.allele_of_internal_gene is True:
             allele.internal = True
             allele.internal_reasons.append('Allele of internal Dmel gene type.')
-        allele_status = {False: 'public', True: 'private'}
-        allele.allele_database_status_dto = self.generic_audited_object.copy()
-        allele.allele_database_status_dto['database_status_name'] = allele_status[allele.internal]
         return
 
     def flag_unexportable_alleles(self, allele):
