@@ -33,7 +33,7 @@ from harvdev_utils.psycopg_functions import set_up_db_reading
 from utils import DataHandler
 
 # Now proceed with generic setup.
-report_label = 'agm_curation'
+report_label = 'test'
 set_up_dict = set_up_db_reading(report_label)
 server = set_up_dict['server']
 database = set_up_dict['database']
