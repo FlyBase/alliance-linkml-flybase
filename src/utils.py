@@ -17,14 +17,20 @@ Author(s):
 class DataHandler(object):
     """A generic data handler that gets some data type and exports it, and
        reports the extent of the export."""
-    def __init__(self, data_type):
-        """Create the generic DataHandler object."""
+    def __init__(self, data_type, log):
+        """Create the generic DataHandler object.
+        
+        Args:
+            data_type (arg1): (str) The label for the data type to be handled: e.g., gene.
+            log (arg2): (Logger) The script's global Logger object for logging.
+        
+        """
         self.data_type = data_type     # Label for the data type being handled: e.g., gene.
         self.total_input_count = 0     # Count of entities found in FlyBase chado database.
         self.total_export_count = 0    # Count of exported entities.
         self.internal_count = 0        # Count of exported entities marked as internal.
         return
 
-    def report_label(self):
+    def report_label(self, log):
         log.info(f'BOB:DataHandler for this data_type: {self.data_type}')
         return

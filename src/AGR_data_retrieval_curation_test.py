@@ -69,7 +69,7 @@ def main():
     log.info('Output JSON file corresponds to "agr_curation_schema" release: {}'.format(linkml_release))
 
     # Instantiate the object, get the data, synthesize it, export it.
-    agm_handler = DataHandler('billy')
+    agm_handler = DataHandler('billy', log)
     agm_handler.report_label()
     log.info('Ended main function.\n')
 
