@@ -70,6 +70,7 @@ def main():
 
     # Instantiate the object, get the data, synthesize it, export it.
     agm_handler = DataHandler('billy')
+    agm_handler.report_label()
     log.info('Ended main function.\n')
 
 
