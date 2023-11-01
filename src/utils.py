@@ -9,8 +9,8 @@ Author(s):
 
 """
 
-import logging
-log = logging.getLogger(__name__)
+# import logging
+# log = logging.getLogger(__name__)
 
 
 # Classes
