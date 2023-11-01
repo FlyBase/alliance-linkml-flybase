@@ -30,7 +30,7 @@ from harvdev_utils.production import (
     StrainPub, StrainSynonym, Synonym
 )
 from harvdev_utils.psycopg_functions import set_up_db_reading
-from data_retrieval_utils import DataHandler
+from .utils import DataHandler
 
 # Now proceed with generic setup.
 report_label = 'agm_curation'

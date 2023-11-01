@@ -1,4 +1,4 @@
-"""Module:: data_retrieval_utils.
+"""Module:: utils.
 
 Synopsis:
     Data retrieval utils from FlyBase chado for export to the Alliance in
