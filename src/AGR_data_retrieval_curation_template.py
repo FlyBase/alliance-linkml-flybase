@@ -104,8 +104,11 @@ class StrainHandler(DataHandler):
 
     def query_chado(self, session):
         """Extend the query_chado method of the StrainHandler object here."""
-        self.log.info(f'BOB: Running query_chado modified for FlyBase {FB_STRAIN_DATA_TYPE} data.')
+        # Run the inherited portion of the method first.
         super().query_chado(session)
+        # Then run the extra bits.
+        self.log.info(f'BOB: Running query_chado modified for FlyBase {FB_STRAIN_DATA_TYPE} data.')
+        return
 
 
 if __name__ == "__main__":
