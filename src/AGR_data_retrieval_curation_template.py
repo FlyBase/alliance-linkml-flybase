@@ -67,7 +67,7 @@ def main():
     """Run the steps for exporting LinkML-compliant FlyBase PLACEHOLDER_DATA_CLASS."""
     log.info(f'Running script "{__file__}"')
     log.info('Started main function.')
-    log.info(f'Exporting data from  JSON file corresponds to "agr_curation_schema" release: {fb_release}')
+    log.info(f'Exporting data from FlyBase release: {fb_release}')
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Instantiate the object, get the data, synthesize it, export it.
