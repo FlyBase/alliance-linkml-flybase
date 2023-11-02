@@ -85,8 +85,10 @@ def main():
         'linkml_version': linkml_release,
         'alliance_member_release_version': fb_release,
     }
+    # Start export list with strains.
     export_dict[strain_handler.agr_data_type] = strain_handler.export_data
-    export_dict['agm_ingest_set'].append([{'gil': 'cooler'}])
+    # Extend export list with genotypes.
+    export_dict['agm_ingest_set'].extend([{'gil': 'cooler'}])
 
     generate_export_file(export_dict, log, output_filename)
 
@@ -99,6 +101,11 @@ class StrainHandler(DataHandler):
         """Create the StrainHandler object."""
         super().__init__(log, fb_data_type, agr_data_type)
         self.strain_dict = {}    # A curie-keyed dict of AllianceStrainAGM objects.
+
+    def query_chado(self, session):
+        """Extend the query_chado method of the StrainHandler object here."""
+        self.log.info(f'BOB: Running query_chado modified for FlyBase {FB_STRAIN_DATA_TYPE} data.')
+        super().query_chado(self, session)
 
 
 if __name__ == "__main__":
