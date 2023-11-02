@@ -90,7 +90,7 @@ def main():
     # Extend export list with genotypes.
     export_dict['agm_ingest_set'].extend([{'gil': 'cooler'}])
 
-    generate_export_file(export_dict, log, output_filename)
+    # generate_export_file(export_dict, log, output_filename)    # BOB - turn off for prelim testing
 
     log.info('Ended main function.\n')
 
