@@ -31,8 +31,13 @@ from harvdev_utils.production import (
 from harvdev_utils.psycopg_functions import set_up_db_reading
 from utils import DataHandler, db_query_transaction, generate_export_file
 
-# Now proceed with generic setup.
+# Data types handled by this script.
+FB_STRAIN_DATA_TYPE = 'strain'
+FB_GENOTYPE_DATA_TYPE = 'genotype'
+AGR_DATA_TYPE = 'agm_ingest_set'
 report_label = 'AGM'
+
+# Now proceed with generic setup.
 set_up_dict = set_up_db_reading(report_label)
 server = set_up_dict['server']
 database = set_up_dict['database']
@@ -71,7 +76,7 @@ def main():
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Get the data and process it.
-    strain_handler = StrainHandler(log, 'strain', 'agm_ingest_set')
+    strain_handler = StrainHandler(log, FB_STRAIN_DATA_TYPE, AGR_DATA_TYPE)
     db_query_transaction(session, log, strain_handler)
     strain_handler.export_data = [{'bob': 'cool'}]
 
@@ -92,7 +97,7 @@ class StrainHandler(DataHandler):
     """This object gets, synthesizes and filters strain data for export."""
     def __init__(self):
         """Initialize the StrainHandler object."""
-        super(StrainHandler, self).__init__()
+        super(StrainHandler, self).__init__(log, FB_STRAIN_DATA_TYPE, AGR_DATA_TYPE)
         self.strain_dict = {}    # A curie-keyed dict of AllianceStrainAGM objects.
 
 
