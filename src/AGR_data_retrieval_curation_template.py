@@ -20,9 +20,7 @@ Notes:
 
 import argparse
 import datetime
-import json
 import strict_rfc3339
-from tqdm import tqdm
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
 # from sqlalchemy.orm.exc import NoResultFound
@@ -31,7 +29,7 @@ from harvdev_utils.production import (
     StrainPub, StrainSynonym, Synonym
 )
 from harvdev_utils.psycopg_functions import set_up_db_reading
-from utils import DataHandler, db_query_transaction
+from utils import DataHandler, db_query_transaction, generate_export_file
 
 # Now proceed with generic setup.
 report_label = 'PLACEHOLDER_DATA_CLASS'
@@ -72,11 +70,24 @@ def main():
     log.info(f'Exporting data from FlyBase release: {fb_release}')
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
-    # Instantiate the object, get the data, synthesize it, export it.
-    agm_handler = DataHandler(log, 'gene', 'GENE')
-    db_query_transaction(session, log, agm_handler)
+    # Get the data and process it.
+    gene_handler = GeneHandler(log, 'gene', 'GENE')
+    db_query_transaction(session, log, gene_handler)
+    gene_handler.export_data = [{'bob': 'cool'}]
+
+    # Export the data.
+    export_dict = {
+        'linkml_version': linkml_release,
+        'alliance_member_release_version': fb_release,
+    }
+    export_dict[gene_handler.agr_data_type] = gene_handler.export_data
+    generate_export_file(export_dict, log, output_filename)
 
     log.info('Ended main function.\n')
+
+
+class GeneHandler(DataHandler):
+    """This object gets strains, synthesizes/filters the data, then exports it as LinkML JSON."""
 
 
 if __name__ == "__main__":

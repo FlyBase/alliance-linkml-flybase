@@ -9,6 +9,7 @@ Author(s):
 
 """
 
+import json
 from logging import Logger
 from sqlalchemy.orm import Session
 
@@ -23,15 +24,16 @@ class DataHandler(object):
         Args:
             log (Logger): The global Logger object in the script using the DataHandler.
             fb_data_type (str): The FlyBase data class being handled.
-            agr_data_type (str): The Alliance data class to which FlyBase data is being mapped.
+            agr_data_type (str): The Alliance ingest_set to which FlyBase data is being mapped: e.g., allele_ingest_set.
 
         """
         self.log = log
-        self.fb_data_type = fb_data_type
-        self.agr_data_type = agr_data_type
+        self.fb_data_type = fb_data_type      # e.g., allele
+        self.agr_data_type = agr_data_type    # e.g., allele_ingest_set
         self.total_input_count = 0            # Count of entities found in FlyBase chado database.
         self.total_export_count = 0           # Count of exported Alliance entities.
         self.internal_count = 0               # Count of exported entities marked as internal.
+        self.export_data = []                 # List of data objects for export (as Alliance ingest set).
         return
 
     def query_chado(self, session):
@@ -60,4 +62,21 @@ def db_query_transaction(session: Session, log: Logger, object_to_execute: DataH
         session.rollback()
         log.critical('Critical transaction error occurred during chado query; rolling back and exiting.')
         raise
+    return
+
+
+def generate_export_file(export_dict: dict, log: Logger, output_filename: str):
+    """Print out an export dict of Alliance LinkML data as a LinkML-compliant JSON file.
+
+    Args:
+        export_dict (dict): A LinkML dict including some "ingest" list of data elements.
+        log (Logger): The global Logger object in the script calling this function.
+        output_filename (str): The global output_filename in the script calling this function.
+
+    """
+    log.info('Writing output Alliance LinkML data dict to JSON file.')
+    with open(output_filename, 'w') as outfile:
+        json.dump(export_dict, outfile, sort_keys=True, indent=2, separators=(',', ': '))
+        outfile.close()
+    log.info('Done writing data to output JSON file.')
     return
