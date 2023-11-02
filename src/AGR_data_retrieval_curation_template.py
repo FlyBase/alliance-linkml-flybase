@@ -1,19 +1,20 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""TEST: Data retrieval of FlyBase data for Alliance curation database.
+"""Data retrieval of FlyBase PLACEHOLDER_DATA_CLASS for Alliance curation database.
 
 Author(s):
     Gil dos Santos dossantos@morgan.harvard.edu
 
 Usage:
-    AGR_data_retrieval_test.py [-h] [-r FLYBASE_RELEASE][-l LINKML_RELEASE] [-v VERBOSE] [-c CONFIG]
+    AGR_data_retrieval_curation_template.py [-h] [-r FLYBASE_RELEASE] [-l LINKML_RELEASE] [-v VERBOSE] [-c CONFIG]
 
 Example:
-    python AGR_data_retrieval_test.py -v -r FB2023_06_EP7 -l v1.1.2 -c /path/to/config.cfg
+    python AGR_data_retrieval_curation_template.py -v -r 2023_05 -l v1.1.2 -c /path/to/config.cfg
 
 Notes:
-    This script makes a JSON file conforming to LinkML specs for the curation
-    (i.e., "persistent") database.
+    This script exports FlyBase PLACEHOLDER_DATA_CLASS data as a JSON file conforming to the
+    PLACEHOLDER_DATA_CLASS LinkML specs for the Alliance persistent curation database.
+    A chado database with a full "audit_chado" table is required.
 
 """
 
@@ -33,7 +34,7 @@ from harvdev_utils.psycopg_functions import set_up_db_reading
 from utils import DataHandler
 
 # Now proceed with generic setup.
-report_label = 'test'
+report_label = 'PLACEHOLDER_DATA_CLASS'
 set_up_dict = set_up_db_reading(report_label)
 server = set_up_dict['server']
 database = set_up_dict['database']
@@ -58,47 +59,22 @@ fb_release = args.fb_release
 # Create SQL Alchemy engines from environmental variables.
 engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server + '/' + database
 engine = create_engine(engine_var_rep)
-insp = inspect(engine)
+# insp = inspect(engine)    # I always have this line, but I do not know what it does.
 
 
 # The main process.
 def main():
-    """Run the steps for exporting LinkML-compliant FlyBase AGMs."""
-    log.info('Running script "{}"'.format(__file__))
+    """Run the steps for exporting LinkML-compliant FlyBase PLACEHOLDER_DATA_CLASS."""
+    log.info(f'Running script "{__file__}"')
     log.info('Started main function.')
-    log.info('Output JSON file corresponds to "agr_curation_schema" release: {}'.format(linkml_release))
+    log.info(f'Exporting data from  JSON file corresponds to "agr_curation_schema" release: {fb_release}')
+    log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Instantiate the object, get the data, synthesize it, export it.
-    agm_handler = DataHandler('billy', log)
+    agm_handler = DataHandler('billy')
     agm_handler.report_label(log)
+
     log.info('Ended main function.\n')
-
-
-def db_query_transaction(object_to_execute):
-    """Query the chado database given an object that has a "query_chado()" method.
-
-    Function assumes a global "engine" variable for SQLAlchemy processes.
-
-    Args:
-        arg1 (object_to_execute): Some object that has an SQL ORM "query_chado()" method.
-
-    Returns:
-        None.
-
-    Raises:
-        Raises a RuntimeError if there are problems with executing the query.
-
-    """
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    try:
-        object_to_execute.query_chado(session)
-        session.flush()
-    except RuntimeError:
-        session.rollback()
-        log.critical('Critical transaction error occurred during chado query; rolling back and exiting.')
-        raise
-    return
 
 
 if __name__ == "__main__":

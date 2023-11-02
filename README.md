@@ -21,6 +21,10 @@
 
 ## Overview
 FlyBase in-house scripts export FlyBase data in Alliance LinkML-compliant JSON format.
+These scripts are in the `/src/` directory; there is one script per Alliance export data class.
+- Note that the correspondence of FlyBase-to-Alliance data classes may not be one-to-one.
+- An Alliance data class may represent a merging of many FlyBase data classes: e.g., Alliance AGM includes FlyBase genotype and strain.
+Classes and functions that are shared across data class-specific scripts are kept in `/src/utils.py`.
 Files are uploaded to the Alliance persistent store.
 
 ## CodeManagement
@@ -61,7 +65,7 @@ With each run, files generated are stored locally in a directory within `/data/a
   - Specify these variables at the `Alliance_LinkML_Submission` pipeline level.  
     - `SERVER` - flysql machine where the reporting db is located: e.g., `flysql25`  
     - `DATABASE` - the name of the db to use (with `audit_chado`): e.g., `production_chado` or `fb_2022_05_reporting_audit`  
-    - `RELEASE` - ensure that the release matches the db used: e.g., `2022_05`.  
+    - `RELEASE` - ensure that the release matches the db used: e.g., `2022_05` (reporting) or `2022_05_EP3` (production).  
     - `ITERATION` - the date `MMMDD` on which the pipeline is run.  
     - `LINKML_VERSION` - the LinkML version for the data: e.g., `v1.3.1`.  
 ### GoCDPipeline
