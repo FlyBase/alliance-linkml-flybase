@@ -1,6 +1,6 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Data retrieval of FlyBase PLACEHOLDER_DATA_CLASS for Alliance curation database.
+"""Data retrieval of FlyBase AGM for Alliance curation database.
 
 Author(s):
     Gil dos Santos dossantos@morgan.harvard.edu
@@ -12,8 +12,8 @@ Example:
     python AGR_data_retrieval_curation_template.py -v -r 2023_05 -l v1.1.2 -c /path/to/config.cfg
 
 Notes:
-    This script exports FlyBase PLACEHOLDER_DATA_CLASS data as a JSON file conforming to the
-    PLACEHOLDER_DATA_CLASS LinkML specs for the Alliance persistent curation database.
+    This script exports FlyBase AGM data as a JSON file conforming to the
+    AGM LinkML specs for the Alliance persistent curation database.
     A chado database with a full "audit_chado" table is required.
 
 """
@@ -32,7 +32,7 @@ from harvdev_utils.psycopg_functions import set_up_db_reading
 from utils import DataHandler, db_query_transaction, generate_export_file
 
 # Now proceed with generic setup.
-report_label = 'PLACEHOLDER_DATA_CLASS'
+report_label = 'AGM'
 set_up_dict = set_up_db_reading(report_label)
 server = set_up_dict['server']
 database = set_up_dict['database']
@@ -64,30 +64,36 @@ session = Session()
 
 # The main process.
 def main():
-    """Run the steps for exporting LinkML-compliant FlyBase PLACEHOLDER_DATA_CLASS."""
+    """Run the steps for exporting LinkML-compliant FlyBase AGM."""
     log.info(f'Running script "{__file__}"')
     log.info('Started main function.')
     log.info(f'Exporting data from FlyBase release: {fb_release}')
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Get the data and process it.
-    gene_handler = GeneHandler(log, 'gene', 'GENE')
-    db_query_transaction(session, log, gene_handler)
-    gene_handler.export_data = [{'bob': 'cool'}]
+    strain_handler = StrainHandler(log, 'strain', 'agm_ingest_set')
+    db_query_transaction(session, log, strain_handler)
+    strain_handler.export_data = [{'bob': 'cool'}]
 
     # Export the data.
     export_dict = {
         'linkml_version': linkml_release,
         'alliance_member_release_version': fb_release,
     }
-    export_dict[gene_handler.agr_data_type] = gene_handler.export_data
+    export_dict[strain_handler.agr_data_type] = strain_handler.export_data
+    export_dict['agm_ingest_set'].append([{'gil': 'cooler'}])
+
     generate_export_file(export_dict, log, output_filename)
 
     log.info('Ended main function.\n')
 
 
-class GeneHandler(DataHandler):
-    """This object gets strains, synthesizes/filters the data, then exports it as LinkML JSON."""
+class StrainHandler(DataHandler):
+    """This object gets, synthesizes and filters strain data for export."""
+    def __init__(self):
+        """Initialize the StrainHandler object."""
+        super(StrainHandler, self).__init__()
+        self.strain_dict = {}    # A curie-keyed dict of AllianceStrainAGM objects.
 
 
 if __name__ == "__main__":

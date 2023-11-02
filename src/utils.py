@@ -17,7 +17,6 @@ from sqlalchemy.orm import Session
 # Classes
 class DataHandler(object):
     """A generic data handler that gets FlyBase data and maps it to the Alliance LinkML model."""
-
     def __init__(self, log: Logger, fb_data_type: str, agr_data_type: str):
         """Create the generic DataHandler object.
 
@@ -28,14 +27,29 @@ class DataHandler(object):
 
         """
         self.log = log
-        self.fb_data_type = fb_data_type      # e.g., allele
-        self.agr_data_type = agr_data_type    # e.g., allele_ingest_set
+        self.fb_data_type = fb_data_type
+        self.agr_data_type = agr_data_type
+
+        # Trackers and general data collectors.
         self.total_input_count = 0            # Count of entities found in FlyBase chado database.
         self.total_export_count = 0           # Count of exported Alliance entities.
         self.internal_count = 0               # Count of exported entities marked as internal.
         self.export_data = []                 # List of data objects for export (as Alliance ingest set).
-        return
+        self.all_pubs_dict = {}               # A pub_id-keyed dict of pub curies (PMID or FBrf).
 
+        # Generic information.
+        self.pub_regex = r'^(FBrf[0-9]{7}|unattributed)$'
+        self.generic_audited_object = {
+            'internal': False,
+            'obsolete': False,
+            'created_by_curie': 'FB:FB_curator',
+            'updated_by_curie': 'FB:FB_curator'
+        }
+        self.generic_data_provider_dto = self.generic_audited_object.copy()
+        self.generic_data_provider_dto['source_organization_abbreviation'] = 'FB'
+        self.generic_cross_reference_dto = {'prefix': 'FB', 'internal': False}
+
+    # Methods
     def query_chado(self, session):
         """Test."""
         self.log.info(f'This DataHandler is mapping FlyBase "{self.fb_data_type}" to Alliance "{self.agr_data_type}".')
@@ -66,7 +80,7 @@ def db_query_transaction(session: Session, log: Logger, object_to_execute: DataH
 
 
 def generate_export_file(export_dict: dict, log: Logger, output_filename: str):
-    """Print out an export dict of Alliance LinkML data as a LinkML-compliant JSON file.
+    """Print Alliance LinkML data to JSON file.
 
     Args:
         export_dict (dict): A LinkML dict including some "ingest" list of data elements.
