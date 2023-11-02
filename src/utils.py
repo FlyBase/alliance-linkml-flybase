@@ -12,6 +12,9 @@ Author(s):
 import json
 from logging import Logger
 from sqlalchemy.orm import Session
+from harvdev_utils.production import (
+    Cv, Cvterm, Db, Dbxref, Organism, OrganismDbxref, Pub, PubDbxref
+)
 
 
 # Classes
@@ -49,10 +52,46 @@ class DataHandler(object):
         self.generic_data_provider_dto['source_organization_abbreviation'] = 'FB'
         self.generic_cross_reference_dto = {'prefix': 'FB', 'internal': False}
 
+    def get_all_references(self, session):
+        """Get all references."""
+        self.log.info('Get all references.')
+        # First get all current pubs having an FBrf uniquename.
+        filters = (
+            Pub.uniquename.op('~')(self.pub_regex),
+            Pub.is_obsolete.is_(False)
+        )
+        results = session.query(Pub).\
+            filter(*filters).\
+            distinct()
+        pub_counter = 0
+        for pub in results:
+            self.all_pubs_dict[pub.pub_id] = f'FB:{pub.uniquename}'
+            pub_counter += 1
+        # Next find PMIDs if available and replace the curie in the all_pubs_dict.
+        filters = (
+            Pub.uniquename.op('~')(self.pub_regex),
+            Pub.is_obsolete.is_(False),
+            Db.name == 'pubmed',
+            PubDbxref.is_current.is_(True)
+        )
+        pmid_xrefs = session.query(Pub, Dbxref).\
+            join(PubDbxref, (PubDbxref.pub_id == Pub.pub_id)).\
+            join(Dbxref, (Dbxref.dbxref_id == PubDbxref.dbxref_id)).\
+            join(Db, (Db.db_id == Dbxref.db_id)).\
+            filter(*filters).\
+            distinct()
+        pmid_counter = 0
+        for xref in pmid_xrefs:
+            self.all_pubs_dict[xref.Pub.pub_id] = f'PMID:{xref.Dbxref.accession}'
+            pmid_counter += 1
+        self.log.info(f'Found {pmid_counter} PMID IDs for {pub_counter} current FB publications.')
+        return        
+
     # Methods
     def query_chado(self, session):
-        """Test."""
-        self.log.info(f'This DataHandler is mapping FlyBase "{self.fb_data_type}" to Alliance "{self.agr_data_type}".')
+        """A wrapper method that runs db queries."""
+        self.log.info(f'BOB: This DataHandler is mapping FlyBase "{self.fb_data_type}" to Alliance "{self.agr_data_type}".')
+        self.get_all_references(session)
         return
 
 
