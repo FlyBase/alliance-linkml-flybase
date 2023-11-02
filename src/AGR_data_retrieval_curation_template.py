@@ -60,6 +60,8 @@ fb_release = args.fb_release
 engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server + '/' + database
 engine = create_engine(engine_var_rep)
 # insp = inspect(engine)    # I always have this line, but I do not know what it does.
+Session = sessionmaker(bind=engine)
+session = Session()
 
 
 # The main process.
@@ -72,7 +74,7 @@ def main():
 
     # Instantiate the object, get the data, synthesize it, export it.
     agm_handler = DataHandler(log, 'gene', 'GENE')
-    db_query_transaction(agm_handler)
+    db_query_transaction(session, log, agm_handler)
 
     log.info('Ended main function.\n')
 
