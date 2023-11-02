@@ -36,7 +36,7 @@ class DataHandler(object):
 
     def query_chado(self, session):
         """Test."""
-        self.log.info(f'This DataHandler is mapping FlyBase {self.fb_data_type} to {self.agr_data_type}.')
+        self.log.info(f'This DataHandler is mapping FlyBase "{self.fb_data_type}" to Alliance "{self.agr_data_type}".')
         return
 
 
