@@ -9,49 +9,50 @@ Author(s):
 
 """
 
+from logging import Logger
+from sqlalchemy.orm import Session
+
+
 # Classes
 class DataHandler(object):
-    """A generic data handler that gets some data type and exports it, and
-       reports the extent of the export."""
-    def __init__(self, data_type):
+    """A generic data handler that gets FlyBase data and maps it to the Alliance LinkML model."""
+
+    def __init__(self, log: Logger, fb_data_type: str, agr_data_type: str):
         """Create the generic DataHandler object.
-        
+
         Args:
-            data_type (arg1): (str) The label for the data type to be handled: e.g., gene.
-            log (arg2): (Logger) A global Logger object from the script using the DataHandler.
-        
+            log (Logger): The global Logger object in the script using the DataHandler.
+            fb_data_type (str): The FlyBase data class being handled.
+            agr_data_type (str): The Alliance data class to which FlyBase data is being mapped.
+
         """
-        self.data_type = data_type     # Label for the data type being handled: e.g., gene.
-        self.total_input_count = 0     # Count of entities found in FlyBase chado database.
-        self.total_export_count = 0    # Count of exported entities.
-        self.internal_count = 0        # Count of exported entities marked as internal.
+        self.log = log
+        self.fb_data_type = fb_data_type
+        self.agr_data_type = agr_data_type
+        self.total_input_count = 0            # Count of entities found in FlyBase chado database.
+        self.total_export_count = 0           # Count of exported Alliance entities.
+        self.internal_count = 0               # Count of exported entities marked as internal.
         return
 
-    def report_label(self, log):
-        log.info(f'BOB:DataHandler for this data_type: {self.data_type}')
+    def query_chado(self, session):
+        """Test."""
+        self.log.info(f'This DataHandler is mapping FlyBase {self.fb_data_type} to {self.agr_data_type}.')
         return
 
 
 # Functions
-def db_query_transaction(session, log, object_to_execute):
+def db_query_transaction(session: Session, log: Logger, object_to_execute: DataHandler):
     """Query the chado database given an object that has a "query_chado()" method.
 
-    Function assumes a global "engine" variable for SQLAlchemy processes.
-
     Args:
-        arg1 ()
-        arg2 (log): (Logger) A global Logger object from the script using the DataHandler.
-        arg3 (object_to_execute): Some object that has an SQL ORM "query_chado()" method.
-
-    Returns:
-        None.
+        session (Session): SQLAlchemy session for db queries.
+        log (Logger): The global Logger object in the script using the DataHandler.
+        object_to_execute (DataHandler): An object having a query_chado() method.
 
     Raises:
         Raises a RuntimeError if there are problems with executing the query.
 
     """
-    Session = sessionmaker(bind=engine)
-    session = Session()
     try:
         object_to_execute.query_chado(session)
         session.flush()

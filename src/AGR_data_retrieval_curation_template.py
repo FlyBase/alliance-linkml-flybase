@@ -31,7 +31,7 @@ from harvdev_utils.production import (
     StrainPub, StrainSynonym, Synonym
 )
 from harvdev_utils.psycopg_functions import set_up_db_reading
-from utils import DataHandler
+from utils import DataHandler, db_query_transaction
 
 # Now proceed with generic setup.
 report_label = 'PLACEHOLDER_DATA_CLASS'
@@ -71,8 +71,8 @@ def main():
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Instantiate the object, get the data, synthesize it, export it.
-    agm_handler = DataHandler('billy')
-    agm_handler.report_label(log)
+    agm_handler = DataHandler(log, 'gene', 'GENE')
+    db_query_transaction(agm_handler)
 
     log.info('Ended main function.\n')
 
