@@ -76,7 +76,7 @@ def main():
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Get the data and process it.
-    strain_handler = StrainHandler(log, FB_STRAIN_DATA_TYPE, AGR_DATA_TYPE, 'billy bob')
+    strain_handler = StrainHandler(log, FB_STRAIN_DATA_TYPE, AGR_DATA_TYPE, 'bob')
     db_query_transaction(session, log, strain_handler)
     strain_handler.export_data = [{'bob': 'cool'}]
 
@@ -101,8 +101,9 @@ class StrainHandler(DataHandler):
     def __init__(self, log, fb_data_type, agr_data_type, extra):
         """Create the StrainHandler object."""
         super().__init__(log, fb_data_type, agr_data_type)
-        self.extra = extra       # BOB - an extra thingy
+        self.extra = extra       # BOB: Any extra params you want here.
         self.strain_dict = {}    # A curie-keyed dict of AllianceStrainAGM objects.
+        self.strain_regex = r'^FBsn[0-9]{7}$'
 
     def query_chado(self, session):
         """Extend the query_chado method of the StrainHandler object here."""
