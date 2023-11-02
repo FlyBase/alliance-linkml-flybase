@@ -97,7 +97,7 @@ class StrainHandler(DataHandler):
     """This object gets, synthesizes and filters strain data for export."""
     def __init__(self):
         """Initialize the StrainHandler object."""
-        super(StrainHandler, self).__init__(log, FB_STRAIN_DATA_TYPE, AGR_DATA_TYPE)
+        super().__init__()
         self.strain_dict = {}    # A curie-keyed dict of AllianceStrainAGM objects.
 
 
