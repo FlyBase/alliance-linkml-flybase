@@ -26,7 +26,7 @@ class DataHandler(object):
         Args:
             log (Logger): The global Logger object in the script using the DataHandler.
             fb_data_type (str): The FlyBase data class being handled.
-            agr_data_type (str): The Alliance ingest_set to which FlyBase data is being mapped: e.g., allele_ingest_set.
+            agr_data_type (str): The Alliance ingest_set to which FlyBase data is mapped: e.g., allele_ingest_set.
 
         """
         self.log = log
@@ -34,11 +34,11 @@ class DataHandler(object):
         self.agr_data_type = agr_data_type
 
         # Trackers and general data collectors.
-        self.total_input_count = 0            # Count of entities found in FlyBase chado database.
-        self.total_export_count = 0           # Count of exported Alliance entities.
-        self.internal_count = 0               # Count of exported entities marked as internal.
-        self.export_data = []                 # List of data objects for export (as Alliance ingest set).
-        self.all_pubs_dict = {}               # A pub_id-keyed dict of pub curies (PMID or FBrf).
+        self.input_count = 0            # Count of entities found in FlyBase chado database.
+        self.export_count = 0           # Count of exported Alliance entities.
+        self.internal_count = 0         # Count of exported entities marked as internal.
+        self.export_data = []           # List of data objects for export (as Alliance ingest set).
+        self.all_pubs_dict = {}         # A pub_id-keyed dict of pub curies (PMID or FBrf).
 
         # Generic information.
         self.pub_regex = r'^(FBrf[0-9]{7}|unattributed)$'
@@ -51,6 +51,11 @@ class DataHandler(object):
         self.generic_data_provider_dto = self.generic_audited_object.copy()
         self.generic_data_provider_dto['source_organization_abbreviation'] = 'FB'
         self.generic_cross_reference_dto = {'prefix': 'FB', 'internal': False}
+
+        # LinkML attributes to export: lists will be expanded for each data class.
+        self.required_fields = []
+        self.output_fields = []
+        self.fb_agr_db_dict = {'FlyBase': 'FB'}
 
     def get_all_references(self, session):
         """Get all references."""
@@ -85,13 +90,43 @@ class DataHandler(object):
             self.all_pubs_dict[xref.Pub.pub_id] = f'PMID:{xref.Dbxref.accession}'
             pmid_counter += 1
         self.log.info(f'Found {pmid_counter} PMID IDs for {pub_counter} current FB publications.')
-        return        
+        return
 
     # Methods
     def query_chado(self, session):
         """A wrapper method that runs db queries."""
-        self.log.info(f'BOB: This DataHandler is mapping FlyBase "{self.fb_data_type}" to Alliance "{self.agr_data_type}".')
+        self.log.info(f'This DataHandler will map FlyBase "{self.fb_data_type}" to Alliance "{self.agr_data_type}".')
         self.get_all_references(session)
+        return
+
+    def generate_export_dict(self, input_data: list):
+        """Generate LinkML export dict from list of data objects.
+
+        Args:
+            input_data (list): A list of data objects representing FlyBase data, each object having an agr_mapping
+                               attribute representing a corresponding LinkML dict of transformed data. The LinkML
+                               dict will be filtered to remove un-exportable objects, and to suppress empty fields.
+                               The filtered dicts will be added to the handler's self.export_data list.
+
+        """
+        for i in input_data:
+            self.total_input_count += 1
+            if i.for_alliance_export is False:
+                self.log.debug(f'Suppress {i} from export: {i.export_warnings}')
+                continue
+            self.total_export_count += 1
+            if i.agr_mapping.internal is True:
+                self.internal_count += 1
+                self.log.debug(f'Export {i} but keep internal at the Alliance: {i.internal_reasons}')
+            export_agr_dict = {}
+            for attr in self.output_fields:
+                if getattr(i.agr_mapping, attr) is not None and getattr(i.agr_mapping, attr) != []:
+                    export_agr_dict[attr] = getattr(i.agr_mapping, attr)
+            self.export_data.append(export_agr_dict)
+        public_count = self.export_count - self.internal_count
+        self.log.info(f'Exported {self.export_count} of {self.input_count} {self.fb_data_type} entities.')
+        self.log.info(f'{public_count} of {self.export_count} exported {self.fb_data_type}s are PUBLIC.')
+        self.log.info(f'{self.internal_count} of {self.export_count} exported {self.fb_data_type}s are INTERNAL.')
         return
 
 
