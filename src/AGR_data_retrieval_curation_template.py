@@ -100,7 +100,7 @@ class StrainHandler(DataHandler):
     # def __init__(self, log, fb_data_type, agr_data_type):
     def __init__(self, log, fb_data_type, agr_data_type, extra):
         """Create the StrainHandler object."""
-        # super().__init__(log, fb_data_type, agr_data_type)
+        super().__init__(log, fb_data_type, agr_data_type)
         self.extra = extra       # BOB: Any extra params you want here.
         self.strain_dict = {}    # A curie-keyed dict of AllianceStrainAGM objects.
         self.strain_regex = r'^FBsn[0-9]{7}$'
