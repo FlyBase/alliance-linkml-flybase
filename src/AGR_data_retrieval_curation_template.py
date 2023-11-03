@@ -29,7 +29,7 @@ from harvdev_utils.production import (
     StrainPub, StrainSynonym, Synonym
 )
 from harvdev_utils.psycopg_functions import set_up_db_reading
-from utils import DataHandler, db_query_transaction, generate_export_file
+from utils import StrainHandler, db_query_transaction, generate_export_file
 
 # Data types handled by this script.
 FB_STRAIN_DATA_TYPE = 'strain'
@@ -93,25 +93,6 @@ def main():
     # generate_export_file(export_dict, log, output_filename)    # BOB - turn off for prelim testing
 
     log.info('Ended main function.\n')
-
-
-class StrainHandler(DataHandler):
-    """This object gets, synthesizes and filters strain data for export."""
-    # def __init__(self, log, fb_data_type, agr_data_type):
-    def __init__(self, log, fb_data_type, agr_data_type, extra):
-        """Create the StrainHandler object."""
-        super().__init__(log, fb_data_type, agr_data_type)
-        self.extra = extra       # BOB: Any extra params you want here.
-        self.strain_dict = {}    # A curie-keyed dict of AllianceStrainAGM objects.
-        self.strain_regex = r'^FBsn[0-9]{7}$'
-
-    def query_chado(self, session):
-        """Extend the query_chado method of the StrainHandler object here."""
-        # Run the inherited portion of the method first.
-        super().query_chado(session)
-        # Then run the extra bits.
-        self.log.info(f'BOB: Running query_chado modified for FlyBase {self.extra} data.')
-        return
 
 
 if __name__ == "__main__":

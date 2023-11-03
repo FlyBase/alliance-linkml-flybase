@@ -130,6 +130,25 @@ class DataHandler(object):
         return
 
 
+class StrainHandler(DataHandler):
+    """This object gets, synthesizes and filters strain data for export."""
+    # def __init__(self, log, fb_data_type, agr_data_type):
+    def __init__(self, log, fb_data_type, agr_data_type, extra):
+        """Create the StrainHandler object."""
+        super().__init__(log, fb_data_type, agr_data_type)
+        self.extra = extra       # BOB: Any extra params you want here.
+        self.strain_dict = {}    # A curie-keyed dict of AllianceStrainAGM objects.
+        self.strain_regex = r'^FBsn[0-9]{7}$'
+
+    def query_chado(self, session):
+        """Extend the query_chado method of the StrainHandler object here."""
+        # Run the inherited portion of the method first.
+        super().query_chado(session)
+        # Then run the extra bits.
+        self.log.info(f'BOB: Running query_chado modified for FlyBase {self.extra} data.')
+        return
+
+
 # Functions
 def db_query_transaction(session: Session, log: Logger, object_to_execute: DataHandler):
     """Query the chado database given an object that has a "query_chado()" method.
