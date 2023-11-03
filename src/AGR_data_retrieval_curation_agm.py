@@ -495,7 +495,6 @@ class AGMHandler(object):
         self.get_strain_timestamps(session)
         self.get_strain_dbxrefs(session)
         self.get_strain_references(session)
-        self.synthesize_info()
         return
 
     def generate_export_file(self):

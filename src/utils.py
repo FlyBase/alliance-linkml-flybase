@@ -37,6 +37,7 @@ class DataHandler(object):
         self.input_count = 0            # Count of entities found in FlyBase chado database.
         self.export_count = 0           # Count of exported Alliance entities.
         self.internal_count = 0         # Count of exported entities marked as internal.
+        self.input_dict = {}            # Dict of FlyBase entities, keyed by some unique key.
         self.export_data = []           # List of data objects for export (as Alliance ingest set).
         self.all_pubs_dict = {}         # A pub_id-keyed dict of pub curies (PMID or FBrf).
 
@@ -57,9 +58,9 @@ class DataHandler(object):
         self.output_fields = []
         self.fb_agr_db_dict = {'FlyBase': 'FB'}
 
-    def get_all_references(self, session):
-        """Get all references."""
-        self.log.info('Get all references.')
+    def build_bibliography(self, session):
+        """Build bibliography."""
+        self.log.info('Build bibliography.')
         # First get all current pubs having an FBrf uniquename.
         filters = (
             Pub.uniquename.op('~')(self.pub_regex),
@@ -96,7 +97,12 @@ class DataHandler(object):
     def query_chado(self, session):
         """A wrapper method that runs db queries."""
         self.log.info(f'This DataHandler will map FlyBase "{self.fb_data_type}" to Alliance "{self.agr_data_type}".')
-        self.get_all_references(session)
+        self.build_bibliography(session)
+        return
+
+    def synthesize_info(self):
+        """Synthesize info in each data object, map to Alliance LinkML."""
+        # Placeholder
         return
 
     def generate_export_dict(self, input_data: list):
