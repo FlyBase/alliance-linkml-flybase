@@ -30,6 +30,9 @@ from harvdev_utils.production import (
 )
 from harvdev_utils.psycopg_functions import set_up_db_reading
 from utils import StrainHandler, db_query_transaction, generate_export_file
+from datatypes import (
+    FlyBaseDataEntity, AuditedObjectDTO, DataProviderDTO
+)
 
 # Data types handled by this script.
 FB_STRAIN_DATA_TYPE = 'strain'
