@@ -33,9 +33,8 @@ class FlyBaseDataEntity(object):
 # Alliance Classes for FlyBase data.
 class AuditedObjectDTO(object):
     """Base Alliance class."""
-    def __init__(self, name):
+    def __init__(self):
         """Create base AuditedObjectDTO for FlyBase objects."""
-        self.name = name
         self.internal = False
         self.obsolete = False
         self.date_created = None

@@ -79,9 +79,9 @@ def main():
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Test handling of dataclass objects
-    a = AuditedObjectDTO('a')
-    b = AuditedObjectDTO('b')
-    c = AuditedObjectDTO('c')
+    a = AuditedObjectDTO()
+    b = AuditedObjectDTO()
+    c = AuditedObjectDTO()
 
     a.test_list.append(1)
     b.test_list.append(2)
@@ -91,13 +91,13 @@ def main():
 
     log.info('BOB: TEST LIST')
     log.info(f'BOB: a: {a.test_list}')
-    log.info(f'BOB: b: {a.test_list}')
-    log.info(f'BOB: c: {a.test_list}')
+    log.info(f'BOB: b: {b.test_list}')
+    log.info(f'BOB: c: {c.test_list}')
 
     log.info('BOB: TEST INTERNAL')
     log.info(f'BOB: a: {a.internal}')
-    log.info(f'BOB: b: {a.internal}')
-    log.info(f'BOB: c: {a.internal}')
+    log.info(f'BOB: b: {b.internal}')
+    log.info(f'BOB: c: {c.internal}')
 
 
     # Get the data and process it.
