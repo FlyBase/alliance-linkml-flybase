@@ -33,8 +33,9 @@ class FlyBaseDataEntity(object):
 # Alliance Classes for FlyBase data.
 class AuditedObjectDTO(object):
     """Base Alliance class."""
-    def __init__(self):
+    def __init__(self, name):
         """Create base AuditedObjectDTO for FlyBase objects."""
+        self.name = name
         self.internal = False
         self.obsolete = False
         self.date_created = None
@@ -48,6 +49,6 @@ class DataProviderDTO(AuditedObjectDTO):
     """DataProvider class."""
     def __init__(self):
         """Create simple DataProviderDTO for FlyBase objects."""
+        self.source_organization_abbreviation = 'FB'
+        self.cross_reference_dto = {'prefix': 'FB', 'internal': False}
 
-    source_organization_abbreviation = 'FB'
-    cross_reference_dto = {'prefix': 'FB', 'internal': False}
