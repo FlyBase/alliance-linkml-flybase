@@ -42,6 +42,7 @@ class AuditedObjectDTO(object):
     date_updated = None
     created_by_curie = 'FB:FB_curator'
     updated_by_curie = 'FB:FB_curator'
+    test_list = []
 
 
 class DataProviderDTO(AuditedObjectDTO):
