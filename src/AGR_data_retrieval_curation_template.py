@@ -78,31 +78,11 @@ def main():
     log.info(f'Exporting data from FlyBase release: {fb_release}')
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
-    # Test handling of dataclass objects
-    a = AuditedObjectDTO()
-    b = AuditedObjectDTO()
-    c = AuditedObjectDTO()
-
-    a.test_list.append(1)
-    b.test_list.append(2)
-    c.test_list.append(3)
-    a.internal = True
-    c.internal = True
-
-    log.info('BOB: TEST LIST')
-    log.info(f'BOB: a: {a.test_list}')
-    log.info(f'BOB: b: {b.test_list}')
-    log.info(f'BOB: c: {c.test_list}')
-
-    log.info('BOB: TEST INTERNAL')
-    log.info(f'BOB: a: {a.internal}')
-    log.info(f'BOB: b: {b.internal}')
-    log.info(f'BOB: c: {c.internal}')
-
-
     # Get the data and process it.
     strain_handler = StrainHandler(log, FB_STRAIN_DATA_TYPE, AGR_DATA_TYPE, 'billy bob')
     db_query_transaction(session, log, strain_handler)
+    strain_handler.synthesize_info()
+    strain_handler.flag_unexportable_entities()
     strain_handler.export_data = [{'bob': 'cool'}]
 
     # Export the data.

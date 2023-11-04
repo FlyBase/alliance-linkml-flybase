@@ -103,13 +103,28 @@ class DataHandler(object):
     # Methods
     def query_chado(self, session):
         """A wrapper method that runs db queries."""
-        self.log.info(f'This DataHandler will map FlyBase "{self.fb_data_type}" to Alliance "{self.agr_data_type}".')
+        self.log.info(f'Get FlyBase "{self.fb_data_type}" data from chado.')
         self.build_bibliography(session)
         return
 
     def synthesize_info(self, input_data: list):
         """Synthesize info in each data object, map to Alliance LinkML."""
-        # Placeholder
+        self.log.info(f'Synthesize FlyBase "{self.fb_data_type}" data and map it to Alliance "{self.agr_data_type}".')
+        return
+
+    def flag_unexportable_entities(self, input_data: list):
+        """Flag entities lacking information for a required field."""
+        self.log.info(f'Flag FlyBase "{self.fb_data_type}" data lacking information for a required field.')
+        for i in input_data:
+            for attr in self.required_fields:
+                if attr not in i.linkmldto.__dict__.keys():
+                    i.for_export = False
+                    i.export_warnings.append(f'Missing "{attr}" attribute.')
+                elif getattr(i.linkmldto, attr) is None:
+                    i.for_export = False
+                    i.export_warnings.append(f'Missing value "{attr}" attribute.')
+            if i.for_export is False:
+                self.log.debug(f'DO NOT EXPORT {i}: {i.export_warnings}')
         return
 
     def generate_export_dict(self, input_data: list):
@@ -154,11 +169,18 @@ class StrainHandler(DataHandler):
         self.strain_regex = r'^FBsn[0-9]{7}$'
 
     def query_chado(self, session):
-        """Extend the query_chado method of the StrainHandler object here."""
+        """Extend the query_chado method for the StrainHandler."""
         # Run the inherited portion of the method first.
         super().query_chado(session)
         # Then run the extra bits.
         self.log.info(f'BOB: Running query_chado modified for FlyBase {self.extra} data.')
+        return
+
+    def synthesize_info(self, input_data: list):
+        """Extend the synthesize_info method for the StrainHandler."""
+        # Run the inherited portion of the method first.
+        super().synthesize_info()
+        # Run strain-specific bits here
         return
 
 
