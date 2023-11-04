@@ -92,10 +92,17 @@ def main():
     b.test_list.append('b')
     c.test_list.append(4)
 
+    log.info('BOB: TEST LIST')
     log.info(f'BOB: a: {a.test_list}')
     log.info(f'BOB: b: {a.test_list}')
     log.info(f'BOB: c: {a.test_list}')
 
+    a.internal = False
+    c.internal = False
+    log.info('BOB: TEST INTERNAL')
+    log.info(f'BOB: a: {a.internal}')
+    log.info(f'BOB: b: {a.internal}')
+    log.info(f'BOB: c: {a.internal}')
 
 
     # Get the data and process it.

@@ -33,12 +33,17 @@ class DataHandler(object):
         self.fb_data_type = fb_data_type
         self.agr_data_type = agr_data_type
 
-    # Trackers and general data collectors.
-    input_count = 0            # Count of entities found in FlyBase chado database.
-    export_count = 0           # Count of exported Alliance entities.
-    internal_count = 0         # Count of exported entities marked as internal.
-    export_data = []           # List of data objects for export (as Alliance ingest set).
-    bibliography = {}          # A pub_id-keyed dict of pub curies (PMID or FBrf).
+        # Trackers and general data collectors.
+        self.input_count = 0            # Count of entities found in FlyBase chado database.
+        self.export_count = 0           # Count of exported Alliance entities.
+        self.internal_count = 0         # Count of exported entities marked as internal.
+        self.export_data = []           # List of data objects for export (as Alliance ingest set).
+        self.bibliography = {}          # A pub_id-keyed dict of pub curies (PMID or FBrf).
+
+        # Export filters.
+        self.required_fields = []
+        self.output_fields = []
+        self.fb_agr_db_dict = {'FlyBase': 'FB'}
 
     # Regex list.
     regex = {
@@ -59,11 +64,6 @@ class DataHandler(object):
         'library': r'^FBlc[0-9][7]$',
         'cell': r'^FBcl[0-9][7]$'
     }
-
-    # Export filters.
-    required_fields = []
-    output_fields = []
-    fb_agr_db_dict = {'FlyBase': 'FB'}
 
     def build_bibliography(self, session):
         """Build bibliography."""

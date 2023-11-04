@@ -35,14 +35,13 @@ class AuditedObjectDTO(object):
     """Base Alliance class."""
     def __init__(self):
         """Create base AuditedObjectDTO for FlyBase objects."""
-
-    internal = False
-    obsolete = False
-    date_created = None
-    date_updated = None
-    created_by_curie = 'FB:FB_curator'
-    updated_by_curie = 'FB:FB_curator'
-    test_list = []
+        self.internal = False
+        self.obsolete = False
+        self.date_created = None
+        self.date_updated = None
+        self.created_by_curie = 'FB:FB_curator'
+        self.updated_by_curie = 'FB:FB_curator'
+        self.test_list = []
 
 
 class DataProviderDTO(AuditedObjectDTO):
