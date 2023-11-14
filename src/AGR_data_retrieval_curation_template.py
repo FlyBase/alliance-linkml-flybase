@@ -55,8 +55,6 @@ args, extra_args = parser.parse_known_args()
 log.info('Parsing args specific to this script; ignoring these: {}'.format(extra_args))
 linkml_release = args.linkml_release
 fb_release = args.fb_release
-fb_input = args.fb_input
-agr_output = args.agr_output
 
 # Create SQL Alchemy engines from environmental variables.
 engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server + '/' + database
