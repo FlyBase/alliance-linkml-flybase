@@ -48,6 +48,8 @@ class DataHandler(object):
         self.input_count = 0          # Count of entities found in FlyBase chado database.
         self.export_count = 0         # Count of exported Alliance entities.
         self.internal_count = 0       # Count of exported entities marked as internal.
+        self.warnings = []            # Handler issues of note.
+        self.errors = []              # Handler issues that break things.
 
     # Export filters.
     required_fields = []
@@ -102,7 +104,7 @@ class DataHandler(object):
     # Methods
     def __str__(self):
         """Print out data handler description."""
-        self.log(f'A data handler that exports FB {self.fb_data_type} to Alliance LinkML {self.agr_ingest_type}.')
+        self.log.info(f'A data handler that exports FB {self.fb_data_type} to Alliance LinkML {self.agr_ingest_type}.')
         return
 
     # Sub-methods for get_general_data().
@@ -466,7 +468,7 @@ class StrainHandler(DataHandler):
 
 
 # Functions
-def get_handler(log, fb_data_type: str, agr_ingest_type: str):
+def get_handler(log: Logger, fb_data_type: str, agr_ingest_type: str):
     """Return the appropriate type of data handler.
 
     Args:
@@ -481,6 +483,7 @@ def get_handler(log, fb_data_type: str, agr_ingest_type: str):
         Raises a KeyError if the FB data type is not recognized.
 
     """
+    log.info(f'Get handler for {fb_data_type} and {agr_ingest_type}.')
     handler_type = (fb_data_type, agr_ingest_type)
     handler_dict = {
         # ('gene', 'gene_ingest_set'): GeneHandler,
@@ -490,9 +493,9 @@ def get_handler(log, fb_data_type: str, agr_ingest_type: str):
     }
     try:
         data_handler = handler_dict[handler_type](log, fb_data_type, agr_ingest_type)
-        log.info(f'Returning: {data_handler}')
+        log.info(f'{data_handler}')
     except KeyError:
-        log.error(f'Unrecognized FB data type and/or Alliance ingest set: {handler_type}.')
+        log.error.append(f'Unrecognized FB data type and/or Alliance ingest set: {handler_type}.')
         raise
     return data_handler
 
