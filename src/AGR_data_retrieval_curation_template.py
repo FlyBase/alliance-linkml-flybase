@@ -6,10 +6,12 @@ Author(s):
     Gil dos Santos dossantos@morgan.harvard.edu
 
 Usage:
-    AGR_data_retrieval_curation_template.py [-h] [-r FLYBASE_RELEASE] [-l LINKML_RELEASE] [-v VERBOSE] [-c CONFIG]
+    AGR_data_retrieval_curation_template.py [-h] [-r FLYBASE_RELEASE]
+    [-l LINKML_RELEASE] [-v VERBOSE] [-c CONFIG]
 
 Example:
-    python AGR_data_retrieval_curation_template.py -v -r 2023_05 -l v1.1.2 -c /path/to/config.cfg
+    python AGR_data_retrieval_curation_template.py -v -r 2023_05 -l v1.1.2
+    -c /path/to/config.cfg
 
 Notes:
     This script exports FlyBase AGM data as a JSON file conforming to the
@@ -29,7 +31,7 @@ from harvdev_utils.production import (
     StrainPub, StrainSynonym, Synonym
 )
 from harvdev_utils.psycopg_functions import set_up_db_reading
-from utils import StrainHandler, db_query_transaction, generate_export_file
+from utils import get_handler, db_query_transaction, generate_export_file
 from datatypes import (
     FlyBaseDataEntity, AuditedObjectDTO, DataProviderDTO
 )
@@ -37,11 +39,11 @@ from datatypes import (
 # Data types handled by this script.
 FB_STRAIN_DATA_TYPE = 'strain'
 FB_GENOTYPE_DATA_TYPE = 'genotype'
-AGR_DATA_TYPE = 'agm_ingest_set'
-report_label = 'AGM'
+AGR_INGEST_TYPE = 'agm_ingest_set'
+REPORT_LABEL = 'agm_curation'
 
 # Now proceed with generic setup.
-set_up_dict = set_up_db_reading(report_label)
+set_up_dict = set_up_db_reading(REPORT_LABEL)
 server = set_up_dict['server']
 database = set_up_dict['database']
 username = set_up_dict['username']
@@ -56,11 +58,14 @@ log = set_up_dict['log']
 parser = argparse.ArgumentParser(description='inputs')
 parser.add_argument('-l', '--linkml_release', help='The "agr_curation_schema" LinkML release number.', required=True)
 parser.add_argument('-r', '--fb_release', help='The FlyBase data release from which data was obtained.', required=True)
+
 # Use parse_known_args(), not parse_args(), to handle args specific to this script (outside of set_up_db_reading()).
 args, extra_args = parser.parse_known_args()
 log.info('Parsing args specific to this script; ignoring these: {}'.format(extra_args))
 linkml_release = args.linkml_release
 fb_release = args.fb_release
+fb_input = args.fb_input
+agr_output = args.agr_output
 
 # Create SQL Alchemy engines from environmental variables.
 engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server + '/' + database
@@ -79,11 +84,8 @@ def main():
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Get the data and process it.
-    strain_handler = StrainHandler(log, FB_STRAIN_DATA_TYPE, AGR_DATA_TYPE, 'billy bob')
+    strain_handler = get_handler(log, FB_STRAIN_DATA_TYPE, AGR_INGEST_TYPE)
     db_query_transaction(session, log, strain_handler)
-    strain_handler.synthesize_info()
-    strain_handler.flag_unexportable_entities()
-    strain_handler.export_data = [{'bob': 'cool'}]
 
     # Export the data.
     export_dict = {
@@ -91,11 +93,10 @@ def main():
         'alliance_member_release_version': fb_release,
     }
     # Start export list with strains.
-    export_dict[strain_handler.agr_data_type] = strain_handler.export_data
-    # Extend export list with genotypes.
-    export_dict['agm_ingest_set'].extend([{'gil': 'cooler'}])
-
-    # generate_export_file(export_dict, log, output_filename)    # BOB - turn off for prelim testing
+    export_dict[AGR_INGEST_TYPE] = []
+    export_dict[AGR_INGEST_TYPE].extend(strain_handler.export_data)
+    # export_dict[AGR_INGEST_TYPE].extend(genotype_handler.export_data)    # To do
+    generate_export_file(export_dict, log, output_filename)
 
     log.info('Ended main function.\n')
 
