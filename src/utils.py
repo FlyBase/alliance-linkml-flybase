@@ -226,7 +226,7 @@ class EntityHandler(DataHandler):
     """A generic entity handler (excludes associations/annotations) that gets FlyBase data and maps it to the Alliance LinkML model."""
     def __init__(self, log: Logger, fb_data_type: str, agr_ingest_type: str):
         """Create the generic EntityHandler object."""
-        super().__init__()
+        super().__init__(log, fb_data_type, agr_ingest_type)
 
     # Mappings of input fb_data_type to various data handling objects and chado tables.
     main_chado_entity_types = {
