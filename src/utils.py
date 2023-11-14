@@ -51,12 +51,12 @@ class DataHandler(object):
         self.warnings = []            # Handler issues of note.
         self.errors = []              # Handler issues that break things.
 
-    # Export filters.
+    # Export filters (must be filled out in detail for each specific data handler).
     required_fields = []
     output_fields = []
     fb_agr_db_dict = {'FlyBase': 'FB'}
 
-    # Regex list.
+    # Useful regexes.
     regex = {
         'pub': r'^(FBrf[0-9]{7}|unattributed)$',
         'feature': r'^FB[a-z]{2}[0-9]{7,10}$',
@@ -75,31 +75,6 @@ class DataHandler(object):
         'library': r'^FBlc[0-9]{7}$',
         'cell': r'^FBcl[0-9]{7}$'
     }
-    # Subtype list used to filter to specific FB data type within a chado table.
-    subtypes = {
-        'gene': ['gene'],
-        'allele': ['allele'],
-        'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion', 'point_mutation', 'sequence_alteration', 'sequence_variant']
-    }
-    # Data tables by class.
-    chado_entity_types = {
-        'gene': 'feature',
-        'allele': 'feature',
-        'construct': 'feature',
-        'variation': 'feature',
-        'strain': 'strain'
-    }
-    chado_tables = {
-        'primary_key': {'feature': 'feature_id', 'strain': 'strain_id'},
-        'main_table': {'feature': Feature, 'strain': Strain},
-        'pubs': {'feature': FeaturePub, 'strain': StrainPub},
-        'synonyms': {'feature': FeatureSynonym, 'strain': StrainSynonym},
-        'dbxrefs': {'feature': FeatureDbxref, 'strain': StrainDbxref},
-        'props': {'feature': Featureprop, 'strain': Strainprop},
-        'prop_pubs': {'feature': FeaturepropPub, 'strain': StrainpropPub},
-        'cvterms': {'feature': FeatureCvterm, 'strain': StrainCvterm},
-        'cvtermprops': {'feature': FeatureCvtermprop, 'strain': StrainCvtermprop}
-    }
 
     # Methods
     def __str__(self):
@@ -107,7 +82,6 @@ class DataHandler(object):
         handler_description = f'A data handler that exports FB {self.fb_data_type} to Alliance LinkML {self.agr_ingest_type}.'
         return handler_description
 
-    # Sub-methods for get_general_data().
     def build_bibliography(self, session):
         """Build FlyBase bibliography."""
         self.log.info('Build FlyBase bibliography.')
@@ -185,150 +159,14 @@ class DataHandler(object):
         self.get_ncbi_taxon_ids(session)
         return
 
-    # Elaborate on get_datatype_data() method in specific handlers.
-    def get_entity_data(self, session):
-        """Get primary FlyBase data entitites (excludes associations/annotations)."""
-        chado_type = self.chado_entity_types[self.fb_data_type]
-        self.log.info(f'Get {self.fb_data_type} data entities from {chado_type} table.')
-        chado_table = self.chado_tables['main_table'][chado_type]
-        filters = ()
-        if self.fb_data_type in self.regex.keys():
-            self.log.info(f'Use this regex: {self.regex[self.fb_data_type]}')
-            filters += (chado_table.uniquename.op('~')(self.regex[self.fb_data_type]), )
-        if self.fb_data_type in self.subtypes.keys():
-            self.log.info(f'Use these subtypes: {self.subtypes[self.fb_data_type]}')
-            filters += (chado_table.type.name.in_((self.subtypes[self.fb_data_type])), )
-        if len(filters) == 0:
-            self.log.warning('Have no filters for the main FlyBase entity driver query.')
-            raise
-        results = session.query(chado_table).filter(*filters).distinct()
-        pkey_name = self.chado_tables['primary_key'][chado_type]
-        self.log.info(f'Have this primary_key name: {pkey_name}')
-        for result in results:
-            pkey_id = getattr(result, pkey_name)
-            self.fb_data_entities[pkey_id] = result
-            self.input_count += 1
-        self.log.info(f'Found {self.input_count} FlyBase {self.fb_data_type} entities in chado.')
-        return
-
-    def get_entity_associated_data(self, session):
-        """Get data associated with FlyBase data entities."""
-        chado_type = self.chado_entity_types[self.fb_data_type]
-        self.log.info(f'Get associated data for {self.fb_data_type} data entities from {chado_type}-related chado tables.')
-        associated_data_types = ['pubs', 'synonyms', 'dbxrefs', 'props', 'prop_pubs', 'cvterms', 'cvtermprops']
-        pkey_name = self.chado_tables['primary_key'][chado_type]
-        for i in associated_data_types:
-            chado_table = self.chado_tables[i][chado_type]
-            self.log.info(f'Get {i} data.')
-            counter = 0
-            results = session.query(chado_table).distinct()
-            for result in results:
-                pkey_id = getattr(result, pkey_name)
-                self.fb_data_entities[pkey_id].__dict__[i].append(result)
-                counter += 1
-            self.log.info(f'Found {counter} {i} data elements.')
-        return
-
-    def get_entity_timestamps(self, session):
-        """Get timestamps for data entities."""
-        self.log.info(f'Get timestamps for FlyBase{self.fb_data_type} entities.')
-        chado_type = self.chado_entity_types[self.fb_data_type]
-        counter = 0
-        for i in self.fb_data_entities.values():
-            audit_query = f"""
-            SELECT DISTINCT record_pkey, transaction_timestamp
-            FROM audit_chado
-            WHERE audited_table = {chado_type}
-              AND record_pkey = {i.db_primary_id};
-            """
-            TIMESTAMP = 1
-            audit_results = session.execute(audit_query).fetchall()
-            for row in audit_results:
-                i.timestamps.append(row[TIMESTAMP])
-                counter += 1
-        self.log.info(f'Found {counter} timestamps.')
-        return
-
     def get_datatype_data(self, session):
         """Get datatype-specific FlyBase data from chado."""
-        self.log.info('Get datatype-specific FlyBase data from chado.')
-        if self.fb_data_type in self.chado_entity_types.keys():
-            self.get_entity_data(session)
-            self.get_entity_associated_data(session)
-            self.get_entity_timestamps(session)
+        self.log.info(f'Get FlyBase {self.fb_data_type} data from chado.')
         return
-
-    # Sub-methods for synthesize_info().
-    def synthesize_ncbi_taxon_id(self, fb_data_entity):
-        """Determine the NCBITaxon ID for the entity."""
-        # Catch cases where the FB data entity has no organism_id.
-        try:
-            organism_id = fb_data_entity.chado_obj.organism_id
-        except AttributeError:
-            self.log.warning(f'No organism_id for {fb_data_entity}.')
-            return None
-        # Catch cases where the FB data entity has no corresponding NCBITaxon ID.
-        try:
-            ncbi_taxon_id = f'NCBITaxon:{self.ncbi_taxon_dict[organism_id]}'
-        except KeyError:
-            self.log.warning(f'Use "unidentified" NCBITaxon ID for {fb_data_entity}')
-            ncbi_taxon_id = 'NCBITaxon:32644'
-        fb_data_entity.ncbi_taxon_id = ncbi_taxon_id
-
-    def synthesize_secondary_ids(self, fb_data_entity):
-        """Process secondary IDs and return a list of old FB uniquenames."""
-        secondary_ids = []
-        for xref in fb_data_entity.dbxrefs:
-            if xref.dbxref.db.name == 'FlyBase' and xref.is_current is False:
-                secondary_ids.append(f'FB:{xref.dbxref.accession}')
-        fb_data_entity.alt_fb_ids = list(set(secondary_ids))
 
     def synthesize_info(self):
         """Synthesize FB info for each data object."""
         self.log.info(f'Synthesize FlyBase "{self.fb_data_type}" data.')
-        return
-
-    # Sub-methods for map_fb_data_to_alliance().
-    def map_secondary_ids(self, fb_data_entity):
-        """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for a FlyBase entity."""
-        secondary_id_dtos = []
-        for secondary_id in fb_data_entity.alt_fb_ids:
-            sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(secondary_id).export()
-            secondary_id_dtos.append(sec_dto)
-        return secondary_id_dtos
-
-    def map_xrefs(self, fb_data_entity):
-        """Return a list of Alliance CrossReferenceDTO dicts for a FlyBase entity."""
-        cross_reference_dtos = []
-        for xref in fb_data_entity.dbxrefs:
-            # Skip xrefs from irrelevant database sources.
-            if xref.dbxref.db.name not in self.fb_agr_db_dict.keys():
-                continue
-            # Skip FlyBase xrefs: current xref will be in data_provider_dto; others as 2o IDs.
-            elif xref.dbxref.db.name == 'FlyBase':
-                continue
-            # Build Alliance xref DTO
-            prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
-            curie = f'{prefix}{xref.dbxref.accession}'
-            page_area = self.fb_data_type    # Must ensure that fb_data_types match Alliance resourceDescriptors.yaml page.
-            display_name = xref.dbxref.description
-            xref_dto = datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).export()
-            cross_reference_dtos.append(xref_dto)
-        fb_data_entity.linkmldto.cross_reference_dtos = cross_reference_dtos
-        return
-
-    def map_timestamps(self, fb_data_entity):
-        """Map timestamps to Alliance object."""
-        if fb_data_entity.timestamps:
-            fb_data_entity.linkmldto.date_created = strict_rfc3339.\
-                timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(min(fb_data_entity.timestamps)))
-            fb_data_entity.linkmldto.date_updated_curie = strict_rfc3339.\
-                timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(max(fb_data_entity.timestamps)))
-
-    def flag_internal_fb_entities(self, fb_data_entity):
-        """Flag obsolete FB objects as internal."""
-        if fb_data_entity.chado_obj.is_obsolete is True:
-            fb_data_entity.linkmldto.internal = True
         return
 
     def map_fb_data_to_alliance(self):
@@ -384,11 +222,204 @@ class DataHandler(object):
         return
 
 
-class StrainHandler(DataHandler):
+class EntityHandler(DataHandler):
+    """A generic entity handler (excludes associations/annotations) that gets FlyBase data and maps it to the Alliance LinkML model."""
+    def __init__(self, log: Logger, fb_data_type: str, agr_ingest_type: str):
+        """Create the generic EntityHandler object."""
+        super.__init__()
+
+    # Mappings of input fb_data_type to various data handling objects and chado tables.
+    main_chado_entity_types = {
+        'gene': 'feature',
+        'allele': 'feature',
+        'construct': 'feature',
+        'variation': 'feature',
+        'strain': 'strain'
+    }
+    chado_tables = {
+        'primary_key': {'feature': 'feature_id', 'strain': 'strain_id'},
+        'main_table': {'feature': Feature, 'strain': Strain},
+        'pubs': {'feature': FeaturePub, 'strain': StrainPub},
+        'synonyms': {'feature': FeatureSynonym, 'strain': StrainSynonym},
+        'dbxrefs': {'feature': FeatureDbxref, 'strain': StrainDbxref},
+        'props': {'feature': Featureprop, 'strain': Strainprop},
+        'prop_pubs': {'feature': FeaturepropPub, 'strain': StrainpropPub},
+        'cvterms': {'feature': FeatureCvterm, 'strain': StrainCvterm},
+        'cvtermprops': {'feature': FeatureCvtermprop, 'strain': StrainCvtermprop}
+    }
+    datatype_objects = {
+        # 'gene': datatypes.FBGene,
+        # 'allele': datatypes.FBAllele,
+        # 'construct': datatypes.FBConstruct,
+        # 'variation': datatypes.FBVariant,
+        'strain': datatypes.FBStrain,
+    }
+    subtypes = {
+        'gene': ['gene'],
+        'allele': ['allele'],
+        'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion', 'point_mutation', 'sequence_alteration', 'sequence_variant']
+    }
+
+    # Elaborate on get_datatype_data().
+    def get_entity_data(self, session):
+        """Get primary FlyBase data entitites (excludes associations/annotations)."""
+        chado_type = self.main_chado_entity_types[self.fb_data_type]
+        self.log.info(f'Get {self.fb_data_type} data entities from {chado_type} table.')
+        datatype_object = self.datatype_objects[self.fb_data_type](result)
+        chado_table = self.chado_tables['main_table'][chado_type]
+        filters = ()
+        if self.fb_data_type in self.regex.keys():
+            self.log.info(f'Use this regex: {self.regex[self.fb_data_type]}')
+            filters += (chado_table.uniquename.op('~')(self.regex[self.fb_data_type]), )
+        if self.fb_data_type in self.subtypes.keys():
+            self.log.info(f'Use these subtypes: {self.subtypes[self.fb_data_type]}')
+            filters += (chado_table.type.name.in_((self.subtypes[self.fb_data_type])), )
+        if len(filters) == 0:
+            self.log.warning('Have no filters for the main FlyBase entity driver query.')
+            raise
+        results = session.query(chado_table).filter(*filters).distinct()
+        pkey_name = self.chado_tables['primary_key'][chado_type]
+        self.log.info(f'Have this primary_key name: {pkey_name}')
+        for result in results:
+            pkey_id = getattr(result, pkey_name)
+            self.fb_data_entities[pkey_id] = datatype_object
+            self.input_count += 1
+        self.log.info(f'Found {self.input_count} FlyBase {self.fb_data_type} entities in chado.')
+        return
+
+    def get_entity_associated_data(self, session):
+        """Get data associated with FlyBase data entities."""
+        chado_type = self.main_chado_entity_types[self.fb_data_type]
+        self.log.info(f'Get associated data for {self.fb_data_type} data entities from {chado_type}-related chado tables.')
+        associated_data_types = ['pubs', 'synonyms', 'dbxrefs', 'props', 'prop_pubs', 'cvterms', 'cvtermprops']
+        pkey_name = self.chado_tables['primary_key'][chado_type]
+        for i in associated_data_types:
+            chado_table = self.chado_tables[i][chado_type]
+            self.log.info(f'Get {i} data for {chado_type}.')
+            counter = 0
+            results = session.query(chado_table).distinct()
+            for result in results:
+                pkey_id = getattr(result, pkey_name)
+                self.fb_data_entities[pkey_id].__dict__[i].append(result)
+                counter += 1
+            self.log.info(f'Found {counter} {i} data elements.')
+        return
+
+    def get_entity_timestamps(self, session):
+        """Get timestamps for data entities."""
+        self.log.info(f'Get timestamps for FlyBase{self.fb_data_type} entities.')
+        chado_type = self.main_chado_entity_types[self.fb_data_type]
+        counter = 0
+        for i in self.fb_data_entities.values():
+            audit_query = f"""
+            SELECT DISTINCT record_pkey, transaction_timestamp
+            FROM audit_chado
+            WHERE audited_table = {chado_type}
+              AND record_pkey = {i.db_primary_id};
+            """
+            TIMESTAMP = 1
+            audit_results = session.execute(audit_query).fetchall()
+            for row in audit_results:
+                i.timestamps.append(row[TIMESTAMP])
+                counter += 1
+        self.log.info(f'Found {counter} timestamps.')
+        return
+
+    def get_datatype_data(self, session):
+        """Extend the method for the EntityHandler."""
+        super.get_datatype_data(session)
+        if self.fb_data_type in self.main_chado_entity_types.keys():
+            self.get_entity_data(session)
+            self.get_entity_associated_data(session)
+            self.get_entity_timestamps(session)
+        return
+
+    # Elaborate on synthesize_info().
+    def synthesize_ncbi_taxon_id(self, fb_data_entity):
+        """Determine the NCBITaxon ID for the entity."""
+        # Catch cases where the FB data entity has no organism_id.
+        try:
+            organism_id = fb_data_entity.chado_obj.organism_id
+        except AttributeError:
+            self.log.warning(f'No organism_id for {fb_data_entity}.')
+            return None
+        # Catch cases where the FB data entity has no corresponding NCBITaxon ID.
+        try:
+            ncbi_taxon_id = f'NCBITaxon:{self.ncbi_taxon_dict[organism_id]}'
+        except KeyError:
+            self.log.warning(f'Use "unidentified" NCBITaxon ID for {fb_data_entity}')
+            ncbi_taxon_id = 'NCBITaxon:32644'
+        fb_data_entity.ncbi_taxon_id = ncbi_taxon_id
+        return
+
+    def synthesize_secondary_ids(self, fb_data_entity):
+        """Process secondary IDs and return a list of old FB uniquenames."""
+        secondary_ids = []
+        for xref in fb_data_entity.dbxrefs:
+            if xref.dbxref.db.name == 'FlyBase' and xref.is_current is False:
+                secondary_ids.append(f'FB:{xref.dbxref.accession}')
+        fb_data_entity.alt_fb_ids = list(set(secondary_ids))
+        return
+
+    def synthesize_info(self):
+        """Extend the method for the EntityHandler."""
+        super.synthesize_info()
+        for fb_entity in self.fb_data_entities.values():
+            self.synthesize_ncbi_taxon_id(fb_entity)
+            self.synthesize_secondary_ids(fb_entity)
+            self.map_xrefs(fb_entity)
+        return
+
+    # Create methods to be run within map_fb_data_to_alliance().
+    # However, run them only in more tailored handlers.
+    def map_secondary_ids(self, fb_data_entity):
+        """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for a FlyBase entity."""
+        secondary_id_dtos = []
+        for secondary_id in fb_data_entity.alt_fb_ids:
+            sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(secondary_id).export()
+            secondary_id_dtos.append(sec_dto)
+        return secondary_id_dtos
+
+    def map_xrefs(self, fb_data_entity):
+        """Return a list of Alliance CrossReferenceDTO dicts for a FlyBase entity."""
+        cross_reference_dtos = []
+        for xref in fb_data_entity.dbxrefs:
+            # Skip xrefs from irrelevant database sources.
+            if xref.dbxref.db.name not in self.fb_agr_db_dict.keys():
+                continue
+            # Skip FlyBase xrefs: current xref will be in data_provider_dto; others as 2o IDs.
+            elif xref.dbxref.db.name == 'FlyBase':
+                continue
+            # Build Alliance xref DTO
+            prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
+            curie = f'{prefix}{xref.dbxref.accession}'
+            page_area = self.fb_data_type    # Must ensure that fb_data_types match Alliance resourceDescriptors.yaml page.
+            display_name = xref.dbxref.description
+            xref_dto = datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).export()
+            cross_reference_dtos.append(xref_dto)
+        fb_data_entity.linkmldto.cross_reference_dtos = cross_reference_dtos
+        return
+
+    def map_timestamps(self, fb_data_entity):
+        """Map timestamps to Alliance object."""
+        if fb_data_entity.timestamps:
+            fb_data_entity.linkmldto.date_created = strict_rfc3339.\
+                timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(min(fb_data_entity.timestamps)))
+            fb_data_entity.linkmldto.date_updated_curie = strict_rfc3339.\
+                timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(max(fb_data_entity.timestamps)))
+
+    def flag_internal_fb_entities(self, fb_data_entity):
+        """Flag obsolete FB objects as internal."""
+        if fb_data_entity.chado_obj.is_obsolete is True:
+            fb_data_entity.linkmldto.internal = True
+        return
+
+
+class StrainHandler(EntityHandler):
     """This object gets, synthesizes and filters strain data for export."""
     def __init__(self, log, fb_data_type, agr_ingest_type):
         """Create the StrainHandler object."""
-        super().__init__(log, fb_data_type, agr_ingest_type)
+        super.__init__(log, fb_data_type, agr_ingest_type)
 
     # Export filters.
     required_fields = [
@@ -415,38 +446,7 @@ class StrainHandler(DataHandler):
         'taxon_curie'
     ]
 
-    # Sub-methods for and modifications to get_datatype_data().
-    def get_strains(self, session):
-        """Query chado for strains."""
-        self.log.info('Query chado for strains.')
-        filters = (
-            Strain.uniquename.op('~')(self.regex['strain']),
-        )
-        results = session.query(Strain).filter(*filters).distinct()
-        for strain in results:
-            self.fb_data_entities[strain.strain_id] = datatypes.FBStrain(strain)
-            self.input_count += 1
-        self.log.info(f'Found {self.input_count} FlyBase strains in chado.')
-        return
-
-    def get_datatype_data(self, session):
-        """Extend the method for the StrainHandler."""
-        super().get_datatype_data(session)
-        self.log.info(f'Run {self.fb_data_type}-specific queries.')
-        return
-
-    # Sub-methods for and modifications to synthesize_info().
-    def synthesize_info(self):
-        """Extend the method for the StrainHandler."""
-        super().synthesize_info()
-        for strain in self.fb_data_entities.values():
-            self.synthesize_ncbi_taxon_id(strain)
-            self.synthesize_secondary_ids(strain)
-            self.map_xrefs(strain)
-            strain.agm_secondary_id_dtos = self.map_secondary_ids(strain)
-        return
-
-    # Sub-methods for and modifications to map_fb_data_to_alliance()
+    # Elaborate on map_fb_data_to_alliance().
     def map_strain_basic(self, strain):
         """Map basic FlyBase strain data to the Alliance LinkML object."""
         agr_strain = datatypes.AffectedGenomicModelDTO()
@@ -462,12 +462,13 @@ class StrainHandler(DataHandler):
 
     def map_fb_data_to_alliance(self):
         """Extend the method for the StrainHandler."""
-        super().map_fb_data_to_alliance()
+        super.map_fb_data_to_alliance()
         for strain in self.fb_data_entities.values():
             self.map_strain_basic(strain)
             self.map_xrefs(strain)
-            self.flag_internal_fb_entities(strain)
             self.map_timestamps(strain)
+            strain.linkmldto.agm_secondary_id_dtos = self.map_secondary_ids(strain)
+            self.flag_internal_fb_entities(strain)
         return
 
 
