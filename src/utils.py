@@ -302,7 +302,7 @@ class EntityHandler(DataHandler):
                 pkey_id = getattr(result, pkey_name)
                 self.fb_data_entities[pkey_id].__dict__[i].append(result)
                 counter += 1
-            self.log.info(f'Found {counter} {i} data elements.')
+            self.log.info(f'Found {counter} {i} for {self.fb_data_type}.')
         return
 
     def get_entity_timestamps(self, session):
