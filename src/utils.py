@@ -265,7 +265,7 @@ class EntityHandler(DataHandler):
         """Get primary FlyBase data entitites (excludes associations/annotations)."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
         self.log.info(f'Get {self.fb_data_type} data entities from {chado_type} table.')
-        datatype_object = self.datatype_objects[self.fb_data_type](result)
+        datatype_object = self.datatype_objects[self.fb_data_type]
         chado_table = self.chado_tables['main_table'][chado_type]
         filters = ()
         if self.fb_data_type in self.regex.keys():
@@ -282,7 +282,7 @@ class EntityHandler(DataHandler):
         self.log.info(f'Have this primary_key name: {pkey_name}')
         for result in results:
             pkey_id = getattr(result, pkey_name)
-            self.fb_data_entities[pkey_id] = datatype_object
+            self.fb_data_entities[pkey_id] = datatype_object(result)
             self.input_count += 1
         self.log.info(f'Found {self.input_count} FlyBase {self.fb_data_type} entities in chado.')
         return
@@ -328,10 +328,9 @@ class EntityHandler(DataHandler):
     def get_datatype_data(self, session):
         """Extend the method for the EntityHandler."""
         super().get_datatype_data(session)
-        if self.fb_data_type in self.main_chado_entity_types.keys():
-            self.get_entity_data(session)
-            self.get_entity_associated_data(session)
-            self.get_entity_timestamps(session)
+        self.get_entity_data(session)
+        self.get_entity_associated_data(session)
+        self.get_entity_timestamps(session)
         return
 
     # Elaborate on synthesize_info().
