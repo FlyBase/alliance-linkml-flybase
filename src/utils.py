@@ -193,14 +193,17 @@ class DataHandler(object):
         chado_table = self.chado_tables['main_table'][chado_type]
         filters = ()
         if self.fb_data_type in self.regex.keys():
+            self.log.info(f'Use this regex: {self.regex[self.fb_data_type]}')
             filters += (chado_table.uniquename.op('~')(self.regex[self.fb_data_type]), )
         if self.fb_data_type in self.subtypes.keys():
+            self.log.info(f'Use these subtypes: {self.subtypes[self.fb_data_type]}')
             filters += (chado_table.type.name.in_((self.subtypes[self.fb_data_type])), )
         if len(filters) == 0:
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
         results = session.query(chado_table).filter(*filters).distinct()
         pkey_name = self.chado_tables['primary_key'][chado_type]
+        self.log.info(f'Have this primary_key name: {pkey_name}')
         for result in results:
             pkey_id = getattr(result, pkey_name)
             self.fb_data_entities[pkey_id] = result
