@@ -104,8 +104,8 @@ class DataHandler(object):
     # Methods
     def __str__(self):
         """Print out data handler description."""
-        self.log.info(f'A data handler that exports FB {self.fb_data_type} to Alliance LinkML {self.agr_ingest_type}.')
-        return
+        handler_description = f'A data handler that exports FB {self.fb_data_type} to Alliance LinkML {self.agr_ingest_type}.'
+        return handler_description
 
     # Sub-methods for get_general_data().
     def build_bibliography(self, session):
