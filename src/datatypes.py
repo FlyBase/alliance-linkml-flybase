@@ -28,7 +28,7 @@ class FBAssociation(FBEntity):
     """A generic FlyBase association/annotation."""
     def __init__(self, chado_objs):
         """Create the generic FlyBase association/annotation from the main db entry/entries."""
-        super().__init__()
+        super().__init__(chado_objs)
         self.chado_objs = chado_objs    # The defining SQLAlchemy chado object(s).
 
 
@@ -36,7 +36,7 @@ class FBDataEntity(FBEntity):
     """A generic FlyBase data entity with all it related data, excluding associations/annotations."""
     def __init__(self, chado_obj):
         """Create the generic FlyBase data entity object from the main db entry."""
-        super().__init__()
+        super().__init__(chado_obj)
         # Primary FB chado data.
         self.chado_obj = chado_obj      # The primary SQLAlchemy chado object.
         self.pubs = []                  # Pub associations: e.g., FeaturePub, StrainPub.
@@ -64,7 +64,7 @@ class FBStrain(FBDataEntity):
     """A FlyBase Strain entity with all its related data."""
     def __init__(self, chado_obj):
         """Create the FBStrain object."""
-        super().__init__()
+        super().__init__(chado_obj)
         self.db_primary_id = chado_obj.strain_id
         self.uniquename = chado_obj.uniquename
         self.organism_abbr = chado_obj.organism.abbreviation
