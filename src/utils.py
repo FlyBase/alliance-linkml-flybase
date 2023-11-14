@@ -11,16 +11,16 @@ Author(s):
 
 import json
 import datetime
-import json
 import strict_rfc3339
 from logging import Logger
 from sqlalchemy.orm import Session
 from harvdev_utils.production import (
-    Cv, Cvterm, Db, Dbxref, Organism, OrganismDbxref, Pub, PubDbxref, Synonym,
+    Cvterm, Db, Dbxref, OrganismDbxref, Pub, PubDbxref,
     Strain, StrainPub, StrainSynonym, StrainDbxref, Strainprop, StrainpropPub, StrainCvterm, StrainCvtermprop,
     Feature, FeaturePub, FeatureSynonym, FeatureDbxref, Featureprop, FeaturepropPub, FeatureCvterm, FeatureCvtermprop
 )
 import datatypes
+
 
 # Classes
 class DataHandler(object):
@@ -102,7 +102,7 @@ class DataHandler(object):
     # Methods
     def __str__(self):
         """Print out data handler description."""
-        self.log(f'A data handler that exports FB {self.fb_data_type} to Alliance LinkML {agr_ingest_type}.')
+        self.log(f'A data handler that exports FB {self.fb_data_type} to Alliance LinkML {self.agr_ingest_type}.')
         return
 
     # Sub-methods for get_general_data().
@@ -176,7 +176,7 @@ class DataHandler(object):
 
     def get_general_data(self, session):
         """Get general FlyBase chado data."""
-        self.log.info(f'Get general FlyBase data from chado.')
+        self.log.info('Get general FlyBase data from chado.')
         self.build_bibliography(session)
         self.get_cvterms(session)
         self.get_ncbi_taxon_ids(session)
@@ -235,7 +235,6 @@ class DataHandler(object):
             WHERE audited_table = {chado_type}
               AND record_pkey = {i.db_primary_id};
             """
-            UNIKEY = 0
             TIMESTAMP = 1
             audit_results = session.execute(audit_query).fetchall()
             for row in audit_results:
@@ -246,7 +245,7 @@ class DataHandler(object):
 
     def get_datatype_data(self, session):
         """Get datatype-specific FlyBase data from chado."""
-        self.log.info(f'Get datatype-specific FlyBase data from chado.')
+        self.log.info('Get datatype-specific FlyBase data from chado.')
         if self.fb_data_type in self.chado_entity_types.keys():
             self.get_entity_data(session)
             self.get_entity_associated_data(session)
@@ -425,14 +424,14 @@ class StrainHandler(DataHandler):
         return
 
     def get_datatype_data(self, session):
-        """Extend the get_datatype_data() method for the StrainHandler."""
+        """Extend the method for the StrainHandler."""
         super().query_chado(session)
         self.log.info(f'Run {self.fb_data_type}-specific queries.')
         return
 
     # Sub-methods for and modifications to synthesize_info().
     def synthesize_info(self):
-        """Extend the synthesize_info() method for the StrainHandler."""
+        """Extend the method for the StrainHandler."""
         super().synthesize_info()
         for strain in self.fb_data_entities.values():
             self.synthesize_ncbi_taxon_id(strain)
@@ -456,7 +455,7 @@ class StrainHandler(DataHandler):
         return
 
     def map_fb_data_to_alliance(self):
-        """Extend the map_fb_data_to_alliance() method for the StrainHandler."""
+        """Extend the method for the StrainHandler."""
         super().map_fb_data_to_alliance()
         for strain in self.fb_data_entities.values():
             self.map_strain_basic(strain)
@@ -468,8 +467,7 @@ class StrainHandler(DataHandler):
 
 # Functions
 def get_handler(log, fb_data_type: str, agr_ingest_type: str):
-    """Return the appropriate type of data handler given the input data type
-       the output ingest set.
+    """Return the appropriate type of data handler.
 
     Args:
         log (Logger): The global Logger object in the script using the DataHandler.
@@ -482,7 +480,7 @@ def get_handler(log, fb_data_type: str, agr_ingest_type: str):
     Raises:
         Raises a KeyError if the FB data type is not recognized.
 
-"""
+    """
     handler_type = (fb_data_type, agr_ingest_type)
     handler_dict = {
         # ('gene', 'gene_ingest_set'): GeneHandler,
@@ -536,4 +534,3 @@ def generate_export_file(export_dict: dict, log: Logger, output_filename: str):
         outfile.close()
     log.info('Done writing data to output JSON file.')
     return
-

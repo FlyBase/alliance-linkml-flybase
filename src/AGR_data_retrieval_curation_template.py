@@ -21,20 +21,11 @@ Notes:
 """
 
 import argparse
-import datetime
-import strict_rfc3339
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 # from sqlalchemy.orm.exc import NoResultFound
-from harvdev_utils.production import (
-    Cvterm, Db, Dbxref, OrganismDbxref, Pub, PubDbxref, Strain, StrainDbxref,
-    StrainPub, StrainSynonym, Synonym
-)
 from harvdev_utils.psycopg_functions import set_up_db_reading
 from utils import get_handler, db_query_transaction, generate_export_file
-from datatypes import (
-    FlyBaseDataEntity, AuditedObjectDTO, DataProviderDTO
-)
 
 # Data types handled by this script.
 FB_STRAIN_DATA_TYPE = 'strain'
