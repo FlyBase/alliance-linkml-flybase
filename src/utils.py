@@ -174,6 +174,7 @@ class DataHandler(object):
         for xref in results:
             self.ncbi_taxon_dict[xref.OrganismDbxref.organism_id] = xref.Dbxref.accession
             counter += 1
+        self.log.info(f'Found {counter} NCBITaxon IDs for FlyBase organisms.')
         return
 
     def get_general_data(self, session):
@@ -427,7 +428,7 @@ class StrainHandler(DataHandler):
 
     def get_datatype_data(self, session):
         """Extend the method for the StrainHandler."""
-        super().query_chado(session)
+        super().get_datatype_data(session)
         self.log.info(f'Run {self.fb_data_type}-specific queries.')
         return
 
@@ -493,7 +494,7 @@ def get_handler(log: Logger, fb_data_type: str, agr_ingest_type: str):
     }
     try:
         data_handler = handler_dict[handler_type](log, fb_data_type, agr_ingest_type)
-        log.info(f'{data_handler}')
+        log.info(f'Returning: {data_handler}')
     except KeyError:
         log.error.append(f'Unrecognized FB data type and/or Alliance ingest set: {handler_type}.')
         raise
