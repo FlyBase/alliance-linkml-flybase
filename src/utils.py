@@ -60,20 +60,20 @@ class DataHandler(object):
     regex = {
         'pub': r'^(FBrf[0-9]{7}|unattributed)$',
         'feature': r'^FB[a-z]{2}[0-9]{7,10}$',
-        'gene': r'^FBgn[0-9][7]$',
-        'allele': r'^FBal[0-9][7]$',
-        'construct': r'^FBtp[0-9][7]$',
-        'insertion': r'^FBti[0-9][7]$',
-        'consins': r'^FB(tp|ti)[0-9][7]$',
-        'aberration': r'^FBab[0-9][7]$',
-        'balancer': r'^FBba[0-9][7]$',
-        'abbal': r'^FB(ab|ba)[0-9][7]$',
-        'seqfeat': r'^FBsf[0-9][10]$',
-        'chem': r'^FBch[0-9][7]$',
-        'genotype': r'^FBgo[0-9][7]$',
-        'strain': r'^FBsn[0-9][7]$',
-        'library': r'^FBlc[0-9][7]$',
-        'cell': r'^FBcl[0-9][7]$'
+        'gene': r'^FBgn[0-9]{7}$',
+        'allele': r'^FBal[0-9]{7}$',
+        'construct': r'^FBtp[0-9]{7}$',
+        'insertion': r'^FBti[0-9]{7}$',
+        'consins': r'^FB(tp|ti)[0-9]{7}$',
+        'aberration': r'^FBab[0-9]{7}$',
+        'balancer': r'^FBba[0-9]{7}$',
+        'abbal': r'^FB(ab|ba)[0-9]{7}$',
+        'seqfeat': r'^FBsf[0-9]{10}$',
+        'chem': r'^FBch[0-9]{7}$',
+        'genotype': r'^FBgo[0-9]{7}$',
+        'strain': r'^FBsn[0-9]{7}$',
+        'library': r'^FBlc[0-9]{7}$',
+        'cell': r'^FBcl[0-9]{7}$'
     }
     # Subtype list used to filter to specific FB data type within a chado table.
     subtypes = {
