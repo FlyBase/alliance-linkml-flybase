@@ -327,7 +327,7 @@ class EntityHandler(DataHandler):
 
     def get_datatype_data(self, session):
         """Extend the method for the EntityHandler."""
-        super.get_datatype_data(session)
+        super().get_datatype_data(session)
         if self.fb_data_type in self.main_chado_entity_types.keys():
             self.get_entity_data(session)
             self.get_entity_associated_data(session)
@@ -363,7 +363,7 @@ class EntityHandler(DataHandler):
 
     def synthesize_info(self):
         """Extend the method for the EntityHandler."""
-        super.synthesize_info()
+        super().synthesize_info()
         for fb_entity in self.fb_data_entities.values():
             self.synthesize_ncbi_taxon_id(fb_entity)
             self.synthesize_secondary_ids(fb_entity)
@@ -462,7 +462,7 @@ class StrainHandler(EntityHandler):
 
     def map_fb_data_to_alliance(self):
         """Extend the method for the StrainHandler."""
-        super.map_fb_data_to_alliance()
+        super().map_fb_data_to_alliance()
         for strain in self.fb_data_entities.values():
             self.map_strain_basic(strain)
             self.map_xrefs(strain)
