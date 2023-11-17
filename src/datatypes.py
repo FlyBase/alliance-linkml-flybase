@@ -44,8 +44,8 @@ class FBDataEntity(FBEntity):
         self.dbxrefs = []               # Dbxref associations: e.g., FeatureDbxref, StrainDbxref.
         self.cvterms = []               # Cvterm associations: e.g., FeatureCvterm, StrainCvterm.
         self.cvtermprops = []           # Cvtermprop associations: e.g., FeatureCvtermprop, StrainDbxref.
-        self.props = []                 # entity props: e.g., Featureprop, Strainprop.
-        self.prop_pubs = []             # entity prop pubs: e.g., FeaturepropPub, StrainpropPub.
+        self.props = {}                 # cvterm name-keyed lists of entity props: e.g., Featureprop, Strainprop.
+        self.prop_pubs = {}             # prop_id-keyed lists of pub_ids.
         self.timestamps = []            # FB timestamps.
         # Processed FB data.
         self.organism_abbr = None       # The organism.abbreviation (str).

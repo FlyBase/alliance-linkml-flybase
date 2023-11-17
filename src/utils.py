@@ -14,6 +14,7 @@ import datetime
 import strict_rfc3339
 from logging import Logger
 from sqlalchemy.orm import Session
+# from sqlalchemy.inspection import inspect
 from harvdev_utils.production import (
     Cvterm, Db, Dbxref, OrganismDbxref, Pub, PubDbxref,
     Strain, StrainPub, StrainSynonym, StrainDbxref, Strainprop, StrainpropPub, StrainCvterm, StrainCvtermprop,
@@ -24,19 +25,18 @@ import datatypes
 
 # Classes
 class DataHandler(object):
-    """A generic data handler that gets FlyBase data and maps it to the Alliance LinkML model."""
-    def __init__(self, log: Logger, fb_data_type: str, agr_ingest_type: str):
+    """A generic data handler that gets FlyBase data and maps it to a single Alliance LinkML model."""
+    def __init__(self, log: Logger, fb_data_type: str):
         """Create the generic DataHandler object.
 
         Args:
             log (Logger): The global Logger object in the script using the DataHandler.
             fb_data_type (str): The FlyBase data class being handled.
-            agr_ingest_type (str): The Alliance ingest_set to which FlyBase data is mapped: e.g., allele_ingest_set.
 
         """
         self.log = log
         self.fb_data_type = fb_data_type
-        self.agr_ingest_type = agr_ingest_type
+        self.agr_ingest_type = self.agr_ingest_type_dict[fb_data_type]
         # Datatype bins.
         self.fb_data_entities = {}    # db_primary_id-keyed dict of chado objects to export.
         self.export_data = []         # List of data objects for export (as Alliance ingest set).
@@ -51,9 +51,20 @@ class DataHandler(object):
         self.warnings = []            # Handler issues of note.
         self.errors = []              # Handler issues that break things.
 
-    # Export filters (must be filled out in detail for each specific data handler).
+    # Correspondence of FB data type to Alliance data transfer ingest set.
+    agr_ingest_type_dict = {
+        'gene': 'gene_ingest_set',
+        'allele': 'allele_ingest_set',
+        'strain': 'agm_ingest_set',
+        'genotype': 'agm_ingest_set',
+        'disease': 'disease_allele_ingest_set'
+    }
+    # Export directions (must be filled out in detail for each specific data handler).
     required_fields = []
     output_fields = []
+    # A filter for xrefs to export, with dict keys as FB db.names and dict values as Alliance db names.
+    # Alliance db names should correspond to the contents of this file:
+    # https://github.com/alliance-genome/agr_schemas/blob/master/resourceDescriptors.yaml
     fb_agr_db_dict = {'FlyBase': 'FB'}
 
     # Useful regexes.
@@ -224,9 +235,9 @@ class DataHandler(object):
 
 class EntityHandler(DataHandler):
     """A generic entity handler (excludes associations/annotations) that gets FlyBase data and maps it to the Alliance LinkML model."""
-    def __init__(self, log: Logger, fb_data_type: str, agr_ingest_type: str):
+    def __init__(self, log: Logger, fb_data_type: str):
         """Create the generic EntityHandler object."""
-        super().__init__(log, fb_data_type, agr_ingest_type)
+        super().__init__(log, fb_data_type)
 
     # Mappings of input fb_data_type to various data handling objects and chado tables.
     main_chado_entity_types = {
@@ -260,6 +271,23 @@ class EntityHandler(DataHandler):
         'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion', 'point_mutation', 'sequence_alteration', 'sequence_variant']
     }
 
+    def nj_test(self, session):
+        """Test natural join."""
+        filters = (
+            Feature.uniquename == 'lbe'
+        )
+        results = session.query(FeatureCvterm).\
+            select_from(FeatureCvterm).\
+            join(Feature).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for i in results:
+            self.log.info(f'BOB: Found this lbe CVterm association: {i.cvterm.name}')
+            counter += 1
+        self.log.info(f'Found {counter} test results using natural join')
+        return
+
     # Elaborate on get_datatype_data().
     def get_entity_data(self, session):
         """Get primary FlyBase data entitites (excludes associations/annotations)."""
@@ -272,7 +300,7 @@ class EntityHandler(DataHandler):
             self.log.info(f'Use this regex: {self.regex[self.fb_data_type]}')
             filters += (chado_table.uniquename.op('~')(self.regex[self.fb_data_type]), )
         if self.fb_data_type in self.subtypes.keys():
-            self.log.info(f'Use these subtypes: {self.subtypes[self.fb_data_type]}')
+            self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.fb_data_type]}')
             filters += (chado_table.type.name.in_((self.subtypes[self.fb_data_type])), )
         if len(filters) == 0:
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
@@ -291,18 +319,67 @@ class EntityHandler(DataHandler):
         """Get data associated with FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
         self.log.info(f'Get associated data for {self.fb_data_type} data entities from {chado_type}-related chado tables.')
-        associated_data_types = ['pubs', 'synonyms', 'dbxrefs', 'props', 'prop_pubs', 'cvterms', 'cvtermprops']
+        # associated_data_types = ['pubs', 'synonyms', 'dbxrefs', 'props', 'prop_pubs', 'cvterms', 'cvtermprops']
+        associated_data_types = ['pubs', 'synonyms', 'dbxrefs']
         pkey_name = self.chado_tables['primary_key'][chado_type]
         for i in associated_data_types:
             chado_table = self.chado_tables[i][chado_type]
+            filter_dict = {
+                'feature': (chado_table.feature_id.in_(self.fb_data_entities.keys()), ),
+                'strain': (chado_table.strain_id.in_(self.fb_data_entities.keys()), )
+            }
+            filters = filter_dict[chado_type]
             self.log.info(f'Get {i} data for {chado_type}.')
             counter = 0
-            results = session.query(chado_table).distinct()
+            pass_counter = 0
+            results = session.query(chado_table).filter(*filters).distinct()
             for result in results:
                 pkey_id = getattr(result, pkey_name)
-                self.fb_data_entities[pkey_id].__dict__[i].append(result)
-                counter += 1
+                try:
+                    self.fb_data_entities[pkey_id].__dict__[i].append(result)
+                    counter += 1
+                except KeyError:
+                    pass_counter += 1
             self.log.info(f'Found {counter} {i} for {self.fb_data_type}.')
+            self.log.info(f'Ignored {pass_counter} {i} for {self.fb_data_type}.')
+        return
+
+    def get_entity_props(self, session):
+        """Get props for FlyBase data entities."""
+        chado_type = self.main_chado_entity_types[self.fb_data_type]
+        chadoprop_table = self.chado_tables['props'][chado_type]
+        self.log.info(f'Get props for {self.fb_data_type} data entities from {chadoprop_table} chado table.')
+        pkey_name = self.chado_tables['primary_key'][chado_type]
+        filter_dict = {
+            'feature': (chadoprop_table.feature_id.in_(self.fb_data_entities.keys()), ),
+            'strain': (chadoprop_table.strain_id.in_(self.fb_data_entities.keys()), )
+        }
+        filters = filter_dict[chado_type]
+        counter = 0
+        pass_counter = 0
+        results = session.query(chadoprop_table).filter(*filters).distinct()
+        for result in results:
+            pkey_id = getattr(result, pkey_name)
+            if pkey_id not in self.fb_data_entities.keys():
+                pass_counter += 1
+                continue
+            try:
+                self.fb_data_entities[pkey_id].props[result.type.name].append(result)
+                counter += 1
+            except KeyError:
+                self.fb_data_entities[pkey_id].props[result.type.name] = [result]
+                counter += 1
+        self.log.info(f'Found {counter} props for {self.fb_data_type}.')
+        self.log.info(f'Ignored {pass_counter} props for {self.fb_data_type}.')
+        return
+
+    def get_entity_prop_pubs(self, session):
+        """Get prop pubs for FlyBase data entities."""
+        chado_type = self.main_chado_entity_types[self.fb_data_type]
+        chadoprop_table = self.chado_tables['props'][chado_type]
+        chadoprop_pub_table = self.chado_tables['prop_pubs'][chado_type]
+        self.log.info(f'Get prop pubs for {self.fb_data_type} data entities from {chadoprop_table} and {chadoprop_pub_table} chado tables.')
+        # To Do
         return
 
     def get_entity_timestamps(self, session):
@@ -328,8 +405,12 @@ class EntityHandler(DataHandler):
     def get_datatype_data(self, session):
         """Extend the method for the EntityHandler."""
         super().get_datatype_data(session)
+        self.nj_test(session)
         self.get_entity_data(session)
         self.get_entity_associated_data(session)
+        self.get_entity_props(session)
+        self.get_entity_prop_pubs(session)
+        # self.get_cvterms(session)
         self.get_entity_timestamps(session)
         return
 
@@ -416,9 +497,9 @@ class EntityHandler(DataHandler):
 
 class StrainHandler(EntityHandler):
     """This object gets, synthesizes and filters strain data for export."""
-    def __init__(self, log, fb_data_type, agr_ingest_type):
+    def __init__(self, log, fb_data_type):
         """Create the StrainHandler object."""
-        super().__init__(log, fb_data_type, agr_ingest_type)
+        super().__init__(log, fb_data_type)
 
     # Export filters.
     required_fields = [
@@ -472,13 +553,12 @@ class StrainHandler(EntityHandler):
 
 
 # Functions
-def get_handler(log: Logger, fb_data_type: str, agr_ingest_type: str):
+def get_handler(log: Logger, fb_data_type: str):
     """Return the appropriate type of data handler.
 
     Args:
         log (Logger): The global Logger object in the script using the DataHandler.
         fb_data_type (str): The FB data type to export: e.g., strain, genotype.
-        agr_ingest_type (str): The LinkML set to export: e.g., agm_ingest_set.
 
     Returns:
         A data handler of the appropriate type for the FB data type.
@@ -487,19 +567,18 @@ def get_handler(log: Logger, fb_data_type: str, agr_ingest_type: str):
         Raises a KeyError if the FB data type is not recognized.
 
     """
-    log.info(f'Get handler for {fb_data_type} and {agr_ingest_type}.')
-    handler_type = (fb_data_type, agr_ingest_type)
+    log.info(f'Get handler for {fb_data_type}.')
     handler_dict = {
-        # ('gene', 'gene_ingest_set'): GeneHandler,
-        # ('allele', 'allele_ingest_set'): AlleleHandler,
-        ('strain', 'agm_ingest_set'): StrainHandler,
-        # ('genotype', 'agm_ingest_set': GenotypeHandler,
+        # 'gene': GeneHandler,
+        # 'allele': AlleleHandler,
+        'strain': StrainHandler,
+        # 'genotype': GenotypeHandler,
     }
     try:
-        data_handler = handler_dict[handler_type](log, fb_data_type, agr_ingest_type)
+        data_handler = handler_dict[fb_data_type](log, fb_data_type)
         log.info(f'Returning: {data_handler}')
     except KeyError:
-        log.error.append(f'Unrecognized FB data type and/or Alliance ingest set: {handler_type}.')
+        log.error.append(f'Unrecognized FB data type and/or Alliance ingest set: {fb_data_type}.')
         raise
     return data_handler
 

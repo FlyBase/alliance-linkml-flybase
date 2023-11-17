@@ -30,7 +30,6 @@ from utils import get_handler, db_query_transaction, generate_export_file
 # Data types handled by this script.
 FB_STRAIN_DATA_TYPE = 'strain'
 FB_GENOTYPE_DATA_TYPE = 'genotype'
-AGR_INGEST_TYPE = 'agm_ingest_set'
 REPORT_LABEL = 'agm_curation'
 
 # Now proceed with generic setup.
@@ -73,7 +72,7 @@ def main():
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Get the data and process it.
-    strain_handler = get_handler(log, FB_STRAIN_DATA_TYPE, AGR_INGEST_TYPE)
+    strain_handler = get_handler(log, FB_STRAIN_DATA_TYPE)
     db_query_transaction(session, log, strain_handler)
 
     # Export the data.
@@ -82,9 +81,9 @@ def main():
         'alliance_member_release_version': fb_release,
     }
     # Start export list with strains.
-    export_dict[AGR_INGEST_TYPE] = []
-    export_dict[AGR_INGEST_TYPE].extend(strain_handler.export_data)
-    # export_dict[AGR_INGEST_TYPE].extend(genotype_handler.export_data)    # To do
+    export_dict[strain_handler.agr_ingest_type] = []
+    export_dict[strain_handler.agr_ingest_type].extend(strain_handler.export_data)
+    # export_dict[genotype_handler.agr_ingest_type].extend(genotype_handler.export_data)    # To do
     generate_export_file(export_dict, log, output_filename)
 
     log.info('Ended main function.\n')
