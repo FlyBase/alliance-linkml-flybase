@@ -274,16 +274,16 @@ class EntityHandler(DataHandler):
     def nj_test(self, session):
         """Test natural join."""
         self.log.info('BOB: TEST')
+        lbe_types = ['gene']
         filters = (
             Feature.uniquename == 'FBgn0011278',
         )
-        lbe_types = ['gene']
         filters += (
-            Feature.type.name.in_((lbe_types)), 
+            Cvterm.name.in_((lbe_types)),
         )
-        results = session.query(FeatureCvterm).\
-            select_from(FeatureCvterm).\
-            join(Feature).\
+        results = session.query(Feature).\
+            select_from(Feature).\
+            join(Cvterm).\
             filter(*filters).\
             distinct()
         counter = 0
@@ -313,7 +313,7 @@ class EntityHandler(DataHandler):
         if self.fb_data_type in self.subtypes.keys():
             results = session.query(chado_table).\
                 select_from(chado_table).\
-                join(Cvterm).\
+                join(Cvterm, (Cvterm.cvterm_id == chado_table.type_id)).\
                 filter(*filters).\
                 distinct()
         else:
