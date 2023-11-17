@@ -279,7 +279,7 @@ class EntityHandler(DataHandler):
         )
         lbe_types = ['gene']
         filters += (
-            Feature.type.name.in_((lbe_types))
+            Feature.type.name.in_((lbe_types)), 
         )
         results = session.query(FeatureCvterm).\
             select_from(FeatureCvterm).\
@@ -306,11 +306,20 @@ class EntityHandler(DataHandler):
             filters += (chado_table.uniquename.op('~')(self.regex[self.fb_data_type]), )
         if self.fb_data_type in self.subtypes.keys():
             self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.fb_data_type]}')
-            filters += (chado_table.type.name.in_((self.subtypes[self.fb_data_type])), )
+            filters += (Cvterm.name.in_((self.subtypes[self.fb_data_type])), )
         if len(filters) == 0:
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
-        results = session.query(chado_table).filter(*filters).distinct()
+        if self.fb_data_type in self.subtypes.keys():
+            results = session.query(chado_table).\
+                select_from(chado_table).\
+                join(Cvterm).\
+                filter(*filters).\
+                distinct()
+        else:
+            results = session.query(chado_table).\
+                filter(*filters).\
+                distinct()
         pkey_name = self.chado_tables['primary_key'][chado_type]
         self.log.info(f'Have this primary_key name: {pkey_name}')
         for result in results:
