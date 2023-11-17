@@ -277,6 +277,10 @@ class EntityHandler(DataHandler):
         filters = (
             Feature.uniquename == 'FBgn0011278',
         )
+        lbe_types = ['gene']
+        filters += (
+            Feature.type.name.in_((lbe_types))
+        )
         results = session.query(FeatureCvterm).\
             select_from(FeatureCvterm).\
             join(Feature).\
