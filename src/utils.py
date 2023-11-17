@@ -419,7 +419,7 @@ class EntityHandler(DataHandler):
     def get_datatype_data(self, session):
         """Extend the method for the EntityHandler."""
         super().get_datatype_data(session)
-        self.nj_test(session)
+        self.sqlalchemy_test(session)
         self.get_entity_data(session)
         self.get_entity_associated_data(session)
         self.get_entity_props(session)
