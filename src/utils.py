@@ -273,6 +273,7 @@ class EntityHandler(DataHandler):
 
     def nj_test(self, session):
         """Test natural join."""
+        self.log.info('BOB: TEST')
         filters = (
             Feature.uniquename == 'lbe'
         )
