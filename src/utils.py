@@ -271,9 +271,9 @@ class EntityHandler(DataHandler):
         'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion', 'point_mutation', 'sequence_alteration', 'sequence_variant']
     }
 
-    def nj_test(self, session):
-        """Test natural join."""
-        self.log.info('BOB: TEST')
+    def sqlalchemy_test(self, session):
+        """Test SQLAlchemy behavior."""
+        self.log.info('Test SQLAlchemy behavior.')
         lbe_types = ['gene']
         filters = (
             Feature.uniquename == 'FBgn0011278',
@@ -283,12 +283,12 @@ class EntityHandler(DataHandler):
         )
         results = session.query(Feature).\
             select_from(Feature).\
-            join(Cvterm).\
+            join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
             filter(*filters).\
             distinct()
         counter = 0
         for i in results:
-            self.log.info(f'BOB: Found this lbe CVterm association: {i.cvterm.name}')
+            self.log.info(f'Found this feature: {i.name} {i.uniquename})')
             counter += 1
         self.log.info(f'Found {counter} test results using natural join')
         return
