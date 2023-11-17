@@ -275,7 +275,7 @@ class EntityHandler(DataHandler):
         """Test natural join."""
         self.log.info('BOB: TEST')
         filters = (
-            Feature.uniquename == 'lbe',
+            Feature.uniquename == 'FBgn0011278',
         )
         results = session.query(FeatureCvterm).\
             select_from(FeatureCvterm).\
