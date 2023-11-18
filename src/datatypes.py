@@ -87,7 +87,7 @@ class AuditedObjectDTO(object):
         """Return a JSON-friendly dict for cases where inlined object is required."""
         export_dict = {}
         for attr in self.__dict__.keys():
-            if getattr(self, attr) or attr in self.required_fields:
+            if getattr(self, attr) is not None or getattr(self, attr) != [] or attr in self.required_fields:
                 export_dict[attr] = getattr(self, attr)
         return export_dict
 
