@@ -434,6 +434,10 @@ class PrimaryEntityHandler(DataHandler):
         prop_chado_table = self.chado_tables['props'][chado_type]
         prop_pub_chado_table = self.chado_tables['prop_pubs'][chado_type]
         self.log.info(f'Get prop pubs for {self.fb_data_type} data entities from {chado_type}prop and {chado_type}prop_pub chado tables.')
+        self.log.debug(f'main_chado_table = {main_chado_table}')
+        self.log.debug(f'main_chado_table = {prop_chado_table}')
+        self.log.debug(f'main_chado_table = {prop_pub_chado_table}')
+
         pkey_name = self.chado_tables['primary_key'][chado_type]
         self.log.info(f'Use this primary key name: {pkey_name}')
         # Get the foreign key in associated table corresponding to primary data type.
@@ -443,14 +447,13 @@ class PrimaryEntityHandler(DataHandler):
         )
         counter = 0
         pass_counter = 0
-        results = session.query(main_chado_table, prop_chado_table, prop_pub_chado_table).\
-            select_from(main_chado_table).\
-            join(prop_chado_table).\
+        results = session.query(prop_chado_table, prop_pub_chado_table).\
+            select_from(prop_chado_table).\
             join(prop_pub_chado_table).\
             filter(*filters).\
             distinct()
         for result in results:
-            pkey_id = getattr(result.main_chado_table, pkey_name)
+            pkey_id = getattr(result.prop_chado_table, pkey_name)
             if pkey_id not in self.fb_data_entities.keys():
                 pass_counter += 1
                 continue
@@ -474,6 +477,7 @@ class PrimaryEntityHandler(DataHandler):
         chado_type = self.main_chado_entity_types[self.fb_data_type]
         counter = 0
         for i in self.fb_data_entities.values():
+            self.log.debug(f'Have this db_primary_id: {i.db_primary_id}')
             audit_query = f"""
             SELECT DISTINCT record_pkey, transaction_timestamp
             FROM audit_chado
