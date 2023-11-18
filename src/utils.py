@@ -533,7 +533,6 @@ class PrimaryEntityHandler(DataHandler):
         for fb_entity in self.fb_data_entities.values():
             self.synthesize_ncbi_taxon_id(fb_entity)
             self.synthesize_secondary_ids(fb_entity)
-            self.map_xrefs(fb_entity)
         return
 
     # Elaborate on map_fb_data_to_alliance() sub-methods for PrimaryEntityHandler.
