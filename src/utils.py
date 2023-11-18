@@ -212,7 +212,7 @@ class DataHandler(object):
     def generate_export_dict(self):
         """Generate LinkML export dict from the primary FB data entities."""
         for i in self.fb_data_entities.values():
-            self.total_input_count += 1
+            self.input_count += 1
             if i.for_alliance_export is False:
                 self.log.debug(f'Suppress {i} from export: {i.export_warnings}')
                 continue
