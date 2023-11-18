@@ -357,13 +357,9 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Use this primary key name: {pkey_name}')
         # associated_data_types = ['pubs', 'synonyms', 'dbxrefs', 'props', 'prop_pubs', 'cvterms', 'cvtermprops']
         associated_data_types = ['pubs', 'synonyms', 'dbxrefs']
-
-        ########################################################################
-        ########################################################################
-        ########################################################################
-        ########################################################################
-
-        # BOB - WORKING HERE
+        # BOB - when I start working on larger data like alleles, I need to figure out if it's more efficient to:
+        # 1) Keep filter as is (check if feature_id in self.fb_data_entities.keys())
+        # 2) Or, query for each allele in self.fb_data_entities.keys(), one-at-a-time, setting foreign_key to allele's feature_id.
         for i in associated_data_types:
             self.log.info(f'Get {i} for {self.fb_data_type}')
             asso_chado_table = self.chado_tables[i][chado_type]
@@ -390,28 +386,33 @@ class PrimaryEntityHandler(DataHandler):
             self.log.info(f'Ignored {pass_counter} {i} for {self.fb_data_type}.')
         return
 
-        ############################################
-        ############################################
-        ############################################
-        ############################################
-        ############################################
-
-
-
     def get_entity_props(self, session):
-        """Get props for FlyBase data entities."""
+        """Get props for primary FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
-        chadoprop_table = self.chado_tables['props'][chado_type]
-        self.log.info(f'Get props for {self.fb_data_type} data entities from {chadoprop_table} chado table.')
+        main_chado_table = self.chado_tables['main_table'][chado_type]
+        prop_chado_table = self.chado_tables['props'][chado_type]
+        self.log.info(f'Get props for {self.fb_data_type} data entities from {chado_type}prop table.')
         pkey_name = self.chado_tables['primary_key'][chado_type]
-        filter_dict = {
-            'feature': (chadoprop_table.feature_id.in_(self.fb_data_entities.keys()), ),
-            'strain': (chadoprop_table.strain_id.in_(self.fb_data_entities.keys()), )
-        }
-        filters = filter_dict[chado_type]
+        self.log.info(f'Use this primary key name: {pkey_name}')
+        # Get the foreign key in associated table corresponding to primary data type.
+        foreign_key_column = next((column for column in prop_chado_table.__table__.c if column.foreign_keys and column.name == pkey_name), None)
+        filters = (
+            foreign_key_column.in_((self.fb_data_entities.keys())),
+        )
         counter = 0
         pass_counter = 0
-        results = session.query(chadoprop_table).filter(*filters).distinct()
+        results = session.query(prop_chado_table).\
+            select_from(prop_chado_table).\
+            join(main_chado_table).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        pass_counter = 0
+        results = session.query(prop_chado_table).\
+            select_from(prop_chado_table).\
+            join(main_chado_table).\
+            filter(*filters).\
+            distinct()
         for result in results:
             pkey_id = getattr(result, pkey_name)
             if pkey_id not in self.fb_data_entities.keys():
@@ -432,7 +433,7 @@ class PrimaryEntityHandler(DataHandler):
         chado_type = self.main_chado_entity_types[self.fb_data_type]
         chadoprop_table = self.chado_tables['props'][chado_type]
         chadoprop_pub_table = self.chado_tables['prop_pubs'][chado_type]
-        self.log.info(f'Get prop pubs for {self.fb_data_type} data entities from {chadoprop_table} and {chadoprop_pub_table} chado tables.')
+        self.log.info(f'BOB: Get prop pubs for {self.fb_data_type} data entities from {chadoprop_table} and {chadoprop_pub_table} chado tables.')
         # To Do
         return
 
