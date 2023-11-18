@@ -87,7 +87,7 @@ class AuditedObjectDTO(object):
         """Return a JSON-friendly dict for cases where inlined object is required."""
         export_dict = self.__dict__
         export_dict.pop('required_fields')
-        for k, v in export_dict.items():
+        for k, v in self.__dict__.items():
             if v is None or v == []:
                 export_dict.pop(k)
         return export_dict
