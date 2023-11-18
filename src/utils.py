@@ -13,7 +13,7 @@ import json
 import datetime
 import strict_rfc3339
 from logging import Logger
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import aliased, Session
 # from sqlalchemy.inspection import inspect
 from harvdev_utils.production import (
     Cvterm, Db, Dbxref, OrganismDbxref, Pub, PubDbxref,
@@ -430,14 +430,11 @@ class PrimaryEntityHandler(DataHandler):
     def get_entity_prop_pubs(self, session):
         """Get prop pubs for FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
-        main_chado_table = self.chado_tables['main_table'][chado_type]
-        prop_chado_table = self.chado_tables['props'][chado_type]
-        prop_pub_chado_table = self.chado_tables['prop_pubs'][chado_type]
+        prop_chado_table = aliased(self.chado_tables['props'][chado_type], name='prop_chado_table')
+        prop_pub_chado_table = aliased(self.chado_tables['prop_pubs'][chado_type], name='prop_pub_chado_table')
         self.log.info(f'Get prop pubs for {self.fb_data_type} data entities from {chado_type}prop and {chado_type}prop_pub chado tables.')
-        self.log.debug(f'main_chado_table = {main_chado_table}')
-        self.log.debug(f'main_chado_table = {prop_chado_table}')
-        self.log.debug(f'main_chado_table = {prop_pub_chado_table}')
-
+        self.log.debug(f'prop_chado_table = {prop_chado_table}')
+        self.log.debug(f'prop_pub_chado_table = {prop_pub_chado_table}')
         pkey_name = self.chado_tables['primary_key'][chado_type]
         self.log.info(f'Use this primary key name: {pkey_name}')
         # Get the foreign key in associated table corresponding to primary data type.
