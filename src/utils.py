@@ -390,7 +390,7 @@ class PrimaryEntityHandler(DataHandler):
         chado_type = self.main_chado_entity_types[self.fb_data_type]
         main_chado_table = self.chado_tables['main_table'][chado_type]
         prop_chado_table = self.chado_tables['props'][chado_type]
-        self.log.info(f'Get props for {self.fb_data_type} data entities from {chado_type}prop table.')
+        self.log.info(f'Get props for {self.fb_data_type} data entities from {chado_type}prop chado table.')
         pkey_name = self.chado_tables['primary_key'][chado_type]
         self.log.info(f'Use this primary key name: {pkey_name}')
         # Get the foreign key in associated table corresponding to primary data type.
@@ -430,15 +430,47 @@ class PrimaryEntityHandler(DataHandler):
     def get_entity_prop_pubs(self, session):
         """Get prop pubs for FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
-        chadoprop_table = self.chado_tables['props'][chado_type]
-        chadoprop_pub_table = self.chado_tables['prop_pubs'][chado_type]
-        self.log.info(f'BOB: Get prop pubs for {self.fb_data_type} data entities from {chadoprop_table} and {chadoprop_pub_table} chado tables.')
-        # To Do
+        main_chado_table = self.chado_tables['main_table'][chado_type]
+        prop_chado_table = self.chado_tables['props'][chado_type]
+        prop_pub_chado_table = self.chado_tables['prop_pubs'][chado_type]
+        self.log.info(f'Get prop pubs for {self.fb_data_type} data entities from {chado_type}prop and {chado_type}prop_pub chado tables.')
+        pkey_name = self.chado_tables['primary_key'][chado_type]
+        self.log.info(f'Use this primary key name: {pkey_name}')
+        # Get the foreign key in associated table corresponding to primary data type.
+        foreign_key_column = next((column for column in prop_chado_table.__table__.c if column.foreign_keys and column.name == pkey_name), None)
+        filters = (
+            foreign_key_column.in_((self.fb_data_entities.keys())),
+        )
+        counter = 0
+        pass_counter = 0
+        results = session.query(main_chado_table, prop_chado_table, prop_pub_chado_table).\
+            select_from(main_chado_table).\
+            join(prop_chado_table).\
+            join(prop_pub_chado_table).\
+            filter(*filters).\
+            distinct()
+        for result in results:
+            pkey_id = getattr(result.main_chado_table, pkey_name)
+            if pkey_id not in self.fb_data_entities.keys():
+                pass_counter += 1
+                continue
+            prop_column_name = f'{chado_type}prop_id'
+            prop_id = getattr(result.prop_chado_table, prop_column_name)
+            pub_id = getattr(result.prop_pub_chado_table, 'pub_id')
+            try:
+                self.fb_data_entities[pkey_id].prop_pubs[prop_id].append(pub_id)
+                counter += 1
+            except KeyError:
+                self.fb_data_entities[pkey_id].prop_pubs[prop_id] = [pub_id]
+                counter += 1
+        self.log.info(f'Found {counter} props for {self.fb_data_type}.')
+        self.log.info(f'Ignored {pass_counter} props for {self.fb_data_type}.')
         return
 
+    # BOB - getting not enough timestamps back?
     def get_entity_timestamps(self, session):
         """Get timestamps for data entities."""
-        self.log.info(f'Get timestamps for FlyBase{self.fb_data_type} entities.')
+        self.log.info(f'Get timestamps for FlyBase {self.fb_data_type} entities.')
         chado_type = self.main_chado_entity_types[self.fb_data_type]
         counter = 0
         for i in self.fb_data_entities.values():
