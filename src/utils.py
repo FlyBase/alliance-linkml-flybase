@@ -216,7 +216,7 @@ class DataHandler(object):
             if i.for_export is False:
                 self.log.debug(f'Suppress {i} from export: {i.export_warnings}')
                 continue
-            self.total_export_count += 1
+            self.export_count += 1
             if i.linkmldto.internal is True:
                 self.internal_count += 1
                 self.log.debug(f'Export {i} but keep internal at the Alliance: {i.internal_reasons}')
