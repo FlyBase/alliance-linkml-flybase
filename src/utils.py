@@ -467,14 +467,13 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Ignored {pass_counter} props for {self.fb_data_type}.')
         return
 
-    # BOB - getting not enough timestamps back?
     def get_entity_timestamps(self, session):
         """Get timestamps for data entities."""
         self.log.info(f'Get timestamps for FlyBase {self.fb_data_type} entities.')
         chado_type = self.main_chado_entity_types[self.fb_data_type]
         counter = 0
+        # Get distinct timestamps for each entity (do not distinguish by action, etc).
         for i in self.fb_data_entities.values():
-            self.log.debug(f'Have this db_primary_id: {i.db_primary_id}')
             audit_query = f"""
             SELECT DISTINCT record_pkey, transaction_timestamp
             FROM audit_chado
@@ -484,9 +483,7 @@ class PrimaryEntityHandler(DataHandler):
             self.log.debug(f'Have this query: {audit_query}')
             TIMESTAMP = 1
             audit_results = session.execute(audit_query).fetchall()
-            self.log.info(f'Found {len(audit_results)} results for db_primary_id: {i.db_primary_id}')
             for row in audit_results:
-                self.log.debug(f'Have this result: {row}')
                 i.timestamps.append(row[TIMESTAMP])
                 counter += 1
         self.log.info(f'Found {counter} timestamps.')
