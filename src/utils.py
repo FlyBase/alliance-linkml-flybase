@@ -480,7 +480,6 @@ class PrimaryEntityHandler(DataHandler):
             WHERE audited_table = '{chado_type}'
               AND record_pkey = {i.db_primary_id};
             """
-            self.log.debug(f'Have this query: {audit_query}')
             TIMESTAMP = 1
             audit_results = session.execute(audit_query).fetchall()
             for row in audit_results:
