@@ -357,11 +357,11 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Use this primary key name: {pkey_name}')
         # associated_data_types = ['pubs', 'synonyms', 'dbxrefs', 'props', 'prop_pubs', 'cvterms', 'cvtermprops']
         associated_data_types = ['pubs', 'synonyms', 'dbxrefs']
+        # BOB - WORKING HERE
         for i in associated_data_types:
             asso_chado_table = self.chado_tables[i][chado_type]
             #Get the foreign key in associated table corresponding to primary data type.
-            foreign_key_column = next(column for column in asso_chado_table.__table__.c \
-                if column.foreign_keys and asso_chado_table.__table__.c.name.name == pkey_name)
+            foreign_key_column = next((column for column in asso_chado_table.__table__.c if column.foreign_keys and column.name == pkey_name), None)
             filters = (
                 foreign_key_column.in_((self.fb_data_entities.keys()))
             )
