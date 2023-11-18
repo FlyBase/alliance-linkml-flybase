@@ -290,6 +290,7 @@ class PrimaryEntityHandler(DataHandler):
         'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion', 'point_mutation', 'sequence_alteration', 'sequence_variant']
     }
 
+    # BOB: Quick testing of general SQLAlchemy query approaches.
     def sqlalchemy_test(self, session):
         """Test SQLAlchemy behavior."""
         self.log.info('Test SQLAlchemy behavior.')
@@ -309,7 +310,7 @@ class PrimaryEntityHandler(DataHandler):
         for i in results:
             self.log.info(f'Found this feature: {i.name} ({i.uniquename})')
             counter += 1
-        self.log.info(f'BOB: Found {counter} test results using natural join')
+        self.log.info(f'Found {counter} test results using natural join.')
         return
 
     # Elaborate on get_datatype_data() sub-methods for PrimaryEntityHandler.
@@ -357,9 +358,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Use this primary key name: {pkey_name}')
         # associated_data_types = ['pubs', 'synonyms', 'dbxrefs', 'props', 'prop_pubs', 'cvterms', 'cvtermprops']
         associated_data_types = ['pubs', 'synonyms', 'dbxrefs']
-        # BOB - when I start working on larger data like alleles, I need to figure out if it's more efficient to:
-        # 1) Keep filter as is (check if feature_id in self.fb_data_entities.keys())
-        # 2) Or, query for each allele in self.fb_data_entities.keys(), one-at-a-time, setting foreign_key to allele's feature_id.
+        # BOB - keep filter as is, or, query one-at-a-time, setting foreign_key to allele's feature_id.
         for i in associated_data_types:
             self.log.info(f'Get {i} for {self.fb_data_type}')
             asso_chado_table = self.chado_tables[i][chado_type]
@@ -446,7 +445,7 @@ class PrimaryEntityHandler(DataHandler):
             audit_query = f"""
             SELECT DISTINCT record_pkey, transaction_timestamp
             FROM audit_chado
-            WHERE audited_table = {chado_type}
+            WHERE audited_table = '{chado_type}'
               AND record_pkey = {i.db_primary_id};
             """
             TIMESTAMP = 1
