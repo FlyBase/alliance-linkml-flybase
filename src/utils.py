@@ -541,7 +541,7 @@ class PrimaryEntityHandler(DataHandler):
         """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for a FlyBase entity."""
         secondary_id_dtos = []
         for secondary_id in fb_data_entity.alt_fb_ids:
-            sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(secondary_id).export()
+            sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(secondary_id).dict_export()
             secondary_id_dtos.append(sec_dto)
         return secondary_id_dtos
 
@@ -560,7 +560,7 @@ class PrimaryEntityHandler(DataHandler):
             curie = f'{prefix}{xref.dbxref.accession}'
             page_area = self.fb_data_type    # Must ensure that fb_data_types match Alliance resourceDescriptors.yaml page.
             display_name = xref.dbxref.description
-            xref_dto = datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).export()
+            xref_dto = datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
             cross_reference_dtos.append(xref_dto)
         fb_data_entity.linkmldto.cross_reference_dtos = cross_reference_dtos
         return
@@ -618,8 +618,8 @@ class StrainHandler(PrimaryEntityHandler):
         agr_strain.obsolete = strain.chado_obj.is_obsolete
         agr_strain.curie = f'FB:{strain.uniquename}'
         agr_strain.taxon_curie = strain.ncbi_taxon_id
-        dp_xref = datatypes.CrossReferenceDTO('FB', strain.uniquename, 'strain', strain.chado_obj.name).export()
-        agr_strain.data_provider_dto = datatypes.DataProviderDTO(dp_xref).export()
+        dp_xref = datatypes.CrossReferenceDTO('FB', strain.uniquename, 'strain', strain.chado_obj.name).dict_export()
+        agr_strain.data_provider_dto = datatypes.DataProviderDTO(dp_xref).dict_export()
         agr_strain.name = strain.chado_obj.name
         agr_strain.subtype_name = 'strain'
         strain.linkmldto = agr_strain
