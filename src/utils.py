@@ -481,9 +481,12 @@ class PrimaryEntityHandler(DataHandler):
             WHERE audited_table = '{chado_type}'
               AND record_pkey = {i.db_primary_id};
             """
+            self.log.debug(f'Have this query: {audit_query}')
             TIMESTAMP = 1
             audit_results = session.execute(audit_query).fetchall()
+            self.log.info(f'Found {len(audit_results)} results for db_primary_id: {i.db_primary_id}')
             for row in audit_results:
+                self.log.debug(f'Have this result: {row}')
                 i.timestamps.append(row[TIMESTAMP])
                 counter += 1
         self.log.info(f'Found {counter} timestamps.')
