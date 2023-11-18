@@ -197,7 +197,7 @@ class DataHandler(object):
     def flag_unexportable_entities(self):
         """Flag entities lacking information for a required field."""
         self.log.info(f'Flag FlyBase "{self.fb_data_type}" data lacking information for a required field.')
-        for i in self.fb_data_entities:
+        for i in self.fb_data_entities.values():
             for attr in self.required_fields:
                 if attr not in i.linkmldto.__dict__.keys():
                     i.for_export = False
