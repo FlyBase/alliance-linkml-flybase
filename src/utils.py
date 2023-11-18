@@ -345,7 +345,6 @@ class PrimaryEntityHandler(DataHandler):
         for result in results:
             pkey_id = getattr(result, pkey_name)
             self.fb_data_entities[pkey_id] = datatype_object(result)
-            self.input_count += 1
         self.log.info(f'Found {self.input_count} FlyBase {self.fb_data_type} entities in chado.')
         return
 
