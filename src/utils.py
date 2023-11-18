@@ -432,8 +432,6 @@ class PrimaryEntityHandler(DataHandler):
         prop_chado_table = aliased(self.chado_tables['props'][chado_type], name='prop_chado_table')
         prop_pub_chado_table = aliased(self.chado_tables['prop_pubs'][chado_type], name='prop_pub_chado_table')
         self.log.info(f'Get prop pubs for {self.fb_data_type} data entities from {chado_type}prop and {chado_type}prop_pub chado tables.')
-        self.log.debug(f'prop_chado_table = {prop_chado_table}')
-        self.log.debug(f'prop_pub_chado_table = {prop_pub_chado_table}')
         pkey_name = self.chado_tables['primary_key'][chado_type]
         self.log.info(f'Use this primary key name: {pkey_name}')
         # Get the foreign key in associated table corresponding to primary data type.
