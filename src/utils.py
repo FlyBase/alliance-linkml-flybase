@@ -25,7 +25,14 @@ import datatypes
 
 # Classes
 class DataHandler(object):
-    """A generic data handler that gets FlyBase data and maps it to a single Alliance LinkML model."""
+    """A generic data handler that gets FlyBase data and maps it to a single Alliance LinkML model.
+
+    Specific classes of DataHandler will only map a given FB data type to a single Alliance ingest
+    set (i.e., a set of LinkML DTO objects, in JSON format). In some cases, multiple handlers will
+    map different FB data to the same ingest set: e.g., FB strains and genotypes both go into the
+    "agm_ingest_set" via distinct DataHandler classes.
+
+    """
     def __init__(self, log: Logger, fb_data_type: str):
         """Create the generic DataHandler object.
 
@@ -55,6 +62,8 @@ class DataHandler(object):
     agr_ingest_type_dict = {
         'gene': 'gene_ingest_set',
         'allele': 'allele_ingest_set',
+        'construct': 'construct_ingest_set',
+        'variation': 'variation_ingest_set',
         'strain': 'agm_ingest_set',
         'genotype': 'agm_ingest_set',
         'disease': 'disease_allele_ingest_set'
@@ -233,10 +242,17 @@ class DataHandler(object):
         return
 
 
-class EntityHandler(DataHandler):
-    """A generic entity handler (excludes associations/annotations) that gets FlyBase data and maps it to the Alliance LinkML model."""
+class PrimaryEntityHandler(DataHandler):
+    """A generic handler for that gets data for FlyBase entities and maps it to the Alliance LinkML model.
+
+    This object handles only primary FlyBase entities, things like genes, strains, etc. that typically have
+    public curies and web reports, attributes like props and cvterm associations, and are the subjects
+    in relationships (e.g., feature_relationship) and annotations (e.g., phenstatement). Separate handler
+    classes are to be used for the export of relationships and complex annotations.
+
+    """
     def __init__(self, log: Logger, fb_data_type: str):
-        """Create the generic EntityHandler object."""
+        """Create the generic PrimaryEntityHandler object."""
         super().__init__(log, fb_data_type)
 
     # Mappings of input fb_data_type to various data handling objects and chado tables.
@@ -247,6 +263,7 @@ class EntityHandler(DataHandler):
         'variation': 'feature',
         'strain': 'strain'
     }
+    # Mappings of main data types to chado tables with associated data.
     chado_tables = {
         'primary_key': {'feature': 'feature_id', 'strain': 'strain_id'},
         'main_table': {'feature': Feature, 'strain': Strain},
@@ -258,6 +275,7 @@ class EntityHandler(DataHandler):
         'cvterms': {'feature': FeatureCvterm, 'strain': StrainCvterm},
         'cvtermprops': {'feature': FeatureCvtermprop, 'strain': StrainCvtermprop}
     }
+    # Mappings of fb_data_type to the a datatype Class.
     datatype_objects = {
         # 'gene': datatypes.FBGene,
         # 'allele': datatypes.FBAllele,
@@ -265,6 +283,7 @@ class EntityHandler(DataHandler):
         # 'variation': datatypes.FBVariant,
         'strain': datatypes.FBStrain,
     }
+    # CVterms used to define a fb_data_type within a larger chado table.
     subtypes = {
         'gene': ['gene'],
         'allele': ['allele'],
@@ -288,18 +307,18 @@ class EntityHandler(DataHandler):
             distinct()
         counter = 0
         for i in results:
-            self.log.info(f'Found this feature: {i.name} {i.uniquename})')
+            self.log.info(f'Found this feature: {i.name} ({i.uniquename})')
             counter += 1
-        self.log.info(f'Found {counter} test results using natural join')
+        self.log.info(f'BOB: Found {counter} test results using natural join')
         return
 
-    # Elaborate on get_datatype_data().
+    # Elaborate on get_datatype_data() sub-methods for PrimaryEntityHandler.
     def get_entity_data(self, session):
-        """Get primary FlyBase data entitites (excludes associations/annotations)."""
+        """Get primary FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
         self.log.info(f'Get {self.fb_data_type} data entities from {chado_type} table.')
-        datatype_object = self.datatype_objects[self.fb_data_type]
         chado_table = self.chado_tables['main_table'][chado_type]
+        datatype_object = self.datatype_objects[self.fb_data_type]
         filters = ()
         if self.fb_data_type in self.regex.keys():
             self.log.info(f'Use this regex: {self.regex[self.fb_data_type]}')
@@ -330,23 +349,29 @@ class EntityHandler(DataHandler):
         return
 
     def get_entity_associated_data(self, session):
-        """Get data associated with FlyBase data entities."""
+        """Get data associated with primary FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
         self.log.info(f'Get associated data for {self.fb_data_type} data entities from {chado_type}-related chado tables.')
+        main_chado_table = self.chado_tables['main_table'][chado_type]
+        pkey_name = self.chado_tables['primary_key'][chado_type]
+        self.log.info(f'Use this primary key name: {pkey_name}')
         # associated_data_types = ['pubs', 'synonyms', 'dbxrefs', 'props', 'prop_pubs', 'cvterms', 'cvtermprops']
         associated_data_types = ['pubs', 'synonyms', 'dbxrefs']
-        pkey_name = self.chado_tables['primary_key'][chado_type]
         for i in associated_data_types:
-            chado_table = self.chado_tables[i][chado_type]
-            filter_dict = {
-                'feature': (chado_table.feature_id.in_(self.fb_data_entities.keys()), ),
-                'strain': (chado_table.strain_id.in_(self.fb_data_entities.keys()), )
-            }
-            filters = filter_dict[chado_type]
-            self.log.info(f'Get {i} data for {chado_type}.')
+            asso_chado_table = self.chado_tables[i][chado_type]
+            #Get the foreign key in associated table corresponding to primary data type.
+            foreign_key_column = next(column for column in asso_chado_table.__table__.c \
+                if column.foreign_keys and asso_chado_table.__table__.c.name.name == pkey_name)
+            filters = (
+                foreign_key_column.in_((self.fb_data_entities.keys()))
+            )
             counter = 0
             pass_counter = 0
-            results = session.query(chado_table).filter(*filters).distinct()
+            results = session.query(asso_chado_table).\
+                select_from(asso_chado_table).\
+                join(main_chado_table).\
+                filter(*filters).\
+                distinct()
             for result in results:
                 pkey_id = getattr(result, pkey_name)
                 try:
@@ -417,7 +442,7 @@ class EntityHandler(DataHandler):
         return
 
     def get_datatype_data(self, session):
-        """Extend the method for the EntityHandler."""
+        """Extend the method for the PrimaryEntityHandler."""
         super().get_datatype_data(session)
         self.sqlalchemy_test(session)
         self.get_entity_data(session)
@@ -428,7 +453,7 @@ class EntityHandler(DataHandler):
         self.get_entity_timestamps(session)
         return
 
-    # Elaborate on synthesize_info().
+    # Elaborate on synthesize_info() sub-methods for PrimaryEntityHandler.
     def synthesize_ncbi_taxon_id(self, fb_data_entity):
         """Determine the NCBITaxon ID for the entity."""
         # Catch cases where the FB data entity has no organism_id.
@@ -456,7 +481,7 @@ class EntityHandler(DataHandler):
         return
 
     def synthesize_info(self):
-        """Extend the method for the EntityHandler."""
+        """Extend the method for the PrimaryEntityHandler."""
         super().synthesize_info()
         for fb_entity in self.fb_data_entities.values():
             self.synthesize_ncbi_taxon_id(fb_entity)
@@ -464,8 +489,8 @@ class EntityHandler(DataHandler):
             self.map_xrefs(fb_entity)
         return
 
-    # Create methods to be run within map_fb_data_to_alliance().
-    # However, run them only in more tailored handlers.
+    # Elaborate on map_fb_data_to_alliance() sub-methods for PrimaryEntityHandler.
+    # However, we only create the methods here, and run them in more tailored handler Classes like StrainHandler.
     def map_secondary_ids(self, fb_data_entity):
         """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for a FlyBase entity."""
         secondary_id_dtos = []
@@ -509,13 +534,13 @@ class EntityHandler(DataHandler):
         return
 
 
-class StrainHandler(EntityHandler):
+class StrainHandler(PrimaryEntityHandler):
     """This object gets, synthesizes and filters strain data for export."""
     def __init__(self, log, fb_data_type):
         """Create the StrainHandler object."""
         super().__init__(log, fb_data_type)
 
-    # Export filters.
+    # Elaborate on export filters for StrainHandler.
     required_fields = [
         'curie',
         'data_provider_dto',
@@ -540,7 +565,7 @@ class StrainHandler(EntityHandler):
         'taxon_curie'
     ]
 
-    # Elaborate on map_fb_data_to_alliance().
+    # Elaborate on map_fb_data_to_alliance() sub-methods for StrainHandler.
     def map_strain_basic(self, strain):
         """Map basic FlyBase strain data to the Alliance LinkML object."""
         agr_strain = datatypes.AffectedGenomicModelDTO()
@@ -585,8 +610,11 @@ def get_handler(log: Logger, fb_data_type: str):
     handler_dict = {
         # 'gene': GeneHandler,
         # 'allele': AlleleHandler,
+        # 'construct': ConstructHandler,
+        # 'variation': VariationHandler,
         'strain': StrainHandler,
         # 'genotype': GenotypeHandler,
+        # 'disease': DiseaseHandler,
     }
     try:
         data_handler = handler_dict[fb_data_type](log, fb_data_type)
