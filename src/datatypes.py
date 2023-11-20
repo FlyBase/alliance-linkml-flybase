@@ -53,7 +53,7 @@ class FBDataEntity(FBEntity):
         self.curr_fb_symbol = None      # The current symbol Synonym chado for the entity.
         self.curr_fb_fullname = None    # The current fullname Synonym chado object for the entity.
         self.alt_fb_ids = []            # Secondary FB IDs.
-        self.pub_ids = []               # Pub.pub_id db IDs for pubs associated in any way with the entity.
+        self.all_pub_ids = []           # Pub.pub_id db IDs for pubs associated in any way with the entity.
 
     def __str__(self):
         """Basic descriptive info for the object."""
