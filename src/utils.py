@@ -68,7 +68,18 @@ class DataHandler(object):
         'genotype': 'agm_ingest_set',
         'disease': 'disease_allele_ingest_set'
     }
+    # Mappings of fb_data_type to a datatype Class that will be used to represent each FB entity.
+    datatype_objects = {
+        # 'gene': datatypes.FBGene,
+        # 'allele': datatypes.FBAllele,
+        # 'construct': datatypes.FBConstruct,
+        # 'variation': datatypes.FBVariant,
+        'strain': datatypes.FBStrain,
+        # 'disease': datatypes.FBDiseaseAlleleAnnotation
+    }
     # Export directions (must be filled out in detail for each specific data handler).
+    # The fields in the two lists below must be present in the datatype object
+    #     specified in DataHandler.datatype_objects.values().
     required_fields = []
     output_fields = []
     # A filter for xrefs to export, with dict keys as FB db.names and dict values as Alliance db names.
@@ -275,14 +286,6 @@ class PrimaryEntityHandler(DataHandler):
         'cvterms': {'feature': FeatureCvterm, 'strain': StrainCvterm},
         'cvtermprops': {'feature': FeatureCvtermprop, 'strain': StrainCvtermprop}
     }
-    # Mappings of fb_data_type to the a datatype Class.
-    datatype_objects = {
-        # 'gene': datatypes.FBGene,
-        # 'allele': datatypes.FBAllele,
-        # 'construct': datatypes.FBConstruct,
-        # 'variation': datatypes.FBVariant,
-        'strain': datatypes.FBStrain,
-    }
     # CVterms used to define a fb_data_type within a larger chado table.
     subtypes = {
         'gene': ['gene'],
@@ -363,6 +366,9 @@ class PrimaryEntityHandler(DataHandler):
             asso_chado_table = self.chado_tables[i][chado_type]
             # Get the foreign key in associated table corresponding to primary data type.
             foreign_key_column = next((column for column in asso_chado_table.__table__.c if column.foreign_keys and column.name == pkey_name), None)
+            if foreign_key_column is None:
+                self.log.error(f'Could not get foreign key column for {pkey_name} from {chado_type} {i} tables.')
+                raise
             filters = (
                 foreign_key_column.in_((self.fb_data_entities.keys())),
             )
