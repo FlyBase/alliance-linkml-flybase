@@ -538,10 +538,6 @@ class PrimaryEntityHandler(DataHandler):
         for prop_pub_id_list in fb_data_entity.prop_pubs.values():
             fb_data_entity.all_pub_ids.extend(prop_pub_id_list)
         fb_data_entity.all_pub_ids = list(set(fb_data_entity.all_pub_ids))
-        try:
-            fb_data_entity.all_pub_ids.remove('FB:unattributed')
-        except ValueError:
-            pass
         return
 
     def synthesize_info(self):
@@ -567,6 +563,10 @@ class PrimaryEntityHandler(DataHandler):
         """Add pub curies to a FlyBase entity."""
         for pub_id in fb_data_entity.all_pub_ids:
             fb_data_entity.linkmldto.reference_curies.append(self.bibliography[pub_id])
+        try:
+            fb_data_entity.reference_curies.remove('FB:unattributed')
+        except ValueError:
+            pass
         return
 
     def map_xrefs(self, fb_data_entity):
