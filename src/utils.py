@@ -524,12 +524,23 @@ class PrimaryEntityHandler(DataHandler):
         fb_data_entity.alt_fb_ids = list(set(secondary_ids))
         return
 
+    def synthesize_pubs(self, fb_data_entity):
+        """Collect pub_ids associated directly or indirectly with the entity."""
+        pub_sources = ['pubs', 'synonyms', 'cvterms']
+        for pub_source in pub_sources:
+            fb_data_entity.all_pub_ids.extend([i.pub_id for i in getattr(fb_data_entity, pub_source)])
+        for prop_pub_id_list in fb_data_entity.prop_pubs.values():
+            fb_data_entity.all_pub_ids.extend(prop_pub_id_list)
+        fb_data_entity.all_pub_ids = list(set(fb_data_entity.all_pub_ids))
+        return
+
     def synthesize_info(self):
         """Extend the method for the PrimaryEntityHandler."""
         super().synthesize_info()
-        for fb_entity in self.fb_data_entities.values():
-            self.synthesize_ncbi_taxon_id(fb_entity)
-            self.synthesize_secondary_ids(fb_entity)
+        for fb_data_entity in self.fb_data_entities.values():
+            self.synthesize_ncbi_taxon_id(fb_data_entity)
+            self.synthesize_secondary_ids(fb_data_entity)
+            self.synthesize_pubs(fb_data_entity)
         return
 
     # Elaborate on map_fb_data_to_alliance() sub-methods for PrimaryEntityHandler.
@@ -542,8 +553,14 @@ class PrimaryEntityHandler(DataHandler):
             secondary_id_dtos.append(sec_dto)
         return secondary_id_dtos
 
+    def map_pubs(self, fb_data_entity):
+        """Add pub curies to a FlyBase entity."""
+        for pub_id in fb_data_entity.all_pub_ids:
+            fb_data_entity.linkmldto.reference_curies.append(self.bibliography[pub_id])
+        return
+
     def map_xrefs(self, fb_data_entity):
-        """Return a list of Alliance CrossReferenceDTO dicts for a FlyBase entity."""
+        """Add a list of Alliance CrossReferenceDTO dicts to a FlyBase entity."""
         cross_reference_dtos = []
         for xref in fb_data_entity.dbxrefs:
             # Skip xrefs from irrelevant database sources.
@@ -627,6 +644,7 @@ class StrainHandler(PrimaryEntityHandler):
         super().map_fb_data_to_alliance()
         for strain in self.fb_data_entities.values():
             self.map_strain_basic(strain)
+            self.map_pubs(strain)
             self.map_xrefs(strain)
             self.map_timestamps(strain)
             strain.linkmldto.agm_secondary_id_dtos = self.map_secondary_ids(strain)
