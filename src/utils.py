@@ -538,6 +538,7 @@ class PrimaryEntityHandler(DataHandler):
         for prop_pub_id_list in fb_data_entity.prop_pubs.values():
             fb_data_entity.all_pub_ids.extend(prop_pub_id_list)
         fb_data_entity.all_pub_ids = list(set(fb_data_entity.all_pub_ids))
+        fb_data_entity.all_pub_ids.remove('FB:unattributed')
         return
 
     def synthesize_info(self):
