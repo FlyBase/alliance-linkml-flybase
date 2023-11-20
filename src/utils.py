@@ -564,7 +564,7 @@ class PrimaryEntityHandler(DataHandler):
         for pub_id in fb_data_entity.all_pub_ids:
             fb_data_entity.linkmldto.reference_curies.append(self.bibliography[pub_id])
         try:
-            fb_data_entity.reference_curies.remove('FB:unattributed')
+            fb_data_entity.linkmldto.reference_curies.remove('FB:unattributed')
         except ValueError:
             pass
         return
