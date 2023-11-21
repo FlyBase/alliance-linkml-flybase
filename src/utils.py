@@ -450,13 +450,13 @@ class PrimaryEntityHandler(DataHandler):
     def get_entity_prop_pubs(self, session):
         """Get prop pubs for primary FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
-        main_chado_table = aliased(self.chado_tables['main_table'][chado_type], name='main_chado_table')
+        main_chado_table = self.chado_tables['main_table'][chado_type]
         prop_chado_table = aliased(self.chado_tables['props'][chado_type], name='prop_chado_table')
         prop_pub_chado_table = aliased(self.chado_tables['prop_pubs'][chado_type], name='prop_pub_chado_table')
         self.log.info(f'Get prop pubs for {self.fb_data_type} data entities from {prop_pub_chado_table} chado table.')
-        pkey_col = self.get_primary_key_column(main_chado_table)
+        main_pkey_col = self.get_primary_key_column(main_chado_table)
         filters = (
-            pkey_col.in_((self.fb_data_entities.keys())),
+            main_pkey_col.in_((self.fb_data_entities.keys())),
         )
         results = session.query(main_chado_table, prop_chado_table, prop_pub_chado_table).\
             select_from(main_chado_table).\
@@ -467,7 +467,7 @@ class PrimaryEntityHandler(DataHandler):
         counter = 0
         pass_counter = 0
         for result in results:
-            entity_pkey_id = getattr(result.main_chado_table, pkey_col.name)
+            entity_pkey_id = getattr(result.main_chado_table, main_pkey_col.name)
             try:
                 self.fb_data_entities[entity_pkey_id].prop_pubs.append(result.prop_pub_chado_table)
                 counter += 1
