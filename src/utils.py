@@ -540,7 +540,7 @@ class PrimaryEntityHandler(DataHandler):
             counter += 1
         self.log.info(f'Found these types of props: {set(prop_types)}')
         for i in self.fb_data_entities.values():
-            for k, v in i.prop_pubs:
+            for k, v in i.prop_pubs.items():
                 self.log.debug(f'{chado_type}prop_id={k}, pub_ids={v}')
         self.log.info(f'Found {counter} props for {self.fb_data_type}.')
         self.log.info(f'Ignored {pass_counter} props for {self.fb_data_type}.')
