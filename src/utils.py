@@ -9,8 +9,10 @@ Author(s):
 
 """
 
-import json
+import csv
 import datetime
+import json
+import re
 import strict_rfc3339
 from logging import Logger
 from sqlalchemy.orm import aliased, Session
@@ -70,7 +72,7 @@ class DataHandler(object):
     }
     # Mappings of fb_data_type to a datatype Class that will be used to represent each FB entity.
     datatype_objects = {
-        # 'gene': datatypes.FBGene,
+        'gene': datatypes.FBGene,
         # 'allele': datatypes.FBAllele,
         # 'construct': datatypes.FBConstruct,
         # 'variation': datatypes.FBVariant,
@@ -104,7 +106,9 @@ class DataHandler(object):
         'genotype': r'^FBgo[0-9]{7}$',
         'strain': r'^FBsn[0-9]{7}$',
         'library': r'^FBlc[0-9]{7}$',
-        'cell': r'^FBcl[0-9]{7}$'
+        'cell': r'^FBcl[0-9]{7}$',
+        'pthr': r'PTHR[0-9]{5}',
+        'gene_systematic_name': r'^(D[a-z]{3}\\|)(CG|CR|G[A-Z])[0-9]{4,5}$'
     }
 
     # Methods
@@ -293,13 +297,33 @@ class PrimaryEntityHandler(DataHandler):
         'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion', 'point_mutation', 'sequence_alteration', 'sequence_variant']
     }
 
+    def get_primary_key_column(self, chado_table):
+        """Get the primary key Column object from a specified chado table Model object."""
+        primary_key_column = next((column for column in chado_table.__table__.c if column.primary_keys), None)
+        if primary_key_column is None:
+            self.log.error(f'Could not get primary_key Column from {chado_table}')
+            raise ValueError
+        return primary_key_column
+
+    def get_foreign_key_column(self, chado_table, column_name):
+        """Get a foreign key column object, by name, from a specified chado table Model object."""
+        foreign_key_column = next((column for column in chado_table.__table__.c if column.foreign_keys and column.name == column_name), None)
+        if foreign_key_column is None:
+            self.log.error(f'Could not get foreign_key Column {column_name} from {chado_table}')
+            raise ValueError
+        return foreign_key_column
+
     # BOB: Quick testing of general SQLAlchemy query approaches.
     def sqlalchemy_test(self, session):
         """Test SQLAlchemy behavior."""
         self.log.info('Test SQLAlchemy behavior.')
         lbe_types = ['gene']
+        pkey_col = self.get_primary_key_column(Feature)
+        foreign_col = self.get_foreign_key_column(Feature, 'type_id')
         filters = (
             Feature.uniquename == 'FBgn0011278',
+            pkey_col == 3167743,
+            foreign_col == 219
         )
         filters += (
             Cvterm.name.in_((lbe_types)),
@@ -358,7 +382,6 @@ class PrimaryEntityHandler(DataHandler):
         main_chado_table = self.chado_tables['main_table'][chado_type]
         pkey_name = self.chado_tables['primary_key'][chado_type]
         self.log.info(f'Use this primary key name: {pkey_name}')
-        # associated_data_types = ['pubs', 'synonyms', 'dbxrefs', 'props', 'prop_pubs', 'cvterms', 'cvtermprops']
         associated_data_types = ['pubs', 'synonyms', 'dbxrefs']
         # BOB - keep filter as is, or, query one-at-a-time, setting foreign_key to allele's feature_id.
         for i in associated_data_types:
@@ -470,6 +493,66 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Ignored {pass_counter} props for {self.fb_data_type}.')
         return
 
+    def get_entity_prop_with_pubs(self, session):
+        """Get props with pubs for FlyBase data entities."""
+        chado_type = self.main_chado_entity_types[self.fb_data_type]
+        main_chado_table = aliased(self.chado_tables['main_table'][chado_type], name='main_chado_table')
+        prop_chado_table = aliased(self.chado_tables['props'][chado_type], name='prop_chado_table')
+        prop_pub_chado_table = aliased(self.chado_tables['prop_pubs'][chado_type], name='prop_pub_chado_table')
+        self.log.info(f'Get props for {self.fb_data_type} data entities from {chado_type}prop chado table.')
+        pkey_name = self.chado_tables['primary_key'][chado_type]
+        self.log.info(f'Use this primary key name: {pkey_name}')
+        # Get the foreign key in associated table corresponding to primary data type.
+        foreign_key_column = next((column for column in prop_chado_table.__table__.c if column.foreign_keys and column.name == pkey_name), None)
+        filters = (
+            foreign_key_column.in_((self.fb_data_entities.keys())),
+        )
+        counter = 0
+        pass_counter = 0
+
+
+
+
+
+        prop_chado_table = aliased(self.chado_tables['props'][chado_type], name='prop_chado_table')
+        self.log.info(f'Get prop pubs for {self.fb_data_type} data entities from {chado_type}prop and {chado_type}prop_pub chado tables.')
+        pkey_name = self.chado_tables['primary_key'][chado_type]
+        self.log.info(f'Use this primary key name: {pkey_name}')
+        # Get the foreign key in associated table corresponding to primary data type.
+        foreign_key_column = next((column for column in prop_chado_table.__table__.c if column.foreign_keys and column.name == pkey_name), None)
+        filters = (
+            foreign_key_column.in_((self.fb_data_entities.keys())),
+        )
+        counter = 0
+        pass_counter = 0
+        results = session.query(prop_chado_table, prop_pub_chado_table).\
+            select_from(prop_chado_table).\
+            join(prop_pub_chado_table).\
+            filter(*filters).\
+            distinct()
+        for result in results:
+            pkey_id = getattr(result.prop_chado_table, pkey_name)
+            if pkey_id not in self.fb_data_entities.keys():
+                pass_counter += 1
+                continue
+            prop_column_name = f'{chado_type}prop_id'
+            prop_id = getattr(result.prop_chado_table, prop_column_name)
+            pub_id = getattr(result.prop_pub_chado_table, 'pub_id')
+            try:
+                self.fb_data_entities[pkey_id].prop_pubs[prop_id].append(pub_id)
+                counter += 1
+            except KeyError:
+                self.fb_data_entities[pkey_id].prop_pubs[prop_id] = [pub_id]
+                counter += 1
+        self.log.info(f'Found {counter} props for {self.fb_data_type}.')
+        self.log.info(f'Ignored {pass_counter} props for {self.fb_data_type}.')
+        return
+
+
+    def get_cvterms(self, session):
+        # BOB
+        return
+
     def get_entity_timestamps(self, session):
         """Get timestamps for data entities."""
         self.log.info(f'Get timestamps for FlyBase {self.fb_data_type} entities.')
@@ -497,9 +580,10 @@ class PrimaryEntityHandler(DataHandler):
         self.sqlalchemy_test(session)
         self.get_entity_data(session)
         self.get_entity_associated_data(session)
-        self.get_entity_props(session)
-        self.get_entity_prop_pubs(session)
-        # self.get_cvterms(session)
+        # self.get_entity_props(session)        # BOB: deprecated
+        # self.get_entity_prop_pubs(session)    # BOB: deprecated
+        self.get_entity_prop_with_pubs(session)
+        self.get_cvterms(session)
         self.get_entity_timestamps(session)
         return
 
@@ -604,6 +688,95 @@ class PrimaryEntityHandler(DataHandler):
         return
 
 
+class GeneHandler(PrimaryEntityHandler):
+    """This object gets, synthesizes and filters gene data for export."""
+    def __init__(self, log, fb_data_type):
+        """Create the GeneHandler object."""
+        super().__init__(log, fb_data_type)
+        self.pthr_dict = {}           # Will be an 1:1 FBgn_ID-PTHR xref dict.
+        self.chr_dict = {}            # Will be a feature_id-keyed dict of chr scaffold uniquenames.
+
+    # Elaborate on export filters for StrainHandler.
+    required_fields = [
+        'curie',
+        'data_provider_dto',
+        'gene_symbol_dto',
+        'internal',
+        'taxon_curie',
+    ]
+    output_fields = [
+        'created_by_curie',
+        'cross_reference_dtos',
+        'curie',
+        'data_provider_dto',
+        'date_created',
+        'date_updated',
+        'gene_full_name_dto',
+        'gene_symbol_dto',
+        'gene_synonym_dtos',
+        'gene_systematic_name_dto',
+        'gene_secondary_id_dtos',
+        'gene_type_curie',
+        'internal',
+        'obsolete',
+        'taxon_curie',
+        'updated_by_curie',
+    ]
+    fb_agr_db_dict = {
+        'EntrezGene': 'NCBI_Gene',
+        'FlyBase': 'FB',
+        'FlyBase Annotation IDs': 'FB',
+        'RNAcentral': 'RNAcentral',
+        # 'UniProt/GCRP': 'UniProt/GCRP',
+        'UniProt/Swiss-Prot': 'UniProtKB',
+        'UniProt/TrEMBL': 'UniProtKB'
+    }
+    # Reference dicts.
+    internal_gene_types = [
+        'engineered_fusion_gene',
+        'engineered_region',
+        'gene_group',
+        'gene_with_polycistronic_transcript',
+        'insulator',
+        'mitochondrial_sequence',
+        'origin_of_replication',
+        'region',
+        'regulatory_region',
+        'repeat_region',
+        'satellite_DNA',
+        'transposable_element_gene'
+    ]
+
+    # Elaborate on get_datatype_data() sub-methods for GeneHandler.
+    def get_panther_info(self, input_dir):
+        """Extract panther information from file."""
+        self.log.info('Extract panther information from file.')
+        if input_dir == '/src/input/':
+            filepath = f'{input_dir}PTHR18.0_fruit_fly'
+        else:
+            filepath = '/data/ortholog/panther/PTHR18.0_fruit_fly'
+        tsv_file = open(filepath, "r")
+        tsvin = csv.reader(tsv_file, delimiter='\t')
+        FB = 0
+        PTHR = 3
+        counter = 0
+        gene_regex = r'FBgn[0-9]{7}'
+        for row in tsvin:
+            fields = len(row)
+            if fields:  # Ignore blank lines
+                if re.search(gene_regex, row[FB]) and re.search(self.pthr_regex, row[PTHR]):
+                    self.pthr_dict[re.search(gene_regex, row[FB]).group(0)] = re.search(self.pthr_regex, row[PTHR]).group(0)
+                    counter += 1
+        self.log.info(f'Processed {counter} lines from the panther orthology file.')
+        return
+
+    def get_datatype_data(self, session):
+        """Extend the method for the GeneHandler."""
+        super().get_datatype_data(session)
+        self.get_panther_info()
+        return
+
+
 class StrainHandler(PrimaryEntityHandler):
     """This object gets, synthesizes and filters strain data for export."""
     def __init__(self, log, fb_data_type):
@@ -679,7 +852,7 @@ def get_handler(log: Logger, fb_data_type: str):
     """
     log.info(f'Get handler for {fb_data_type}.')
     handler_dict = {
-        # 'gene': GeneHandler,
+        'gene': GeneHandler,
         # 'allele': AlleleHandler,
         # 'construct': ConstructHandler,
         # 'variation': VariationHandler,

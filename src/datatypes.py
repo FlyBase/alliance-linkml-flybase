@@ -12,7 +12,7 @@ Author(s):
 
 # FlyBase Classes
 class FBEntity(object):
-    """A generic FlyBase entity."""
+    """An abstract, generic FlyBase entity."""
     def __init__(self):
         """Create the generic FlyBase entity with bins for Alliance mapping."""
         self.db_primary_id = None     # The chado table primary key (or concatenation of primary keys).
@@ -25,7 +25,7 @@ class FBEntity(object):
 
 
 class FBAssociation(FBEntity):
-    """A generic FlyBase association/annotation."""
+    """An abstract, generic FlyBase association/annotation."""
     def __init__(self, chado_objs):
         """Create the generic FlyBase association/annotation object from the main db entry/entries."""
         super().__init__()
@@ -33,10 +33,15 @@ class FBAssociation(FBEntity):
 
 
 class FBDataEntity(FBEntity):
-    """A generic FlyBase data entity with all it related data, excluding associations/annotations."""
+    """An abstract, generic FlyBase data entity with all it related data, excluding associations/annotations."""
     def __init__(self, chado_obj):
         """Create the generic FlyBase data entity object from the main db entry."""
         super().__init__()
+        self.uniquename = chado_obj.uniquename
+        try:
+            self.organism_abbr = chado_obj.organism.abbreviation
+        except AttributeError:
+            self.organism_abbr = 'Dmel'
         # Primary FB chado data.
         self.chado_obj = chado_obj      # The primary SQLAlchemy chado object.
         self.pubs = []                  # Pub associations: e.g., FeaturePub, StrainPub.
@@ -61,14 +66,35 @@ class FBDataEntity(FBEntity):
         return entity_desc
 
 
+class FBFeature(FBDataEntity):
+    """An abstract, generic FlyBase Feature entity with all its related data."""
+    def __init__(self, chado_obj):
+        """Create the FBGene object."""
+        super().__init__(chado_obj)
+        self.db_primary_id = chado_obj.feature_id
+
+
+class FBGene(FBFeature):
+    """A FlyBase Gene entity with all its related data."""
+    def __init__(self, chado_obj):
+        """Create the FBGene object."""
+        super().__init__(chado_obj)
+
+
 class FBStrain(FBDataEntity):
     """A FlyBase Strain entity with all its related data."""
     def __init__(self, chado_obj):
         """Create the FBStrain object."""
         super().__init__(chado_obj)
         self.db_primary_id = chado_obj.strain_id
-        self.uniquename = chado_obj.uniquename
-        self.organism_abbr = chado_obj.organism.abbreviation
+
+
+class FBGenotype(FBDataEntity):
+    """A FlyBase Genotype entity with all its related data."""
+    def __init__(self, chado_obj):
+        """Create the FBStrain object."""
+        super().__init__(chado_obj)
+        self.db_primary_id = chado_obj.genotype_id
 
 
 # Primary Alliance DTO Classes for FlyBase data.
