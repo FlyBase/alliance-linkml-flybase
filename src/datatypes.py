@@ -47,7 +47,7 @@ class FBDataEntity(FBEntity):
         self.pubs = []                  # Pub associations: e.g., FeaturePub, StrainPub.
         self.synonyms = []              # Synonym associations: e.g., FeatureSynonym, StrainSynonym.
         self.dbxrefs = []               # Dbxref associations: e.g., FeatureDbxref, StrainDbxref.
-        self.props = {}                 # entity props: e.g., Featureprop, Strainprop.
+        self.props = []                 # entity props: e.g., Featureprop, Strainprop.
         self.prop_pubs = []             # entity prop_pubs: e.g., Featureprop_pub, Strainprop_pub.
         self.cvterms = []               # Cvterm associations: e.g., FeatureCvterm, StrainCvterm.
         self.cvtermprops = []           # Cvtermprop associations: e.g., FeatureCvtermprop, StrainDbxref.

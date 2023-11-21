@@ -389,7 +389,7 @@ class PrimaryEntityHandler(DataHandler):
         main_pkey_name = self.chado_tables['primary_key'][chado_type]
         # BOB - is it more efficient to do "in_" query, or, query each fb entity one-by-one?
         for i in associated_data_types:
-            asso_chado_table = aliased(self.chado_tables[i][chado_type], name='asso_chado_table')
+            asso_chado_table = self.chado_tables[i][chado_type]
             self.log.info(f'Get {i} for {self.fb_data_type} from {asso_chado_table}')
             fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
             filters = (
