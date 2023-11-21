@@ -327,16 +327,16 @@ class PrimaryEntityHandler(DataHandler):
         pkey_col = self.get_primary_key_column(main_table)
         fkey_col = self.get_foreign_key_column(main_table, 'type_id')
         filters = (
-            Feature.uniquename == 'FBgn0011278',
+            main_table.uniquename == 'FBgn0011278',
             pkey_col == 3167743,
             fkey_col == 219
         )
         filters += (
             Cvterm.name.in_((lbe_types)),
         )
-        results = session.query(Feature).\
-            select_from(Feature).\
-            join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
+        results = session.query(main_table).\
+            select_from(main_table).\
+            join(Cvterm, (Cvterm.cvterm_id == main_table.type_id)).\
             filter(*filters).\
             distinct()
         counter = 0
