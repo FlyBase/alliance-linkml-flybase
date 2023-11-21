@@ -451,11 +451,13 @@ class PrimaryEntityHandler(DataHandler):
         """Get prop pubs for primary FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
         pkey_name = self.chado_tables['primary_key'][chado_type]
-        prop_chado_table = aliased(self.chado_tables['props'][chado_type], name='prop_chado_table')
-        prop_pub_chado_table = aliased(self.chado_tables['prop_pubs'][chado_type], name='prop_pub_chado_table')
+        # prop_chado_table = aliased(self.chado_tables['props'][chado_type], name='prop_chado_table')
+        prop_chado_table = self.chado_tables['props'][chado_type], name='prop_chado_table'
+        # prop_pub_chado_table = aliased(self.chado_tables['prop_pubs'][chado_type], name='prop_pub_chado_table')
+        prop_pub_chado_table = self.chado_tables['prop_pubs'][chado_type]
         self.log.info(f'Get prop pubs for {self.fb_data_type} data entities from {prop_pub_chado_table} chado table.')
-        # fkey_col = self.get_foreign_key_column(prop_chado_table, pkey_name)    # BOB?
-        fkey_col = self.get_foreign_key_column(self.chado_tables['props'][chado_type], pkey_name)
+        fkey_col = self.get_foreign_key_column(prop_chado_table, pkey_name)
+        # fkey_col = self.get_foreign_key_column(self.chado_tables['props'][chado_type], pkey_name)    # BOB?
         filters = (
             fkey_col.in_((self.fb_data_entities.keys())),
         )
