@@ -42,7 +42,7 @@ class FBDataEntity(FBEntity):
             self.organism_abbr = chado_obj.organism.abbreviation
         except AttributeError:
             self.organism_abbr = 'Dmel'
-        # Primary FB chado data.
+        # Primary FB chado data - direct db query results.
         self.chado_obj = chado_obj      # The primary SQLAlchemy chado object.
         self.pubs = []                  # Pub associations: e.g., FeaturePub, StrainPub.
         self.synonyms = []              # Synonym associations: e.g., FeatureSynonym, StrainSynonym.
@@ -52,7 +52,7 @@ class FBDataEntity(FBEntity):
         self.props = {}                 # cvterm name-keyed lists of entity props: e.g., Featureprop, Strainprop.
         self.prop_pubs = {}             # prop_id-keyed lists of pub_ids.
         self.timestamps = []            # FB timestamps.
-        # Processed FB data.
+        # Processed FB data - processed from primary FB chado data above.
         self.organism_abbr = None       # The organism.abbreviation (str).
         self.ncbi_taxon_id = None       # The NCBITaxon dbxref.accession (str).
         self.curr_fb_symbol = None      # The current symbol Synonym chado for the entity.
@@ -71,7 +71,10 @@ class FBFeature(FBDataEntity):
     def __init__(self, chado_obj):
         """Create the FBGene object."""
         super().__init__(chado_obj)
+        # Primary FB chado data.
         self.db_primary_id = chado_obj.feature_id
+        self.featureloc = []    # Will be Featureloc objects for the entity.
+        # Processed FB data.
 
 
 class FBGene(FBFeature):
@@ -79,6 +82,13 @@ class FBGene(FBFeature):
     def __init__(self, chado_obj):
         """Create the FBGene object."""
         super().__init__(chado_obj)
+        # Primary FB chado data.
+        self.fb_anno_xrefs = []       # Will be "FlyBase Annotation IDs" Dbxref objects.
+        # Processed FB data.
+        self.gene_type_name = None    # Will be the SO term name from the "promoted_gene_type" Featureprop (str).
+        self.gene_snapshot = None     # Will be the text from the "gene_summary_text" Featureprop (str).
+        self.curr_anno_id = None      # Will be current annotation ID for the gene (str).
+        self.annotation_ids = []      # Will be list of non-current annotation IDs for the gene (str).
 
 
 class FBStrain(FBDataEntity):
@@ -86,7 +96,9 @@ class FBStrain(FBDataEntity):
     def __init__(self, chado_obj):
         """Create the FBStrain object."""
         super().__init__(chado_obj)
+        # Primary FB chado data.
         self.db_primary_id = chado_obj.strain_id
+        # Processed FB data.
 
 
 class FBGenotype(FBDataEntity):
@@ -136,6 +148,19 @@ class GenomicEntityDTO(BiologicalEntityDTO):
         """Create GenomicEntityDTO for FlyBase object."""
         super().__init__()
         self.cross_reference_dtos = []
+
+
+class GeneDTO(GenomicEntityDTO):
+    """GeneDTO class."""
+    def __init__(self):
+        """Create GeneDTO for FlyBase object."""
+        super().__init__()
+        self.gene_symbol_dto = None             # Will be a single SymbolSlotAnnotationDTO.
+        self.gene_full_name_dto = None          # Will be a single FullNameSlotAnnotation.
+        self.gene_systematic_name_dto = None    # Will be a single SystematicNameSlotAnnotation.
+        self.gene_synonym_dtos = []             # Will be list of NameSlotAnnotationDTO objects.
+        self.gene_type_curie = None             # Will be the SO term ID corresponding to the gene's promoted_gene_type.
+        self.gene_secondary_id_dtos = []        # Annotation IDs and 2o FlyBase IDs.
 
 
 class AffectedGenomicModelDTO(GenomicEntityDTO):

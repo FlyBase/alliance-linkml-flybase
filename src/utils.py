@@ -319,7 +319,9 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info('Test SQLAlchemy behavior.')
         lbe_types = ['gene']
         pkey_col = self.get_primary_key_column(Feature)
+        self.log.info(f'Found primary_key column: {pkey_col.name}')
         foreign_col = self.get_foreign_key_column(Feature, 'type_id')
+        self.log.info(f'Found foreign_key column: {foreign_col.name}')
         filters = (
             Feature.uniquename == 'FBgn0011278',
             pkey_col == 3167743,
@@ -369,10 +371,12 @@ class PrimaryEntityHandler(DataHandler):
                 distinct()
         pkey_name = self.chado_tables['primary_key'][chado_type]
         self.log.info(f'Have this primary_key name: {pkey_name}')
+        counter = 0
         for result in results:
             pkey_id = getattr(result, pkey_name)
             self.fb_data_entities[pkey_id] = datatype_object(result)
-        self.log.info(f'Found {self.input_count} FlyBase {self.fb_data_type} entities in chado.')
+            counter += 1
+        self.log.info(f'Found {counter} FlyBase {self.fb_data_type} entities in chado.')
         return
 
     def get_entity_associated_data(self, session):
@@ -770,10 +774,15 @@ class GeneHandler(PrimaryEntityHandler):
         self.log.info(f'Processed {counter} lines from the panther orthology file.')
         return
 
+    def get_chr_info(self, session):
+        # BOB
+        return
+
     def get_datatype_data(self, session):
         """Extend the method for the GeneHandler."""
         super().get_datatype_data(session)
         self.get_panther_info()
+        self.get_chr_info(session)
         return
 
 
