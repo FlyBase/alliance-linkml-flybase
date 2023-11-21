@@ -505,7 +505,7 @@ class PrimaryEntityHandler(DataHandler):
         main_chado_table = aliased(self.chado_tables['main_table'][chado_type], name='main_chado_table')
         prop_chado_table = aliased(self.chado_tables['props'][chado_type], name='prop_chado_table')
         prop_pub_chado_table = aliased(self.chado_tables['prop_pubs'][chado_type], name='prop_pub_chado_table')
-        self.log.info(f'Get prop with pubs for {self.fb_data_type} data entities from {prop_chado_table.name} chado table.')
+        self.log.info(f'Get prop with pubs for {self.fb_data_type} data entities from {prop_chado_table} chado table.')
         main_pkey_col = self.get_primary_key_column(main_chado_table)
         prop_pkey_col = self.get_primary_key_column(prop_chado_table)
         filters = (
