@@ -538,7 +538,7 @@ class PrimaryEntityHandler(DataHandler):
                     self.fb_data_entities[entity_pkey_id].props[prop_type] = [result.prop_chado_table]
                 self.fb_data_entities[entity_pkey_id].prop_pubs[prop_pkey_id] = [prop_pub_id]
             counter += 1
-        self.log.info(f'Found these types of props: {set(prop_types)}')
+        self.log.info(f'Found these types of {chado_type}props: {set(prop_types)}')
         for i in self.fb_data_entities.values():
             for k, v in i.prop_pubs.items():
                 self.log.debug(f'{chado_type}prop_id={k}, pub_ids={v}')
