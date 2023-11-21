@@ -299,7 +299,7 @@ class PrimaryEntityHandler(DataHandler):
 
     def get_primary_key_column(self, chado_table):
         """Get the primary key Column object from a specified chado table Model object."""
-        primary_key_column = next((column for column in chado_table.__table__.c if column.primary_keys), None)
+        primary_key_column = next((column for column in chado_table.__table__.c if column.primary_key), None)
         if primary_key_column is None:
             self.log.error(f'Could not get primary_key Column from {chado_table}')
             raise ValueError
