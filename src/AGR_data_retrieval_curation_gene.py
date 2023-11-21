@@ -10,12 +10,12 @@ Usage:
     [-l LINKML_RELEASE] [-v VERBOSE] [-c CONFIG]
 
 Example:
-    python AGR_data_retrieval_curation_template.py -v -r 2023_05 -l v1.1.2
+    python AGR_data_retrieval_curation_gene.py -v -r 2023_05 -l v1.1.2
     -c /path/to/config.cfg
 
 Notes:
-    This script exports FlyBase AGM data as a JSON file conforming to the
-    AGM LinkML specs for the Alliance persistent curation database.
+    This script exports FlyBase gene data as a JSON file conforming to the
+    Gene LinkML specs for the Alliance persistent curation database.
     A chado database with a full "audit_chado" table is required.
 
 """
@@ -28,9 +28,8 @@ from harvdev_utils.psycopg_functions import set_up_db_reading
 from utils import get_handler, db_query_transaction, generate_export_file
 
 # Data types handled by this script.
-FB_STRAIN_DATA_TYPE = 'strain'
-FB_GENOTYPE_DATA_TYPE = 'genotype'
-REPORT_LABEL = 'agm_curation'
+FB_DATA_TYPE = 'gene'
+REPORT_LABEL = 'gene_curation'
 
 # Now proceed with generic setup.
 set_up_dict = set_up_db_reading(REPORT_LABEL)
@@ -72,8 +71,8 @@ def main():
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Get the data and process it.
-    strain_handler = get_handler(log, FB_STRAIN_DATA_TYPE)
-    db_query_transaction(session, log, strain_handler)
+    gene_handler = get_handler(log, FB_DATA_TYPE)
+    db_query_transaction(session, log, gene_handler)
 
     # Export the data.
     export_dict = {
@@ -81,9 +80,8 @@ def main():
         'alliance_member_release_version': fb_release,
     }
     # Start export list with strains.
-    export_dict[strain_handler.agr_ingest_type] = []
-    export_dict[strain_handler.agr_ingest_type].extend(strain_handler.export_data)
-    # export_dict[genotype_handler.agr_ingest_type].extend(genotype_handler.export_data)    # To do
+    export_dict[gene_handler.agr_ingest_type] = []
+    export_dict[gene_handler.agr_ingest_type].extend(gene_handler.export_data)
     generate_export_file(export_dict, log, output_filename)
 
     log.info('Ended main function.\n')
