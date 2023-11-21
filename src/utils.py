@@ -326,9 +326,10 @@ class PrimaryEntityHandler(DataHandler):
         main_table = table_dict['main']
         pkey_col = self.get_primary_key_column(main_table)
         fkey_col = self.get_foreign_key_column(main_table, 'type_id')
+        feat_ids = [3167743]
         filters = (
             main_table.uniquename == 'FBgn0011278',
-            pkey_col == 3167743,
+            pkey_col.in_((feat_ids)),
             fkey_col == 219
         )
         filters += (
