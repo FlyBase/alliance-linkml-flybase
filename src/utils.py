@@ -323,7 +323,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info('Test SQLAlchemy behavior.')
         lbe_types = ['gene']
         table_dict = {'main': Feature}
-        main_table = aliased(table_dict['main'], name='main_table')
+        main_table = table_dict['main']
         pkey_col = self.get_primary_key_column(main_table)
         fkey_col = self.get_foreign_key_column(main_table, 'type_id')
         filters = (
