@@ -519,10 +519,12 @@ class PrimaryEntityHandler(DataHandler):
             distinct()
         counter = 0
         pass_counter = 0
+        prop_types = []
         for result in results:
             entity_pkey_id = getattr(result.prop_chado_table, main_pkey_col.name)
             prop_pkey_id = getattr(result.prop_chado_table, prop_pkey_col.name)
             prop_type = result.prop_chado_table.type.name
+            prop_types.append(prop_type)
             prop_pub_id = getattr(result.prop_pub_chado_table, 'pub_id')
             if entity_pkey_id not in self.fb_data_entities.keys():
                 pass_counter += 1
@@ -536,6 +538,10 @@ class PrimaryEntityHandler(DataHandler):
                     self.fb_data_entities[entity_pkey_id].props[prop_type] = [result.prop_chado_table]
                 self.fb_data_entities[entity_pkey_id].prop_pubs[prop_pkey_id] = [prop_pub_id]
             counter += 1
+        self.log.info(f'Found these types of props: {set(prop_types)}')
+        for i in self.fb_data_entities.values():
+            for k, v in i.prop_pubs:
+                self.log.debug(f'{chado_type}prop_id={k}, pub_ids={v}')
         self.log.info(f'Found {counter} props for {self.fb_data_type}.')
         self.log.info(f'Ignored {pass_counter} props for {self.fb_data_type}.')
         return
