@@ -459,8 +459,9 @@ class PrimaryEntityHandler(DataHandler):
             fkey_col.in_((self.fb_data_entities.keys())),
         )
         results = session.query(prop_chado_table, prop_pub_chado_table).\
-            select_from(prop_chado_table).\
-            join(prop_pub_chado_table).\
+            select_from(prop_pub_chado_table).\
+            join(prop_chado_table).\
+            join(fkey_col).\
             filter(*filters).\
             distinct()
         counter = 0
@@ -573,8 +574,6 @@ class PrimaryEntityHandler(DataHandler):
         prop_chado_table = self.chado_tables['props'][chado_type]
         prop_pkey_col = self.get_primary_key_column(prop_chado_table)
         self.log.info(f'Synthesize {prop_chado_table} data.')
-        counter = 0
-        pass_counter = 0
         prop_types = []
         # Build prop dict.
         for fb_data_entity in self.fb_data_entities.values():
@@ -679,8 +678,8 @@ class GeneHandler(PrimaryEntityHandler):
     def __init__(self, log, fb_data_type):
         """Create the GeneHandler object."""
         super().__init__(log, fb_data_type)
-        self.pthr_dict = {}           # Will be an 1:1 FBgn_ID-PTHR xref dict.
-        self.chr_dict = {}            # Will be a feature_id-keyed dict of chr scaffold uniquenames.
+        self.pthr_dict = {}    # Will be an 1:1 FBgn_ID-PTHR xref dict.
+        self.chr_dict = {}     # Will be a feature_id-keyed dict of chr scaffold uniquenames.
 
     # Elaborate on export filters for StrainHandler.
     required_fields = [
@@ -757,7 +756,9 @@ class GeneHandler(PrimaryEntityHandler):
         return
 
     def get_chr_info(self, session):
+        """Build chr dict."""
         # BOB
+        # Build self.chr_dict, a feature_id-keyed dict of golden_path.uniquename.
         return
 
     def get_datatype_data(self, session):

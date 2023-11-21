@@ -62,7 +62,6 @@ class FBDataEntity(FBEntity):
         self.prop_dict = {}             # cvterm name-keyed lists of prop objects: e.g., Featureprop, Strainprop.
         self.prop_pub_dict = {}         # prop_id-keyed lists of pub_ids.
 
-
     def __str__(self):
         """Basic descriptive info for the object."""
         entity_desc = f'{self.chado_obj.name} ({self.chado_obj.uniquename})'
