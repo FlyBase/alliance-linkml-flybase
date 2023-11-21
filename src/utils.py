@@ -512,7 +512,8 @@ class PrimaryEntityHandler(DataHandler):
             main_pkey_col.in_((self.fb_data_entities.keys())),
         )
         results = session.query(main_chado_table, prop_chado_table, prop_pub_chado_table).\
-            select_from(prop_chado_table).\
+            select_from(main_chado_table).\
+            join(prop_chado_table).\
             join(prop_pub_chado_table).\
             filter(*filters).\
             distinct()
