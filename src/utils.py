@@ -323,11 +323,11 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info('Test SQLAlchemy behavior.')
         lbe_types = ['gene']
         pkey_col = self.get_primary_key_column(Feature)
-        foreign_col = self.get_foreign_key_column(Feature, 'type_id')
+        fkey_col = self.get_foreign_key_column(Feature, 'type_id')
         filters = (
             Feature.uniquename == 'FBgn0011278',
             pkey_col == 3167743,
-            foreign_col == 219
+            fkey_col == 219
         )
         filters += (
             Cvterm.name.in_((lbe_types)),
@@ -505,55 +505,39 @@ class PrimaryEntityHandler(DataHandler):
         main_chado_table = aliased(self.chado_tables['main_table'][chado_type], name='main_chado_table')
         prop_chado_table = aliased(self.chado_tables['props'][chado_type], name='prop_chado_table')
         prop_pub_chado_table = aliased(self.chado_tables['prop_pubs'][chado_type], name='prop_pub_chado_table')
-        self.log.info(f'Get props for {self.fb_data_type} data entities from {chado_type}prop chado table.')
-        pkey_name = self.chado_tables['primary_key'][chado_type]
-        self.log.info(f'Use this primary key name: {pkey_name}')
-        # Get the foreign key in associated table corresponding to primary data type.
-        foreign_key_column = next((column for column in prop_chado_table.__table__.c if column.foreign_keys and column.name == pkey_name), None)
+        self.log.info(f'Get prop with pubs for {self.fb_data_type} data entities from {prop_chado_table.name} chado table.')
+        main_pkey_col = self.get_primary_key_column(main_chado_table)
+        prop_pkey_col = self.get_primary_key_column(prop_chado_table)
         filters = (
-            foreign_key_column.in_((self.fb_data_entities.keys())),
+            main_pkey_col.in_((self.fb_data_entities.keys())),
         )
-        counter = 0
-        pass_counter = 0
-
-
-
-
-
-        prop_chado_table = aliased(self.chado_tables['props'][chado_type], name='prop_chado_table')
-        self.log.info(f'Get prop pubs for {self.fb_data_type} data entities from {chado_type}prop and {chado_type}prop_pub chado tables.')
-        pkey_name = self.chado_tables['primary_key'][chado_type]
-        self.log.info(f'Use this primary key name: {pkey_name}')
-        # Get the foreign key in associated table corresponding to primary data type.
-        foreign_key_column = next((column for column in prop_chado_table.__table__.c if column.foreign_keys and column.name == pkey_name), None)
-        filters = (
-            foreign_key_column.in_((self.fb_data_entities.keys())),
-        )
-        counter = 0
-        pass_counter = 0
-        results = session.query(prop_chado_table, prop_pub_chado_table).\
+        results = session.query(main_chado_table, prop_chado_table, prop_pub_chado_table).\
             select_from(prop_chado_table).\
             join(prop_pub_chado_table).\
             filter(*filters).\
             distinct()
+        counter = 0
+        pass_counter = 0
         for result in results:
-            pkey_id = getattr(result.prop_chado_table, pkey_name)
-            if pkey_id not in self.fb_data_entities.keys():
+            entity_pkey_id = getattr(result.prop_chado_table, main_pkey_col.name)
+            prop_pkey_id = getattr(result.prop_chado_table, prop_pkey_col.name)
+            prop_type = result.prop_chado_table.type.name
+            prop_pub_id = getattr(result.prop_pub_chado_table, 'pub_id')
+            if entity_pkey_id not in self.fb_data_entities.keys():
                 pass_counter += 1
                 continue
-            prop_column_name = f'{chado_type}prop_id'
-            prop_id = getattr(result.prop_chado_table, prop_column_name)
-            pub_id = getattr(result.prop_pub_chado_table, 'pub_id')
-            try:
-                self.fb_data_entities[pkey_id].prop_pubs[prop_id].append(pub_id)
-                counter += 1
-            except KeyError:
-                self.fb_data_entities[pkey_id].prop_pubs[prop_id] = [pub_id]
-                counter += 1
+            if prop_pkey_id in self.fb_data_entities[entity_pkey_id].prop_pubs.keys():
+                self.fb_data_entities[entity_pkey_id].prop_pubs[prop_pkey_id].append(prop_pub_id)
+            else:
+                try:
+                    self.fb_data_entities[entity_pkey_id].props[prop_type].append(result.prop_chado_table)
+                except KeyError:
+                    self.fb_data_entities[entity_pkey_id].props[prop_type] = [result.prop_chado_table]
+                self.fb_data_entities[entity_pkey_id].prop_pubs[prop_pkey_id] = [prop_pub_id]
+            counter += 1
         self.log.info(f'Found {counter} props for {self.fb_data_type}.')
         self.log.info(f'Ignored {pass_counter} props for {self.fb_data_type}.')
         return
-
 
     def get_cvterms(self, session):
         # BOB
