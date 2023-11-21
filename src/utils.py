@@ -464,7 +464,6 @@ class PrimaryEntityHandler(DataHandler):
         results = session.query(prop_chado_table, prop_pub_chado_table).\
             select_from(prop_pub_chado_table).\
             join(prop_chado_table).\
-            join(main_pkey_col).\
             filter(*filters).\
             distinct()
         counter = 0
