@@ -342,6 +342,7 @@ class PrimaryEntityHandler(DataHandler):
         counter = 0
         for i in results:
             self.log.info(f'Found this feature: {i.name} ({i.uniquename})')
+            self.log.info(f'Found this feature_id: {getattr(i, pkey_col.name)}')
             counter += 1
         self.log.info(f'Found {counter} test results using natural join.')
         return
