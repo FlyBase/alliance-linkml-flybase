@@ -401,13 +401,13 @@ class PrimaryEntityHandler(DataHandler):
             filters = (
                 foreign_key_column.in_((self.fb_data_entities.keys())),
             )
-            counter = 0
-            pass_counter = 0
             results = session.query(asso_chado_table).\
                 select_from(asso_chado_table).\
                 join(main_chado_table).\
                 filter(*filters).\
                 distinct()
+            counter = 0
+            pass_counter = 0
             for result in results:
                 pkey_id = getattr(result, pkey_name)
                 try:
@@ -416,24 +416,19 @@ class PrimaryEntityHandler(DataHandler):
                 except KeyError:
                     pass_counter += 1
             self.log.info(f'Found {counter} {i} for {self.fb_data_type}.')
-            self.log.info(f'Ignored {pass_counter} {i} for {self.fb_data_type}.')
+            self.log.info(f'Ignored {pass_counter} {i} for irrelevant {self.fb_data_type} entities.')
         return
 
     def get_entity_props(self, session):
         """Get props for primary FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
-        main_chado_table = self.chado_tables['main_table'][chado_type]
-        prop_chado_table = self.chado_tables['props'][chado_type]
-        self.log.info(f'Get props for {self.fb_data_type} data entities from {chado_type}prop chado table.')
-        pkey_name = self.chado_tables['primary_key'][chado_type]
-        self.log.info(f'Use this primary key name: {pkey_name}')
-        # Get the foreign key in associated table corresponding to primary data type.
-        foreign_key_column = next((column for column in prop_chado_table.__table__.c if column.foreign_keys and column.name == pkey_name), None)
+        main_chado_table = aliased(self.chado_tables['main_table'][chado_type], name='main_chado_table')
+        prop_chado_table = aliased(self.chado_tables['props'][chado_type], name='prop_chado_table')
+        self.log.info(f'Get props for {self.fb_data_type} data entities from {prop_chado_table} chado table.')
+        main_pkey_col = self.get_primary_key_column(main_chado_table)
         filters = (
-            foreign_key_column.in_((self.fb_data_entities.keys())),
+            main_pkey_col.in_((self.fb_data_entities.keys())),
         )
-        counter = 0
-        pass_counter = 0
         results = session.query(prop_chado_table).\
             select_from(prop_chado_table).\
             join(main_chado_table).\
@@ -447,107 +442,99 @@ class PrimaryEntityHandler(DataHandler):
             filter(*filters).\
             distinct()
         for result in results:
-            pkey_id = getattr(result, pkey_name)
-            if pkey_id not in self.fb_data_entities.keys():
+            entity_pkey_id = getattr(result, main_pkey_col.name)
+            if entity_pkey_id not in self.fb_data_entities.keys():
                 pass_counter += 1
                 continue
             try:
-                self.fb_data_entities[pkey_id].props[result.type.name].append(result)
-                counter += 1
+                self.fb_data_entities[entity_pkey_id].props.append(result)
             except KeyError:
-                self.fb_data_entities[pkey_id].props[result.type.name] = [result]
-                counter += 1
+                self.fb_data_entities[entity_pkey_id].props = [result]
+            counter += 1
         self.log.info(f'Found {counter} props for {self.fb_data_type}.')
-        self.log.info(f'Ignored {pass_counter} props for {self.fb_data_type}.')
+        self.log.info(f'Ignored {pass_counter} props for irrelevant {self.fb_data_type} entities.')
         return
 
     def get_entity_prop_pubs(self, session):
-        """Get prop pubs for FlyBase data entities."""
-        chado_type = self.main_chado_entity_types[self.fb_data_type]
-        prop_chado_table = aliased(self.chado_tables['props'][chado_type], name='prop_chado_table')
-        prop_pub_chado_table = aliased(self.chado_tables['prop_pubs'][chado_type], name='prop_pub_chado_table')
-        self.log.info(f'Get prop pubs for {self.fb_data_type} data entities from {chado_type}prop and {chado_type}prop_pub chado tables.')
-        pkey_name = self.chado_tables['primary_key'][chado_type]
-        self.log.info(f'Use this primary key name: {pkey_name}')
-        # Get the foreign key in associated table corresponding to primary data type.
-        foreign_key_column = next((column for column in prop_chado_table.__table__.c if column.foreign_keys and column.name == pkey_name), None)
-        filters = (
-            foreign_key_column.in_((self.fb_data_entities.keys())),
-        )
-        counter = 0
-        pass_counter = 0
-        results = session.query(prop_chado_table, prop_pub_chado_table).\
-            select_from(prop_chado_table).\
-            join(prop_pub_chado_table).\
-            filter(*filters).\
-            distinct()
-        for result in results:
-            pkey_id = getattr(result.prop_chado_table, pkey_name)
-            if pkey_id not in self.fb_data_entities.keys():
-                pass_counter += 1
-                continue
-            prop_column_name = f'{chado_type}prop_id'
-            prop_id = getattr(result.prop_chado_table, prop_column_name)
-            pub_id = getattr(result.prop_pub_chado_table, 'pub_id')
-            try:
-                self.fb_data_entities[pkey_id].prop_pubs[prop_id].append(pub_id)
-                counter += 1
-            except KeyError:
-                self.fb_data_entities[pkey_id].prop_pubs[prop_id] = [pub_id]
-                counter += 1
-        self.log.info(f'Found {counter} props for {self.fb_data_type}.')
-        self.log.info(f'Ignored {pass_counter} props for {self.fb_data_type}.')
-        return
-
-    def get_entity_prop_with_pubs(self, session):
-        """Get props with pubs for FlyBase data entities."""
+        """Get prop pubs for primary FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
         main_chado_table = aliased(self.chado_tables['main_table'][chado_type], name='main_chado_table')
         prop_chado_table = aliased(self.chado_tables['props'][chado_type], name='prop_chado_table')
         prop_pub_chado_table = aliased(self.chado_tables['prop_pubs'][chado_type], name='prop_pub_chado_table')
-        self.log.info(f'Get prop with pubs for {self.fb_data_type} data entities from {prop_chado_table} chado table.')
+        self.log.info(f'Get prop pubs for {self.fb_data_type} data entities from {prop_pub_chado_table} chado table.')
         main_pkey_col = self.get_primary_key_column(main_chado_table)
-        prop_pkey_col = self.get_primary_key_column(prop_chado_table)
         filters = (
             main_pkey_col.in_((self.fb_data_entities.keys())),
         )
-        results = session.query(main_chado_table, prop_chado_table, prop_pub_chado_table).\
-            select_from(main_chado_table).\
-            join(prop_chado_table).\
+        results = session.query(prop_chado_table, prop_pub_chado_table).\
+            select_from(prop_chado_table).\
+            join(main_chado_table).\
             join(prop_pub_chado_table).\
             filter(*filters).\
             distinct()
         counter = 0
         pass_counter = 0
-        prop_types = []
         for result in results:
-            entity_pkey_id = getattr(result.prop_chado_table, main_pkey_col.name)
-            prop_pkey_id = getattr(result.prop_chado_table, prop_pkey_col.name)
-            prop_type = result.prop_chado_table.type.name
-            prop_types.append(prop_type)
-            prop_pub_id = getattr(result.prop_pub_chado_table, 'pub_id')
+            entity_pkey_id = getattr(result, main_pkey_col.name)
             if entity_pkey_id not in self.fb_data_entities.keys():
                 pass_counter += 1
                 continue
-            if prop_pkey_id in self.fb_data_entities[entity_pkey_id].prop_pubs.keys():
-                self.fb_data_entities[entity_pkey_id].prop_pubs[prop_pkey_id].append(prop_pub_id)
-            else:
-                try:
-                    self.fb_data_entities[entity_pkey_id].props[prop_type].append(result.prop_chado_table)
-                except KeyError:
-                    self.fb_data_entities[entity_pkey_id].props[prop_type] = [result.prop_chado_table]
-                self.fb_data_entities[entity_pkey_id].prop_pubs[prop_pkey_id] = [prop_pub_id]
+            try:
+                self.fb_data_entities[entity_pkey_id].prop_pubs.append(result.prop_pub_chado_table)
+            except KeyError:
+                self.fb_data_entities[entity_pkey_id].prop_pubs = [result.prop_pub_chado_table]
             counter += 1
-        self.log.info(f'Found these types of {chado_type}props: {set(prop_types)}')
-        for i in self.fb_data_entities.values():
-            for k, v in i.prop_pubs.items():
-                self.log.debug(f'{chado_type}prop_id={k}, pub_ids={v}')
         self.log.info(f'Found {counter} props for {self.fb_data_type}.')
-        self.log.info(f'Ignored {pass_counter} props for {self.fb_data_type}.')
+        self.log.info(f'Ignored {pass_counter} props for irrelevant {self.fb_data_type} entities.')
         return
 
     def get_cvterms(self, session):
-        # BOB
+        chado_type = self.main_chado_entity_types[self.fb_data_type]
+        main_chado_table = aliased(self.chado_tables['main_table'][chado_type], name='main_chado_table')
+        cvterm_chado_table = aliased(self.chado_tables['cvterms'][chado_type], name='cvterm_chado_table')
+        cvtermprop_chado_table = aliased(self.chado_tables['cvtermprops'][chado_type], name='cvtermprop_chado_table')
+
+        # BOB - continue here
+        # self.log.info(f'Get prop with pubs for {self.fb_data_type} data entities from {prop_chado_table} chado table.')
+        # main_pkey_col = self.get_primary_key_column(main_chado_table)
+        # prop_pkey_col = self.get_primary_key_column(prop_chado_table)
+        # filters = (
+        #     main_pkey_col.in_((self.fb_data_entities.keys())),
+        # )
+        # results = session.query(main_chado_table, prop_chado_table, prop_pub_chado_table).\
+        #     select_from(main_chado_table).\
+        #     join(prop_chado_table).\
+        #     join(prop_pub_chado_table).\
+        #     filter(*filters).\
+        #     distinct()
+        # counter = 0
+        # pass_counter = 0
+        # prop_types = []
+        # for result in results:
+        #     entity_pkey_id = getattr(result.prop_chado_table, main_pkey_col.name)
+        #     prop_pkey_id = getattr(result.prop_chado_table, prop_pkey_col.name)
+        #     prop_type = result.prop_chado_table.type.name
+        #     prop_types.append(prop_type)
+        #     prop_pub_id = getattr(result.prop_pub_chado_table, 'pub_id')
+        #     if entity_pkey_id not in self.fb_data_entities.keys():
+        #         pass_counter += 1
+        #         continue
+        #     if prop_pkey_id in self.fb_data_entities[entity_pkey_id].prop_pubs.keys():
+        #         self.fb_data_entities[entity_pkey_id].prop_pubs[prop_pkey_id].append(prop_pub_id)
+        #     else:
+        #         try:
+        #             self.fb_data_entities[entity_pkey_id].props[prop_type].append(result.prop_chado_table)
+        #         except KeyError:
+        #             self.fb_data_entities[entity_pkey_id].props[prop_type] = [result.prop_chado_table]
+        #         self.fb_data_entities[entity_pkey_id].prop_pubs[prop_pkey_id] = [prop_pub_id]
+        #     counter += 1
+        # self.log.info(f'Found these types of {chado_type}props: {set(prop_types)}')
+        # Optional debug.
+        # for i in self.fb_data_entities.values():
+        #     for k, v in i.prop_pubs.items():
+        #         self.log.debug(f'{chado_type}prop_id={k}, pub_ids={v}')
+        # self.log.info(f'Found {counter} props for {self.fb_data_type}.')
+        # self.log.info(f'Ignored {pass_counter} props for {self.fb_data_type}.')
         return
 
     def get_entity_timestamps(self, session):
@@ -577,57 +564,91 @@ class PrimaryEntityHandler(DataHandler):
         self.sqlalchemy_test(session)
         self.get_entity_data(session)
         self.get_entity_associated_data(session)
-        # self.get_entity_props(session)        # BOB: deprecated
-        # self.get_entity_prop_pubs(session)    # BOB: deprecated
-        self.get_entity_prop_with_pubs(session)
+        self.get_entity_props(session)
+        self.get_entity_prop_pubs(session)
         self.get_cvterms(session)
         self.get_entity_timestamps(session)
         return
 
     # Elaborate on synthesize_info() sub-methods for PrimaryEntityHandler.
-    def synthesize_ncbi_taxon_id(self, fb_data_entity):
+    def synthesize_ncbi_taxon_id(self):
         """Determine the NCBITaxon ID for the entity."""
-        # Catch cases where the FB data entity has no organism_id.
-        try:
-            organism_id = fb_data_entity.chado_obj.organism_id
-        except AttributeError:
-            self.log.warning(f'No organism_id for {fb_data_entity}.')
-            return None
-        # Catch cases where the FB data entity has no corresponding NCBITaxon ID.
-        try:
-            ncbi_taxon_id = f'NCBITaxon:{self.ncbi_taxon_dict[organism_id]}'
-        except KeyError:
-            self.log.warning(f'Use "unidentified" NCBITaxon ID for {fb_data_entity}')
-            ncbi_taxon_id = 'NCBITaxon:32644'
-        fb_data_entity.ncbi_taxon_id = ncbi_taxon_id
+        for fb_data_entity in self.fb_data_entities.values():
+            # Catch cases where the FB data entity has no organism_id.
+            try:
+                organism_id = fb_data_entity.chado_obj.organism_id
+            except AttributeError:
+                self.log.warning(f'No organism_id for {fb_data_entity}.')
+                return None
+            # Catch cases where the FB data entity has no corresponding NCBITaxon ID.
+            try:
+                ncbi_taxon_id = f'NCBITaxon:{self.ncbi_taxon_dict[organism_id]}'
+            except KeyError:
+                self.log.warning(f'Use "unidentified" NCBITaxon ID for {fb_data_entity}')
+                ncbi_taxon_id = 'NCBITaxon:32644'
+            fb_data_entity.ncbi_taxon_id = ncbi_taxon_id
         return
 
-    def synthesize_secondary_ids(self, fb_data_entity):
+    def synthesize_secondary_ids(self):
         """Process secondary IDs and return a list of old FB uniquenames."""
-        secondary_ids = []
-        for xref in fb_data_entity.dbxrefs:
-            if xref.dbxref.db.name == 'FlyBase' and xref.is_current is False:
-                secondary_ids.append(f'FB:{xref.dbxref.accession}')
-        fb_data_entity.alt_fb_ids = list(set(secondary_ids))
+        for fb_data_entity in self.fb_data_entities.values():
+            secondary_ids = []
+            for xref in fb_data_entity.dbxrefs:
+                if xref.dbxref.db.name == 'FlyBase' and xref.is_current is False:
+                    secondary_ids.append(f'FB:{xref.dbxref.accession}')
+            fb_data_entity.alt_fb_ids = list(set(secondary_ids))
+        return
+
+    def synthesize_props(self):
+        """Process props and pubs for FlyBase data entities."""
+        chado_type = self.main_chado_entity_types[self.fb_data_type]
+        prop_chado_table = self.chado_tables['props'][chado_type]
+        prop_pkey_col = self.get_primary_key_column(prop_chado_table)
+        self.log.info(f'Synthesize {prop_chado_table} data.')
+        counter = 0
+        pass_counter = 0
+        prop_types = []
+        # Build prop dict.
+        for fb_data_entity in self.fb_data_entities.values():
+            # Build prop_type-keyed lists of props.
+            for prop in fb_data_entity.props:
+                prop_type = prop.type.name
+                prop_types.append(prop_type)
+                try:
+                    fb_data_entity.prop_dict[prop_type].append(prop)
+                except KeyError:
+                    fb_data_entity.prop_dict[prop_type].append(prop)
+            # Build prop_id-keyed lists of pub_ids.
+            for prop_pub in fb_data_entity.prop_pubs:
+                prop_id = getattr(prop_pub, prop_pkey_col.name)
+                try:
+                    fb_data_entity.prop_pub_dict[prop_id].append(prop_pub.pub_id)
+                except KeyError:
+                    fb_data_entity.prop_pub_dict[prop_id] = [prop_pub.pub_id]
+        # Review prop synthesis.
+        self.log.info(f'Found these types of {chado_type}props: {set(prop_types)}')
+        # Optional debug.
+        for i in self.fb_data_entities.values():
+            for k, v in i.prop_pub_dict.items():
+                self.log.debug(f'{chado_type}_id={i.db_primary_id}, {chado_type}prop_id={k}, pub_ids={v}')
         return
 
     def synthesize_pubs(self, fb_data_entity):
         """Collect pub_ids associated directly or indirectly with the entity."""
-        pub_sources = ['pubs', 'synonyms', 'cvterms']
-        for pub_source in pub_sources:
-            fb_data_entity.all_pub_ids.extend([i.pub_id for i in getattr(fb_data_entity, pub_source)])
-        for prop_pub_id_list in fb_data_entity.prop_pubs.values():
-            fb_data_entity.all_pub_ids.extend(prop_pub_id_list)
-        fb_data_entity.all_pub_ids = list(set(fb_data_entity.all_pub_ids))
+        pub_sources = ['pubs', 'synonyms', 'cvterms', 'prop_pubs']
+        for fb_data_entity in self.fb_data_entities.values():
+            for pub_source in pub_sources:
+                fb_data_entity.all_pub_ids.extend([i.pub_id for i in getattr(fb_data_entity, pub_source)])
+            fb_data_entity.all_pub_ids = list(set(fb_data_entity.all_pub_ids))
         return
 
     def synthesize_info(self):
         """Extend the method for the PrimaryEntityHandler."""
         super().synthesize_info()
-        for fb_data_entity in self.fb_data_entities.values():
-            self.synthesize_ncbi_taxon_id(fb_data_entity)
-            self.synthesize_secondary_ids(fb_data_entity)
-            self.synthesize_pubs(fb_data_entity)
+        self.synthesize_ncbi_taxon_id()
+        self.synthesize_secondary_ids()
+        self.synthesize_props()
+        self.synthesize_pubs()
         return
 
     # Elaborate on map_fb_data_to_alliance() sub-methods for PrimaryEntityHandler.

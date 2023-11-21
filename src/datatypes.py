@@ -42,15 +42,15 @@ class FBDataEntity(FBEntity):
             self.organism_abbr = chado_obj.organism.abbreviation
         except AttributeError:
             self.organism_abbr = 'Dmel'
-        # Primary FB chado data - direct db query results.
+        # Primary FB chado data - direct db query results, no processing.
         self.chado_obj = chado_obj      # The primary SQLAlchemy chado object.
         self.pubs = []                  # Pub associations: e.g., FeaturePub, StrainPub.
         self.synonyms = []              # Synonym associations: e.g., FeatureSynonym, StrainSynonym.
         self.dbxrefs = []               # Dbxref associations: e.g., FeatureDbxref, StrainDbxref.
+        self.props = {}                 # entity props: e.g., Featureprop, Strainprop.
+        self.prop_pubs = []             # entity prop_pubs: e.g., Featureprop_pub, Strainprop_pub.
         self.cvterms = []               # Cvterm associations: e.g., FeatureCvterm, StrainCvterm.
         self.cvtermprops = []           # Cvtermprop associations: e.g., FeatureCvtermprop, StrainDbxref.
-        self.props = {}                 # cvterm name-keyed lists of entity props: e.g., Featureprop, Strainprop.
-        self.prop_pubs = {}             # prop_id-keyed lists of pub_ids.
         self.timestamps = []            # FB timestamps.
         # Processed FB data - processed from primary FB chado data above.
         self.organism_abbr = None       # The organism.abbreviation (str).
@@ -59,6 +59,9 @@ class FBDataEntity(FBEntity):
         self.curr_fb_fullname = None    # The current fullname Synonym chado object for the entity.
         self.alt_fb_ids = []            # Secondary FB IDs.
         self.all_pub_ids = []           # Pub.pub_id db IDs for pubs associated in any way with the entity.
+        self.prop_dict = {}             # cvterm name-keyed lists of prop objects: e.g., Featureprop, Strainprop.
+        self.prop_pub_dict = {}         # prop_id-keyed lists of pub_ids.
+
 
     def __str__(self):
         """Basic descriptive info for the object."""
