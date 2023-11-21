@@ -322,8 +322,9 @@ class PrimaryEntityHandler(DataHandler):
         """Test SQLAlchemy behavior."""
         self.log.info('Test SQLAlchemy behavior.')
         lbe_types = ['gene']
-        pkey_col = self.get_primary_key_column(Feature)
-        fkey_col = self.get_foreign_key_column(Feature, 'type_id')
+        main_table = aliased(Feature, name='main_table')
+        pkey_col = self.get_primary_key_column(main_table)
+        fkey_col = self.get_foreign_key_column(main_table, 'type_id')
         filters = (
             Feature.uniquename == 'FBgn0011278',
             pkey_col == 3167743,
