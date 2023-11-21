@@ -585,7 +585,7 @@ class PrimaryEntityHandler(DataHandler):
                 try:
                     fb_data_entity.prop_dict[prop_type].append(prop)
                 except KeyError:
-                    fb_data_entity.prop_dict[prop_type].append(prop)
+                    fb_data_entity.prop_dict[prop_type] = [prop]
             # Build prop_id-keyed lists of pub_ids.
             for prop_pub in fb_data_entity.prop_pubs:
                 prop_id = getattr(prop_pub, prop_pkey_col.name)
