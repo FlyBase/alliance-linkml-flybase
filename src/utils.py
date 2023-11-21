@@ -602,7 +602,7 @@ class PrimaryEntityHandler(DataHandler):
                 self.log.debug(f'{chado_type}_id={i.db_primary_id}, {chado_type}prop_id={k}, pub_ids={v}')
         return
 
-    def synthesize_pubs(self, fb_data_entity):
+    def synthesize_pubs(self):
         """Collect pub_ids associated directly or indirectly with the entity."""
         pub_sources = ['pubs', 'synonyms', 'cvterms', 'prop_pubs']
         for fb_data_entity in self.fb_data_entities.values():
