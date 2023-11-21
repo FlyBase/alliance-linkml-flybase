@@ -303,6 +303,8 @@ class PrimaryEntityHandler(DataHandler):
         if primary_key_column is None:
             self.log.error(f'Could not get primary_key Column from {chado_table}')
             raise ValueError
+        else:
+            self.log.debug(f'Found primary_key column: {primary_key_column.name}')
         return primary_key_column
 
     def get_foreign_key_column(self, chado_table, column_name):
@@ -311,6 +313,8 @@ class PrimaryEntityHandler(DataHandler):
         if foreign_key_column is None:
             self.log.error(f'Could not get foreign_key Column {column_name} from {chado_table}')
             raise ValueError
+        else:
+            self.log.debug(f'Found primary_key column: {foreign_key_column.name}')
         return foreign_key_column
 
     # BOB: Quick testing of general SQLAlchemy query approaches.
@@ -319,9 +323,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info('Test SQLAlchemy behavior.')
         lbe_types = ['gene']
         pkey_col = self.get_primary_key_column(Feature)
-        self.log.info(f'Found primary_key column: {pkey_col.name}')
         foreign_col = self.get_foreign_key_column(Feature, 'type_id')
-        self.log.info(f'Found foreign_key column: {foreign_col.name}')
         filters = (
             Feature.uniquename == 'FBgn0011278',
             pkey_col == 3167743,
