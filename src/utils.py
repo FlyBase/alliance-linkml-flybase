@@ -368,7 +368,7 @@ class PrimaryEntityHandler(DataHandler):
             filters += (Cvterm.name.in_((self.subtypes[self.fb_data_type])), )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
-            filters += (chado_table.uniquename.in_((self.test_set.keys())))
+            filters += (chado_table.uniquename.in_((self.test_set.keys())), )
         if filters == ():
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
