@@ -18,7 +18,7 @@ from logging import Logger
 from sqlalchemy.orm import aliased, Session
 # from sqlalchemy.inspection import inspect
 from harvdev_utils.production import (
-    Cvterm, Db, Dbxref, OrganismDbxref, Pub, PubDbxref,
+    Cvterm, Db, Dbxref, Organism, OrganismDbxref, Pub, PubDbxref,
     Strain, StrainPub, StrainSynonym, StrainDbxref, Strainprop, StrainpropPub, StrainCvterm, StrainCvtermprop,
     Feature, FeaturePub, FeatureSynonym, FeatureDbxref, Featureprop, FeaturepropPub, FeatureCvterm, FeatureCvtermprop
 )
@@ -600,9 +600,9 @@ class PrimaryEntityHandler(DataHandler):
         # Review prop synthesis.
         self.log.info(f'Found these types of {chado_type}props: {set(prop_types)}')
         # Optional debug.
-        for i in self.fb_data_entities.values():
-            for k, v in i.prop_pub_dict.items():
-                self.log.debug(f'{chado_type}_id={i.db_primary_id}, {chado_type}prop_id={k}, pub_ids={v}')
+        # for i in self.fb_data_entities.values():
+        #     for k, v in i.prop_pub_dict.items():
+        #         self.log.debug(f'{chado_type}_id={i.db_primary_id}, {chado_type}prop_id={k}, pub_ids={v}')
         return
 
     def synthesize_pubs(self):
@@ -762,8 +762,24 @@ class GeneHandler(PrimaryEntityHandler):
 
     def get_chr_info(self, session):
         """Build chr dict."""
-        # BOB
-        # Build self.chr_dict, a feature_id-keyed dict of golden_path.uniquename.
+        self.log.info('Build chr dict.')
+        filters = (
+            Feature.is_obsolete.is_(False),
+            Feature.is_analysis.is_(False),
+            Cvterm.name == 'golden_path',
+            Organism.abbreviation == 'Dmel'
+        )
+        chr_results = session.query(Feature).\
+            join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
+            join(Organism, (Organism.organism_id == Feature.organism_id)).\
+            filter(*filters).\
+            distinct()
+        self.chr_dict = {}
+        counter = 0
+        for result in chr_results:
+            self.chr_dict[result.feature_id] = result.uniquename
+            counter += 1
+        self.log.info(f'Got basic info for {counter} current Dmel chr scaffolds.')
         return
 
     def get_datatype_data(self, session):
