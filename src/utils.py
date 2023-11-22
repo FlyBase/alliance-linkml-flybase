@@ -18,7 +18,7 @@ from logging import Logger
 from sqlalchemy.orm import aliased, Session
 # from sqlalchemy.inspection import inspect
 from harvdev_utils.production import (
-    Cvterm, Db, Dbxref, Organism, OrganismDbxref, Pub, PubDbxref,
+    Cvterm, Db, Dbxref, Organism, OrganismDbxref, Pub, PubDbxref, Featureloc,
     Strain, StrainPub, StrainSynonym, StrainDbxref, Strainprop, StrainpropPub, StrainCvterm, StrainCvtermprop,
     Feature, FeaturePub, FeatureSynonym, FeatureDbxref, Featureprop, FeaturepropPub, FeatureCvterm, FeatureCvtermprop
 )
@@ -787,39 +787,7 @@ class FeatureHandler(PrimaryEntityHandler):
         self.chr_dict = {}    # Will be a feature_id-keyed dict of chr scaffold uniquenames.
 
     # Elaborate on get_general_data() sub-methods for FeatureHandler.
-    def get_general_data(self, session):
-        """Extend the method for the FeatureHandler."""
-        super().get_general_data(session)
-        return
-
-    # Elaborate on get_datatype_data() sub-methods for FeatureHandler.
-    # However, call on these methods by modifying get_datatype_data() for more specific handler types.
-    def get_annotation_ids(self, session):
-        """Get annotation IDs."""
-        # BOB - TO DO
-        # self.log.info('Get annotation IDs.')
-        # filters = (
-        #     Feature.uniquename.op('~')(self.gene_regex),
-        #     Feature.is_analysis.is_(False),
-        #     Feature.is_obsolete.is_(False),
-        #     Cvterm.name == 'gene',
-        #     FeatureDbxref.is_current.is_(True),
-        #     Db.name == 'FlyBase Annotation IDs'
-        # )
-        # results = session.query(Feature, Dbxref).\
-        #     join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
-        #     join(FeatureDbxref, (FeatureDbxref.feature_id == Feature.feature_id)).\
-        #     join(Dbxref, (Dbxref.dbxref_id == FeatureDbxref.dbxref_id)).\
-        #     join(Db, (Db.db_id == Dbxref.db_id)).\
-        #     filter(*filters).\
-        #     distinct()
-        # counter = 0
-        # for result in results:
-        #     self.gene_dict[result.Feature.uniquename].curr_anno_id = result.Dbxref.accession
-        #     counter += 1
-        # log.info(f'Found {counter} current annotation IDs for FlyBase genes.')
-        return
-
+    # Call get_chr_info() only for more specific FeatureHandler types.
     def get_chr_info(self, session):
         """Build chr dict."""
         self.log.info('Build chr dict.')
@@ -842,45 +810,111 @@ class FeatureHandler(PrimaryEntityHandler):
         self.log.info(f'Got basic info for {counter} current Dmel chr scaffolds.')
         return
 
-    def get_featureloc(self, session):
-        """Getting featurelocs."""
-        # BOB: TO DO
-        # log.info('Getting gene genomic locations.')
-        # # First get a simple chr scaffold dict. We'll need this later.
-        # filters = (
-        #     Feature.is_obsolete.is_(False),
-        #     Feature.is_analysis.is_(False),
-        #     Cvterm.name == 'golden_path'
-        # )
-        # chr_results = session.query(Feature).\
-        #     join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
-        #     filter(*filters).\
-        #     distinct()
-        # self.chr_dict = {}
-        # chr_counter = 0
-        # for result in chr_results:
-        #     if result.organism.abbreviation != 'Dmel':
-        #         continue
-        #     self.chr_dict[result.feature_id] = result.uniquename
-        #     chr_counter += 1
-        # log.info(f'Got basic info for {chr_counter} current Dmel chr scaffolds.')
-        # # Now get gene featureloc.
-        # filters = (
-        #     Feature.uniquename.op('~')(self.gene_regex),
-        #     Feature.is_analysis.is_(False),
-        #     Cvterm.name == 'gene'
-        # )
-        # gene_featureloc_results = session.query(Featureloc).\
-        #     join(Feature, (Feature.feature_id == Featureloc.feature_id)).\
-        #     join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
-        #     filter(*filters).\
-        #     distinct()
-        # gene_counter = 0
-        # for result in gene_featureloc_results:
-        #     self.gene_dict[result.feature.uniquename].featureloc = result
-        #     gene_counter += 1
-        # log.info(f'Found {gene_counter} genomic locations for genes.')
+    def get_general_data(self, session):
+        """Extend the method for the FeatureHandler."""
+        super().get_general_data(session)
         return
+
+    # Elaborate on get_datatype_data() sub-methods for FeatureHandler.
+    # Call get_annotation_ids() only for more specific FeatureHandler types.
+    def get_annotation_ids(self, session):
+        """Get annotation IDs (current and non-current)."""
+        self.log.info('Get annotation IDs (current and non-current).')
+        filters = (
+            Feature.uniquename.op('~')(self.regex[self.fb_data_type]),
+            Feature.is_analysis.is_(False),
+            Db.name == 'FlyBase Annotation IDs'
+        )
+        if self.fb_data_type in self.subtypes.keys():
+            self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.fb_data_type]}')
+            filters += (Cvterm.name.in_((self.subtypes[self.fb_data_type])), )
+        if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            filters += (Feature.uniquename.in_((self.test_set.keys())), )
+        results = session.query(FeatureDbxref).\
+            select_from(Feature).\
+            join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
+            join(FeatureDbxref, (FeatureDbxref.feature_id == Feature.feature_id)).\
+            join(Dbxref, (Dbxref.dbxref_id == FeatureDbxref.dbxref_id)).\
+            join(Db, (Db.db_id == Dbxref.db_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        pass_counter = 0
+        for result in results:
+            entity_pkey_id = FeatureDbxref.feature_id
+            try:
+                self.fb_data_entities[entity_pkey_id].fb_anno_xrefs.append(result)
+                counter += 1
+            except KeyError:
+                pass_counter += 1
+        self.log.info(f'Found {counter} annotation IDs for {self.fb_data_type} entities.')
+        self.log.info(f'Ignored {pass_counter} annotation IDs for {self.fb_data_type} entities.')
+        return
+
+    # Call get_chr_featurelocs() only for more specific FeatureHandler types.
+    def get_chr_featurelocs(self, session):
+        """Get chromosomal featureloc data."""
+        self.log.info('Get chromosomal featureloc data.')
+        filters = (
+            Feature.is_analysis.is_(False),
+            Featureloc.srcfeature_id.in_((self.chr_dict.keys()))
+        )
+        if self.fb_data_type in self.regex.keys():
+            self.log.info(f'Use this regex: {self.regex[self.fb_data_type]}')
+            filters += (Feature.uniquename.op('~')(self.regex[self.fb_data_type]), )
+        if self.fb_data_type in self.subtypes.keys():
+            self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.fb_data_type]}')
+            filters += (Cvterm.name.in_((self.subtypes[self.fb_data_type])), )
+        if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            filters += (Feature.uniquename.in_((self.test_set.keys())), )
+        results = session.query(Featureloc).\
+            select_from(Feature).\
+            join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
+            join(Featureloc, (Featureloc.feature_id == Feature.feature_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        pass_counter = 0
+        for result in results:
+            entity_pkey_id = Featureloc.feature_id
+            try:
+                self.fb_data_entities[entity_pkey_id].chr_flocs.append(result)
+                counter += 1
+            except KeyError:
+                pass_counter += 1
+        self.log.info(f'Found {counter} chromosomal featurelocs for {self.fb_data_type} entities.')
+        self.log.info(f'Ignored {pass_counter} chromosomal featurelocs for {self.fb_data_type} entities.')
+        return
+
+    # Call get_chr_featurelocs() only for more specific FeatureHandler types.
+    def get_featureprops_by_type(self, session, fprop_type):
+        """Return a list of featureprops of a given type."""
+        self.log.info(f'Get featureprops of type {fprop_type} for {self.fb_data_type} entities.')
+        feat_type = aliased(Cvterm, name='feat_type')
+        prop_type = aliased(Cvterm, name='prop_type')
+        filters = (
+            Feature.is_analysis.is_(False),
+            prop_type.name == fprop_type
+        )
+        if self.fb_data_type in self.regex.keys():
+            self.log.info(f'Use this regex: {self.regex[self.fb_data_type]}')
+            filters += (Feature.uniquename.op('~')(self.regex[self.fb_data_type]), )
+        if self.fb_data_type in self.subtypes.keys():
+            self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.fb_data_type]}')
+            filters += (feat_type.name.in_((self.subtypes[self.fb_data_type])), )
+        if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            filters += (Feature.uniquename.in_((self.test_set.keys())), )
+        results = session.query(Featureprop).\
+            select_from(Feature).\
+            join(feat_type, (feat_type.cvterm_id == Feature.type_id)).\
+            join(Featureprop, (Featureprop.feature_id == Feature.feature_id)).\
+            join(prop_type, (prop_type.cvterm_id == Featureprop.type_id)).\
+            filter(*filters).\
+            distinct()
+        return results
 
     def get_datatype_data(self, session):
         """Extend the method for the FeatureHandler."""
@@ -975,6 +1009,7 @@ class GeneHandler(FeatureHandler):
     def get_general_data(self, session):
         """Extend the method for the GeneHandler."""
         super().get_general_data(session)
+        self.get_chr_info(session)
         return
 
     # Elaborate on get_datatype_data() sub-methods for GeneHandler.
@@ -1002,52 +1037,36 @@ class GeneHandler(FeatureHandler):
 
     def get_gene_snapshots(self, session):
         """Get human-written gene summaries."""
-        # BOB: TO DO
-        # log.info('Getting gene snapshots.')
-        # feature_type = aliased(Cvterm, name='feature_type')
-        # prop_type = aliased(Cvterm, name='gene_summary_text')
-        # filters = (
-        #     Feature.uniquename.op('~')(self.gene_regex),
-        #     Feature.is_analysis.is_(False),
-        #     feature_type.name == 'gene',
-        #     prop_type.name == 'gene_summary_text'
-        # )
-        # gene_snapshot_results = session.query(Featureprop).\
-        #     join(Feature, (Feature.feature_id == Featureprop.feature_id)).\
-        #     join(feature_type, (feature_type.cvterm_id == Feature.type_id)).\
-        #     join(prop_type, (prop_type.cvterm_id == Featureprop.type_id)).\
-        #     filter(*filters).\
-        #     distinct()
-        # counter = 0
-        # for result in gene_snapshot_results:
-        #     self.gene_dict[result.feature.uniquename].gene_snapshot = result
-        #     counter += 1
-        # log.info(f'Found {counter} gene snapshots.')
+        self.log.info('Get human-written gene summaries.')
+        results = self.get_featureprops_by_type(session, 'gene_summary_text')
+        counter = 0
+        pass_counter = 0
+        for result in results:
+            entity_pkey_id = result.feature_id
+            try:
+                self.fb_data_entities[entity_pkey_id].gene_snapshots.append(result)
+                counter += 1
+            except KeyError:
+                pass_counter += 1
+        self.log.info(f'Found {counter} gene snapshots for {self.fb_data_type} entities.')
+        self.log.info(f'Ignored {pass_counter} gene snapshots for {self.fb_data_type} entities.')
         return
 
     def get_gene_types(self, session):
-        """Get and parse "promoted_gene_type" featureprop for genes."""
-        # BOB: TO DO
-        # log.info('Getting gene types.')
-        # feature_type = aliased(Cvterm, name='feature_type')
-        # prop_type = aliased(Cvterm, name='promoted_gene_type')
-        # filters = (
-        #     Feature.uniquename.op('~')(self.gene_regex),
-        #     Feature.is_analysis.is_(False),
-        #     prop_type.name == 'promoted_gene_type'
-        # )
-        # gene_type_results = session.query(Featureprop).\
-        #     join(Feature, (Feature.feature_id == Featureprop.feature_id)).\
-        #     join(feature_type, (feature_type.cvterm_id == Feature.type_id)).\
-        #     join(prop_type, (prop_type.cvterm_id == Featureprop.type_id)).\
-        #     filter(*filters).\
-        #     distinct()
-        # counter = 0
-        # for result in gene_type_results:
-        #     self.gene_dict[result.feature.uniquename].gene_type_curie = result.value[1:10].replace('SO', 'SO:')
-        #     self.gene_dict[result.feature.uniquename].gene_type_name = result.value[11:-1]
-        #     counter += 1
-        # log.info(f'Found {counter} gene types for genes.')
+        """Get promoted_gene_type for genes."""
+        self.log.info('Get promoted_gene_type for genes.')
+        results = self.get_featureprops_by_type(session, 'promoted_gene_type')
+        counter = 0
+        pass_counter = 0
+        for result in results:
+            entity_pkey_id = result.feature_id
+            try:
+                self.fb_data_entities[entity_pkey_id].gene_type_names.append(result)
+                counter += 1
+            except KeyError:
+                pass_counter += 1
+        self.log.info(f'Found {counter} promoted_gene_types for {self.fb_data_type} entities.')
+        self.log.info(f'Ignored {pass_counter} promoted_gene_types for {self.fb_data_type} entities.')
         return
 
     def get_datatype_data(self, session):
@@ -1055,7 +1074,9 @@ class GeneHandler(FeatureHandler):
         super().get_datatype_data(session)
         self.get_panther_info()
         self.get_annotation_ids(session)
-        self.get_chr_info(session)
+        self.get_chr_featurelocs(session)
+        self.get_gene_snapshots(session)
+        self.get_gene_types(session)
         return
 
     # Elaborate on synthesize_info() sub-methods for GeneHandler.
