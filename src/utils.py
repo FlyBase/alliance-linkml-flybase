@@ -418,44 +418,8 @@ class PrimaryEntityHandler(DataHandler):
                     counter += 1
                 except KeyError:
                     pass_counter += 1
-            self.log.info(f'Found {counter} {i} for {self.fb_data_type}.')
+            self.log.info(f'Found {counter} {i} for {self.fb_data_type} entities.')
             self.log.info(f'Ignored {pass_counter} {i} for irrelevant {self.fb_data_type} entities.')
-        return
-
-    def get_entity_props(self, session):
-        """Get props for primary FlyBase data entities."""
-        chado_type = self.main_chado_entity_types[self.fb_data_type]
-        main_chado_table = aliased(self.chado_tables['main_table'][chado_type], name='main_chado_table')
-        prop_chado_table = aliased(self.chado_tables['props'][chado_type], name='prop_chado_table')
-        self.log.info(f'Get props for {self.fb_data_type} data entities from {prop_chado_table} chado table.')
-        main_pkey_col = self.get_primary_key_column(main_chado_table)
-        filters = (
-            main_pkey_col.in_((self.fb_data_entities.keys())),
-        )
-        results = session.query(prop_chado_table).\
-            select_from(prop_chado_table).\
-            join(main_chado_table).\
-            filter(*filters).\
-            distinct()
-        counter = 0
-        pass_counter = 0
-        results = session.query(prop_chado_table).\
-            select_from(prop_chado_table).\
-            join(main_chado_table).\
-            filter(*filters).\
-            distinct()
-        for result in results:
-            entity_pkey_id = getattr(result, main_pkey_col.name)
-            if entity_pkey_id not in self.fb_data_entities.keys():
-                pass_counter += 1
-                continue
-            try:
-                self.fb_data_entities[entity_pkey_id].props.append(result)
-            except KeyError:
-                self.fb_data_entities[entity_pkey_id].props = [result]
-            counter += 1
-        self.log.info(f'Found {counter} props for {self.fb_data_type}.')
-        self.log.info(f'Ignored {pass_counter} props for irrelevant {self.fb_data_type} entities.')
         return
 
     def get_entity_prop_pubs(self, session):
@@ -471,6 +435,9 @@ class PrimaryEntityHandler(DataHandler):
         filters = (
             main_pkey_col.in_((self.fb_data_entities.keys())),
         )
+        # BOB - need a way to add a uniquename filter for testing.
+        if self.testing:
+            pass
         results = session.query(prop_chado_table, prop_pub_chado_table).\
             select_from(prop_pub_chado_table).\
             join(prop_chado_table).\
@@ -489,7 +456,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Ignored {pass_counter} props for irrelevant {self.fb_data_type} entities.')
         return
 
-    def get_cvtermprops(self, session):
+    def get_entity_cvtermprops(self, session):
         """Get CV term props for primary FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
         main_pkey_name = self.chado_tables['primary_key'][chado_type]
@@ -500,6 +467,9 @@ class PrimaryEntityHandler(DataHandler):
         filters = (
             fkey_col.in_((self.fb_data_entities.keys())),
         )
+        # BOB - need a way to add a uniquename filter for testing.
+        if self.testing:
+            pass
         results = session.query(cvterm_table, cvtermprop_table).\
             select_from(cvterm_table).\
             join(cvtermprop_table).\
@@ -545,9 +515,8 @@ class PrimaryEntityHandler(DataHandler):
         self.sqlalchemy_test(session)
         self.get_entity_data(session)
         self.get_entity_associated_data(session)
-        # self.get_entity_props(session)
-        self.get_entity_prop_pubs(session)
-        self.get_cvtermprops(session)
+        # self.get_entity_prop_pubs(session)
+        # self.get_entity_cvtermprops(session)
         self.get_entity_timestamps(session)
         return
 
