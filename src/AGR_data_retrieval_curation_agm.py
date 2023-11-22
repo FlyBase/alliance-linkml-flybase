@@ -6,11 +6,11 @@ Author(s):
     Gil dos Santos dossantos@morgan.harvard.edu
 
 Usage:
-    AGR_data_retrieval_curation_agm.py [-h] [-r FLYBASE_RELEASE]
+    AGR_data_retrieval_curation_agm.py [-h] [-t TESTING] [-r FLYBASE_RELEASE]
     [-l LINKML_RELEASE] [-v VERBOSE] [-c CONFIG]
 
 Example:
-    python AGR_data_retrieval_curation_agm.py -v -r 2023_05 -l v1.1.2
+    python AGR_data_retrieval_curation_agm.py -v -t -r 2023_05 -l v1.1.2
     -c /path/to/config.cfg
 
 Notes:
@@ -43,6 +43,7 @@ reference_assembly = set_up_dict['assembly']
 input_dir = set_up_dict['input_dir']
 output_filename = set_up_dict['output_filename'].replace('tsv', 'json')
 log = set_up_dict['log']
+testing = set_up_dict['testing']
 
 # Process additional input parameters not handled by the set_up_db_reading() function above.
 parser = argparse.ArgumentParser(description='inputs')
@@ -72,7 +73,7 @@ def main():
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Get the data and process it.
-    strain_handler = get_handler(log, FB_STRAIN_DATA_TYPE)
+    strain_handler = get_handler(log, FB_STRAIN_DATA_TYPE, testing)
     db_query_transaction(session, log, strain_handler)
 
     # Export the data.
@@ -83,7 +84,7 @@ def main():
     # Start export list with strains.
     export_dict[strain_handler.agr_ingest_type] = []
     export_dict[strain_handler.agr_ingest_type].extend(strain_handler.export_data)
-    # export_dict[genotype_handler.agr_ingest_type].extend(genotype_handler.export_data)    # To do
+    # Add genotypes to export list: to do.
     generate_export_file(export_dict, log, output_filename)
 
     log.info('Ended main function.\n')

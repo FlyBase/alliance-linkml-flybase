@@ -42,6 +42,7 @@ reference_assembly = set_up_dict['assembly']
 input_dir = set_up_dict['input_dir']
 output_filename = set_up_dict['output_filename'].replace('tsv', 'json')
 log = set_up_dict['log']
+testing = set_up_dict['testing']
 
 # Process additional input parameters not handled by the set_up_db_reading() function above.
 parser = argparse.ArgumentParser(description='inputs')
@@ -71,7 +72,7 @@ def main():
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Get the data and process it.
-    gene_handler = get_handler(log, FB_DATA_TYPE)
+    gene_handler = get_handler(log, FB_DATA_TYPE, testing)
     db_query_transaction(session, log, gene_handler)
 
     # Export the data.

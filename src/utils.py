@@ -27,7 +27,7 @@ import datatypes
 
 # Classes
 class DataHandler(object):
-    """A generic data handler that gets FlyBase data and maps it to a single Alliance LinkML model.
+    """A generic, abstract data handler that gets FlyBase data and maps it to a single Alliance LinkML model.
 
     Specific classes of DataHandler will only map a given FB data type to a single Alliance ingest
     set (i.e., a set of LinkML DTO objects, in JSON format). In some cases, multiple handlers will
@@ -35,17 +35,19 @@ class DataHandler(object):
     "agm_ingest_set" via distinct DataHandler classes.
 
     """
-    def __init__(self, log: Logger, fb_data_type: str):
+    def __init__(self, log: Logger, fb_data_type: str, testing: bool):
         """Create the generic DataHandler object.
 
         Args:
             log (Logger): The global Logger object in the script using the DataHandler.
             fb_data_type (str): The FlyBase data class being handled.
+            testing (bool): Whether handler is being run in testing mode or not.
 
         """
         self.log = log
         self.fb_data_type = fb_data_type
         self.agr_ingest_type = self.agr_ingest_type_dict[fb_data_type]
+        self.testing = testing
         # Datatype bins.
         self.fb_data_entities = {}    # db_primary_id-keyed dict of chado objects to export.
         self.export_data = []         # List of data objects for export (as Alliance ingest set).
@@ -60,6 +62,8 @@ class DataHandler(object):
         self.warnings = []            # Handler issues of note.
         self.errors = []              # Handler issues that break things.
 
+    # Sample set for faster testing: use uniquename-keyed names of objects, tailored for each handler.
+    test_set = {}
     # Correspondence of FB data type to Alliance data transfer ingest set.
     agr_ingest_type_dict = {
         'gene': 'gene_ingest_set',
@@ -258,7 +262,7 @@ class DataHandler(object):
 
 
 class PrimaryEntityHandler(DataHandler):
-    """A generic handler for that gets data for FlyBase entities and maps it to the Alliance LinkML model.
+    """A generic, abstract handler for that gets data for FlyBase entities and maps it to the Alliance LinkML model.
 
     This object handles only primary FlyBase entities, things like genes, strains, etc. that typically have
     public curies and web reports, attributes like props and cvterm associations, and are the subjects
@@ -266,9 +270,9 @@ class PrimaryEntityHandler(DataHandler):
     classes are to be used for the export of relationships and complex annotations.
 
     """
-    def __init__(self, log: Logger, fb_data_type: str):
+    def __init__(self, log: Logger, fb_data_type: str, testing: bool):
         """Create the generic PrimaryEntityHandler object."""
-        super().__init__(log, fb_data_type)
+        super().__init__(log, fb_data_type, testing)
 
     # Mappings of input fb_data_type to various data handling objects and chado tables.
     main_chado_entity_types = {
@@ -362,6 +366,9 @@ class PrimaryEntityHandler(DataHandler):
         if self.fb_data_type in self.subtypes.keys():
             self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.fb_data_type]}')
             filters += (Cvterm.name.in_((self.subtypes[self.fb_data_type])), )
+        if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            filters += (chado_table.uniquename.in_((self.test_set.keys())))
         if len(filters) == 0:
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
@@ -678,14 +685,124 @@ class PrimaryEntityHandler(DataHandler):
         return
 
 
-class GeneHandler(PrimaryEntityHandler):
-    """This object gets, synthesizes and filters gene data for export."""
-    def __init__(self, log, fb_data_type):
-        """Create the GeneHandler object."""
-        super().__init__(log, fb_data_type)
-        self.pthr_dict = {}    # Will be an 1:1 FBgn_ID-PTHR xref dict.
-        self.chr_dict = {}     # Will be a feature_id-keyed dict of chr scaffold uniquenames.
+class FeatureHandler(PrimaryEntityHandler):
+    """A generic, abstract handler for that gets data for FlyBase features and maps it to the Alliance LinkML model."""
+    def __init__(self, log: Logger, fb_data_type: str, testing: bool):
+        """Create the FeatureHandler object."""
+        super().__init__(log, fb_data_type, testing)
+        self.chr_dict = {}    # Will be a feature_id-keyed dict of chr scaffold uniquenames.
 
+    # Elaborate on get_datatype_data() sub-methods for FeatureHandler.
+    # However, call on these methods by modifying get_datatype_data() for more specific handler types.
+    def get_annotation_ids(self, session):
+        """Get annotation IDs."""
+        # BOB - TO DO
+        # self.log.info('Get annotation IDs.')
+        # filters = (
+        #     Feature.uniquename.op('~')(self.gene_regex),
+        #     Feature.is_analysis.is_(False),
+        #     Feature.is_obsolete.is_(False),
+        #     Cvterm.name == 'gene',
+        #     FeatureDbxref.is_current.is_(True),
+        #     Db.name == 'FlyBase Annotation IDs'
+        # )
+        # results = session.query(Feature, Dbxref).\
+        #     join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
+        #     join(FeatureDbxref, (FeatureDbxref.feature_id == Feature.feature_id)).\
+        #     join(Dbxref, (Dbxref.dbxref_id == FeatureDbxref.dbxref_id)).\
+        #     join(Db, (Db.db_id == Dbxref.db_id)).\
+        #     filter(*filters).\
+        #     distinct()
+        # counter = 0
+        # for result in results:
+        #     self.gene_dict[result.Feature.uniquename].curr_anno_id = result.Dbxref.accession
+        #     counter += 1
+        # log.info(f'Found {counter} current annotation IDs for FlyBase genes.')
+        return
+
+    def get_chr_info(self, session):
+        """Build chr dict."""
+        self.log.info('Build chr dict.')
+        filters = (
+            Feature.is_obsolete.is_(False),
+            Feature.is_analysis.is_(False),
+            Cvterm.name == 'golden_path',
+            Organism.abbreviation == 'Dmel'
+        )
+        chr_results = session.query(Feature).\
+            join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
+            join(Organism, (Organism.organism_id == Feature.organism_id)).\
+            filter(*filters).\
+            distinct()
+        self.chr_dict = {}
+        counter = 0
+        for result in chr_results:
+            self.chr_dict[result.feature_id] = result.uniquename
+            counter += 1
+        self.log.info(f'Got basic info for {counter} current Dmel chr scaffolds.')
+        return
+
+    def get_featureloc(self, session):
+        """Getting featurelocs."""
+        # BOB: TO DO
+        # log.info('Getting gene genomic locations.')
+        # # First get a simple chr scaffold dict. We'll need this later.
+        # filters = (
+        #     Feature.is_obsolete.is_(False),
+        #     Feature.is_analysis.is_(False),
+        #     Cvterm.name == 'golden_path'
+        # )
+        # chr_results = session.query(Feature).\
+        #     join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
+        #     filter(*filters).\
+        #     distinct()
+        # self.chr_dict = {}
+        # chr_counter = 0
+        # for result in chr_results:
+        #     if result.organism.abbreviation != 'Dmel':
+        #         continue
+        #     self.chr_dict[result.feature_id] = result.uniquename
+        #     chr_counter += 1
+        # log.info(f'Got basic info for {chr_counter} current Dmel chr scaffolds.')
+        # # Now get gene featureloc.
+        # filters = (
+        #     Feature.uniquename.op('~')(self.gene_regex),
+        #     Feature.is_analysis.is_(False),
+        #     Cvterm.name == 'gene'
+        # )
+        # gene_featureloc_results = session.query(Featureloc).\
+        #     join(Feature, (Feature.feature_id == Featureloc.feature_id)).\
+        #     join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
+        #     filter(*filters).\
+        #     distinct()
+        # gene_counter = 0
+        # for result in gene_featureloc_results:
+        #     self.gene_dict[result.feature.uniquename].featureloc = result
+        #     gene_counter += 1
+        # log.info(f'Found {gene_counter} genomic locations for genes.')
+        return
+
+
+class GeneHandler(FeatureHandler):
+    """This object gets, synthesizes and filters gene data for export."""
+    def __init__(self, log: Logger, fb_data_type: str, testing: bool):
+        """Create the GeneHandler object."""
+        super().__init__(log, fb_data_type, testing)
+        self.pthr_dict = {}    # Will be an 1:1 FBgn_ID-PTHR xref dict.
+
+    # Sample set for faster testing: use uniquename-keyed names of objects, tailored for each handler.
+    test_set = {
+        'FBgn0284084': 'wg',             # Current annotated nuclear protein_coding gene.
+        'FBgn0004009': 'wg',             # Obsolete annotated nuclear protein_coding gene.
+        'FBgn0013687': 'mt:ori',         # Current localized but unannotated mitochondrial gene.
+        'FBgn0013678': 'mt:Cyt-b',       # Current annotated mitochondrial protein_coding gene.
+        'FBgn0019661': 'lncRNA:roX1',    # Current annotated nuclear ncRNA gene.
+        'FBgn0262451': 'mir-ban',        # Current annotated nuclear miRNA gene.
+        'FBgn0031087': 'CG12656',        # Current withdrawn gene.
+        'FBgn0000154': 'Bar',            # Current unannotated gene.
+        'FBgn0001200': 'His4',           # Current unannotated gene family.
+        'FBgn0087003': 'tal',            # Current unannotated oddball.
+    }
     # Elaborate on export filters for StrainHandler.
     required_fields = [
         'curie',
@@ -760,42 +877,81 @@ class GeneHandler(PrimaryEntityHandler):
         self.log.info(f'Processed {counter} lines from the panther orthology file.')
         return
 
-    def get_chr_info(self, session):
-        """Build chr dict."""
-        self.log.info('Build chr dict.')
-        filters = (
-            Feature.is_obsolete.is_(False),
-            Feature.is_analysis.is_(False),
-            Cvterm.name == 'golden_path',
-            Organism.abbreviation == 'Dmel'
-        )
-        chr_results = session.query(Feature).\
-            join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
-            join(Organism, (Organism.organism_id == Feature.organism_id)).\
-            filter(*filters).\
-            distinct()
-        self.chr_dict = {}
-        counter = 0
-        for result in chr_results:
-            self.chr_dict[result.feature_id] = result.uniquename
-            counter += 1
-        self.log.info(f'Got basic info for {counter} current Dmel chr scaffolds.')
+    def get_gene_snapshots(self, session):
+        """Get human-written gene summaries."""
+        # BOB: TO DO
+        # log.info('Getting gene snapshots.')
+        # feature_type = aliased(Cvterm, name='feature_type')
+        # prop_type = aliased(Cvterm, name='gene_summary_text')
+        # filters = (
+        #     Feature.uniquename.op('~')(self.gene_regex),
+        #     Feature.is_analysis.is_(False),
+        #     feature_type.name == 'gene',
+        #     prop_type.name == 'gene_summary_text'
+        # )
+        # gene_snapshot_results = session.query(Featureprop).\
+        #     join(Feature, (Feature.feature_id == Featureprop.feature_id)).\
+        #     join(feature_type, (feature_type.cvterm_id == Feature.type_id)).\
+        #     join(prop_type, (prop_type.cvterm_id == Featureprop.type_id)).\
+        #     filter(*filters).\
+        #     distinct()
+        # counter = 0
+        # for result in gene_snapshot_results:
+        #     self.gene_dict[result.feature.uniquename].gene_snapshot = result
+        #     counter += 1
+        # log.info(f'Found {counter} gene snapshots.')
         return
+
+    def get_gene_types(self, session):
+        """Get and parse "promoted_gene_type" featureprop for genes."""
+        # BOB: TO DO
+        # log.info('Getting gene types.')
+        # feature_type = aliased(Cvterm, name='feature_type')
+        # prop_type = aliased(Cvterm, name='promoted_gene_type')
+        # filters = (
+        #     Feature.uniquename.op('~')(self.gene_regex),
+        #     Feature.is_analysis.is_(False),
+        #     prop_type.name == 'promoted_gene_type'
+        # )
+        # gene_type_results = session.query(Featureprop).\
+        #     join(Feature, (Feature.feature_id == Featureprop.feature_id)).\
+        #     join(feature_type, (feature_type.cvterm_id == Feature.type_id)).\
+        #     join(prop_type, (prop_type.cvterm_id == Featureprop.type_id)).\
+        #     filter(*filters).\
+        #     distinct()
+        # counter = 0
+        # for result in gene_type_results:
+        #     self.gene_dict[result.feature.uniquename].gene_type_curie = result.value[1:10].replace('SO', 'SO:')
+        #     self.gene_dict[result.feature.uniquename].gene_type_name = result.value[11:-1]
+        #     counter += 1
+        # log.info(f'Found {counter} gene types for genes.')
+        return
+
 
     def get_datatype_data(self, session):
         """Extend the method for the GeneHandler."""
         super().get_datatype_data(session)
         self.get_panther_info()
+        self.get_annotation_ids(session)
         self.get_chr_info(session)
         return
 
 
 class StrainHandler(PrimaryEntityHandler):
     """This object gets, synthesizes and filters strain data for export."""
-    def __init__(self, log, fb_data_type):
+    def __init__(self, log: Logger, fb_data_type: str, testing: bool):
         """Create the StrainHandler object."""
-        super().__init__(log, fb_data_type)
+        super().__init__(log, fb_data_type, testing)
 
+    # Sample set for faster testing: use uniquename-keyed names of objects, tailored for each handler.
+    test_set = {
+        'FBsn0000001': 'Oregon-R-modENCODE',
+        'FBsn0000091': 'DGRP-373',
+        'FBsn0000272': 'iso-1',
+        'FBsn0001072': 'DSPR-B1-019',
+        'FBsn0000283': 'MV2-25',
+        'FBsn0000284': 'DGRP_Flyland',
+    }
     # Elaborate on export filters for StrainHandler.
     required_fields = [
         'curie',
@@ -849,12 +1005,13 @@ class StrainHandler(PrimaryEntityHandler):
 
 
 # Functions
-def get_handler(log: Logger, fb_data_type: str):
+def get_handler(log: Logger, fb_data_type: str, testing: bool):
     """Return the appropriate type of data handler.
 
     Args:
         log (Logger): The global Logger object in the script using the DataHandler.
         fb_data_type (str): The FB data type to export: e.g., strain, genotype.
+        testing (bool): Whether the handler is being run in test mode or not.
 
     Returns:
         A data handler of the appropriate type for the FB data type.
@@ -874,7 +1031,7 @@ def get_handler(log: Logger, fb_data_type: str):
         # 'disease': DiseaseHandler,
     }
     try:
-        data_handler = handler_dict[fb_data_type](log, fb_data_type)
+        data_handler = handler_dict[fb_data_type](log, fb_data_type, testing)
         log.info(f'Returning: {data_handler}')
     except KeyError:
         log.error.append(f'Unrecognized FB data type and/or Alliance ingest set: {fb_data_type}.')
