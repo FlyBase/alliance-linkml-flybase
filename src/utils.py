@@ -352,6 +352,12 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Found {counter} test results using natural join.')
         return
 
+    # Elaborate on get_general_data() sub-methods for PrimaryEntityHandler.
+    def get_general_data(self, session):
+        """Extend the method for the PrimaryEntityHandler."""
+        super().get_general_data(session)
+        return
+
     # Elaborate on get_datatype_data() sub-methods for PrimaryEntityHandler.
     def get_entity_data(self, session):
         """Get primary FlyBase data entities."""
@@ -600,7 +606,7 @@ class PrimaryEntityHandler(DataHandler):
         return
 
     # Elaborate on map_fb_data_to_alliance() sub-methods for PrimaryEntityHandler.
-    # However, we only create the methods here, and run them in more tailored handler Classes like StrainHandler.
+    # However, as they're not useful for all data types, call them in tailored handler Classes.
     def map_secondary_ids(self, fb_data_entity):
         """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for a FlyBase entity."""
         secondary_id_dtos = []
@@ -639,6 +645,120 @@ class PrimaryEntityHandler(DataHandler):
         fb_data_entity.linkmldto.cross_reference_dtos = cross_reference_dtos
         return
 
+    def map_synonyms(self, fb_data_entity):
+        # BOB: TO DO
+        # """Generate name/synonym DTOs for a feature that has a list of FeatureSynonym objects."""
+        # # Dict for converting FB to AGR synonym types.
+        # synonym_type_conversion = {
+        #     'symbol': 'nomenclature_symbol',
+        #     'fullname': 'full_name',
+        #     'nickname': 'nomenclature_symbol',
+        #     'synonym': 'nomenclature_symbol'
+        # }
+        # default_name_dto = {
+        #     'name_type_name': 'unspecified',
+        #     'format_text': 'unspecified',
+        #     'display_text': 'unspecified',
+        #     'synonym_scope_name': 'exact',
+        #     'evidence_curies': [],
+        #     'internal': False,
+        #     'obsolete': False
+        # }
+        # # Create a dict of all distinct name/synonym_sgml combinations: for each, capture synonym type(s) an pub_ids.
+        # # Keys are (synonym.name, synonym.synonym_sgml) tuples.
+        # # Values are dicts too where keys are chado synonym types and values are lists of pub_ids.
+        # # Value dict also has an "internal" key that stores list of FeatureSynonym.is_internal values.
+        # feature_synonym_dict = {}
+        # for f_s in feature.feature_synonyms:
+        #     synonym = self.all_synonyms_dict[f_s.synonym_id]
+        #     distinct_synonym_name = (synonym.name, synonym.synonym_sgml)
+        #     if distinct_synonym_name in feature_synonym_dict.keys():
+        #         feature_synonym_dict[distinct_synonym_name]['internal'].append(f_s.is_internal)
+        #         if synonym.type.name in feature_synonym_dict[distinct_synonym_name].keys():
+        #             feature_synonym_dict[distinct_synonym_name][synonym.type.name].append(f_s.pub_id)
+        #         else:
+        #             feature_synonym_dict[distinct_synonym_name][synonym.type.name] = [f_s.pub_id]
+        #     else:
+        #         feature_synonym_dict[distinct_synonym_name] = {synonym.type.name: [f_s.pub_id], 'internal': [f_s.is_internal]}
+        # # Convert to AGR name DTO objects.
+        # name_dto_list = []
+        # FORMAT_TEXT = 0
+        # DISPLAY_TEXT = 1
+        # for syno_name, syno_attributes in feature_synonym_dict.items():
+        #     # Determine internal status. False trumps True.
+        #     if False in set(syno_attributes['internal']):
+        #         syno_internal = False
+        #     else:
+        #         syno_internal = True
+        #     # Collect all pubs.
+        #     pub_id_list = []
+        #     for syno_type, syno_type_pub_list in syno_attributes.items():
+        #         if syno_type == 'internal':
+        #             continue
+        #         pub_id_list.extend(syno_type_pub_list)
+        #     pub_id_list = list(set(pub_id_list))
+        #     # Out of curiosity, report cases where same synonym used as both symbol and fullname.
+        #     if 'symbol' in syno_attributes.keys() and 'fullname' in syno_attributes.keys():
+        #         n_symb = len(syno_attributes['symbol'])
+        #         n_full = len(syno_attributes['fullname'])
+        #         log.warning(f"RATIO = {round(n_symb/n_full)}, SYMBOL_USAGE: n={n_symb}, FULLNAME_USAGE: n={n_full}, GENE={feature}, SYNONYM={syno_name}.")
+        #     # Pick correct name type to apply.
+        #     if re.match(self.systematic_name_regex, syno_name[DISPLAY_TEXT]):
+        #         name_type_to_use = 'systematic_name'
+        #     else:
+        #         type_tally = {}
+        #         for syno_type, syno_type_pub_list in syno_attributes.items():
+        #             if syno_type == 'internal':
+        #                 continue
+        #             type_tally[len(set(syno_type_pub_list))] = syno_type
+        #         name_type_to_use = synonym_type_conversion[type_tally[max(type_tally.keys())]]
+        #     output_synonym_dto = {
+        #         'name_type_name': name_type_to_use,
+        #         'format_text': sub_sup_sgml_to_html(syno_name[FORMAT_TEXT]),
+        #         'display_text': sub_sup_sgml_to_html(syno_name[DISPLAY_TEXT]),
+        #         'synonym_scope_name': 'exact',
+        #         'evidence_curies': [self.all_pubs_dict[i] for i in pub_id_list if self.all_pubs_dict[i] != 'FB:unattributed'],
+        #         'internal': syno_internal,
+        #         'obsolete': False
+        #     }
+        #     name_dto_list.append(output_synonym_dto)
+        # # Sift through name DTOs for symbol, fullname, systematic_name, etc.
+        # for name_dto in name_dto_list:
+        #     if name_dto['display_text'] == feature.curr_anno_id:
+        #         if name_dto['name_type_name'] != 'systematic_name':
+        #             log.warning(f"{feature}: Found mistyped curr anno ID: type={name_dto['name_type_name']}, name={name_dto['display_text']}")
+        #             name_dto['name_type_name'] = 'systematic_name'
+        #         feature.gene_systematic_name_dto = name_dto
+        #     if name_dto['display_text'] == feature.curr_symbol_name:
+        #         if name_dto['name_type_name'] not in ['systematic_name', 'nomenclature_symbol']:
+        #             log.warning(f"{feature}: Found mistyped curr symbol: type={name_dto['name_type_name']}, name={name_dto['display_text']}")
+        #             name_dto['name_type_name'] = 'nomenclature_symbol'
+        #         feature.gene_symbol_dto = name_dto
+        #     elif name_dto['display_text'] == feature.curr_fullname:
+        #         if name_dto['name_type_name'] != 'full_name':
+        #             log.warning(f"{feature}: Found mistyped curr full_name: type={name_dto['name_type_name']}, name={name_dto['display_text']}")
+        #             name_dto['name_type_name'] = 'full_name'
+        #         feature.gene_full_name_dto = name_dto
+        #     else:
+        #         feature.gene_synonym_dtos.append(name_dto)
+        # # LinkML change required: make gene_full_name_dto and gene_systematic_name_dto OPTIONAL.
+        # # Symbol is required. If none, fill it in.
+        # if feature.gene_symbol_dto is None:
+        #     placeholder_symbol_dto = default_name_dto.copy()
+        #     placeholder_symbol_dto['name_type_name'] = 'nomenclature_symbol'
+        #     placeholder_symbol_dto['format_text'] = feature.feature.name
+        #     placeholder_symbol_dto['display_text'] = feature.feature.name
+        #     feature.gene_symbol_dto = placeholder_symbol_dto
+        # # In rare cases, a gene's annotation ID has never been used as a synonym. For these, fill in the annotation ID.
+        # if feature.gene_systematic_name_dto is None and feature.curr_anno_id:
+        #     placeholder_systematic_name_dto = default_name_dto.copy()
+        #     placeholder_systematic_name_dto['name_type_name'] = 'systematic_name'
+        #     placeholder_systematic_name_dto['format_text'] = feature.curr_anno_id
+        #     placeholder_systematic_name_dto['display_text'] = feature.curr_anno_id
+        #     log.warning(f"{feature}: Has annoID never used as a synonym: {feature.curr_anno_id}")
+        #     feature.gene_systematic_name_dto = placeholder_systematic_name_dto
+        return
+
     def map_timestamps(self, fb_data_entity):
         """Map timestamps to Alliance object."""
         if fb_data_entity.timestamps:
@@ -653,6 +773,11 @@ class PrimaryEntityHandler(DataHandler):
             fb_data_entity.linkmldto.internal = True
         return
 
+    def map_fb_data_to_alliance(self):
+        """Extend the method for the PrimaryEntityHandler."""
+        super().map_fb_data_to_alliance()
+        return
+
 
 class FeatureHandler(PrimaryEntityHandler):
     """A generic, abstract handler for that gets data for FlyBase features and maps it to the Alliance LinkML model."""
@@ -660,6 +785,12 @@ class FeatureHandler(PrimaryEntityHandler):
         """Create the FeatureHandler object."""
         super().__init__(log, fb_data_type, testing)
         self.chr_dict = {}    # Will be a feature_id-keyed dict of chr scaffold uniquenames.
+
+    # Elaborate on get_general_data() sub-methods for FeatureHandler.
+    def get_general_data(self, session):
+        """Extend the method for the FeatureHandler."""
+        super().get_general_data(session)
+        return
 
     # Elaborate on get_datatype_data() sub-methods for FeatureHandler.
     # However, call on these methods by modifying get_datatype_data() for more specific handler types.
@@ -751,6 +882,23 @@ class FeatureHandler(PrimaryEntityHandler):
         # log.info(f'Found {gene_counter} genomic locations for genes.')
         return
 
+    def get_datatype_data(self, session):
+        """Extend the method for the FeatureHandler."""
+        super().get_datatype_data(session)
+        return
+
+    # Elaborate on synthesize_info() sub-methods for FeatureHandler.
+    def synthesize_info(self):
+        """Extend the method for the FeatureHandler."""
+        super().synthesize_info()
+        return
+
+    # Elaborate on map_fb_data_to_alliance() sub-methods for FeatureHandler.
+    def map_fb_data_to_alliance(self):
+        """Extend the method for the FeatureHandler."""
+        super().map_fb_data_to_alliance()
+        return
+
 
 class GeneHandler(FeatureHandler):
     """This object gets, synthesizes and filters gene data for export."""
@@ -822,6 +970,12 @@ class GeneHandler(FeatureHandler):
         'satellite_DNA',
         'transposable_element_gene'
     ]
+
+    # Elaborate on get_general_data() sub-methods for GeneHandler.
+    def get_general_data(self, session):
+        """Extend the method for the GeneHandler."""
+        super().get_general_data(session)
+        return
 
     # Elaborate on get_datatype_data() sub-methods for GeneHandler.
     def get_panther_info(self, input_dir):
@@ -896,13 +1050,24 @@ class GeneHandler(FeatureHandler):
         # log.info(f'Found {counter} gene types for genes.')
         return
 
-
     def get_datatype_data(self, session):
         """Extend the method for the GeneHandler."""
         super().get_datatype_data(session)
         self.get_panther_info()
         self.get_annotation_ids(session)
         self.get_chr_info(session)
+        return
+
+    # Elaborate on synthesize_info() sub-methods for GeneHandler.
+    def synthesize_info(self):
+        """Extend the method for the GeneHandler."""
+        super().synthesize_info()
+        return
+
+    # Elaborate on map_fb_data_to_alliance() sub-methods for GeneHandler.
+    def map_fb_data_to_alliance(self):
+        """Extend the method for the GeneHandler."""
+        super().map_fb_data_to_alliance()
         return
 
 
@@ -945,6 +1110,24 @@ class StrainHandler(PrimaryEntityHandler):
         'subtype_name',
         'taxon_curie'
     ]
+
+    # Elaborate on get_general_data() sub-methods for StrainHandler.
+    def get_general_data(self, session):
+        """Extend the method for the StrainHandler."""
+        super().get_general_data(session)
+        return
+
+    # Elaborate on get_datatype_data() sub-methods for StrainHandler.
+    def get_datatype_data(self, session):
+        """Extend the method for the StrainHandler."""
+        super().get_datatype_data(session)
+        return
+
+    # Elaborate on synthesize_info() sub-methods for StrainHandler.
+    def synthesize_info(self):
+        """Extend the method for the StrainHandler."""
+        super().synthesize_info()
+        return
 
     # Elaborate on map_fb_data_to_alliance() sub-methods for StrainHandler.
     def map_strain_basic(self, strain):
