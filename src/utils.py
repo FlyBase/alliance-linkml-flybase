@@ -325,7 +325,7 @@ class PrimaryEntityHandler(DataHandler):
     def sqlalchemy_test(self, session):
         """Test SQLAlchemy behavior."""
         self.log.info('Test SQLAlchemy behavior.')
-        lbe_types = ['gene']
+        lbe_types = {'gene': 'bob'}
         table_dict = {'main': Feature}
         main_table = table_dict['main']
         pkey_col = self.get_primary_key_column(main_table)
@@ -337,7 +337,7 @@ class PrimaryEntityHandler(DataHandler):
             fkey_col == 219
         )
         filters += (
-            Cvterm.name.in_((lbe_types)),
+            Cvterm.name.in_((lbe_types.keys())),
         )
         results = session.query(main_table).\
             select_from(main_table).\
