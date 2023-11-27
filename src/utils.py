@@ -1143,7 +1143,17 @@ class GeneHandler(FeatureHandler):
         agr_gene.taxon_curie = gene.ncbi_taxon_id
         dp_xref = datatypes.CrossReferenceDTO('FB', gene.uniquename, 'gene', gene.chado_obj.name).dict_export()
         agr_gene.data_provider_dto = datatypes.DataProviderDTO(dp_xref).dict_export()
-        agr_gene.gene_symbol_dto = f'{gene.chado_obj.name}'    # BOB - placeholder until map_synonyms if updated.
+        # BOB - place holder until map synonyms is updated.
+        symbol_dto = {
+            'display_text': gene.chado_obj.name,
+            'format_text': gene.chado_obj.name,
+            'name_type_name': 'nomenclature_symbol',
+            'synonym_scope_name': 'exact',
+            'internal': False,
+            'obsolete': False,
+            'evidence_curies': []
+        }
+        agr_gene.gene_symbol_dto = symbol_dto
         gene.linkmldto = agr_gene
         return
 

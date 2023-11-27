@@ -236,6 +236,7 @@ class SlotAnnotationDTO(AuditedObjectDTO):
     """SlotAnnotationDTO class."""
     def __init__(self):
         """Create a SlotAnnotationDTO for FlyBase object."""
+        super().__init__()
         self.evidence_curies = []
 
 
@@ -243,5 +244,6 @@ class SecondaryIdSlotAnnotationDTO(SlotAnnotationDTO):
     """SecondaryIdSlotAnnotationDTO class."""
     def __init__(self, secondary_id):
         """Create a SecondaryIdSlotAnnotationDTO for FlyBase object."""
+        super().__init__()
         self.secondary_id = secondary_id
         self.required_fields.extend(['secondary_id'])
