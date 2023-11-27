@@ -308,7 +308,8 @@ class PrimaryEntityHandler(DataHandler):
             self.log.error(f'Could not get primary_key Column from {chado_table}')
             raise ValueError
         else:
-            self.log.debug(f'Found primary_key column: {primary_key_column.name}')
+            pass
+            # self.log.debug(f'Found primary_key column: {primary_key_column.name}')
         return primary_key_column
 
     def get_foreign_key_column(self, chado_table, column_name):
@@ -318,7 +319,8 @@ class PrimaryEntityHandler(DataHandler):
             self.log.error(f'Could not get foreign_key Column {column_name} from {chado_table}')
             raise ValueError
         else:
-            self.log.debug(f'Found primary_key column: {foreign_key_column.name}')
+            pass
+            # self.log.debug(f'Found primary_key column: {foreign_key_column.name}')
         return foreign_key_column
 
     # BOB: Quick testing of general SQLAlchemy query approaches.
@@ -1083,9 +1085,28 @@ class GeneHandler(FeatureHandler):
         return
 
     # Elaborate on map_fb_data_to_alliance() sub-methods for GeneHandler.
+    def map_gene_basic(self, gene):
+        """Map basic FlyBase gene data to the Alliance LinkML object."""
+        agr_gene = datatypes.GeneDTO()
+        agr_gene.obsolete = gene.chado_obj.is_obsolete
+        agr_gene.curie = f'FB:{gene.uniquename}'
+        agr_gene.taxon_curie = gene.ncbi_taxon_id
+        dp_xref = datatypes.CrossReferenceDTO('FB', gene.uniquename, 'strain', gene.chado_obj.name).dict_export()
+        agr_gene.data_provider_dto = datatypes.DataProviderDTO(dp_xref).dict_export()
+        agr_gene.gene_symbol_dto = f'{gene.name}'    # BOB - placeholder until map_synonyms if updated.
+        gene.linkmldto = agr_gene
+        return
+
     def map_fb_data_to_alliance(self):
-        """Extend the method for the GeneHandler."""
+        """Extend the method for the StrainHandler."""
         super().map_fb_data_to_alliance()
+        for gene in self.fb_data_entities.values():
+            self.map_gene_basic(gene)
+            self.map_pubs(gene)
+            self.map_xrefs(gene)
+            self.map_timestamps(gene)
+            gene.linkmldto.gene_secondary_id_dtos = self.map_secondary_ids(gene)
+            self.flag_internal_fb_entities(gene)
         return
 
 

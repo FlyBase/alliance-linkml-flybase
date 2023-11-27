@@ -163,6 +163,7 @@ class GeneDTO(GenomicEntityDTO):
         self.gene_synonym_dtos = []             # Will be list of NameSlotAnnotationDTO objects.
         self.gene_type_curie = None             # Will be the SO term ID corresponding to the gene's promoted_gene_type.
         self.gene_secondary_id_dtos = []        # Annotation IDs and 2o FlyBase IDs.
+        self.required_fields.extend(['gene_symbol_dto'])
 
 
 class AffectedGenomicModelDTO(GenomicEntityDTO):
