@@ -56,7 +56,6 @@ class FBDataEntity(FBEntity):
         self.cvtermprops = []           # Cvtermprop associations: e.g., FeatureCvtermprop, StrainDbxref.
         self.timestamps = []            # FB timestamps.
         # Processed FB data - processed from primary FB chado data above.
-        self.organism_abbr = None       # The organism.abbreviation (str).
         self.ncbi_taxon_id = None       # The NCBITaxon dbxref.accession (str).
         self.curr_fb_symbol = None      # The current symbol Synonym chado for the entity.
         self.curr_fb_fullname = None    # The current fullname Synonym chado object for the entity.
