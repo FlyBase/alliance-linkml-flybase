@@ -78,6 +78,8 @@ class FBFeature(FBDataEntity):
         self.chr_flocs = []        # Will be chromosomal Featureloc objects for the entity.
         self.fb_anno_xrefs = []    # Will be "FlyBase Annotation IDs" FeatureDbxref objects.
         # Processed FB data.
+        self.curr_anno_id = None     # Will be current annotation ID for the gene (str).
+        self.alt_anno_ids = []       # Will be list of non-current annotation IDs for the gene (str).
 
 
 class FBGene(FBFeature):
@@ -86,11 +88,11 @@ class FBGene(FBFeature):
         """Create the FBGene object."""
         super().__init__(chado_obj)
         # Primary FB chado data.
-        self.gene_type_names = []    # Will be "promoted_gene_type" Featureprops.
-        self.gene_snapshots = []     # Will be "gene_summary_text" Featureprops.
+        self.gene_type_names = []     # Will be "promoted_gene_type" Featureprops.
+        self.gene_snapshots = []      # Will be "gene_summary_text" Featureprops.
         # Processed FB data.
-        self.curr_anno_id = None     # Will be current annotation ID for the gene (str).
-        self.alt_anno_ids = []       # Will be list of non-current annotation IDs for the gene (str).
+        self.gene_type_name = None    # Will be SO term name from "promoted_gene_type" Featureprop.
+        self.gene_type_id = None      # Will be SO term ID from "promoted_gene_type" Featureprop.
 
 
 class FBStrain(FBDataEntity):

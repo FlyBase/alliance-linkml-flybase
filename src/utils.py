@@ -639,9 +639,14 @@ class PrimaryEntityHandler(DataHandler):
                 continue
             # Build Alliance xref DTO
             prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
-            curie = f'{prefix}{xref.dbxref.accession}'
             page_area = self.fb_data_type    # Must ensure that fb_data_types match Alliance resourceDescriptors.yaml page.
-            display_name = xref.dbxref.description
+            curie = f'{prefix}{xref.dbxref.accession}'
+            display_name = curie
+            # Optional - consider using dbxref.description for xref display.
+            # if xref.dbxref.description is not None and xref.dbxref.description != '':
+            #     display_name = xref.dbxref.description
+            # else:
+            #     display_name = curie
             xref_dto = datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
             cross_reference_dtos.append(xref_dto)
         fb_data_entity.linkmldto.cross_reference_dtos = cross_reference_dtos
@@ -924,12 +929,44 @@ class FeatureHandler(PrimaryEntityHandler):
         return
 
     # Elaborate on synthesize_info() sub-methods for FeatureHandler.
+    # Call these methods only for more specific FeatureHandler types.
+    def synthesize_anno_ids(self):
+        """Synthesize annotation IDs."""
+        current_anno_ids = []
+        alt_anno_ids = []
+        for fb_data_entity in self.fb_data_entities.values():
+            for xref in fb_data_entity.fb_anno_xrefs:
+                if xref.is_current is True:
+                    current_anno_ids.append(xref.dbxref.accession)
+                else:
+                    alt_anno_ids.append(xref.dbxref.accession)
+            # Get the one current annotation ID.
+            if len(current_anno_ids) == 1:
+                fb_data_entity.curr_anno_id = current_anno_ids[0]
+            elif len(current_anno_ids) > 1:
+                self.log.warning(f'{fb_data_entity} has {len(current_anno_ids)} current annotations IDs.')
+            # Record old annotation IDs.
+            fb_data_entity.alt_anno_ids = alt_anno_ids
+        return
+
     def synthesize_info(self):
         """Extend the method for the FeatureHandler."""
         super().synthesize_info()
         return
 
     # Elaborate on map_fb_data_to_alliance() sub-methods for FeatureHandler.
+    # Call these methods only for more specific FeatureHandler types.
+    def map_anno_ids_to_secondary_ids(self, fb_data_entity):
+        """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for annotation IDs."""
+        anno_ids = []
+        anno_ids.append(fb_data_entity.curr_anno_id)
+        anno_ids.extend(fb_data_entity.alt_anno_ids)
+        anno_secondary_id_dtos = []
+        for anno_id in anno_ids:
+            sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(f'FB:{anno_id}').dict_export()
+            anno_secondary_id_dtos.append(sec_dto)
+        return anno_secondary_id_dtos
+
     def map_fb_data_to_alliance(self):
         """Extend the method for the FeatureHandler."""
         super().map_fb_data_to_alliance()
@@ -1079,9 +1116,22 @@ class GeneHandler(FeatureHandler):
         return
 
     # Elaborate on synthesize_info() sub-methods for GeneHandler.
+    def synthesize_gene_type(self, gene):
+        """Synthesize gene type."""
+        for gene in self.fb_data_entities.values():
+            if len(gene.gene_type_names) == 1:
+                prop_value = gene.gene_type_names[0].value
+                gene.gene_type_name = prop_value[11:-1]
+                gene.gene_type_id = prop_value[1:10].replace('SO', 'SO:')
+            elif len(gene.gene_type_names) > 1:
+                self.log.warning(f'{gene} has many promoted gene types.')
+        return
+
     def synthesize_info(self):
         """Extend the method for the GeneHandler."""
         super().synthesize_info()
+        self.synthesize_gene_type()
+        self.synthesize_anno_ids()
         return
 
     # Elaborate on map_fb_data_to_alliance() sub-methods for GeneHandler.
@@ -1097,6 +1147,33 @@ class GeneHandler(FeatureHandler):
         gene.linkmldto = agr_gene
         return
 
+    def map_gene_type(self, gene):
+        """Map gene type."""
+        gene.linkmldto.gene_type_curie = gene.gene_type_id
+        return
+
+    def map_gene_snapshot(self, gene):
+        """Map gene snapshot."""
+        # BOB - need to figure out how to export gene snapshots.
+        if len(gene.gene_snapshots) == 1:
+            pass
+        elif len(gene.gene_snapshots) > 1:
+            self.log.warning(f'{gene} has many gene snapshots.')
+        return
+
+    def map_gene_panther_xrefs(self, gene):
+        """Add panther xrefs."""
+        if gene.uniquename not in self.pthr_dict.keys():
+            return
+        # Build Alliance xref DTO
+        prefix = 'PANTHER'
+        page_area = 'FB'
+        curie = f'{prefix}:{self.pthr_dict[gene.uniquename]}'
+        display_name = curie
+        xref_dto = datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
+        gene.linkmldto.cross_reference_dtos.append(xref_dto)
+        return
+
     def map_fb_data_to_alliance(self):
         """Extend the method for the StrainHandler."""
         super().map_fb_data_to_alliance()
@@ -1106,6 +1183,10 @@ class GeneHandler(FeatureHandler):
             self.map_xrefs(gene)
             self.map_timestamps(gene)
             gene.linkmldto.gene_secondary_id_dtos = self.map_secondary_ids(gene)
+            self.map_gene_snapshot(gene)
+            self.map_gene_type(gene)
+            self.map_gene_panther_xrefs(gene)
+            gene.linkmldto.gene_secondary_id_dtos.extend(self.map_anno_ids_to_secondary_ids(gene))
             self.flag_internal_fb_entities(gene)
         return
 
