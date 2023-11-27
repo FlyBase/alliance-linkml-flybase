@@ -1013,13 +1013,10 @@ class GeneHandler(FeatureHandler):
         return
 
     # Elaborate on get_datatype_data() sub-methods for GeneHandler.
-    def get_panther_info(self, input_dir):
+    def get_panther_info(self):
         """Extract panther information from file."""
         self.log.info('Extract panther information from file.')
-        if input_dir == '/src/input/':
-            filepath = f'{input_dir}PTHR18.0_fruit_fly'
-        else:
-            filepath = '/data/ortholog/panther/PTHR18.0_fruit_fly'
+        filepath = '/src/input/PTHR18.0_fruit_fly'
         tsv_file = open(filepath, "r")
         tsvin = csv.reader(tsv_file, delimiter='\t')
         FB = 0
@@ -1072,7 +1069,7 @@ class GeneHandler(FeatureHandler):
     def get_datatype_data(self, session):
         """Extend the method for the GeneHandler."""
         super().get_datatype_data(session)
-        self.get_panther_info(input_dir)
+        self.get_panther_info()
         self.get_annotation_ids(session)
         self.get_chr_featurelocs(session)
         self.get_gene_snapshots(session)
