@@ -950,10 +950,10 @@ class FeatureHandler(PrimaryEntityHandler):
     def synthesize_anno_ids(self):
         """Synthesize annotation IDs."""
         self.log.info('Synthesize annotation IDs.')
-        current_anno_ids = []
-        alt_anno_ids = []
         for fb_data_entity in self.fb_data_entities.values():
             self.log.debug(f'{fb_data_entity} has {len(fb_data_entity.fb_anno_xrefs)} anno xrefs.')
+            current_anno_ids = []
+            alt_anno_ids = []
             for xref in fb_data_entity.fb_anno_xrefs:
                 if xref.is_current is True:
                     current_anno_ids.append(xref.dbxref.accession)
