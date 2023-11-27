@@ -1141,9 +1141,9 @@ class GeneHandler(FeatureHandler):
         agr_gene.obsolete = gene.chado_obj.is_obsolete
         agr_gene.curie = f'FB:{gene.uniquename}'
         agr_gene.taxon_curie = gene.ncbi_taxon_id
-        dp_xref = datatypes.CrossReferenceDTO('FB', gene.uniquename, 'strain', gene.chado_obj.name).dict_export()
+        dp_xref = datatypes.CrossReferenceDTO('FB', gene.uniquename, 'gene', gene.chado_obj.name).dict_export()
         agr_gene.data_provider_dto = datatypes.DataProviderDTO(dp_xref).dict_export()
-        agr_gene.gene_symbol_dto = f'{gene.name}'    # BOB - placeholder until map_synonyms if updated.
+        agr_gene.gene_symbol_dto = f'{gene.chado_obj.name}'    # BOB - placeholder until map_synonyms if updated.
         gene.linkmldto = agr_gene
         return
 
