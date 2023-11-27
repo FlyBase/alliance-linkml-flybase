@@ -620,7 +620,10 @@ class PrimaryEntityHandler(DataHandler):
     def map_pubs(self, fb_data_entity):
         """Add pub curies to a FlyBase entity."""
         for pub_id in fb_data_entity.all_pub_ids:
-            fb_data_entity.linkmldto.reference_curies.append(self.bibliography[pub_id])
+            try:
+                fb_data_entity.linkmldto.reference_curies.append(self.bibliography[pub_id])
+            except KeyError:
+                pass
         try:
             fb_data_entity.linkmldto.reference_curies.remove('FB:unattributed')
         except ValueError:
