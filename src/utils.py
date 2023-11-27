@@ -646,8 +646,8 @@ class PrimaryEntityHandler(DataHandler):
         return
 
     def map_synonyms(self, fb_data_entity):
+        """Generate name/synonym DTOs for a feature that has a list of FeatureSynonym objects."""
         # BOB: TO DO
-        # """Generate name/synonym DTOs for a feature that has a list of FeatureSynonym objects."""
         # # Dict for converting FB to AGR synonym types.
         # synonym_type_conversion = {
         #     'symbol': 'nomenclature_symbol',
