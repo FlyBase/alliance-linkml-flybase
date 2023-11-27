@@ -111,7 +111,7 @@ class DataHandler(object):
         'strain': r'^FBsn[0-9]{7}$',
         'library': r'^FBlc[0-9]{7}$',
         'cell': r'^FBcl[0-9]{7}$',
-        'pthr': r'PTHR[0-9]{5}',
+        'panther': r'PTHR[0-9]{5}',
         'gene_systematic_name': r'^(D[a-z]{3}\\|)(CG|CR|G[A-Z])[0-9]{4,5}$'
     }
 
@@ -1026,8 +1026,8 @@ class GeneHandler(FeatureHandler):
         for row in tsvin:
             fields = len(row)
             if fields:  # Ignore blank lines
-                if re.search(gene_regex, row[FB]) and re.search(self.pthr_regex, row[PTHR]):
-                    self.pthr_dict[re.search(gene_regex, row[FB]).group(0)] = re.search(self.pthr_regex, row[PTHR]).group(0)
+                if re.search(gene_regex, row[FB]) and re.search(self.regex['panther'], row[PTHR]):
+                    self.pthr_dict[re.search(gene_regex, row[FB]).group(0)] = re.search(self.regex['panther'], row[PTHR]).group(0)
                     counter += 1
         self.log.info(f'Processed {counter} lines from the panther orthology file.')
         return
