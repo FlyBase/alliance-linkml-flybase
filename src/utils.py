@@ -953,6 +953,7 @@ class FeatureHandler(PrimaryEntityHandler):
         current_anno_ids = []
         alt_anno_ids = []
         for fb_data_entity in self.fb_data_entities.values():
+            self.log.debug(f'{fb_data_entity} has {len(fb_data_entity.fb_anno_xrefs)} anno xrefs.')
             for xref in fb_data_entity.fb_anno_xrefs:
                 if xref.is_current is True:
                     current_anno_ids.append(xref.dbxref.accession)
@@ -963,8 +964,10 @@ class FeatureHandler(PrimaryEntityHandler):
                 fb_data_entity.curr_anno_id = current_anno_ids[0]
             elif len(current_anno_ids) > 1:
                 self.log.warning(f'{fb_data_entity} has {len(current_anno_ids)} current annotations IDs.')
+                # Some unlocalized genes have many current anno IDs.
+                fb_data_entity.alt_anno_ids.extend(current_anno_ids)
             # Record old annotation IDs.
-            fb_data_entity.alt_anno_ids = alt_anno_ids
+            fb_data_entity.alt_anno_ids.extend(alt_anno_ids)
         return
 
     def synthesize_info(self):
