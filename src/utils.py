@@ -229,7 +229,8 @@ class DataHandler(object):
         return
 
     def generate_export_dict(self):
-        """Generate LinkML export dict from the primary FB data entities."""
+        """Generate LinkML export dict from FB data."""
+        self.log.info('Generate LinkML export dict from FB data.')
         for i in self.fb_data_entities.values():
             self.input_count += 1
             if i.for_export is False:
@@ -252,6 +253,7 @@ class DataHandler(object):
 
     def query_chado(self, session):
         """Wrapper that runs all methods within an SQLAlchemy session."""
+        self.log.info('Run main query_chado() handler method.')
         self.get_general_data(session)
         self.get_datatype_data(session)
         self.synthesize_info()
@@ -530,7 +532,8 @@ class PrimaryEntityHandler(DataHandler):
 
     # Elaborate on synthesize_info() sub-methods for PrimaryEntityHandler.
     def synthesize_ncbi_taxon_id(self):
-        """Determine the NCBITaxon ID for the entity."""
+        """Determine the NCBITaxon ID for FB entities."""
+        self.log.info('Determine the NCBITaxon ID for FB entities.')
         for fb_data_entity in self.fb_data_entities.values():
             # Catch cases where the FB data entity has no organism_id.
             try:
@@ -549,6 +552,7 @@ class PrimaryEntityHandler(DataHandler):
 
     def synthesize_secondary_ids(self):
         """Process secondary IDs and return a list of old FB uniquenames."""
+        self.log.info('Process secondary IDs and return a list of old FB uniquenames.')
         for fb_data_entity in self.fb_data_entities.values():
             secondary_ids = []
             for xref in fb_data_entity.dbxrefs:
@@ -591,6 +595,7 @@ class PrimaryEntityHandler(DataHandler):
 
     def synthesize_pubs(self):
         """Collect pub_ids associated directly or indirectly with the entity."""
+        self.log.info('Collect pub_ids associated directly or indirectly with the entity.')
         pub_sources = ['pubs', 'synonyms', 'cvterms', 'prop_pubs']
         for fb_data_entity in self.fb_data_entities.values():
             for pub_source in pub_sources:
@@ -944,6 +949,7 @@ class FeatureHandler(PrimaryEntityHandler):
     # Call these methods only for more specific FeatureHandler types.
     def synthesize_anno_ids(self):
         """Synthesize annotation IDs."""
+        self.log.info('Synthesize annotation IDs.')
         current_anno_ids = []
         alt_anno_ids = []
         for fb_data_entity in self.fb_data_entities.values():
@@ -970,6 +976,7 @@ class FeatureHandler(PrimaryEntityHandler):
     # Call these methods only for more specific FeatureHandler types.
     def map_anno_ids_to_secondary_ids(self, fb_data_entity):
         """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for annotation IDs."""
+        self.log.info('Return a list of Alliance SecondaryIdSlotAnnotationDTOs for annotation IDs.')
         anno_ids = []
         anno_ids.append(fb_data_entity.curr_anno_id)
         anno_ids.extend(fb_data_entity.alt_anno_ids)
@@ -1130,6 +1137,7 @@ class GeneHandler(FeatureHandler):
     # Elaborate on synthesize_info() sub-methods for GeneHandler.
     def synthesize_gene_type(self):
         """Synthesize gene type."""
+        self.log.info('Synthesize gene type.')
         for gene in self.fb_data_entities.values():
             if len(gene.gene_type_names) == 1:
                 prop_value = gene.gene_type_names[0].value
@@ -1177,9 +1185,12 @@ class GeneHandler(FeatureHandler):
 
     def map_gene_snapshot(self, gene):
         """Map gene snapshot."""
-        # BOB - need to figure out how to export gene snapshots.
         if len(gene.gene_snapshots) == 1:
-            pass
+            note_type_name = 'MOD_provided_gene_description'
+            free_text = gene.gene_snapshots[0].value
+            pub_curies = ['FB:FBrf0232436']
+            snapshot_note_dto = datatypes.NoteDTO(note_type_name, free_text, pub_curies)
+            gene.related_notes.append(snapshot_note_dto)
         elif len(gene.gene_snapshots) > 1:
             self.log.warning(f'{gene} has many gene snapshots.')
         return
