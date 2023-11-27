@@ -1191,7 +1191,7 @@ class GeneHandler(FeatureHandler):
         """Map gene snapshot."""
         if len(gene.gene_snapshots) == 1:
             note_type_name = 'MOD_provided_gene_description'
-            free_text = gene.gene_snapshots[0].value
+            free_text = gene.gene_snapshots[0].value.replace('@', '')
             pub_curies = ['FB:FBrf0232436']
             snapshot_note_dto = datatypes.NoteDTO(note_type_name, free_text, pub_curies).dict_export()
             gene.linkmldto.related_notes.append(snapshot_note_dto)
