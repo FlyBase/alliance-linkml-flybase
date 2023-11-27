@@ -234,7 +234,6 @@ class DataHandler(object):
         for i in self.fb_data_entities.values():
             self.input_count += 1
             if i.for_export is False:
-                self.log.debug(f'Suppress {i} from export: {i.export_warnings}')
                 continue
             self.export_count += 1
             if i.linkmldto.internal is True:
@@ -795,6 +794,7 @@ class PrimaryEntityHandler(DataHandler):
         """Flag obsolete FB objects as internal."""
         if fb_data_entity.chado_obj.is_obsolete is True:
             fb_data_entity.linkmldto.internal = True
+            fb_data_entity.internal_reasons.append('Obsolete')
         return
 
     def map_fb_data_to_alliance(self):
@@ -951,7 +951,6 @@ class FeatureHandler(PrimaryEntityHandler):
         """Synthesize annotation IDs."""
         self.log.info('Synthesize annotation IDs.')
         for fb_data_entity in self.fb_data_entities.values():
-            self.log.debug(f'{fb_data_entity} has {len(fb_data_entity.fb_anno_xrefs)} anno xrefs.')
             current_anno_ids = []
             alt_anno_ids = []
             for xref in fb_data_entity.fb_anno_xrefs:
@@ -979,7 +978,6 @@ class FeatureHandler(PrimaryEntityHandler):
     # Call these methods only for more specific FeatureHandler types.
     def map_anno_ids_to_secondary_ids(self, fb_data_entity):
         """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for annotation IDs."""
-        self.log.info('Return a list of Alliance SecondaryIdSlotAnnotationDTOs for annotation IDs.')
         anno_ids = []
         anno_ids.append(fb_data_entity.curr_anno_id)
         anno_ids.extend(fb_data_entity.alt_anno_ids)
