@@ -1190,7 +1190,7 @@ class GeneHandler(FeatureHandler):
             free_text = gene.gene_snapshots[0].value
             pub_curies = ['FB:FBrf0232436']
             snapshot_note_dto = datatypes.NoteDTO(note_type_name, free_text, pub_curies)
-            gene.related_notes.append(snapshot_note_dto)
+            gene.linkmldto.related_notes.append(snapshot_note_dto)
         elif len(gene.gene_snapshots) > 1:
             self.log.warning(f'{gene} has many gene snapshots.')
         return
