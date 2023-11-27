@@ -169,6 +169,7 @@ class GeneDTO(GenomicEntityDTO):
         self.gene_type_curie = None             # Will be the SO term ID corresponding to the gene's promoted_gene_type.
         self.gene_secondary_id_dtos = []        # Annotation IDs and 2o FlyBase IDs.
         self.reference_curies = []              # Not yet part of LinkML, so not exported - should be added to LinkML model?
+        self.related_notes = []                 # Will be NoteDTO objects.
         self.required_fields.extend(['gene_symbol_dto'])
 
 
@@ -233,6 +234,24 @@ class DataProviderDTO(AuditedObjectDTO):
         self.source_organization_abbreviation = 'FB'
         self.cross_reference_dto = data_provider_xref
         self.required_fields.extend(['source_organization_abbreviation'])
+
+
+class NoteDTO(AuditedObjectDTO):
+    """NoteDTO class."""
+    def __init__(self, note_type_name: str, free_text: str, evidence_curies: list):
+        """Create a NoteDTO for FlyBase objects.
+
+        Args:
+            note_type_name (str): The type of note.
+            free_text (str): The note itself.
+            evidence_curies (list): A list of FB:FBrf or PMID:### curies.
+
+        """
+        super().__init__()
+        self.note_type_name = note_type_name
+        self.free_text = free_text
+        self.evidence_curies = evidence_curies
+        self.required_fields.extend(['note_type_name', 'free_text'])
 
 
 class SlotAnnotationDTO(AuditedObjectDTO):
