@@ -853,7 +853,6 @@ class FeatureHandler(PrimaryEntityHandler):
             self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.fb_data_type]}')
             filters += (Cvterm.name.in_((self.subtypes[self.fb_data_type])), )
         if self.testing:
-            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             filters += (Feature.uniquename.in_((self.test_set.keys())), )
         results = session.query(FeatureDbxref).\
             select_from(Feature).\
@@ -891,7 +890,6 @@ class FeatureHandler(PrimaryEntityHandler):
             self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.fb_data_type]}')
             filters += (Cvterm.name.in_((self.subtypes[self.fb_data_type])), )
         if self.testing:
-            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             filters += (Feature.uniquename.in_((self.test_set.keys())), )
         results = session.query(Featureloc).\
             select_from(Feature).\
@@ -929,7 +927,6 @@ class FeatureHandler(PrimaryEntityHandler):
             self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.fb_data_type]}')
             filters += (feat_type.name.in_((self.subtypes[self.fb_data_type])), )
         if self.testing:
-            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             filters += (Feature.uniquename.in_((self.test_set.keys())), )
         results = session.query(Featureprop).\
             select_from(Feature).\
