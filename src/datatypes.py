@@ -16,7 +16,6 @@ class FBEntity(object):
     def __init__(self):
         """Create the generic FlyBase entity with bins for Alliance mapping."""
         self.db_primary_id = None     # The chado table primary key (or concatenation of primary keys).
-        self.uniquename = None        # The FlyBase uniquename, if applicable.
         self.uniq_key = None          # A string derived from the uniquely defining properties of the entity.
         self.linkmldto = None         # The Alliance LinkML object containing mapped data.
         self.for_export = True        # Change to False if object should be excluded from export.
@@ -38,6 +37,10 @@ class FBDataEntity(FBEntity):
         """Create the generic FlyBase data entity object from the main db entry."""
         super().__init__()
         self.uniquename = chado_obj.uniquename
+        try:
+            self.name = chado_obj.name
+        except AttributeError:
+            self.name = None
         try:
             self.organism_abbr = chado_obj.organism.abbreviation
         except AttributeError:
@@ -64,7 +67,7 @@ class FBDataEntity(FBEntity):
 
     def __str__(self):
         """Basic descriptive info for the object."""
-        entity_desc = f'{self.chado_obj.name} ({self.chado_obj.uniquename})'
+        entity_desc = f'{self.name} ({self.uniquename})'
         return entity_desc
 
 
