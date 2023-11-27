@@ -609,6 +609,12 @@ class PrimaryEntityHandler(DataHandler):
 
     # Elaborate on map_fb_data_to_alliance() sub-methods for PrimaryEntityHandler.
     # However, as they're not useful for all data types, call them in tailored handler Classes.
+    def map_data_provider_dto(self, fb_data_entity):
+        """Return the DataProviderDTO for the FB data entity."""
+        dp_xref = datatypes.CrossReferenceDTO('FB', f'FB:{fb_data_entity.uniquename}', self.fb_data_type, fb_data_entity.name).dict_export()
+        data_provider_dto = datatypes.DataProviderDTO(dp_xref).dict_export()
+        return data_provider_dto
+
     def map_secondary_ids(self, fb_data_entity):
         """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for a FlyBase entity."""
         secondary_id_dtos = []
@@ -966,8 +972,9 @@ class FeatureHandler(PrimaryEntityHandler):
         anno_ids.extend(fb_data_entity.alt_anno_ids)
         anno_secondary_id_dtos = []
         for anno_id in anno_ids:
-            sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(f'FB:{anno_id}').dict_export()
-            anno_secondary_id_dtos.append(sec_dto)
+            if anno_id is not None:
+                sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(f'FB:{anno_id}').dict_export()
+                anno_secondary_id_dtos.append(sec_dto)
         return anno_secondary_id_dtos
 
     def map_fb_data_to_alliance(self):
@@ -1144,8 +1151,9 @@ class GeneHandler(FeatureHandler):
         agr_gene.obsolete = gene.chado_obj.is_obsolete
         agr_gene.curie = f'FB:{gene.uniquename}'
         agr_gene.taxon_curie = gene.ncbi_taxon_id
-        dp_xref = datatypes.CrossReferenceDTO('FB', gene.uniquename, 'gene', gene.chado_obj.name).dict_export()
-        agr_gene.data_provider_dto = datatypes.DataProviderDTO(dp_xref).dict_export()
+        # dp_xref = datatypes.CrossReferenceDTO('FB', f'FB:{gene.uniquename}', 'gene', gene.chado_obj.name).dict_export()
+        # agr_gene.data_provider_dto = datatypes.DataProviderDTO(dp_xref).dict_export()
+        agr_gene.data_provider_dto = self.map_data_provider_dto(gene)
         # BOB - place holder until map synonyms is updated.
         symbol_dto = {
             'display_text': gene.chado_obj.name,
@@ -1269,8 +1277,9 @@ class StrainHandler(PrimaryEntityHandler):
         agr_strain.obsolete = strain.chado_obj.is_obsolete
         agr_strain.curie = f'FB:{strain.uniquename}'
         agr_strain.taxon_curie = strain.ncbi_taxon_id
-        dp_xref = datatypes.CrossReferenceDTO('FB', strain.uniquename, 'strain', strain.chado_obj.name).dict_export()
-        agr_strain.data_provider_dto = datatypes.DataProviderDTO(dp_xref).dict_export()
+        # dp_xref = datatypes.CrossReferenceDTO('FB', f'FB:{strain.uniquename}', 'strain', strain.chado_obj.name).dict_export()
+        # agr_strain.data_provider_dto = datatypes.DataProviderDTO(dp_xref).dict_export()
+        agr_strain.data_provider_dto = self.map_data_provider_dto(strain)
         agr_strain.name = strain.chado_obj.name
         agr_strain.subtype_name = 'strain'
         strain.linkmldto = agr_strain
