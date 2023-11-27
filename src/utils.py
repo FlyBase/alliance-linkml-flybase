@@ -646,10 +646,13 @@ class PrimaryEntityHandler(DataHandler):
             # Skip FlyBase xrefs: current xref will be in data_provider_dto; others as 2o IDs.
             elif xref.dbxref.db.name == 'FlyBase':
                 continue
+            # Handle annotation IDs separately.
+            elif xref.dbxref.db.name == 'FlyBase Annotation IDs':
+                continue
             # Build Alliance xref DTO
             prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
             page_area = self.fb_data_type    # Must ensure that fb_data_types match Alliance resourceDescriptors.yaml page.
-            curie = f'{prefix}{xref.dbxref.accession}'
+            curie = f'{prefix}:{xref.dbxref.accession}'
             display_name = curie
             # Optional - consider using dbxref.description for xref display.
             # if xref.dbxref.description is not None and xref.dbxref.description != '':
@@ -1032,7 +1035,6 @@ class GeneHandler(FeatureHandler):
     fb_agr_db_dict = {
         'EntrezGene': 'NCBI_Gene',
         'FlyBase': 'FB',
-        'FlyBase Annotation IDs': 'FB',
         'RNAcentral': 'RNAcentral',
         # 'UniProt/GCRP': 'UniProt/GCRP',
         'UniProt/Swiss-Prot': 'UniProtKB',
