@@ -1116,7 +1116,7 @@ class GeneHandler(FeatureHandler):
         return
 
     # Elaborate on synthesize_info() sub-methods for GeneHandler.
-    def synthesize_gene_type(self, gene):
+    def synthesize_gene_type(self):
         """Synthesize gene type."""
         for gene in self.fb_data_entities.values():
             if len(gene.gene_type_names) == 1:
