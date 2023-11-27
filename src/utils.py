@@ -842,7 +842,7 @@ class FeatureHandler(PrimaryEntityHandler):
         counter = 0
         pass_counter = 0
         for result in results:
-            entity_pkey_id = FeatureDbxref.feature_id
+            entity_pkey_id = result.feature_id
             try:
                 self.fb_data_entities[entity_pkey_id].fb_anno_xrefs.append(result)
                 counter += 1
@@ -878,7 +878,7 @@ class FeatureHandler(PrimaryEntityHandler):
         counter = 0
         pass_counter = 0
         for result in results:
-            entity_pkey_id = Featureloc.feature_id
+            entity_pkey_id = result.feature_id
             try:
                 self.fb_data_entities[entity_pkey_id].chr_flocs.append(result)
                 counter += 1
