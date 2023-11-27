@@ -540,7 +540,7 @@ class PrimaryEntityHandler(DataHandler):
                 organism_id = fb_data_entity.chado_obj.organism_id
             except AttributeError:
                 self.log.warning(f'No organism_id for {fb_data_entity}.')
-                return None
+                return
             # Catch cases where the FB data entity has no corresponding NCBITaxon ID.
             try:
                 ncbi_taxon_id = f'NCBITaxon:{self.ncbi_taxon_dict[organism_id]}'
@@ -1036,6 +1036,7 @@ class GeneHandler(FeatureHandler):
         'gene_type_curie',
         'internal',
         'obsolete',
+        'related_notes',
         'taxon_curie',
         'updated_by_curie',
     ]
