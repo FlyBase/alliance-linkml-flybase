@@ -53,6 +53,7 @@ class DataHandler(object):
         self.export_data = []         # List of data objects for export (as Alliance ingest set).
         # General data bins.
         self.bibliography = {}        # A pub_id-keyed dict of pub curies (PMID or FBrf).
+        self.db_dict = {}             # A db_id-keyed dict of db names.
         self.cvterm_dict = {}         # A cvterm_id-keyed dict of Cvterm objects.
         self.ncbi_taxon_dict = {}     # An organism_id-keyed dict of NCBITaxon Dbxref.accession strings.
         # Trackers.
@@ -155,6 +156,17 @@ class DataHandler(object):
         self.log.info(f'Found {pmid_counter} PMID IDs for {pub_counter} current FB publications.')
         return
 
+    def get_dbs(self, session):
+        """Create a db_id-keyed dict of database names."""
+        self.log.info('Create a db_id-keyed dict of database names.')
+        results = session.query(Db).distinct()
+        counter = 0
+        for result in results:
+            self.db_dict[result.db_id] = result.name
+            counter += 1
+        self.log.info(f'Found {counter} db entries in chado.')
+        return
+
     def get_cvterms(self, session):
         """Create a cvterm_id-keyed dict of Cvterms."""
         self.log.info('Create a cvterm_id-keyed dict of Cvterms.')
@@ -193,6 +205,7 @@ class DataHandler(object):
         """Get general FlyBase chado data."""
         self.log.info('Get general FlyBase data from chado.')
         self.build_bibliography(session)
+        self.get_dbs(session)
         self.get_cvterms(session)
         self.get_ncbi_taxon_ids(session)
         return
@@ -785,8 +798,10 @@ class PrimaryEntityHandler(DataHandler):
             cross_reference_dtos = []
             for xref in fb_data_entity.dbxrefs:
                 # Build Alliance xref DTO
-                prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
-                # This assumes that self.fb_data_type has a matching value in the Alliance resourceDescriptors.yaml page.
+                fb_db_name = self.db_dict[xref.dbxref.db_id]
+                prefix = self.fb_agr_db_dict[fb_db_name]
+                # prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
+                # The page_area assignment assumes that the self.fb_data_type has a matching value in the Alliance resourceDescriptors.yaml page.
                 page_area = self.fb_data_type
                 # Clean up cases where the db prefix is redundantly included at the start of the dbxref.accession.
                 redundant_prefix = f'{prefix}:'
