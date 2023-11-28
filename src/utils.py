@@ -17,8 +17,9 @@ import strict_rfc3339
 from logging import Logger
 from sqlalchemy.orm import aliased, Session
 # from sqlalchemy.inspection import inspect
+from harvdev_utils.char_conversions import sub_sup_sgml_to_html
 from harvdev_utils.production import (
-    Cvterm, Db, Dbxref, Organism, OrganismDbxref, Pub, PubDbxref, Featureloc,
+    Cvterm, Db, Dbxref, Organism, OrganismDbxref, Pub, PubDbxref, Featureloc, Synonym,
     Strain, StrainPub, StrainSynonym, StrainDbxref, Strainprop, StrainpropPub, StrainCvterm, StrainCvtermprop,
     Feature, FeaturePub, FeatureSynonym, FeatureDbxref, Featureprop, FeaturepropPub, FeatureCvterm, FeatureCvtermprop
 )
@@ -53,7 +54,6 @@ class DataHandler(object):
         self.export_data = []         # List of data objects for export (as Alliance ingest set).
         # General data bins.
         self.bibliography = {}        # A pub_id-keyed dict of pub curies (PMID or FBrf).
-        self.db_dict = {}             # A db_id-keyed dict of db names.
         self.cvterm_dict = {}         # A cvterm_id-keyed dict of Cvterm objects.
         self.ncbi_taxon_dict = {}     # An organism_id-keyed dict of NCBITaxon Dbxref.accession strings.
         # Trackers.
@@ -156,17 +156,6 @@ class DataHandler(object):
         self.log.info(f'Found {pmid_counter} PMID IDs for {pub_counter} current FB publications.')
         return
 
-    def get_dbs(self, session):
-        """Create a db_id-keyed dict of database names."""
-        self.log.info('Create a db_id-keyed dict of database names.')
-        results = session.query(Db).distinct()
-        counter = 0
-        for result in results:
-            self.db_dict[result.db_id] = result.name
-            counter += 1
-        self.log.info(f'Found {counter} db entries in chado.')
-        return
-
     def get_cvterms(self, session):
         """Create a cvterm_id-keyed dict of Cvterms."""
         self.log.info('Create a cvterm_id-keyed dict of Cvterms.')
@@ -205,7 +194,6 @@ class DataHandler(object):
         """Get general FlyBase chado data."""
         self.log.info('Get general FlyBase data from chado.')
         self.build_bibliography(session)
-        self.get_dbs(session)
         self.get_cvterms(session)
         self.get_ncbi_taxon_ids(session)
         return
@@ -439,6 +427,35 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Ignored {pass_counter} pubs for irrelevant {self.fb_data_type} entities.')
         return
 
+    def get_entity_current_symbols(self, session):
+        """Get current symbols for the FlyBase data entities."""
+        chado_type = self.main_chado_entity_types[self.fb_data_type]
+        asso_chado_table = self.chado_tables['synonyms'][chado_type]
+        self.log.info(f'Get current symbols for {self.fb_data_type} data entities from {asso_chado_table}.')
+        main_pkey_name = self.chado_tables['primary_key'][chado_type]
+        fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
+        filters = (
+            fkey_col.in_((self.fb_data_entities.keys())),
+            asso_chado_table.is_current.is_(True),
+        )
+        results = session.query(asso_chado_table).\
+            join(asso_chado_table, (asso_chado_table.synonym_id == Synonym.synonym_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        pass_counter = 0
+        for result in results:
+            entity_pkey_id = getattr(result, main_pkey_name)
+            try:
+                self.fb_data_entities[entity_pkey_id].curr_fb_symbol = result
+                counter += 1
+            except KeyError:
+                pass_counter += 1
+        self.log.info(f'Found {counter} current symbols for {self.fb_data_type} entities.')
+        self.log.info(f'Ignored {pass_counter} current symbols for irrelevant {self.fb_data_type} entities.')
+        return
+
     def get_entity_synonyms(self, session):
         """Get synonyms for the FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
@@ -660,6 +677,8 @@ class PrimaryEntityHandler(DataHandler):
         self.sqlalchemy_test(session)
         self.get_entities(session)
         self.get_entity_pubs(session)
+        # self.get_entity_current_symbols(session)
+        # self.get_entity_current_fullnames(session)
         self.get_entity_synonyms(session)
         self.get_entity_fb_xrefs(session)
         self.get_entity_xrefs(session)
@@ -758,9 +777,14 @@ class PrimaryEntityHandler(DataHandler):
     # However, as they're not useful for all data types, call them in tailored handler Classes.
     def map_data_provider_dto(self):
         """Return the DataProviderDTO for the FB data entity."""
+        # Note - dependent on previous map_synonyms() run, if applicable.
         self.log.info('Map data provider to Alliance object.')
         for fb_data_entity in self.fb_data_entities.values():
-            dp_xref = datatypes.CrossReferenceDTO('FB', f'FB:{fb_data_entity.uniquename}', self.fb_data_type, fb_data_entity.name).dict_export()
+            if fb_data_entity.curr_fb_symbol:
+                display_name = sub_sup_sgml_to_html(fb_data_entity.curr_fb_symbol.synonym_sgml)
+            else:
+                display_name = fb_data_entity.name
+            dp_xref = datatypes.CrossReferenceDTO('FB', f'FB:{fb_data_entity.uniquename}', self.fb_data_type, display_name).dict_export()
             fb_data_entity.linkmldto.data_provider_dto = datatypes.DataProviderDTO(dp_xref).dict_export()
         return
 
@@ -798,9 +822,7 @@ class PrimaryEntityHandler(DataHandler):
             cross_reference_dtos = []
             for xref in fb_data_entity.dbxrefs:
                 # Build Alliance xref DTO
-                fb_db_name = self.db_dict[xref.dbxref.db_id]
-                prefix = self.fb_agr_db_dict[fb_db_name]
-                # prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
+                prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
                 # The page_area assignment assumes that the self.fb_data_type has a matching value in the Alliance resourceDescriptors.yaml page.
                 page_area = self.fb_data_type
                 # Clean up cases where the db prefix is redundantly included at the start of the dbxref.accession.
@@ -820,6 +842,10 @@ class PrimaryEntityHandler(DataHandler):
     def map_synonyms(self):
         """Generate name/synonym DTOs for a feature that has a list of FeatureSynonym objects."""
         self.log.info('Map synonyms to Alliance object.')
+        # The FB data object has these attributes to fill in.
+        # self.curr_fb_symbol = None      # The current symbol Synonym chado for the entity.
+        # self.curr_fb_fullname = None    # The current fullname Synonym chado object for the entity.
+        # The AGR data object has these attributes to fill in.
         # gene_symbol_dto
         # gene_full_name_dto
         # gene_systematic_name_dto
@@ -1381,8 +1407,8 @@ class GeneHandler(FeatureHandler):
         """Extend the method for the StrainHandler."""
         super().map_fb_data_to_alliance()
         self.map_gene_basic()
-        self.map_data_provider_dto()
         self.map_synonyms()
+        self.map_data_provider_dto()
         self.map_pubs()
         self.map_xrefs()
         self.map_timestamps()
@@ -1471,6 +1497,7 @@ class StrainHandler(PrimaryEntityHandler):
         """Extend the method for the StrainHandler."""
         super().map_fb_data_to_alliance()
         self.map_strain_basic()
+        self.map_synonyms()
         self.map_data_provider_dto()
         self.map_pubs()
         self.map_xrefs()
