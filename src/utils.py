@@ -88,10 +88,10 @@ class DataHandler(object):
     #     specified in DataHandler.datatype_objects.values().
     required_fields = []
     output_fields = []
-    # A filter for xrefs to export, with dict keys as FB db.names and dict values as Alliance db names.
+    # A filter for non-FB xrefs to export, with dict keys as FB db.names and dict values as Alliance db names.
     # Alliance db names should correspond to the contents of this file:
     # https://github.com/alliance-genome/agr_schemas/blob/master/resourceDescriptors.yaml
-    fb_agr_db_dict = {'FlyBase': 'FB'}
+    fb_agr_db_dict = {}
 
     # Useful regexes.
     regex = {
@@ -456,7 +456,7 @@ class PrimaryEntityHandler(DataHandler):
     def get_entity_fb_xrefs(self, session):
         """Get secondary FB xrefs for the FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
-        asso_chado_table = self.chado_tables['synonyms'][chado_type]
+        asso_chado_table = self.chado_tables['dbxrefs'][chado_type]
         self.log.info(f'Get non-current FlyBase xrefs for {self.fb_data_type} data entities from {asso_chado_table}.')
         main_pkey_name = self.chado_tables['primary_key'][chado_type]
         fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
@@ -466,7 +466,8 @@ class PrimaryEntityHandler(DataHandler):
             Db.name == 'FlyBase',
         )
         results = session.query(asso_chado_table).\
-            join(Db, (Db.db_id == asso_chado_table.db_id)).\
+            join(Dbxref, (Dbxref.dbxref_id == asso_chado_table.dbxref_id)).\
+            join(Db, (Db.db_id == Dbxref.db_id)).\
             filter(*filters).\
             distinct()
         counter = 0
@@ -474,17 +475,43 @@ class PrimaryEntityHandler(DataHandler):
         for result in results:
             entity_pkey_id = getattr(result, main_pkey_name)
             try:
-                self.fb_data_entities[entity_pkey_id].synonyms.append(result)
+                self.fb_data_entities[entity_pkey_id].fb_dbxrefs.append(result)
                 counter += 1
             except KeyError:
                 pass_counter += 1
-        self.log.info(f'Found {counter} synonyms for {self.fb_data_type} entities.')
-        self.log.info(f'Ignored {pass_counter} synonyms for irrelevant {self.fb_data_type} entities.')
+        self.log.info(f'Found {counter} 2o FB xrefs for {self.fb_data_type} entities.')
+        self.log.info(f'Ignored {pass_counter} 2o FB xrefs for irrelevant {self.fb_data_type} entities.')
         return
 
     # BOB - TO DO
     def get_entity_xrefs(self, session):
-        """Placeholder."""
+        """Get all other xrefs for the FlyBase data entities."""
+        chado_type = self.main_chado_entity_types[self.fb_data_type]
+        asso_chado_table = self.chado_tables['dbxrefs'][chado_type]
+        self.log.info(f'Get non-current FlyBase xrefs for {self.fb_data_type} data entities from {asso_chado_table}.')
+        main_pkey_name = self.chado_tables['primary_key'][chado_type]
+        fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
+        filters = (
+            fkey_col.in_((self.fb_data_entities.keys())),
+            asso_chado_table.is_current.is_(False),
+            Db.name.in_((self.fb_agr_db_dict.keys()))
+        )
+        results = session.query(asso_chado_table).\
+            join(Dbxref, (Dbxref.dbxref_id == asso_chado_table.dbxref_id)).\
+            join(Db, (Db.db_id == Dbxref.db_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        pass_counter = 0
+        for result in results:
+            entity_pkey_id = getattr(result, main_pkey_name)
+            try:
+                self.fb_data_entities[entity_pkey_id].dbxrefs.append(result)
+                counter += 1
+            except KeyError:
+                pass_counter += 1
+        self.log.info(f'Found {counter} xrefs for {self.fb_data_type} entities.')
+        self.log.info(f'Ignored {pass_counter} xrefs for irrelevant {self.fb_data_type} entities.')
         return
 
     # BOB - unused
@@ -659,13 +686,9 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info('Process secondary IDs and return a list of old FB uniquenames.')
         counter = 0    # BOB
         for fb_data_entity in self.fb_data_entities.values():
-            if counter > 100:    # BOB
-                break            # BOB
-            self.log.debug(f'{fb_data_entity} has {len(fb_data_entity.dbxrefs)} xrefs')    # BOB
             secondary_ids = []
-            for xref in fb_data_entity.dbxrefs:
-                if xref.dbxref.db.name == 'FlyBase' and xref.is_current is False:
-                    secondary_ids.append(f'FB:{xref.dbxref.accession}')
+            for xref in fb_data_entity.fb_dbxrefs:
+                secondary_ids.append(f'FB:{xref.dbxref.accession}')
             fb_data_entity.alt_fb_ids = list(set(secondary_ids))
             counter += 1    # BOB
         return
@@ -756,25 +779,14 @@ class PrimaryEntityHandler(DataHandler):
         """Add a list of Alliance CrossReferenceDTO dicts to a FlyBase entity."""
         cross_reference_dtos = []
         for xref in fb_data_entity.dbxrefs:
-            # Skip xrefs from irrelevant database sources.
-            if xref.dbxref.db.name not in self.fb_agr_db_dict.keys():
-                continue
-            # Skip FlyBase xrefs: current xref will be in data_provider_dto; others as 2o IDs.
-            elif xref.dbxref.db.name == 'FlyBase':
-                continue
-            # Handle annotation IDs separately.
-            elif xref.dbxref.db.name == 'FlyBase Annotation IDs':
-                continue
             # Build Alliance xref DTO
             prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
-            page_area = self.fb_data_type    # Must ensure that fb_data_types match Alliance resourceDescriptors.yaml page.
-            curie = f'{prefix}:{xref.dbxref.accession}'
+            # This assumes that self.fb_data_type has a matching value in the Alliance resourceDescriptors.yaml page.
+            page_area = self.fb_data_type
+            # Clean up cases where the db prefix is redundantly included in the dbxref.accession.
+            cleaned_accession = xref.dbxref.accession.lstrip(f'{prefix}:', '')
+            curie = f'{prefix}:{cleaned_accession}'
             display_name = curie
-            # Optional - consider using dbxref.description for xref display.
-            # if xref.dbxref.description is not None and xref.dbxref.description != '':
-            #     display_name = xref.dbxref.description
-            # else:
-            #     display_name = curie
             xref_dto = datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
             cross_reference_dtos.append(xref_dto)
         fb_data_entity.linkmldto.cross_reference_dtos = cross_reference_dtos
@@ -1152,12 +1164,17 @@ class GeneHandler(FeatureHandler):
     ]
     fb_agr_db_dict = {
         'EntrezGene': 'NCBI_Gene',
-        'FlyBase': 'FB',
-        'FlyBase Annotation IDs': 'FB',
         'RNAcentral': 'RNAcentral',
         # 'UniProt/GCRP': 'UniProt/GCRP',
         'UniProt/Swiss-Prot': 'UniProtKB',
-        'UniProt/TrEMBL': 'UniProtKB'
+        'UniProt/TrEMBL': 'UniProtKB',
+        'SGD': 'SGD',
+        'WormBase': 'WB',
+        'ZFIN': 'ZFIN',
+        'Xenbase': 'Xenbase',
+        'RGD': 'RGD',
+        'MGD': 'MGI',
+        'MGI': 'MGI'
     }
     # Reference dicts.
     internal_gene_types = [
