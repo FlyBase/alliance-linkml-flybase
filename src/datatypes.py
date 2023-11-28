@@ -263,7 +263,7 @@ class SlotAnnotationDTO(AuditedObjectDTO):
             evidence_curies (list): A list of FB:FBrf or PMID curies.
 
         """
-        super().__init__(evidence_curies)
+        super().__init__()
         self.evidence_curies = evidence_curies
 
 
