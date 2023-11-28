@@ -1375,18 +1375,18 @@ class GeneHandler(FeatureHandler):
     def map_fb_data_to_alliance(self):
         """Extend the method for the StrainHandler."""
         super().map_fb_data_to_alliance()
-        for gene in self.fb_data_entities.values():
-            self.map_gene_basic()
-            self.map_data_provider_dto()
-            self.map_pubs()
-            self.map_xrefs()
-            self.map_timestamps()
-            self.map_secondary_ids('gene_secondary_id_dtos')
-            self.map_gene_snapshot()
-            self.map_gene_type()
-            self.map_gene_panther_xrefs()
-            self.map_anno_ids_to_secondary_ids('gene_secondary_id_dtos')
-            self.flag_internal_fb_entities()
+        self.map_gene_basic()
+        self.map_data_provider_dto()
+        self.map_synonyms()
+        self.map_pubs()
+        self.map_xrefs()
+        self.map_timestamps()
+        self.map_secondary_ids('gene_secondary_id_dtos')
+        self.map_gene_snapshot()
+        self.map_gene_type()
+        self.map_gene_panther_xrefs()
+        self.map_anno_ids_to_secondary_ids('gene_secondary_id_dtos')
+        self.flag_internal_fb_entities()
         return
 
 
@@ -1457,7 +1457,7 @@ class StrainHandler(PrimaryEntityHandler):
             agr_strain.obsolete = strain.chado_obj.is_obsolete
             agr_strain.curie = f'FB:{strain.uniquename}'
             agr_strain.taxon_curie = strain.ncbi_taxon_id
-            agr_strain.name = strain.chado_obj.name
+            agr_strain.name = strain.name
             agr_strain.subtype_name = 'strain'
             strain.linkmldto = agr_strain
         return

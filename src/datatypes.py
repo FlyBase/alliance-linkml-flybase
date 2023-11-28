@@ -44,7 +44,7 @@ class FBDataEntity(FBEntity):
         try:
             self.organism_abbr = chado_obj.organism.abbreviation
         except AttributeError:
-            self.organism_abbr = 'Dmel'
+            self.organism_abbr = None
         # Primary FB chado data - direct db query results, no processing.
         self.chado_obj = chado_obj      # The primary SQLAlchemy chado object.
         self.pubs = []                  # Pub associations: e.g., FeaturePub, StrainPub.
