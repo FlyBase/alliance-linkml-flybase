@@ -757,7 +757,7 @@ class PrimaryEntityHandler(DataHandler):
         for fb_data_entity in self.fb_data_entities.values():
             secondary_id_dtos = []
             for secondary_id in fb_data_entity.alt_fb_ids:
-                sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(secondary_id).dict_export()
+                sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(secondary_id, []).dict_export()
                 secondary_id_dtos.append(sec_dto)
             sec_id_list = getattr(fb_data_entity.linkmldto, slot_name)
             sec_id_list.extend(secondary_id_dtos)
@@ -805,31 +805,21 @@ class PrimaryEntityHandler(DataHandler):
     def map_synonyms(self):
         """Generate name/synonym DTOs for a feature that has a list of FeatureSynonym objects."""
         self.log.info('Map synonyms to Alliance object.')
-    #   - gene_symbol_dto
-    #   - gene_full_name_dto
-    #   - gene_systematic_name_dto
-    #   - gene_synonym_dtos
-    #   - construct_symbol_dto
-    #   - construct_full_name_dto
-    #   - construct_synonym_dtos
-
-        # BOB: TO DO
-        # # Dict for converting FB to AGR synonym types.
-        # synonym_type_conversion = {
-        #     'symbol': 'nomenclature_symbol',
-        #     'fullname': 'full_name',
-        #     'nickname': 'nomenclature_symbol',
-        #     'synonym': 'nomenclature_symbol'
-        # }
-        # default_name_dto = {
-        #     'name_type_name': 'unspecified',
-        #     'format_text': 'unspecified',
-        #     'display_text': 'unspecified',
-        #     'synonym_scope_name': 'exact',
-        #     'evidence_curies': [],
-        #     'internal': False,
-        #     'obsolete': False
-        # }
+        # gene_symbol_dto
+        # gene_full_name_dto
+        # gene_systematic_name_dto
+        # gene_synonym_dtos
+        # construct_symbol_dto
+        # construct_full_name_dto
+        # construct_synonym_dtos
+        # Dict for converting FB to AGR synonym types.
+        synonym_type_conversion = {
+            'symbol': 'nomenclature_symbol',
+            'fullname': 'full_name',
+            'nickname': 'nomenclature_symbol',
+            'synonym': 'nomenclature_symbol'
+        }
+        # CONTINUE HERE
         # # Create a dict of all distinct name/synonym_sgml combinations: for each, capture synonym type(s) an pub_ids.
         # # Keys are (synonym.name, synonym.synonym_sgml) tuples.
         # # Values are dicts too where keys are chado synonym types and values are lists of pub_ids.
@@ -1132,7 +1122,7 @@ class FeatureHandler(PrimaryEntityHandler):
                 anno_ids.extend(fb_data_entity.alt_anno_ids)
             anno_secondary_id_dtos = []
             for anno_id in anno_ids:
-                sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(f'FB:{anno_id}').dict_export()
+                sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(f'FB:{anno_id}', []).dict_export()
                 anno_secondary_id_dtos.append(sec_dto)
             curr_sec_id_dtos = getattr(fb_data_entity.linkmldto, slot_name)
             curr_sec_id_dtos.extend(anno_secondary_id_dtos)
