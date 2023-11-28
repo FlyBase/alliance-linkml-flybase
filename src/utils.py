@@ -1163,7 +1163,7 @@ class GeneHandler(FeatureHandler):
         'gene_type_curie',
         'internal',
         'obsolete',
-        'related_notes',
+        # 'related_notes',    # Not present in GeneDTO.
         'taxon_curie',
         'updated_by_curie',
     ]
