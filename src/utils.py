@@ -782,13 +782,13 @@ class PrimaryEntityHandler(DataHandler):
             # This assumes that self.fb_data_type has a matching value in the Alliance resourceDescriptors.yaml page.
             page_area = self.fb_data_type
             # Clean up cases where the db prefix is redundantly included in the dbxref.accession.
-            self.log.debug(f'Evaluate this accession: {xref.dbxref.accession}')
-            if xref.dbxref.accession.startswith(f'{prefix}:'):
-                to_strip = f'{prefix}:'
-                self.log.debug(f'Strip this: {to_strip}')
-                cleaned_accession = xref.dbxref.accession.lstrip(f'{prefix}:')
-            else:
-                cleaned_accession = xref.dbxref.accession
+            redundant_prefix = f'{prefix}:'
+            cleaned_accession = xref.dbxref.accession.lstrip(redundant_prefix)
+            # BOB - extra code in case I need to revert
+            # if xref.dbxref.accession.startswith(redundant_prefix):
+            #     cleaned_accession = xref.dbxref.accession.lstrip(redundant_prefix)
+            # else:
+            #     cleaned_accession = xref.dbxref.accession
             curie = f'{prefix}:{cleaned_accession}'
             display_name = curie
             xref_dto = datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
@@ -1139,6 +1139,7 @@ class GeneHandler(FeatureHandler):
         'FBgn0000154': 'Bar',            # Current unannotated gene.
         'FBgn0001200': 'His4',           # Current unannotated gene family.
         'FBgn0087003': 'tal',            # Current unannotated oddball.
+        'FBgn0015267': 'Mmus\Abl1',      # Current mouse gene with MGI xref.
     }
     # Elaborate on export filters for StrainHandler.
     required_fields = [
