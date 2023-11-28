@@ -802,7 +802,7 @@ class PrimaryEntityHandler(DataHandler):
             fb_data_entity.linkmldto.cross_reference_dtos = cross_reference_dtos
         return
 
-    def map_synonyms(self, fb_data_entity):
+    def map_synonyms(self):
         """Generate name/synonym DTOs for a feature that has a list of FeatureSynonym objects."""
         # BOB: TO DO
         # # Dict for converting FB to AGR synonym types.
@@ -1305,7 +1305,7 @@ class GeneHandler(FeatureHandler):
         return
 
     # Elaborate on map_fb_data_to_alliance() sub-methods for GeneHandler.
-    def map_gene_basic(self, gene):
+    def map_gene_basic(self):
         """Map basic FlyBase gene data to the Alliance LinkML object."""
         self.log.info('Map basic gene info to Alliance object.')
         for gene in self.fb_data_entities.values():
