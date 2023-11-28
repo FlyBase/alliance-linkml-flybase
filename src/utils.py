@@ -84,8 +84,7 @@ class DataHandler(object):
         # 'disease': datatypes.FBDiseaseAlleleAnnotation
     }
     # Export directions (must be filled out in detail for each specific data handler).
-    # The fields in the two lists below must be present in the datatype object
-    #     specified in DataHandler.datatype_objects.values().
+    # The fields in the two lists below must be present in the datatype object specified in DataHandler.datatype_objects.values().
     required_fields = []
     output_fields = []
     # A filter for non-FB xrefs to export, with dict keys as FB db.names and dict values as Alliance db names.
@@ -1100,13 +1099,14 @@ class FeatureHandler(PrimaryEntityHandler):
     def map_anno_ids_to_secondary_ids(self, fb_data_entity):
         """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for annotation IDs."""
         anno_ids = []
-        anno_ids.append(fb_data_entity.curr_anno_id)
-        anno_ids.extend(fb_data_entity.alt_anno_ids)
+        if fb_data_entity.curr_anno_id:
+            anno_ids.append(fb_data_entity.curr_anno_id)
+        if fb_data_entity.alt_anno_ids:
+            anno_ids.extend(fb_data_entity.alt_anno_ids)
         anno_secondary_id_dtos = []
         for anno_id in anno_ids:
-            if anno_id is not None:
-                sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(f'FB:{anno_id}').dict_export()
-                anno_secondary_id_dtos.append(sec_dto)
+            sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(f'FB:{anno_id}').dict_export()
+            anno_secondary_id_dtos.append(sec_dto)
         return anno_secondary_id_dtos
 
     def map_fb_data_to_alliance(self):
