@@ -482,17 +482,16 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Ignored {pass_counter} 2o FB xrefs for irrelevant {self.fb_data_type} entities.')
         return
 
-    # BOB - TO DO
     def get_entity_xrefs(self, session):
         """Get all other xrefs for the FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
         asso_chado_table = self.chado_tables['dbxrefs'][chado_type]
-        self.log.info(f'Get non-current FlyBase xrefs for {self.fb_data_type} data entities from {asso_chado_table}.')
+        self.log.info(f'Get non-FlyBase xrefs for {self.fb_data_type} data entities from {asso_chado_table}.')
         main_pkey_name = self.chado_tables['primary_key'][chado_type]
         fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
         filters = (
             fkey_col.in_((self.fb_data_entities.keys())),
-            asso_chado_table.is_current.is_(False),
+            asso_chado_table.is_current.is_(True),
             Db.name.in_((self.fb_agr_db_dict.keys()))
         )
         results = session.query(asso_chado_table).\
