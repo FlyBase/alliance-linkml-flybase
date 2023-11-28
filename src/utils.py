@@ -552,12 +552,17 @@ class PrimaryEntityHandler(DataHandler):
     def synthesize_secondary_ids(self):
         """Process secondary IDs and return a list of old FB uniquenames."""
         self.log.info('Process secondary IDs and return a list of old FB uniquenames.')
+        counter = 0    # BOB
         for fb_data_entity in self.fb_data_entities.values():
+            if counter > 100:    # BOB
+                break            # BOB
+            self.log.debug(f'{fb_data_entity} has {len(fb_data_entity.dbxrefs)} xrefs')
             secondary_ids = []
             for xref in fb_data_entity.dbxrefs:
                 if xref.dbxref.db.name == 'FlyBase' and xref.is_current is False:
                     secondary_ids.append(f'FB:{xref.dbxref.accession}')
             fb_data_entity.alt_fb_ids = list(set(secondary_ids))
+            counter += 1    # BOB
         return
 
     def synthesize_props(self):
@@ -569,6 +574,7 @@ class PrimaryEntityHandler(DataHandler):
         prop_types = []
         # Build prop dict.
         for fb_data_entity in self.fb_data_entities.values():
+            self.log.debug(f'{fb_data_entity} has {len(fb_data_entity.props)} props')
             # Build prop_type-keyed lists of props.
             for prop in fb_data_entity.props:
                 prop_type = prop.type.name
@@ -597,6 +603,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info('Collect pub_ids associated directly or indirectly with the entity.')
         pub_sources = ['pubs', 'synonyms', 'cvterms', 'prop_pubs']
         for fb_data_entity in self.fb_data_entities.values():
+            self.log.debug(f'{fb_data_entity} has {len(fb_data_entity.all_pub_ids)} pubs')
             for pub_source in pub_sources:
                 fb_data_entity.all_pub_ids.extend([i.pub_id for i in getattr(fb_data_entity, pub_source)])
             fb_data_entity.all_pub_ids = list(set(fb_data_entity.all_pub_ids))
