@@ -362,7 +362,7 @@ class PrimaryEntityHandler(DataHandler):
         return
 
     # Elaborate on get_datatype_data() sub-methods for PrimaryEntityHandler.
-    def get_entity_data(self, session):
+    def get_entities(self, session):
         """Get primary FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
         self.log.info(f'Get {self.fb_data_type} data entities from {chado_type} table.')
@@ -401,6 +401,103 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Found {counter} FlyBase {self.fb_data_type} entities in chado.')
         return
 
+    def get_entity_pubs(self, session):
+        """Get pubs directly associated with FlyBase data entities."""
+        chado_type = self.main_chado_entity_types[self.fb_data_type]
+        asso_chado_table = self.chado_tables['pubs'][chado_type]
+        self.log.info(f'Get pubs for {self.fb_data_type} data entities from {asso_chado_table}.')
+        main_pkey_name = self.chado_tables['primary_key'][chado_type]
+        fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
+        filters = (
+            fkey_col.in_((self.fb_data_entities.keys())),
+        )
+        results = session.query(asso_chado_table).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        pass_counter = 0
+        for result in results:
+            entity_pkey_id = getattr(result, main_pkey_name)
+            try:
+                self.fb_data_entities[entity_pkey_id].pubs.append(result)
+                counter += 1
+            except KeyError:
+                pass_counter += 1
+        self.log.info(f'Found {counter} pubs for {self.fb_data_type} entities.')
+        self.log.info(f'Ignored {pass_counter} pubs for irrelevant {self.fb_data_type} entities.')
+        return
+
+    def get_entity_synonyms(self, session):
+        """Get synonyms for the FlyBase data entities."""
+        chado_type = self.main_chado_entity_types[self.fb_data_type]
+        asso_chado_table = self.chado_tables['synonyms'][chado_type]
+        self.log.info(f'Get synonyms for {self.fb_data_type} data entities from {asso_chado_table}.')
+        main_pkey_name = self.chado_tables['primary_key'][chado_type]
+        fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
+        filters = (
+            fkey_col.in_((self.fb_data_entities.keys())),
+        )
+        results = session.query(asso_chado_table).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        pass_counter = 0
+        for result in results:
+            entity_pkey_id = getattr(result, main_pkey_name)
+            try:
+                self.fb_data_entities[entity_pkey_id].synonyms.append(result)
+                counter += 1
+            except KeyError:
+                pass_counter += 1
+        self.log.info(f'Found {counter} synonyms for {self.fb_data_type} entities.')
+        self.log.info(f'Ignored {pass_counter} synonyms for irrelevant {self.fb_data_type} entities.')
+        return
+
+    def get_entity_fb_xrefs(self, session):
+        """Get secondary FB xrefs for the FlyBase data entities."""
+        chado_type = self.main_chado_entity_types[self.fb_data_type]
+        asso_chado_table = self.chado_tables['synonyms'][chado_type]
+        self.log.info(f'Get non-current FlyBase xrefs for {self.fb_data_type} data entities from {asso_chado_table}.')
+        main_pkey_name = self.chado_tables['primary_key'][chado_type]
+        fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
+        filters = (
+            fkey_col.in_((self.fb_data_entities.keys())),
+            asso_chado_table.is_current.is_(False),
+            Db.name == 'FlyBase',
+        )
+        results = session.query(asso_chado_table).\
+            join(Db, (Db.db_id == asso_chado_table.db_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        pass_counter = 0
+        for result in results:
+            entity_pkey_id = getattr(result, main_pkey_name)
+            try:
+                self.fb_data_entities[entity_pkey_id].synonyms.append(result)
+                counter += 1
+            except KeyError:
+                pass_counter += 1
+        self.log.info(f'Found {counter} synonyms for {self.fb_data_type} entities.')
+        self.log.info(f'Ignored {pass_counter} synonyms for irrelevant {self.fb_data_type} entities.')
+        return
+
+    # BOB - TO DO
+    def get_entity_xrefs(self, session):
+        """Placeholder."""
+        return
+
+    # BOB - unused
+    def get_entity_props(self, session):
+        """Placeholder."""
+        return
+
+    # BOB - unused
+    def get_entity_cvterms(self, session):
+        """Placeholder."""
+        return
+
+    # BOB - unused
     def get_entity_associated_data(self, session):
         """Get data associated with primary FlyBase data entities."""
         associated_data_types = ['pubs', 'synonyms', 'dbxrefs', 'props', 'cvterms']
@@ -431,6 +528,7 @@ class PrimaryEntityHandler(DataHandler):
             self.log.info(f'Ignored {pass_counter} {i} for irrelevant {self.fb_data_type} entities.')
         return
 
+    # BOB - unused
     def get_entity_prop_pubs(self, session):
         """Get prop pubs for primary FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
@@ -465,6 +563,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Ignored {pass_counter} props for irrelevant {self.fb_data_type} entities.')
         return
 
+    # BOB - unused
     def get_entity_cvtermprops(self, session):
         """Get CV term props for primary FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
@@ -522,8 +621,14 @@ class PrimaryEntityHandler(DataHandler):
         """Extend the method for the PrimaryEntityHandler."""
         super().get_datatype_data(session)
         self.sqlalchemy_test(session)
-        self.get_entity_data(session)
-        self.get_entity_associated_data(session)
+        self.get_entities(session)
+        self.get_entity_pubs(session)
+        self.get_entity_synonyms(session)
+        self.get_entity_fb_xrefs(session)
+        self.get_entity_xrefs(session)
+        # self.get_entity_props(session)
+        # self.get_entity_cvterms(session)
+        # self.get_entity_associated_data(session)
         # self.get_entity_prop_pubs(session)
         # self.get_entity_cvtermprops(session)
         self.get_entity_timestamps(session)
@@ -874,7 +979,7 @@ class FeatureHandler(PrimaryEntityHandler):
         for result in results:
             entity_pkey_id = result.feature_id
             try:
-                self.fb_data_entities[entity_pkey_id].fb_anno_xrefs.append(result)
+                self.fb_data_entities[entity_pkey_id].fb_anno_dbxrefs.append(result)
                 counter += 1
             except KeyError:
                 pass_counter += 1
@@ -957,7 +1062,7 @@ class FeatureHandler(PrimaryEntityHandler):
         for fb_data_entity in self.fb_data_entities.values():
             current_anno_ids = []
             alt_anno_ids = []
-            for xref in fb_data_entity.fb_anno_xrefs:
+            for xref in fb_data_entity.fb_anno_dbxrefs:
                 if xref.is_current is True:
                     current_anno_ids.append(xref.dbxref.accession)
                 else:

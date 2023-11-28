@@ -49,6 +49,7 @@ class FBDataEntity(FBEntity):
         self.chado_obj = chado_obj      # The primary SQLAlchemy chado object.
         self.pubs = []                  # Pub associations: e.g., FeaturePub, StrainPub.
         self.synonyms = []              # Synonym associations: e.g., FeatureSynonym, StrainSynonym.
+        self.fb_dbxrefs = []            # Dbxref non-current associations for "FlyBase" db: e.g., FeatureDbxref, StrainDbxref.
         self.dbxrefs = []               # Dbxref associations: e.g., FeatureDbxref, StrainDbxref.
         self.props = []                 # entity props: e.g., Featureprop, Strainprop.
         self.prop_pubs = []             # entity prop_pubs: e.g., Featureprop_pub, Strainprop_pub.
@@ -77,8 +78,8 @@ class FBFeature(FBDataEntity):
         super().__init__(chado_obj)
         # Primary FB chado data.
         self.db_primary_id = chado_obj.feature_id
-        self.chr_flocs = []        # Will be chromosomal Featureloc objects for the entity.
-        self.fb_anno_xrefs = []    # Will be "FlyBase Annotation IDs" FeatureDbxref objects.
+        self.chr_flocs = []          # Will be chromosomal Featureloc objects for the entity.
+        self.fb_anno_dbxrefs = []    # Will be "FlyBase Annotation IDs" FeatureDbxref objects.
         # Processed FB data.
         self.curr_anno_id = None     # Will be current annotation ID for the gene (str).
         self.alt_anno_ids = []       # Will be list of non-current annotation IDs for the gene (str).
