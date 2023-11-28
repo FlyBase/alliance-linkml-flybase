@@ -1153,7 +1153,7 @@ class GeneHandler(FeatureHandler):
         'FBgn0000154': 'Bar',            # Current unannotated gene.
         'FBgn0001200': 'His4',           # Current unannotated gene family.
         'FBgn0087003': 'tal',            # Current unannotated oddball.
-        'FBgn0015267': 'Mmus\Abl1',      # Current mouse gene with MGI xref.
+        'FBgn0015267': 'Mmus\\Abl1',     # Current mouse gene with MGI xref.
     }
     # Elaborate on export filters for StrainHandler.
     required_fields = [

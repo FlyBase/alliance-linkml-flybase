@@ -239,7 +239,7 @@ class DataProviderDTO(AuditedObjectDTO):
 class NoteDTO(AuditedObjectDTO):
     """NoteDTO class."""
     def __init__(self, note_type_name: str, free_text: str, evidence_curies: list):
-        """Create a NoteDTO for FlyBase objects.
+        """Create a NoteDTO for a FlyBase statement.
 
         Args:
             note_type_name (str): The type of note.
@@ -256,16 +256,47 @@ class NoteDTO(AuditedObjectDTO):
 
 class SlotAnnotationDTO(AuditedObjectDTO):
     """SlotAnnotationDTO class."""
-    def __init__(self):
-        """Create a SlotAnnotationDTO for FlyBase object."""
-        super().__init__()
-        self.evidence_curies = []
+    def __init__(self, evidence_curies: list):
+        """Create a SlotAnnotationDTO for FlyBase object.
+
+        Args:
+            evidence_curies (list): A list of FB:FBrf or PMID curies.
+
+        """
+        super().__init__(evidence_curies)
+        self.evidence_curies = evidence_curies
 
 
 class SecondaryIdSlotAnnotationDTO(SlotAnnotationDTO):
     """SecondaryIdSlotAnnotationDTO class."""
-    def __init__(self, secondary_id):
-        """Create a SecondaryIdSlotAnnotationDTO for FlyBase object."""
-        super().__init__()
+    def __init__(self, secondary_id: str, evidence_curies: list):
+        """Create a SecondaryIdSlotAnnotationDTO for FlyBase object.
+
+        Args:
+            evidence_curies (list): A list of FB:FBrf or PMID curies.
+            secondary_id (str): The secondary ID string (should include the db prefix).
+
+        """
+        super().__init__(evidence_curies)
         self.secondary_id = secondary_id
         self.required_fields.extend(['secondary_id'])
+
+
+class NameSlotAnnotationDTO(SlotAnnotationDTO):
+    """NameSlotAnnotationDTO class."""
+    def __init__(self, name_type_name: str, format_text: str, display_text: str, evidence_curies: list):
+        """Create a NameSlotAnnotationDTO for a FlyBase name.
+
+        Args:
+            name_type_name (str): The type of name.
+            format_text (str): The ASCII-only version of the name.
+            display_text (str): The UTF-8 version of the name (using HTML superscript/subscript tags).
+            evidence_curies (list): A list of FB:FBrf or PMID:### curies.
+
+        """
+        super().__init__(evidence_curies)
+        self.name_type_name = name_type_name
+        self.format_text = format_text
+        self.display_text = display_text
+        self.synonym_scope = 'exact'
+        self.required_fields.extend(['name_type_name', 'format_text', 'display_text', 'synonym_scope'])
