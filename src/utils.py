@@ -556,7 +556,7 @@ class PrimaryEntityHandler(DataHandler):
         for fb_data_entity in self.fb_data_entities.values():
             if counter > 100:    # BOB
                 break            # BOB
-            self.log.debug(f'{fb_data_entity} has {len(fb_data_entity.dbxrefs)} xrefs')
+            self.log.debug(f'{fb_data_entity} has {len(fb_data_entity.dbxrefs)} xrefs')    # BOB
             secondary_ids = []
             for xref in fb_data_entity.dbxrefs:
                 if xref.dbxref.db.name == 'FlyBase' and xref.is_current is False:
@@ -574,7 +574,7 @@ class PrimaryEntityHandler(DataHandler):
         prop_types = []
         # Build prop dict.
         for fb_data_entity in self.fb_data_entities.values():
-            self.log.debug(f'{fb_data_entity} has {len(fb_data_entity.props)} props')
+            self.log.debug(f'{fb_data_entity} has {len(fb_data_entity.props)} props')    # BOB
             # Build prop_type-keyed lists of props.
             for prop in fb_data_entity.props:
                 prop_type = prop.type.name
@@ -603,10 +603,10 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info('Collect pub_ids associated directly or indirectly with the entity.')
         pub_sources = ['pubs', 'synonyms', 'cvterms', 'prop_pubs']
         for fb_data_entity in self.fb_data_entities.values():
-            self.log.debug(f'{fb_data_entity} has {len(fb_data_entity.all_pub_ids)} pubs')
             for pub_source in pub_sources:
                 fb_data_entity.all_pub_ids.extend([i.pub_id for i in getattr(fb_data_entity, pub_source)])
             fb_data_entity.all_pub_ids = list(set(fb_data_entity.all_pub_ids))
+            self.log.debug(f'{fb_data_entity} has {len(fb_data_entity.all_pub_ids)} pubs')    # BOB
         return
 
     def synthesize_info(self):
@@ -1048,6 +1048,7 @@ class GeneHandler(FeatureHandler):
     fb_agr_db_dict = {
         'EntrezGene': 'NCBI_Gene',
         'FlyBase': 'FB',
+        'FlyBase Annotation IDs': 'FB',
         'RNAcentral': 'RNAcentral',
         # 'UniProt/GCRP': 'UniProt/GCRP',
         'UniProt/Swiss-Prot': 'UniProtKB',
