@@ -327,7 +327,7 @@ class PrimaryEntityHandler(DataHandler):
     def sqlalchemy_test(self, session):
         """Test SQLAlchemy behavior."""
         self.log.info('Test SQLAlchemy behavior.')
-        lbe_types = {'gene': 'bob'}
+        lbe_types = {'gene': 'gene'}
         table_dict = {'main': Feature}
         main_table = table_dict['main']
         pkey_col = self.get_primary_key_column(main_table)
@@ -529,7 +529,6 @@ class PrimaryEntityHandler(DataHandler):
         chado_type = self.main_chado_entity_types[self.fb_data_type]
         self.log.info(f'Get associated data for {self.fb_data_type} data entities from {chado_type}-related chado tables.')
         main_pkey_name = self.chado_tables['primary_key'][chado_type]
-        # BOB - is it more efficient to do "in_" query, or, query each fb entity one-by-one?
         for i in associated_data_types:
             asso_chado_table = self.chado_tables[i][chado_type]
             self.log.info(f'Get {i} for {self.fb_data_type} from {asso_chado_table}')
@@ -682,13 +681,11 @@ class PrimaryEntityHandler(DataHandler):
     def synthesize_secondary_ids(self):
         """Process secondary IDs and return a list of old FB uniquenames."""
         self.log.info('Process secondary IDs and return a list of old FB uniquenames.')
-        counter = 0    # BOB
         for fb_data_entity in self.fb_data_entities.values():
             secondary_ids = []
             for xref in fb_data_entity.fb_dbxrefs:
                 secondary_ids.append(f'FB:{xref.dbxref.accession}')
             fb_data_entity.alt_fb_ids = list(set(secondary_ids))
-            counter += 1    # BOB
         return
 
     def synthesize_props(self):
@@ -700,7 +697,7 @@ class PrimaryEntityHandler(DataHandler):
         prop_types = []
         # Build prop dict.
         for fb_data_entity in self.fb_data_entities.values():
-            self.log.debug(f'{fb_data_entity} has {len(fb_data_entity.props)} props')    # BOB
+            # self.log.debug(f'{fb_data_entity} has {len(fb_data_entity.props)} props')
             # Build prop_type-keyed lists of props.
             for prop in fb_data_entity.props:
                 prop_type = prop.type.name
@@ -732,7 +729,7 @@ class PrimaryEntityHandler(DataHandler):
             for pub_source in pub_sources:
                 fb_data_entity.all_pub_ids.extend([i.pub_id for i in getattr(fb_data_entity, pub_source)])
             fb_data_entity.all_pub_ids = list(set(fb_data_entity.all_pub_ids))
-            self.log.debug(f'{fb_data_entity} has {len(fb_data_entity.all_pub_ids)} pubs')    # BOB
+            # self.log.debug(f'{fb_data_entity} has {len(fb_data_entity.all_pub_ids)} pubs')
         return
 
     def synthesize_info(self):
@@ -746,53 +743,63 @@ class PrimaryEntityHandler(DataHandler):
 
     # Elaborate on map_fb_data_to_alliance() sub-methods for PrimaryEntityHandler.
     # However, as they're not useful for all data types, call them in tailored handler Classes.
-    def map_data_provider_dto(self, fb_data_entity):
+    def map_data_provider_dto(self):
         """Return the DataProviderDTO for the FB data entity."""
-        dp_xref = datatypes.CrossReferenceDTO('FB', f'FB:{fb_data_entity.uniquename}', self.fb_data_type, fb_data_entity.name).dict_export()
-        data_provider_dto = datatypes.DataProviderDTO(dp_xref).dict_export()
-        return data_provider_dto
-
-    def map_secondary_ids(self, fb_data_entity):
-        """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for a FlyBase entity."""
-        secondary_id_dtos = []
-        for secondary_id in fb_data_entity.alt_fb_ids:
-            sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(secondary_id).dict_export()
-            secondary_id_dtos.append(sec_dto)
-        return secondary_id_dtos
-
-    def map_pubs(self, fb_data_entity):
-        """Add pub curies to a FlyBase entity."""
-        for pub_id in fb_data_entity.all_pub_ids:
-            try:
-                fb_data_entity.linkmldto.reference_curies.append(self.bibliography[pub_id])
-            except KeyError:
-                pass
-        try:
-            fb_data_entity.linkmldto.reference_curies.remove('FB:unattributed')
-        except ValueError:
-            pass
+        self.log.info('Map data provider to Alliance object.')
+        for fb_data_entity in self.fb_data_entities.values():
+            dp_xref = datatypes.CrossReferenceDTO('FB', f'FB:{fb_data_entity.uniquename}', self.fb_data_type, fb_data_entity.name).dict_export()
+            fb_data_entity.linkmldto.data_provider_dto = datatypes.DataProviderDTO(dp_xref).dict_export()
         return
 
-    def map_xrefs(self, fb_data_entity):
+    def map_secondary_ids(self, slot_name):
+        """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for a FlyBase entity."""
+        self.log.info('Map secondary IDs to Alliance object.')
+        for fb_data_entity in self.fb_data_entities.values():
+            secondary_id_dtos = []
+            for secondary_id in fb_data_entity.alt_fb_ids:
+                sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(secondary_id).dict_export()
+                secondary_id_dtos.append(sec_dto)
+            sec_id_list = getattr(fb_data_entity, slot_name)
+            sec_id_list.extend(secondary_id_dtos)
+        return
+
+    def map_pubs(self):
+        """Add pub curies to a FlyBase entity."""
+        self.log.info('Map pubs to Alliance object.')
+        for fb_data_entity in self.fb_data_entities.values():
+            for pub_id in fb_data_entity.all_pub_ids:
+                try:
+                    fb_data_entity.linkmldto.reference_curies.append(self.bibliography[pub_id])
+                except KeyError:
+                    pass
+            try:
+                fb_data_entity.linkmldto.reference_curies.remove('FB:unattributed')
+            except ValueError:
+                pass
+        return
+
+    def map_xrefs(self):
         """Add a list of Alliance CrossReferenceDTO dicts to a FlyBase entity."""
-        cross_reference_dtos = []
-        for xref in fb_data_entity.dbxrefs:
-            # Build Alliance xref DTO
-            prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
-            # This assumes that self.fb_data_type has a matching value in the Alliance resourceDescriptors.yaml page.
-            page_area = self.fb_data_type
-            # Clean up cases where the db prefix is redundantly included at the start of the dbxref.accession.
-            redundant_prefix = f'{prefix}:'
-            if xref.dbxref.accession.startswith(redundant_prefix):
-                cleaned_accession = xref.dbxref.accession.replace(redundant_prefix, '', 1)
-                self.log.debug(f'Removed {redundant_prefix} from {xref.dbxref.accession} to give {cleaned_accession}')
-            else:
-                cleaned_accession = xref.dbxref.accession
-            curie = f'{prefix}:{cleaned_accession}'
-            display_name = curie
-            xref_dto = datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
-            cross_reference_dtos.append(xref_dto)
-        fb_data_entity.linkmldto.cross_reference_dtos = cross_reference_dtos
+        self.log.info('Map xrefs to Alliance object.')
+        for fb_data_entity in self.fb_data_entities.values():
+            cross_reference_dtos = []
+            for xref in fb_data_entity.dbxrefs:
+                # Build Alliance xref DTO
+                prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
+                # This assumes that self.fb_data_type has a matching value in the Alliance resourceDescriptors.yaml page.
+                page_area = self.fb_data_type
+                # Clean up cases where the db prefix is redundantly included at the start of the dbxref.accession.
+                redundant_prefix = f'{prefix}:'
+                if xref.dbxref.accession.startswith(redundant_prefix):
+                    cleaned_accession = xref.dbxref.accession.replace(redundant_prefix, '', 1)
+                    self.log.debug(f'Removed "{redundant_prefix}" from "{xref.dbxref.accession}" to give "{cleaned_accession}"')
+                else:
+                    cleaned_accession = xref.dbxref.accession
+                curie = f'{prefix}:{cleaned_accession}'
+                display_name = curie
+                xref_dto = datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
+                cross_reference_dtos.append(xref_dto)
+            fb_data_entity.linkmldto.cross_reference_dtos = cross_reference_dtos
         return
 
     def map_synonyms(self, fb_data_entity):
@@ -909,19 +916,24 @@ class PrimaryEntityHandler(DataHandler):
         #     feature.gene_systematic_name_dto = placeholder_systematic_name_dto
         return
 
-    def map_timestamps(self, fb_data_entity):
+    def map_timestamps(self):
         """Map timestamps to Alliance object."""
-        if fb_data_entity.timestamps:
-            fb_data_entity.linkmldto.date_created = strict_rfc3339.\
-                timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(min(fb_data_entity.timestamps)))
-            fb_data_entity.linkmldto.date_updated_curie = strict_rfc3339.\
-                timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(max(fb_data_entity.timestamps)))
+        self.log.info('Map timestamps to Alliance object.')
+        for fb_data_entity in self.fb_data_entities.values():
+            if fb_data_entity.timestamps:
+                fb_data_entity.linkmldto.date_created = strict_rfc3339.\
+                    timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(min(fb_data_entity.timestamps)))
+                fb_data_entity.linkmldto.date_updated_curie = strict_rfc3339.\
+                    timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(max(fb_data_entity.timestamps)))
+        return
 
-    def flag_internal_fb_entities(self, fb_data_entity):
+    def flag_internal_fb_entities(self):
         """Flag obsolete FB objects as internal."""
-        if fb_data_entity.chado_obj.is_obsolete is True:
-            fb_data_entity.linkmldto.internal = True
-            fb_data_entity.internal_reasons.append('Obsolete')
+        self.log.info('Flag obsolete FB objects as internal.')
+        for fb_data_entity in self.fb_data_entities.values():
+            if fb_data_entity.chado_obj.is_obsolete is True:
+                fb_data_entity.linkmldto.internal = True
+                fb_data_entity.internal_reasons.append('Obsolete')
         return
 
     def map_fb_data_to_alliance(self):
@@ -1100,17 +1112,21 @@ class FeatureHandler(PrimaryEntityHandler):
 
     # Elaborate on map_fb_data_to_alliance() sub-methods for FeatureHandler.
     # Call these methods only for more specific FeatureHandler types.
-    def map_anno_ids_to_secondary_ids(self, fb_data_entity):
+    def map_anno_ids_to_secondary_ids(self, slot_name):
         """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for annotation IDs."""
-        anno_ids = []
-        if fb_data_entity.curr_anno_id:
-            anno_ids.append(fb_data_entity.curr_anno_id)
-        if fb_data_entity.alt_anno_ids:
-            anno_ids.extend(fb_data_entity.alt_anno_ids)
-        anno_secondary_id_dtos = []
-        for anno_id in anno_ids:
-            sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(f'FB:{anno_id}').dict_export()
-            anno_secondary_id_dtos.append(sec_dto)
+        self.log.info('Map annotation IDs to Alliance object.')
+        for fb_data_entity in self.fb_data_entities.values():
+            anno_ids = []
+            if fb_data_entity.curr_anno_id:
+                anno_ids.append(fb_data_entity.curr_anno_id)
+            if fb_data_entity.alt_anno_ids:
+                anno_ids.extend(fb_data_entity.alt_anno_ids)
+            anno_secondary_id_dtos = []
+            for anno_id in anno_ids:
+                sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(f'FB:{anno_id}').dict_export()
+                anno_secondary_id_dtos.append(sec_dto)
+            curr_sec_id_dtos = getattr(fb_data_entity, slot_name)
+            curr_sec_id_dtos.extend(anno_secondary_id_dtos)
         return anno_secondary_id_dtos
 
     def map_fb_data_to_alliance(self):
@@ -1291,71 +1307,77 @@ class GeneHandler(FeatureHandler):
     # Elaborate on map_fb_data_to_alliance() sub-methods for GeneHandler.
     def map_gene_basic(self, gene):
         """Map basic FlyBase gene data to the Alliance LinkML object."""
-        agr_gene = datatypes.GeneDTO()
-        agr_gene.obsolete = gene.chado_obj.is_obsolete
-        agr_gene.curie = f'FB:{gene.uniquename}'
-        agr_gene.taxon_curie = gene.ncbi_taxon_id
-        # dp_xref = datatypes.CrossReferenceDTO('FB', f'FB:{gene.uniquename}', 'gene', gene.chado_obj.name).dict_export()
-        # agr_gene.data_provider_dto = datatypes.DataProviderDTO(dp_xref).dict_export()
-        agr_gene.data_provider_dto = self.map_data_provider_dto(gene)
-        # BOB - place holder until map synonyms is updated.
-        symbol_dto = {
-            'display_text': gene.chado_obj.name,
-            'format_text': gene.chado_obj.name,
-            'name_type_name': 'nomenclature_symbol',
-            'synonym_scope_name': 'exact',
-            'internal': False,
-            'obsolete': False,
-            'evidence_curies': []
-        }
-        agr_gene.gene_symbol_dto = symbol_dto
-        gene.linkmldto = agr_gene
+        self.log.info('Map basic gene info to Alliance object.')
+        for gene in self.fb_data_entities.values():
+            agr_gene = datatypes.GeneDTO()
+            agr_gene.obsolete = gene.chado_obj.is_obsolete
+            agr_gene.curie = f'FB:{gene.uniquename}'
+            agr_gene.taxon_curie = gene.ncbi_taxon_id
+            # BOB - place holder until map synonyms is updated.
+            tmp_symbol_dto = {
+                'display_text': gene.chado_obj.name,
+                'format_text': gene.chado_obj.name,
+                'name_type_name': 'nomenclature_symbol',
+                'synonym_scope_name': 'exact',
+                'internal': False,
+                'obsolete': False,
+                'evidence_curies': []
+            }
+            agr_gene.gene_symbol_dto = tmp_symbol_dto
+            gene.linkmldto = agr_gene
         return
 
-    def map_gene_type(self, gene):
+    def map_gene_type(self):
         """Map gene type."""
-        gene.linkmldto.gene_type_curie = gene.gene_type_id
+        self.log.info('Map gene type to Alliance object.')
+        for gene in self.fb_data_entities.values():
+            gene.linkmldto.gene_type_curie = gene.gene_type_id
         return
 
-    def map_gene_snapshot(self, gene):
+    def map_gene_snapshot(self):
         """Map gene snapshot."""
-        if len(gene.gene_snapshots) == 1:
-            note_type_name = 'MOD_provided_gene_description'
-            free_text = gene.gene_snapshots[0].value.replace('@', '')
-            pub_curies = ['FB:FBrf0232436']
-            snapshot_note_dto = datatypes.NoteDTO(note_type_name, free_text, pub_curies).dict_export()
-            gene.linkmldto.related_notes.append(snapshot_note_dto)
-        elif len(gene.gene_snapshots) > 1:
-            self.log.warning(f'{gene} has many gene snapshots.')
+        self.log.info('Map gene snapshot to Alliance object.')
+        for gene in self.fb_data_entities.values():
+            if len(gene.gene_snapshots) == 1:
+                note_type_name = 'MOD_provided_gene_description'
+                free_text = gene.gene_snapshots[0].value.replace('@', '')
+                pub_curies = ['FB:FBrf0232436']
+                snapshot_note_dto = datatypes.NoteDTO(note_type_name, free_text, pub_curies).dict_export()
+                gene.linkmldto.related_notes.append(snapshot_note_dto)
+            elif len(gene.gene_snapshots) > 1:
+                self.log.warning(f'{gene} has many gene snapshots.')
         return
 
-    def map_gene_panther_xrefs(self, gene):
+    def map_gene_panther_xrefs(self):
         """Add panther xrefs."""
-        if gene.uniquename not in self.pthr_dict.keys():
-            return
-        # Build Alliance xref DTO
-        prefix = 'PANTHER'
-        page_area = 'FB'
-        curie = f'{prefix}:{self.pthr_dict[gene.uniquename]}'
-        display_name = curie
-        xref_dto = datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
-        gene.linkmldto.cross_reference_dtos.append(xref_dto)
+        self.log.info('Map panther xrefs to Alliance object.')
+        for gene in self.fb_data_entities.values():
+            if gene.uniquename not in self.pthr_dict.keys():
+                return
+            # Build Alliance xref DTO
+            prefix = 'PANTHER'
+            page_area = 'FB'
+            curie = f'{prefix}:{self.pthr_dict[gene.uniquename]}'
+            display_name = curie
+            xref_dto = datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
+            gene.linkmldto.cross_reference_dtos.append(xref_dto)
         return
 
     def map_fb_data_to_alliance(self):
         """Extend the method for the StrainHandler."""
         super().map_fb_data_to_alliance()
         for gene in self.fb_data_entities.values():
-            self.map_gene_basic(gene)
-            self.map_pubs(gene)
-            self.map_xrefs(gene)
-            self.map_timestamps(gene)
-            gene.linkmldto.gene_secondary_id_dtos = self.map_secondary_ids(gene)
-            self.map_gene_snapshot(gene)
-            self.map_gene_type(gene)
-            self.map_gene_panther_xrefs(gene)
-            gene.linkmldto.gene_secondary_id_dtos.extend(self.map_anno_ids_to_secondary_ids(gene))
-            self.flag_internal_fb_entities(gene)
+            self.map_gene_basic()
+            self.map_data_provider_dto()
+            self.map_pubs()
+            self.map_xrefs()
+            self.map_timestamps()
+            self.map_secondary_ids('gene_secondary_id_dtos')
+            self.map_gene_snapshot()
+            self.map_gene_type()
+            self.map_gene_panther_xrefs()
+            self.map_anno_ids_to_secondary_ids('gene_secondary_id_dtos')
+            self.flag_internal_fb_entities()
         return
 
 
@@ -1418,30 +1440,29 @@ class StrainHandler(PrimaryEntityHandler):
         return
 
     # Elaborate on map_fb_data_to_alliance() sub-methods for StrainHandler.
-    def map_strain_basic(self, strain):
-        """Map basic FlyBase strain data to the Alliance LinkML object."""
-        agr_strain = datatypes.AffectedGenomicModelDTO()
-        agr_strain.obsolete = strain.chado_obj.is_obsolete
-        agr_strain.curie = f'FB:{strain.uniquename}'
-        agr_strain.taxon_curie = strain.ncbi_taxon_id
-        # dp_xref = datatypes.CrossReferenceDTO('FB', f'FB:{strain.uniquename}', 'strain', strain.chado_obj.name).dict_export()
-        # agr_strain.data_provider_dto = datatypes.DataProviderDTO(dp_xref).dict_export()
-        agr_strain.data_provider_dto = self.map_data_provider_dto(strain)
-        agr_strain.name = strain.chado_obj.name
-        agr_strain.subtype_name = 'strain'
-        strain.linkmldto = agr_strain
+    def map_strain_basic(self):
+        """Map basic FlyBase strain data to the Alliance object."""
+        self.log.info('Map basic strain info.')
+        for strain in self.fb_data_entities.values():
+            agr_strain = datatypes.AffectedGenomicModelDTO()
+            agr_strain.obsolete = strain.chado_obj.is_obsolete
+            agr_strain.curie = f'FB:{strain.uniquename}'
+            agr_strain.taxon_curie = strain.ncbi_taxon_id
+            agr_strain.name = strain.chado_obj.name
+            agr_strain.subtype_name = 'strain'
+            strain.linkmldto = agr_strain
         return
 
     def map_fb_data_to_alliance(self):
         """Extend the method for the StrainHandler."""
         super().map_fb_data_to_alliance()
-        for strain in self.fb_data_entities.values():
-            self.map_strain_basic(strain)
-            self.map_pubs(strain)
-            self.map_xrefs(strain)
-            self.map_timestamps(strain)
-            strain.linkmldto.agm_secondary_id_dtos = self.map_secondary_ids(strain)
-            self.flag_internal_fb_entities(strain)
+        self.map_strain_basic()
+        self.map_data_provider_dto()
+        self.map_pubs()
+        self.map_xrefs()
+        self.map_timestamps()
+        self.map_secondary_ids('agm_secondary_id_dtos')
+        self.flag_internal_fb_entities()
         return
 
 
