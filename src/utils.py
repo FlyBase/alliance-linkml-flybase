@@ -759,7 +759,7 @@ class PrimaryEntityHandler(DataHandler):
             for secondary_id in fb_data_entity.alt_fb_ids:
                 sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(secondary_id).dict_export()
                 secondary_id_dtos.append(sec_dto)
-            sec_id_list = getattr(fb_data_entity, slot_name)
+            sec_id_list = getattr(fb_data_entity.linkmldto, slot_name)
             sec_id_list.extend(secondary_id_dtos)
         return
 
@@ -804,6 +804,15 @@ class PrimaryEntityHandler(DataHandler):
 
     def map_synonyms(self):
         """Generate name/synonym DTOs for a feature that has a list of FeatureSynonym objects."""
+        self.log.info('Map synonyms to Alliance object.')
+    #   - gene_symbol_dto
+    #   - gene_full_name_dto
+    #   - gene_systematic_name_dto
+    #   - gene_synonym_dtos
+    #   - construct_symbol_dto
+    #   - construct_full_name_dto
+    #   - construct_synonym_dtos
+
         # BOB: TO DO
         # # Dict for converting FB to AGR synonym types.
         # synonym_type_conversion = {
@@ -1125,7 +1134,7 @@ class FeatureHandler(PrimaryEntityHandler):
             for anno_id in anno_ids:
                 sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(f'FB:{anno_id}').dict_export()
                 anno_secondary_id_dtos.append(sec_dto)
-            curr_sec_id_dtos = getattr(fb_data_entity, slot_name)
+            curr_sec_id_dtos = getattr(fb_data_entity.linkmldto, slot_name)
             curr_sec_id_dtos.extend(anno_secondary_id_dtos)
         return anno_secondary_id_dtos
 
