@@ -781,14 +781,13 @@ class PrimaryEntityHandler(DataHandler):
             prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
             # This assumes that self.fb_data_type has a matching value in the Alliance resourceDescriptors.yaml page.
             page_area = self.fb_data_type
-            # Clean up cases where the db prefix is redundantly included in the dbxref.accession.
+            # Clean up cases where the db prefix is redundantly included at the start of the dbxref.accession.
             redundant_prefix = f'{prefix}:'
-            cleaned_accession = xref.dbxref.accession.lstrip(redundant_prefix)
-            # BOB - extra code in case I need to revert
-            # if xref.dbxref.accession.startswith(redundant_prefix):
-            #     cleaned_accession = xref.dbxref.accession.lstrip(redundant_prefix)
-            # else:
-            #     cleaned_accession = xref.dbxref.accession
+            if xref.dbxref.accession.startswith(redundant_prefix):
+                cleaned_accession = xref.dbxref.accession.replace(redundant_prefix, '', 1)
+                self.log.debug(f'Removed {redundant_prefix} from {xref.dbxref.accession} to give {cleaned_accession}')
+            else:
+                cleaned_accession = xref.dbxref.accession
             curie = f'{prefix}:{cleaned_accession}'
             display_name = curie
             xref_dto = datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
