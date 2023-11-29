@@ -1482,7 +1482,7 @@ class StrainHandler(PrimaryEntityHandler):
         """Map basic FlyBase strain data to the Alliance object."""
         self.log.info('Map basic strain info.')
         for strain in self.fb_data_entities.values():
-            agr_strain = datatypes.StrainDTO()
+            agr_strain = datatypes.AffectedGenomicModelDTO()
             agr_strain.obsolete = strain.chado_obj.is_obsolete
             agr_strain.curie = f'FB:{strain.uniquename}'
             agr_strain.taxon_curie = strain.ncbi_taxon_id
