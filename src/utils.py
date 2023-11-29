@@ -438,7 +438,7 @@ class PrimaryEntityHandler(DataHandler):
             fkey_col.in_((self.fb_data_entities.keys())),
             asso_chado_table.is_current.is_(True),
         )
-        results = session.query(asso_chado_table).\
+        results = session.query(asso_chado_table, Synonym).\
             join(asso_chado_table, (asso_chado_table.synonym_id == Synonym.synonym_id)).\
             join(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
             filter(*filters).\
@@ -446,7 +446,7 @@ class PrimaryEntityHandler(DataHandler):
         counter = 0
         pass_counter = 0
         for result in results:
-            entity_pkey_id = getattr(result, main_pkey_name)
+            entity_pkey_id = getattr(result.asso_chado_table, main_pkey_name)
             try:
                 self.fb_data_entities[entity_pkey_id].curr_fb_symbol = result
                 counter += 1
@@ -677,7 +677,7 @@ class PrimaryEntityHandler(DataHandler):
         self.sqlalchemy_test(session)
         self.get_entities(session)
         self.get_entity_pubs(session)
-        # self.get_entity_current_symbols(session)
+        self.get_entity_current_symbols(session)
         # self.get_entity_current_fullnames(session)
         self.get_entity_synonyms(session)
         self.get_entity_fb_xrefs(session)
@@ -930,7 +930,6 @@ class PrimaryEntityHandler(DataHandler):
                 name_dto['internal'] = syno_internal
 
         # billy bob - continue here
-
 
         # # Sift through name DTOs for symbol, fullname, systematic_name, etc.
         # for name_dto in name_dto_list:
