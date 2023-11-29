@@ -730,10 +730,7 @@ class PrimaryEntityHandler(DataHandler):
                     fb_data_entity.synonyms_dict[feat_syno.synonym_id] = syno_dict
             # Go back over each synonym and refine each
             for syno_dict in fb_data_entity.synonyms_dict.values():
-                self.log.debug(f'For {fb_data_entity}, evaluate synonym: {syno_dict}')
-                # First, pick out current symbol for the entity.
-                if syno_dict['is_current'] is True and syno_dict['name_type_name'] == 'nomenclature_symbol':
-                    fb_data_entity.curr_fb_symbol = syno_dict['display_text']
+                self.log.debug(f'For {fb_data_entity}, starting syno_dict: {syno_dict}')
                 # Then modify attributes as needed.
                 # Identify systematic names.
                 if re.match(self.regex['systematic_name'], syno_dict['format_text']):
@@ -750,6 +747,10 @@ class PrimaryEntityHandler(DataHandler):
                     syno_dict['is_internal'] = True
                 # Convert pub_ids into pub_curies.
                 syno_dict['pub_curies'] = self.get_pub_curies(syno_dict['pub_ids'])
+                # Finally, pick out current symbol for the entity.
+                self.log.debug(f'For {fb_data_entity}, final syno_dict: {syno_dict}')
+                if syno_dict['is_current'] is True and syno_dict['name_type_name'] in ['systematic_name', 'nomenclature_symbol']:
+                    fb_data_entity.curr_fb_symbol = syno_dict['display_text']
             self.log.debug(f'{fb_data_entity} has curr_fb_symbol={fb_data_entity.curr_fb_symbol}')
         return
 
