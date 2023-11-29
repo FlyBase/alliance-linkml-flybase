@@ -71,8 +71,8 @@ class DataHandler(object):
         'allele': 'TBD',
         'construct': 'TBD',
         'variation': 'TBD',
-        'strain': datatypes.AffectedGenomicModelComponentDTO(),
-        'genotype': datatypes.AffectedGenomicModelComponentDTO(),
+        'strain': datatypes.AffectedGenomicModelDTO(),
+        'genotype': datatypes.AffectedGenomicModelDTO(),
         'disease': 'TBD'
     }
     # Correspondence of FB data type to Alliance data transfer ingest set.
