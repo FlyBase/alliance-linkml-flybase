@@ -1362,17 +1362,6 @@ class GeneHandler(FeatureHandler):
             agr_gene.obsolete = gene.chado_obj.is_obsolete
             agr_gene.curie = f'FB:{gene.uniquename}'
             agr_gene.taxon_curie = gene.ncbi_taxon_id
-            # BOB - place holder until map synonyms is updated.
-            tmp_symbol_dto = {
-                'display_text': gene.chado_obj.name,
-                'format_text': gene.chado_obj.name,
-                'name_type_name': 'nomenclature_symbol',
-                'synonym_scope_name': 'exact',
-                'internal': False,
-                'obsolete': False,
-                'evidence_curies': []
-            }
-            agr_gene.gene_symbol_dto = tmp_symbol_dto
             gene.linkmldto = agr_gene
         return
 
