@@ -298,5 +298,5 @@ class NameSlotAnnotationDTO(SlotAnnotationDTO):
         self.name_type_name = name_type_name
         self.format_text = format_text
         self.display_text = display_text
-        self.synonym_scope = 'exact'
+        self.synonym_scope_name = 'exact'
         self.required_fields.extend(['name_type_name', 'format_text', 'display_text', 'synonym_scope'])
