@@ -710,7 +710,7 @@ class PrimaryEntityHandler(DataHandler):
             'synonym': 'unspecified',
         }
         for fb_data_entity in self.fb_data_entities.values():
-            self.log.debug(f'Evaluate {len(fb_data_entity.synonyms)} feature_synonym entries for {fb_data_entity}.')
+            # self.log.debug(f'Evaluate {len(fb_data_entity.synonyms)} feature_synonym entries for {fb_data_entity}.')
             # For each entity, gather synonym_id-keyed dict of synonym info.
             for feat_syno in fb_data_entity.synonyms:
                 try:
@@ -730,7 +730,7 @@ class PrimaryEntityHandler(DataHandler):
                     fb_data_entity.synonym_dict[feat_syno.synonym_id] = syno_dict
             # Go back over each synonym and refine each
             for syno_dict in fb_data_entity.synonym_dict.values():
-                self.log.debug(f'For {fb_data_entity}, starting syno_dict: {syno_dict}')
+                # self.log.debug(f'For {fb_data_entity}, starting syno_dict: {syno_dict}')
                 # Then modify attributes as needed.
                 # Identify systematic names.
                 if re.match(self.regex['systematic_name'], syno_dict['format_text']):
@@ -748,7 +748,7 @@ class PrimaryEntityHandler(DataHandler):
                 # Convert pub_ids into pub_curies.
                 syno_dict['pub_curies'] = self.get_pub_curies(syno_dict['pub_ids'])
                 # Finally, pick out current symbol for the entity.
-                self.log.debug(f'For {fb_data_entity}, final syno_dict: {syno_dict}')
+                # self.log.debug(f'For {fb_data_entity}, final syno_dict: {syno_dict}')
                 if syno_dict['is_current'] is True and syno_dict['name_type_name'] in ['systematic_name', 'nomenclature_symbol']:
                     fb_data_entity.curr_fb_symbol = syno_dict['display_text']
             self.log.debug(f'{fb_data_entity} has curr_fb_symbol={fb_data_entity.curr_fb_symbol}')
