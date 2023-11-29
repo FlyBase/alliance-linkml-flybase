@@ -733,7 +733,7 @@ class PrimaryEntityHandler(DataHandler):
                 # self.log.debug(f'For {fb_data_entity}, starting syno_dict: {syno_dict}')
                 # Then modify attributes as needed.
                 # Identify systematic names.
-                if re.match(self.regex['systematic_name'], syno_dict['format_text']):
+                if re.match(self.regex['systematic_name'], syno_dict['format_text']) and syno_dict['name_type_name'] == 'nomenclature_symbol':
                     syno_dict['name_type_name'] = 'systematic_name'
                 # Classify is_current (convert list of booleans into a single boolean).
                 if True in syno_dict['is_current']:
@@ -922,6 +922,7 @@ class PrimaryEntityHandler(DataHandler):
             }
             # Create NameSlotAnnotationDTO objects and sort them out.
             for syno_dict in fb_data_entity.synonym_dict.values():
+                # Sort into current symbol, current fullname or synonym.
                 name_dto = datatypes.NameSlotAnnotationDTO(syno_dict['name_type_name'], syno_dict['format_text'],
                                                            syno_dict['display_text'], syno_dict['pub_curies']).dict_export()
                 name_dto['internal'] = syno_dict['is_internal']
@@ -931,8 +932,10 @@ class PrimaryEntityHandler(DataHandler):
                     linkml_synonym_bins['full_name_bin'].append(name_dto)
                 else:
                     linkml_synonym_bins['synonym_bin'].append(name_dto)
+                # Also add to current systematic name for current Dmel genes only.
                 if syno_dict['name_type_name'] == 'systematic_name' and syno_dict['display_text'] == fb_data_entity.curr_anno_id:
-                    linkml_synonym_bins['systematic_name_bin'].append(name_dto)
+                    if fb_data_entity.chado_obj.is_obsolete is False and fb_data_entity.organism_abbr == 'Dmel':
+                        linkml_synonym_bins['systematic_name_bin'].append(name_dto)
             # Review the linkml_synonym_bins for each fb_data_entity.
             # 1. Symbol.
             if len(linkml_synonym_bins['symbol_bin']) == 0:
@@ -951,8 +954,8 @@ class PrimaryEntityHandler(DataHandler):
                 multi_symbols = ', '.join([i['format_text'] for i in linkml_synonym_bins['full_name_bin']])
                 self.log.warning(f'Found many current full_names for {fb_data_entity}: {multi_symbols}')
             # 3. Systematic name.
-            if len(linkml_synonym_bins['systematic_name_bin']) == 0 and fb_data_entity.curr_anno_id is not None:
-                self.log.warning(f'No current systematic names found for annotated {fb_data_entity}: create a generic one.')
+            if len(linkml_synonym_bins['systematic_name_bin']) == 0 and fb_data_entity.curr_anno_id and fb_data_entity.chado_obj.is_obsolete is False:
+                self.log.warning(f'No current systematic names found for current annotated {fb_data_entity}: create a generic one.')
                 sys_name_dto = datatypes.NameSlotAnnotationDTO('systematic_name', fb_data_entity.curr_anno_id, fb_data_entity.curr_anno_id, []).dict_export()
                 setattr(fb_data_entity.linkmldto, linkml_synonym_slots['systematic_name_bin'], sys_name_dto)
             elif len(linkml_synonym_bins['systematic_name_bin']) == 1:
@@ -1191,20 +1194,21 @@ class GeneHandler(FeatureHandler):
 
     # Sample set for faster testing: use uniquename-keyed names of objects, tailored for each handler.
     test_set = {
-        'FBgn0284084': 'wg',              # Current annotated nuclear protein_coding gene.
-        'FBgn0004009': 'wg',              # Obsolete annotated nuclear protein_coding gene.
-        'FBgn0013687': 'mt:ori',          # Current localized but unannotated mitochondrial gene.
-        'FBgn0013678': 'mt:Cyt-b',        # Current annotated mitochondrial protein_coding gene.
-        'FBgn0019661': 'lncRNA:roX1',     # Current annotated nuclear ncRNA gene.
-        'FBgn0262451': 'mir-ban',         # Current annotated nuclear miRNA gene.
-        'FBgn0034365': 'CG5335',          # Current annotated gene with CG symbol.
-        'FBgn0003884': 'alphaTub84B',     # Current annotated gene with non-ASCII char in symbol.
-        'FBgn0108495': 'Dere\GG16260',    # Current unannotated non-Dmel with systematic name.
-        'FBgn0031087': 'CG12656',         # Current withdrawn gene.
-        'FBgn0000154': 'Bar',             # Current unannotated gene.
-        'FBgn0001200': 'His4',            # Current unannotated gene family.
-        'FBgn0087003': 'tal',             # Current unannotated oddball.
-        'FBgn0015267': 'Mmus\\Abl1',      # Current mouse gene with MGI xref.
+        'FBgn0284084': 'wg',               # Current annotated nuclear protein_coding gene.
+        'FBgn0004009': 'wg',               # Obsolete annotated nuclear protein_coding gene.
+        'FBgn0013687': 'mt:ori',           # Current localized but unannotated mitochondrial gene.
+        'FBgn0013678': 'mt:Cyt-b',         # Current annotated mitochondrial protein_coding gene.
+        'FBgn0019661': 'lncRNA:roX1',      # Current annotated nuclear ncRNA gene.
+        'FBgn0262451': 'mir-ban',          # Current annotated nuclear miRNA gene.
+        'FBgn0034365': 'CG5335',           # Current annotated gene with CG symbol.
+        'FBgn0003884': 'alphaTub84B',      # Current annotated gene with non-ASCII char in symbol.
+        'FBgn0030179': 'CG12094',          # Obsolete unannotated gene, should not get systematic name but needs symbol.
+        'FBgn0108495': 'Dere\\GG16260',    # Current unannotated non-Dmel with systematic name.
+        'FBgn0031087': 'CG12656',          # Current withdrawn gene.
+        'FBgn0000154': 'Bar',              # Current unannotated gene.
+        'FBgn0001200': 'His4',             # Current unannotated gene family.
+        'FBgn0087003': 'tal',              # Current unannotated oddball.
+        'FBgn0015267': 'Mmus\\Abl1',       # Current mouse gene with MGI xref.
     }
     # Elaborate on export filters for StrainHandler.
     required_fields = [
