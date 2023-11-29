@@ -19,7 +19,7 @@ from sqlalchemy.orm import aliased, Session
 # from sqlalchemy.inspection import inspect
 from harvdev_utils.char_conversions import sub_sup_sgml_to_html
 from harvdev_utils.production import (
-    Cvterm, Db, Dbxref, Organism, OrganismDbxref, Pub, PubDbxref, Featureloc, Synonym,
+    Cvterm, Db, Dbxref, Organism, OrganismDbxref, Pub, PubDbxref, Featureloc,
     Strain, StrainPub, StrainSynonym, StrainDbxref, Strainprop, StrainpropPub, StrainCvterm, StrainCvtermprop,
     Feature, FeaturePub, FeatureSynonym, FeatureDbxref, Featureprop, FeaturepropPub, FeatureCvterm, FeatureCvtermprop
 )
@@ -1357,7 +1357,7 @@ class GeneHandler(FeatureHandler):
         """Map basic FlyBase gene data to the Alliance LinkML object."""
         self.log.info('Map basic gene info to Alliance object.')
         for gene in self.fb_data_entities.values():
-            agr_gene = self.agr_linkmldto_dict(self.fb_data_type)
+            agr_gene = self.agr_linkmldto_dict[self.fb_data_type]
             agr_gene.obsolete = gene.chado_obj.is_obsolete
             agr_gene.curie = f'FB:{gene.uniquename}'
             agr_gene.taxon_curie = gene.ncbi_taxon_id
@@ -1492,7 +1492,7 @@ class StrainHandler(PrimaryEntityHandler):
         """Map basic FlyBase strain data to the Alliance object."""
         self.log.info('Map basic strain info.')
         for strain in self.fb_data_entities.values():
-            agr_strain = self.agr_linkmldto_dict(self.fb_data_type)
+            agr_strain = self.agr_linkmldto_dict[self.fb_data_type]
             agr_strain.obsolete = strain.chado_obj.is_obsolete
             agr_strain.curie = f'FB:{strain.uniquename}'
             agr_strain.taxon_curie = strain.ncbi_taxon_id
