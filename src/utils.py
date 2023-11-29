@@ -751,7 +751,7 @@ class PrimaryEntityHandler(DataHandler):
                 # self.log.debug(f'For {fb_data_entity}, final syno_dict: {syno_dict}')
                 if syno_dict['is_current'] is True and syno_dict['name_type_name'] in ['systematic_name', 'nomenclature_symbol']:
                     fb_data_entity.curr_fb_symbol = syno_dict['display_text']
-            self.log.debug(f'{fb_data_entity} has curr_fb_symbol={fb_data_entity.curr_fb_symbol}')
+            # self.log.debug(f'{fb_data_entity} has curr_fb_symbol={fb_data_entity.curr_fb_symbol}')
         return
 
     def synthesize_props(self):
@@ -942,13 +942,13 @@ class PrimaryEntityHandler(DataHandler):
             else:
                 setattr(fb_data_entity.linkmldto, linkml_synonym_slots['symbol_bin'], linkml_synonym_bins['symbol_bin'][0])
                 if len(linkml_synonym_bins['symbol_bin']) > 1:
-                    multi_symbols = ', '.join([i['format_text'] for i in linkml_synonym_slots['symbol_bin']])
+                    multi_symbols = ', '.join([i['format_text'] for i in linkml_synonym_bins['symbol_bin']])
                     self.log.warning(f'Found many current symbols for {fb_data_entity}: {multi_symbols}')
             # 2. Fullname.
             if len(linkml_synonym_bins['full_name_bin']) == 1:
                 setattr(fb_data_entity.linkmldto, linkml_synonym_slots['full_name_bin'], linkml_synonym_bins['full_name_bin'][0])
             elif len(linkml_synonym_bins['full_name_bin']) > 1:
-                multi_symbols = ', '.join([i['format_text'] for i in linkml_synonym_slots['full_name_bin']])
+                multi_symbols = ', '.join([i['format_text'] for i in linkml_synonym_bins['full_name_bin']])
                 self.log.warning(f'Found many current full_names for {fb_data_entity}: {multi_symbols}')
             # 3. Systematic name.
             if len(linkml_synonym_bins['systematic_name_bin']) == 0 and fb_data_entity.curr_anno_id is not None:
@@ -958,7 +958,7 @@ class PrimaryEntityHandler(DataHandler):
             elif len(linkml_synonym_bins['systematic_name_bin']) == 1:
                 setattr(fb_data_entity.linkmldto, linkml_synonym_slots['systematic_name_bin'], linkml_synonym_bins['systematic_name_bin'][0])
             elif len(linkml_synonym_bins['systematic_name_bin']) > 1:
-                multi_symbols = ', '.join([i['format_text'] for i in linkml_synonym_slots['systematic_name_bin']])
+                multi_symbols = ', '.join([i['format_text'] for i in linkml_synonym_bins['systematic_name_bin']])
                 self.log.warning(f'Found many current systematic_names for {fb_data_entity}: {multi_symbols}')
             # 4. Synonyms.
             setattr(fb_data_entity.linkmldto, linkml_synonym_slots['synonym_bin'], linkml_synonym_bins['synonym_bin'])
@@ -1191,19 +1191,20 @@ class GeneHandler(FeatureHandler):
 
     # Sample set for faster testing: use uniquename-keyed names of objects, tailored for each handler.
     test_set = {
-        'FBgn0284084': 'wg',             # Current annotated nuclear protein_coding gene.
-        'FBgn0004009': 'wg',             # Obsolete annotated nuclear protein_coding gene.
-        'FBgn0013687': 'mt:ori',         # Current localized but unannotated mitochondrial gene.
-        'FBgn0013678': 'mt:Cyt-b',       # Current annotated mitochondrial protein_coding gene.
-        'FBgn0019661': 'lncRNA:roX1',    # Current annotated nuclear ncRNA gene.
-        'FBgn0262451': 'mir-ban',        # Current annotated nuclear miRNA gene.
-        'FBgn0034365': 'CG5335',         # Current annotated gene with CG symbol.
-        'FBgn0003884': 'alphaTub84B',    # Current annotated gene with non-ASCII char in symbol.
-        'FBgn0031087': 'CG12656',        # Current withdrawn gene.
-        'FBgn0000154': 'Bar',            # Current unannotated gene.
-        'FBgn0001200': 'His4',           # Current unannotated gene family.
-        'FBgn0087003': 'tal',            # Current unannotated oddball.
-        'FBgn0015267': 'Mmus\\Abl1',     # Current mouse gene with MGI xref.
+        'FBgn0284084': 'wg',              # Current annotated nuclear protein_coding gene.
+        'FBgn0004009': 'wg',              # Obsolete annotated nuclear protein_coding gene.
+        'FBgn0013687': 'mt:ori',          # Current localized but unannotated mitochondrial gene.
+        'FBgn0013678': 'mt:Cyt-b',        # Current annotated mitochondrial protein_coding gene.
+        'FBgn0019661': 'lncRNA:roX1',     # Current annotated nuclear ncRNA gene.
+        'FBgn0262451': 'mir-ban',         # Current annotated nuclear miRNA gene.
+        'FBgn0034365': 'CG5335',          # Current annotated gene with CG symbol.
+        'FBgn0003884': 'alphaTub84B',     # Current annotated gene with non-ASCII char in symbol.
+        'FBgn0108495': 'Dere\GG16260',    # Current unannotated non-Dmel with systematic name.
+        'FBgn0031087': 'CG12656',         # Current withdrawn gene.
+        'FBgn0000154': 'Bar',             # Current unannotated gene.
+        'FBgn0001200': 'His4',            # Current unannotated gene family.
+        'FBgn0087003': 'tal',             # Current unannotated oddball.
+        'FBgn0015267': 'Mmus\\Abl1',      # Current mouse gene with MGI xref.
     }
     # Elaborate on export filters for StrainHandler.
     required_fields = [
