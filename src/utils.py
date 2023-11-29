@@ -714,9 +714,9 @@ class PrimaryEntityHandler(DataHandler):
             # For each entity, gather synonym_id-keyed dict of synonym info.
             for feat_syno in fb_data_entity.synonyms:
                 try:
-                    fb_data_entity.synonyms_dict[feat_syno.synonym_id]['is_current'].append(feat_syno.is_current)
-                    fb_data_entity.synonyms_dict[feat_syno.synonym_id]['is_internal'].append(feat_syno.is_internal)
-                    fb_data_entity.synonyms_dict[feat_syno.synonym_id]['pub_ids'].append(feat_syno.pub_id)
+                    fb_data_entity.synonym_dict[feat_syno.synonym_id]['is_current'].append(feat_syno.is_current)
+                    fb_data_entity.synonym_dict[feat_syno.synonym_id]['is_internal'].append(feat_syno.is_internal)
+                    fb_data_entity.synonym_dict[feat_syno.synonym_id]['pub_ids'].append(feat_syno.pub_id)
                 except KeyError:
                     syno_dict = {
                         'name_type_name': synonym_type_conversion[feat_syno.synonym.type.name],
@@ -727,9 +727,9 @@ class PrimaryEntityHandler(DataHandler):
                         'pub_ids': [feat_syno.pub_id],
                         'pub_curies': []
                     }
-                    fb_data_entity.synonyms_dict[feat_syno.synonym_id] = syno_dict
+                    fb_data_entity.synonym_dict[feat_syno.synonym_id] = syno_dict
             # Go back over each synonym and refine each
-            for syno_dict in fb_data_entity.synonyms_dict.values():
+            for syno_dict in fb_data_entity.synonym_dict.values():
                 self.log.debug(f'For {fb_data_entity}, starting syno_dict: {syno_dict}')
                 # Then modify attributes as needed.
                 # Identify systematic names.
