@@ -710,6 +710,7 @@ class PrimaryEntityHandler(DataHandler):
             'synonym': 'unspecified',
         }
         for fb_data_entity in self.fb_data_entities.values():
+            self.log.debug(f'Evaluate {len(fb_data_entity.synonyms)} feature_synonym entries for {fb_data_entity}.')
             # For each entity, gather synonym_id-keyed dict of synonym info.
             for feat_syno in fb_data_entity.synonyms:
                 try:
@@ -729,6 +730,7 @@ class PrimaryEntityHandler(DataHandler):
                     fb_data_entity.synonyms_dict[feat_syno.synonym_id] = syno_dict
             # Go back over each synonym and refine each
             for syno_dict in fb_data_entity.synonyms_dict.values():
+                self.log.debug(f'For {fb_data_entity}, evaluate synonym: {syno_dict}')
                 # First, pick out current symbol for the entity.
                 if syno_dict['is_current'] is True and syno_dict['name_type_name'] == 'nomenclature_symbol':
                     fb_data_entity.curr_fb_symbol = syno_dict['display_text']
@@ -898,7 +900,7 @@ class PrimaryEntityHandler(DataHandler):
             'synonym_bin': '_synonym_dtos'
         }
         map_synonyms_required = False
-        test_linkmldto = self.agr_linkmldto_dict(self.fb_data_type)
+        test_linkmldto = self.agr_linkmldto_dict[self.fb_data_type]
         for dto_key in test_linkmldto.__dict__.keys():
             for bin_type, bin_suffix in linkml_synonym_slots.items():
                 if dto_key.endswith(bin_suffix):
