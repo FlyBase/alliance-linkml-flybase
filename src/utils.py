@@ -65,6 +65,16 @@ class DataHandler(object):
 
     # Sample set for faster testing: use uniquename-keyed names of objects, tailored for each handler.
     test_set = {}
+    # Correspondence of FB data type to Alliance LinkML object.
+    agr_linkmldto_dict = {
+        'gene': datatypes.GeneDTO(),
+        'allele': 'TBD',
+        'construct': 'TBD',
+        'variation': 'TBD',
+        'strain': datatypes.AffectedGenomicModelComponentDTO(),
+        'genotype': datatypes.AffectedGenomicModelComponentDTO(),
+        'disease': 'TBD'
+    }
     # Correspondence of FB data type to Alliance data transfer ingest set.
     agr_ingest_type_dict = {
         'gene': 'gene_ingest_set',
@@ -427,35 +437,6 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Ignored {pass_counter} pubs for irrelevant {self.fb_data_type} entities.')
         return
 
-    def get_entity_current_symbols(self, session):
-        """Get current symbols for the FlyBase data entities."""
-        chado_type = self.main_chado_entity_types[self.fb_data_type]
-        asso_chado_table = self.chado_tables['synonyms'][chado_type]
-        self.log.info(f'Get current symbols for {self.fb_data_type} data entities from {asso_chado_table}.')
-        main_pkey_name = self.chado_tables['primary_key'][chado_type]
-        fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
-        filters = (
-            fkey_col.in_((self.fb_data_entities.keys())),
-            asso_chado_table.is_current.is_(True),
-        )
-        results = session.query(asso_chado_table, Synonym).\
-            join(asso_chado_table, (asso_chado_table.synonym_id == Synonym.synonym_id)).\
-            join(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
-            filter(*filters).\
-            distinct()
-        counter = 0
-        pass_counter = 0
-        for result in results:
-            entity_pkey_id = getattr(result.asso_chado_table, main_pkey_name)
-            try:
-                self.fb_data_entities[entity_pkey_id].curr_fb_symbol = result
-                counter += 1
-            except KeyError:
-                pass_counter += 1
-        self.log.info(f'Found {counter} current symbols for {self.fb_data_type} entities.')
-        self.log.info(f'Ignored {pass_counter} current symbols for irrelevant {self.fb_data_type} entities.')
-        return
-
     def get_entity_synonyms(self, session):
         """Get synonyms for the FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
@@ -677,8 +658,6 @@ class PrimaryEntityHandler(DataHandler):
         self.sqlalchemy_test(session)
         self.get_entities(session)
         self.get_entity_pubs(session)
-        self.get_entity_current_symbols(session)
-        # self.get_entity_current_fullnames(session)
         self.get_entity_synonyms(session)
         self.get_entity_fb_xrefs(session)
         self.get_entity_xrefs(session)
@@ -711,13 +690,65 @@ class PrimaryEntityHandler(DataHandler):
         return
 
     def synthesize_secondary_ids(self):
-        """Process secondary IDs and return a list of old FB uniquenames."""
+        """Process secondary IDs and into a list of old FB uniquename curies."""
         self.log.info('Process secondary IDs and return a list of old FB uniquenames.')
         for fb_data_entity in self.fb_data_entities.values():
             secondary_ids = []
             for xref in fb_data_entity.fb_dbxrefs:
                 secondary_ids.append(f'FB:{xref.dbxref.accession}')
             fb_data_entity.alt_fb_ids = list(set(secondary_ids))
+        return
+
+    def synthesize_synonyms(self):
+        """Synthesize synonyms from Synonym association objects."""
+        self.log.info('Synthesize synonyms.')
+        # Dict for converting FB synonym types to AGR synonym types.
+        synonym_type_conversion = {
+            'symbol': 'nomenclature_symbol',
+            'fullname': 'full_name',
+            'nickname': 'unspecified',
+            'synonym': 'unspecified',
+        }
+        for fb_data_entity in self.fb_data_entities.values():
+            # For each entity, gather synonym_id-keyed dict of synonym info.
+            for feat_syno in fb_data_entity.synonyms:
+                try:
+                    fb_data_entity.synonyms_dict[feat_syno.synonym_id]['is_current'].append(feat_syno.is_current)
+                    fb_data_entity.synonyms_dict[feat_syno.synonym_id]['is_internal'].append(feat_syno.is_internal)
+                    fb_data_entity.synonyms_dict[feat_syno.synonym_id]['pub_ids'].append(feat_syno.pub_id)
+                except KeyError:
+                    syno_dict = {
+                        'name_type_name': synonym_type_conversion[feat_syno.synonym.type.name],
+                        'format_text': feat_syno.synonym.name,
+                        'display_text': sub_sup_sgml_to_html(feat_syno.synonym.synonym_sgml),
+                        'is_current': [feat_syno.is_current],
+                        'is_internal': [feat_syno.is_internal],
+                        'pub_ids': [feat_syno.pub_id],
+                        'pub_curies': []
+                    }
+                    fb_data_entity.synonyms_dict[feat_syno.synonym_id] = syno_dict
+            # Go back over each synonym and refine each
+            for syno_dict in fb_data_entity.synonyms_dict.values():
+                # First, pick out current symbol for the entity.
+                if syno_dict['is_current'] is True and syno_dict['name_type_name'] == 'nomenclature_symbol':
+                    fb_data_entity.curr_fb_symbol = syno_dict['display_text']
+                # Then modify attributes as needed.
+                # Identify systematic names.
+                if re.match(self.regex['systematic_name'], syno_dict['format_text']):
+                    syno_dict['name_type_name'] = 'systematic_name'
+                # Classify is_current (convert list of booleans into a single boolean).
+                if True in syno_dict['is_current']:
+                    syno_dict['is_current'] = True
+                else:
+                    syno_dict['is_current'] = False
+                # Classify is_internal (convert list of booleans into a single boolean).
+                if False in syno_dict['is_internal']:
+                    syno_dict['is_internal'] = False
+                else:
+                    syno_dict['is_internal'] = True
+                # Convert pub_ids into pub_curies.
+                syno_dict['pub_curies'] = self.get_pub_curies(syno_dict['pub_ids'])
+            self.log.debug(f'{fb_data_entity} has curr_fb_symbol={fb_data_entity.curr_fb_symbol}')
         return
 
     def synthesize_props(self):
@@ -769,6 +800,7 @@ class PrimaryEntityHandler(DataHandler):
         super().synthesize_info()
         self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
+        self.synthesize_synonyms()
         self.synthesize_props()
         self.synthesize_pubs()
         return
@@ -777,11 +809,11 @@ class PrimaryEntityHandler(DataHandler):
     # However, as they're not useful for all data types, call them in tailored handler Classes.
     def map_data_provider_dto(self):
         """Return the DataProviderDTO for the FB data entity."""
-        # Note - dependent on previous map_synonyms() run, if applicable.
+        # Note - this method is depends on previous determination of fb_data_entity.curr_fb_symbol by map_synonyms(), if applicable.
         self.log.info('Map data provider to Alliance object.')
         for fb_data_entity in self.fb_data_entities.values():
             if fb_data_entity.curr_fb_symbol:
-                display_name = sub_sup_sgml_to_html(fb_data_entity.curr_fb_symbol.synonym_sgml)
+                display_name = fb_data_entity.curr_fb_symbol
             else:
                 display_name = fb_data_entity.name
             dp_xref = datatypes.CrossReferenceDTO('FB', f'FB:{fb_data_entity.uniquename}', self.fb_data_type, display_name).dict_export()
@@ -856,116 +888,77 @@ class PrimaryEntityHandler(DataHandler):
         return
 
     def map_synonyms(self):
-        """Generate name/synonym DTOs for a feature that has a list of FeatureSynonym objects."""
+        """Generate name/synonym DTOs for an entity."""
         self.log.info('Map synonyms to Alliance object.')
-        # The FB data object has these attributes to fill in.
-        # self.curr_fb_symbol = None      # The current symbol Synonym chado for the entity.
-        # self.curr_fb_fullname = None    # The current fullname Synonym chado object for the entity.
-        # The AGR data object has these attributes to fill in.
-        # gene_symbol_dto
-        # gene_full_name_dto
-        # gene_systematic_name_dto
-        # gene_synonym_dtos
-        # construct_symbol_dto
-        # construct_full_name_dto
-        # construct_synonym_dtos
-        # Dict for converting FB to AGR synonym types.
-        synonym_type_conversion = {
-            'symbol': 'nomenclature_symbol',
-            'nickname': 'nomenclature_symbol',
-            'synonym': 'nomenclature_symbol',
-            'fullname': 'full_name',
+        # First determine synonym slots available, if any.
+        linkml_synonym_slots = {
+            'symbol_bin': '_symbol_dto',
+            'full_name_bin': '_full_name_dto',
+            'systematic_name_bin': '_systematic_name_dto',
+            'synonym_bin': '_synonym_dtos'
         }
-        FORMAT_TEXT = 0
-        DISPLAY_TEXT = 1
+        map_synonyms_required = False
+        test_linkmldto = self.agr_linkmldto_dict(self.fb_data_type)
+        for dto_key in test_linkmldto.__dict__.keys():
+            for bin_type, bin_suffix in linkml_synonym_slots.items():
+                if dto_key.endswith(bin_suffix):
+                    linkml_synonym_slots[bin_type] = dto_key
+                    self.log.debug(f'Map {bin_type} to LinkML DTO slot {dto_key} because it has suffix "{bin_suffix}".')
+                    map_synonyms_required = True
+        if map_synonyms_required is False:
+            self.log.warning(f'The map_synonyms() method has been incorrectly called for {self.fb_data_type} objects.')
+            return
+        else:
+            self.log.info(f'Have these linkml name dto slots to fill in: {linkml_synonym_slots.values()}')
         for fb_data_entity in self.fb_data_entities.values():
-            # Build a dict of synonyms (distinct name/synonym_sgml combinations).
-            # For each synonym, record how it's used (symbol, fullname, etc), and pub_ids for that use.
-            synonym_dict = {}
-            for feat_syno in fb_data_entity.synonyms:
-                synonym_name = (feat_syno.synonym.name, feat_syno.synonym.synonym_sgml)
-                synonym_type = feat_syno.synonym.type.name
-                pub_id = feat_syno.pub_id
-                internal = feat_syno.is_internal
-                if synonym_name in synonym_dict.keys():
-                    synonym_dict[synonym_name]['internal'].append(internal)
-                    if synonym_type in synonym_dict[synonym_name].keys():
-                        synonym_dict[synonym_name][synonym_type].append(pub_id)
-                    else:
-                        synonym_dict[synonym_name][synonym_type] = [pub_id]
+            linkml_synonym_bins = {
+                'symbol_bin': [],
+                'full_name_bin': [],
+                'systematic_name_bin': [],
+                'synonym_bin': []
+            }
+            # Create NameSlotAnnotationDTO objects and sort them out.
+            for syno_dict in fb_data_entity.synonym_dict.values():
+                name_dto = datatypes.NameSlotAnnotationDTO(syno_dict['name_type_name'], syno_dict['format_text'],
+                                                           syno_dict['display_text'], syno_dict['pub_curies']).dict_export()
+                name_dto['internal'] = syno_dict['is_internal']
+                if syno_dict['is_current'] is True and syno_dict['name_type_name'] in ['nomenclature_symbol', 'systematic_name']:
+                    linkml_synonym_bins['symbol_bin'].append(name_dto)
+                elif syno_dict['is_current'] is True and syno_dict['name_type_name'] == 'fullname':
+                    linkml_synonym_bins['full_name_bin'].append(name_dto)
                 else:
-                    synonym_dict[synonym_name] = {synonym_type: [pub_id], 'internal': [internal]}
-            # Now evaluate each synonym (including synonym type and internal status).
-            for syno_name, syno_attributes in synonym_dict.items():
-                syno_format_text = syno_name[FORMAT_TEXT]
-                syno_display_text = sub_sup_sgml_to_html(syno_name[DISPLAY_TEXT])
-                # Determine the type of synonym.
-                # First check to see if it's systematic.
-                if re.match(self.regex['systematic_name'], syno_name[FORMAT_TEXT]):
-                    name_type_to_use = 'systematic_name'
-                # Otherwise, pick the most common type for the name.
-                else:
-                    # Create a count-keyed dict of synonym types.
-                    type_tally = {}
-                    for syno_type, syno_type_pub_list in syno_attributes.items():
-                        if syno_type != 'internal':
-                            usage_count = len(set(syno_type_pub_list))
-                            type_tally[usage_count] = syno_type
-                    max_count = max(type_tally.keys())
-                    prevalent_name_type = type_tally[max_count]
-                    name_type_to_use = synonym_type_conversion[prevalent_name_type]
-                # Determine if the synonym is internal; a single instance of False trumps True.
-                if False in syno_attributes['internal']:
-                    syno_internal = False
-                else:
-                    syno_internal = True
-                # Collect pubs.
-                pub_id_list = []
-                for syno_type, syno_type_pub_list in syno_attributes.items():
-                    if syno_type != 'internal':
-                        pub_id_list.extend(syno_type_pub_list)
-                pub_curies = self.get_pub_curies(pub_id_list)
-                # Create the NameDTO object.
-                name_dto = datatypes.NameSlotAnnotationDTO(name_type_to_use, syno_format_text, syno_display_text, pub_curies).dict_export()
-                name_dto['internal'] = syno_internal
-
-        # billy bob - continue here
-
-        # # Sift through name DTOs for symbol, fullname, systematic_name, etc.
-        # for name_dto in name_dto_list:
-        #     if name_dto['display_text'] == feature.curr_anno_id:
-        #         if name_dto['name_type_name'] != 'systematic_name':
-        #             log.warning(f"{feature}: Found mistyped curr anno ID: type={name_dto['name_type_name']}, name={name_dto['display_text']}")
-        #             name_dto['name_type_name'] = 'systematic_name'
-        #         feature.gene_systematic_name_dto = name_dto
-        #     if name_dto['display_text'] == feature.curr_symbol_name:
-        #         if name_dto['name_type_name'] not in ['systematic_name', 'nomenclature_symbol']:
-        #             log.warning(f"{feature}: Found mistyped curr symbol: type={name_dto['name_type_name']}, name={name_dto['display_text']}")
-        #             name_dto['name_type_name'] = 'nomenclature_symbol'
-        #         feature.gene_symbol_dto = name_dto
-        #     elif name_dto['display_text'] == feature.curr_fullname:
-        #         if name_dto['name_type_name'] != 'full_name':
-        #             log.warning(f"{feature}: Found mistyped curr full_name: type={name_dto['name_type_name']}, name={name_dto['display_text']}")
-        #             name_dto['name_type_name'] = 'full_name'
-        #         feature.gene_full_name_dto = name_dto
-        #     else:
-        #         feature.gene_synonym_dtos.append(name_dto)
-        # # LinkML change required: make gene_full_name_dto and gene_systematic_name_dto OPTIONAL.
-        # # Symbol is required. If none, fill it in.
-        # if feature.gene_symbol_dto is None:
-        #     placeholder_symbol_dto = default_name_dto.copy()
-        #     placeholder_symbol_dto['name_type_name'] = 'nomenclature_symbol'
-        #     placeholder_symbol_dto['format_text'] = feature.feature.name
-        #     placeholder_symbol_dto['display_text'] = feature.feature.name
-        #     feature.gene_symbol_dto = placeholder_symbol_dto
-        # # In rare cases, a gene's annotation ID has never been used as a synonym. For these, fill in the annotation ID.
-        # if feature.gene_systematic_name_dto is None and feature.curr_anno_id:
-        #     placeholder_systematic_name_dto = default_name_dto.copy()
-        #     placeholder_systematic_name_dto['name_type_name'] = 'systematic_name'
-        #     placeholder_systematic_name_dto['format_text'] = feature.curr_anno_id
-        #     placeholder_systematic_name_dto['display_text'] = feature.curr_anno_id
-        #     log.warning(f"{feature}: Has annoID never used as a synonym: {feature.curr_anno_id}")
-        #     feature.gene_systematic_name_dto = placeholder_systematic_name_dto
+                    linkml_synonym_bins['synonym_bin'].append(name_dto)
+                if syno_dict['name_type_name'] == 'systematic_name' and syno_dict['display_text'] == fb_data_entity.curr_anno_id:
+                    linkml_synonym_bins['systematic_name_bin'].append(name_dto)
+            # Review the linkml_synonym_bins for each fb_data_entity.
+            # 1. Symbol.
+            if len(linkml_synonym_bins['symbol_bin']) == 0:
+                self.log.warning(f'No current symbols found for {fb_data_entity}: create a generic one.')
+                generic_symbol_dto = datatypes.NameSlotAnnotationDTO('symbol', fb_data_entity.name, fb_data_entity.name, []).dict_export()
+                setattr(fb_data_entity.linkmldto, linkml_synonym_slots['symbol_bin'], generic_symbol_dto)
+            else:
+                setattr(fb_data_entity.linkmldto, linkml_synonym_slots['symbol_bin'], linkml_synonym_bins['symbol_bin'][0])
+                if len(linkml_synonym_bins['symbol_bin']) > 1:
+                    multi_symbols = ', '.join([i['format_text'] for i in linkml_synonym_slots['symbol_bin']])
+                    self.log.warning(f'Found many current symbols for {fb_data_entity}: {multi_symbols}')
+            # 2. Fullname.
+            if len(linkml_synonym_bins['full_name_bin']) == 1:
+                setattr(fb_data_entity.linkmldto, linkml_synonym_slots['full_name_bin'], linkml_synonym_bins['full_name_bin'][0])
+            elif len(linkml_synonym_bins['full_name_bin']) > 1:
+                multi_symbols = ', '.join([i['format_text'] for i in linkml_synonym_slots['full_name_bin']])
+                self.log.warning(f'Found many current full_names for {fb_data_entity}: {multi_symbols}')
+            # 3. Systematic name.
+            if len(linkml_synonym_bins['systematic_name_bin']) == 0 and fb_data_entity.curr_anno_id is not None:
+                self.log.warning(f'No current systematic names found for annotated {fb_data_entity}: create a generic one.')
+                sys_name_dto = datatypes.NameSlotAnnotationDTO('systematic_name', fb_data_entity.curr_anno_id, fb_data_entity.curr_anno_id, []).dict_export()
+                setattr(fb_data_entity.linkmldto, linkml_synonym_slots['systematic_name_bin'], sys_name_dto)
+            elif len(linkml_synonym_bins['systematic_name_bin']) == 1:
+                setattr(fb_data_entity.linkmldto, linkml_synonym_slots['systematic_name_bin'], linkml_synonym_bins['systematic_name_bin'][0])
+            elif len(linkml_synonym_bins['systematic_name_bin']) > 1:
+                multi_symbols = ', '.join([i['format_text'] for i in linkml_synonym_slots['systematic_name_bin']])
+                self.log.warning(f'Found many current systematic_names for {fb_data_entity}: {multi_symbols}')
+            # 4. Synonyms.
+            setattr(fb_data_entity.linkmldto, linkml_synonym_slots['synonym_bin'], linkml_synonym_bins['synonym_bin'])
         return
 
     def map_timestamps(self):
@@ -1151,7 +1144,6 @@ class FeatureHandler(PrimaryEntityHandler):
                 fb_data_entity.curr_anno_id = current_anno_ids[0]
             elif len(current_anno_ids) > 1:
                 self.log.warning(f'{fb_data_entity} has {len(current_anno_ids)} current annotations IDs.')
-                # Some unlocalized genes have many current anno IDs.
                 fb_data_entity.alt_anno_ids.extend(current_anno_ids)
             # Record old annotation IDs.
             fb_data_entity.alt_anno_ids.extend(alt_anno_ids)
@@ -1202,6 +1194,8 @@ class GeneHandler(FeatureHandler):
         'FBgn0013678': 'mt:Cyt-b',       # Current annotated mitochondrial protein_coding gene.
         'FBgn0019661': 'lncRNA:roX1',    # Current annotated nuclear ncRNA gene.
         'FBgn0262451': 'mir-ban',        # Current annotated nuclear miRNA gene.
+        'FBgn0034365': 'CG5335',         # Current annotated gene with CG symbol.
+        'FBgn0003884': 'alphaTub84B',    # Current annotated gene with non-ASCII char in symbol.
         'FBgn0031087': 'CG12656',        # Current withdrawn gene.
         'FBgn0000154': 'Bar',            # Current unannotated gene.
         'FBgn0001200': 'His4',           # Current unannotated gene family.
@@ -1361,7 +1355,7 @@ class GeneHandler(FeatureHandler):
         """Map basic FlyBase gene data to the Alliance LinkML object."""
         self.log.info('Map basic gene info to Alliance object.')
         for gene in self.fb_data_entities.values():
-            agr_gene = datatypes.GeneDTO()
+            agr_gene = self.agr_linkmldto_dict(self.fb_data_type)
             agr_gene.obsolete = gene.chado_obj.is_obsolete
             agr_gene.curie = f'FB:{gene.uniquename}'
             agr_gene.taxon_curie = gene.ncbi_taxon_id
@@ -1496,7 +1490,7 @@ class StrainHandler(PrimaryEntityHandler):
         """Map basic FlyBase strain data to the Alliance object."""
         self.log.info('Map basic strain info.')
         for strain in self.fb_data_entities.values():
-            agr_strain = datatypes.AffectedGenomicModelDTO()
+            agr_strain = self.agr_linkmldto_dict(self.fb_data_type)
             agr_strain.obsolete = strain.chado_obj.is_obsolete
             agr_strain.curie = f'FB:{strain.uniquename}'
             agr_strain.taxon_curie = strain.ncbi_taxon_id
@@ -1509,7 +1503,6 @@ class StrainHandler(PrimaryEntityHandler):
         """Extend the method for the StrainHandler."""
         super().map_fb_data_to_alliance()
         self.map_strain_basic()
-        self.map_synonyms()
         self.map_data_provider_dto()
         self.map_pubs()
         self.map_xrefs()
