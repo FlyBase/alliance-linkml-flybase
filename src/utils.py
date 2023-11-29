@@ -940,7 +940,7 @@ class PrimaryEntityHandler(DataHandler):
             # 1. Symbol.
             if len(linkml_synonym_bins['symbol_bin']) == 0:
                 self.log.warning(f'No current symbols found for {fb_data_entity}: create a generic one.')
-                generic_symbol_dto = datatypes.NameSlotAnnotationDTO('symbol', fb_data_entity.name, fb_data_entity.name, []).dict_export()
+                generic_symbol_dto = datatypes.NameSlotAnnotationDTO('nomenclature_symbol', fb_data_entity.name, fb_data_entity.name, []).dict_export()
                 setattr(fb_data_entity.linkmldto, linkml_synonym_slots['symbol_bin'], generic_symbol_dto)
             else:
                 setattr(fb_data_entity.linkmldto, linkml_synonym_slots['symbol_bin'], linkml_synonym_bins['symbol_bin'][0])
