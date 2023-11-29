@@ -1194,21 +1194,22 @@ class GeneHandler(FeatureHandler):
 
     # Sample set for faster testing: use uniquename-keyed names of objects, tailored for each handler.
     test_set = {
-        'FBgn0284084': 'wg',               # Current annotated nuclear protein_coding gene.
-        'FBgn0004009': 'wg',               # Obsolete annotated nuclear protein_coding gene.
-        'FBgn0013687': 'mt:ori',           # Current localized but unannotated mitochondrial gene.
-        'FBgn0013678': 'mt:Cyt-b',         # Current annotated mitochondrial protein_coding gene.
-        'FBgn0019661': 'lncRNA:roX1',      # Current annotated nuclear ncRNA gene.
-        'FBgn0262451': 'mir-ban',          # Current annotated nuclear miRNA gene.
-        'FBgn0034365': 'CG5335',           # Current annotated gene with CG symbol.
-        'FBgn0003884': 'alphaTub84B',      # Current annotated gene with non-ASCII char in symbol.
-        'FBgn0030179': 'CG12094',          # Obsolete unannotated gene, should not get systematic name but needs symbol.
-        'FBgn0108495': 'Dere\\GG16260',    # Current unannotated non-Dmel with systematic name.
-        'FBgn0031087': 'CG12656',          # Current withdrawn gene.
-        'FBgn0000154': 'Bar',              # Current unannotated gene.
-        'FBgn0001200': 'His4',             # Current unannotated gene family.
-        'FBgn0087003': 'tal',              # Current unannotated oddball.
-        'FBgn0015267': 'Mmus\\Abl1',       # Current mouse gene with MGI xref.
+        'FBgn0284084': 'wg',                # Current annotated nuclear protein_coding gene.
+        'FBgn0004009': 'wg',                # Obsolete annotated nuclear protein_coding gene.
+        'FBgn0013687': 'mt:ori',            # Current localized but unannotated mitochondrial gene.
+        'FBgn0013678': 'mt:Cyt-b',          # Current annotated mitochondrial protein_coding gene.
+        'FBgn0019661': 'lncRNA:roX1',       # Current annotated nuclear ncRNA gene.
+        'FBgn0262451': 'mir-ban',           # Current annotated nuclear miRNA gene.
+        'FBgn0034365': 'CG5335',            # Current annotated gene with CG symbol.
+        'FBgn0003884': 'alphaTub84B',       # Current annotated gene with non-ASCII char in symbol.
+        'FBgn0263477': 'scaRNA:PsiU1-6',    # Current annotated gene needs systematic synonym dto.
+        'FBgn0030179': 'CG12094',           # Obsolete unannotated gene, should not get systematic name but needs symbol.
+        'FBgn0108495': 'Dere\\GG16260',     # Current unannotated non-Dmel with systematic name.
+        'FBgn0031087': 'CG12656',           # Current withdrawn gene.
+        'FBgn0000154': 'Bar',               # Current unannotated gene.
+        'FBgn0001200': 'His4',              # Current unannotated gene family.
+        'FBgn0087003': 'tal',               # Current unannotated oddball.
+        'FBgn0015267': 'Mmus\\Abl1',        # Current mouse gene with MGI xref.
     }
     # Elaborate on export filters for StrainHandler.
     required_fields = [
