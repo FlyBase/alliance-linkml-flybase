@@ -58,8 +58,8 @@ class FBDataEntity(FBEntity):
         self.timestamps = []            # FB timestamps.
         # Processed FB data - processed from primary FB chado data above.
         self.ncbi_taxon_id = None       # The NCBITaxon dbxref.accession (str).
-        self.curr_fb_symbol = None      # The current symbol Synonym chado object for the entity.
-        self.curr_fb_fullname = None    # The current fullname Synonym chado object for the entity.
+        self.synonyms_dict = {}         # Will be synonym_id-keyed dicts of processed synonym info, similar to NameDTO.
+        self.curr_fb_symbol = None      # The current symbol for the entity (UTF-8).
         self.alt_fb_ids = []            # Secondary FB IDs.
         self.all_pub_ids = []           # Pub.pub_id db IDs for pubs associated in any way with the entity.
         self.prop_dict = {}             # cvterm name-keyed lists of prop objects: e.g., Featureprop, Strainprop.
