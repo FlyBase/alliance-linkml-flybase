@@ -334,7 +334,7 @@ class PrimaryEntityHandler(DataHandler):
             # self.log.debug(f'Found primary_key column: {foreign_key_column.name}')
         return foreign_key_column
 
-    # BOB: Quick testing of general SQLAlchemy query approaches.
+    # Quick testing of general SQLAlchemy query approaches.
     def sqlalchemy_test(self, session):
         """Test SQLAlchemy behavior."""
         self.log.info('Test SQLAlchemy behavior.')
