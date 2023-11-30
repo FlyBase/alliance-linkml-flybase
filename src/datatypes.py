@@ -98,6 +98,17 @@ class FBGene(FBFeature):
         self.gene_type_id = None      # Will be SO term ID from "promoted_gene_type" Featureprop.
 
 
+class FBConstruct(FBFeature):
+    """A FlyBase Construct entity with all its related data."""
+    def __init__(self, chado_obj):
+        """Create the FBConstruct object."""
+        super().__init__(chado_obj)
+        # Primary FB chado data.
+        # In progress.
+        # Processed FB data.
+        # In progress.
+
+
 class FBStrain(FBDataEntity):
     """A FlyBase Strain entity with all its related data."""
     def __init__(self, chado_obj):
@@ -162,9 +173,9 @@ class GeneDTO(GenomicEntityDTO):
     def __init__(self):
         """Create GeneDTO for FlyBase object."""
         super().__init__()
-        self.gene_symbol_dto = None             # Will be a single SymbolSlotAnnotationDTO.
-        self.gene_full_name_dto = None          # Will be a single FullNameSlotAnnotation.
-        self.gene_systematic_name_dto = None    # Will be a single SystematicNameSlotAnnotation.
+        self.gene_symbol_dto = None             # Will be a single NameSlotAnnotationDTO.
+        self.gene_full_name_dto = None          # Will be a single NameSlotAnnotationDTO.
+        self.gene_systematic_name_dto = None    # Will be a single NameSlotAnnotationDTO.
         self.gene_synonym_dtos = []             # Will be list of NameSlotAnnotationDTO objects.
         self.gene_type_curie = None             # Will be the SO term ID corresponding to the gene's promoted_gene_type.
         self.gene_secondary_id_dtos = []        # Annotation IDs and 2o FlyBase IDs.
@@ -184,6 +195,31 @@ class AffectedGenomicModelDTO(GenomicEntityDTO):
         self.reference_curies = []         # Publication curies (PMID or FBrf).
         self.component_dtos = []           # AffectedGenomicModelComponentDTO objects.
         self.required_fields.extend(['subtype_name'])
+
+
+class ReagentDTO(AuditedObjectDTO):
+    """ReagentDTO class."""
+    def __init__(self):
+        """Create ReagentDTO for FlyBase object."""
+        super().__init__()
+        self.mod_entity_id = None          # Will be the MOD curie.
+        self.mod_internal_id = None        # Will be the MOD internal db id, if no MOD curie.
+        self.secondary_identifiers = []    # Will be list of 2o FB IDs (curies, not DTOs).
+        self.data_provider_dto = None
+        self.required_fields.extend(['mod_entity_id', 'data_provider_dto'])
+
+
+class ConstructDTO(ReagentDTO):
+    """ConstructDTO class."""
+    def __init__(self):
+        """Create ConstructDTO for FlyBase object."""
+        super().__init__()
+        self.construct_symbol_dto = None       # Will be a single NameSlotAnnotationDTO.
+        self.construct_full_name_dto = None    # Will be a single NameSlotAnnotationDTO.
+        self.construct_synonym_dtos = None     # Will be a list of NameSlotAnnotationDTOs.
+        self.construct_component_dtos = []     # Will be a list of ConstructComponentSlotAnnotationDTOs.
+        self.reference_curies = []
+        self.required_fields.extend(['construct_symbol_dto'])
 
 
 # Secondary Alliance DTO Classes for FlyBase data.
@@ -267,21 +303,6 @@ class SlotAnnotationDTO(AuditedObjectDTO):
         self.evidence_curies = evidence_curies
 
 
-class SecondaryIdSlotAnnotationDTO(SlotAnnotationDTO):
-    """SecondaryIdSlotAnnotationDTO class."""
-    def __init__(self, secondary_id: str, evidence_curies: list):
-        """Create a SecondaryIdSlotAnnotationDTO for FlyBase object.
-
-        Args:
-            evidence_curies (list): A list of FB:FBrf or PMID curies.
-            secondary_id (str): The secondary ID string (should include the db prefix).
-
-        """
-        super().__init__(evidence_curies)
-        self.secondary_id = secondary_id
-        self.required_fields.extend(['secondary_id'])
-
-
 class NameSlotAnnotationDTO(SlotAnnotationDTO):
     """NameSlotAnnotationDTO class."""
     def __init__(self, name_type_name: str, format_text: str, display_text: str, evidence_curies: list):
@@ -300,3 +321,40 @@ class NameSlotAnnotationDTO(SlotAnnotationDTO):
         self.display_text = display_text
         self.synonym_scope_name = 'exact'
         self.required_fields.extend(['name_type_name', 'format_text', 'display_text', 'synonym_scope'])
+
+
+class ConstructComponentSlotAnnotation(SlotAnnotationDTO):
+    """ConstructComponentSlotAnnotation class."""
+    def __init__(self, relation_name: str, component_symbol: str, taxon_curie: str, taxon_text: str, evidence_curies: list):
+        """Create a ConstructComponentSlotAnnotation for a FlyBase construct component.
+
+        Args:
+            relation_name (str): The relation type, CVterm from "Construct Genomic Entity Association Relation".
+            component_symbol (str): The symbol for the component.
+            taxon_curie (str): The NCBITaxon ID of the component.
+            taxon_text (str): The species name of the component.
+            evidence_curies (list): A list of FB:FBrf or PMID curies.
+
+        """
+        super().__init__(evidence_curies)
+        self.relation_name = relation_name          # Should be one of the following: expresses, is_regulated_by, or targets.
+        self.component_symbol = component_symbol
+        self.taxon_curie = taxon_curie
+        self.taxon_text = taxon_text
+        self.note_dtos = []
+        self.required_fields.extend([])
+
+
+class SecondaryIdSlotAnnotationDTO(SlotAnnotationDTO):
+    """SecondaryIdSlotAnnotationDTO class."""
+    def __init__(self, secondary_id: str, evidence_curies: list):
+        """Create a SecondaryIdSlotAnnotationDTO for FlyBase object.
+
+        Args:
+            evidence_curies (list): A list of FB:FBrf or PMID curies.
+            secondary_id (str): The secondary ID string (should include the db prefix).
+
+        """
+        super().__init__(evidence_curies)
+        self.secondary_id = secondary_id
+        self.required_fields.extend(['secondary_id'])

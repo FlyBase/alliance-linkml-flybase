@@ -69,7 +69,7 @@ class DataHandler(object):
     agr_linkmldto_dict = {
         'gene': datatypes.GeneDTO(),
         'allele': 'TBD',
-        'construct': 'TBD',
+        'construct': datatypes.ConstructDTO(),
         'variation': 'TBD',
         'strain': datatypes.AffectedGenomicModelDTO(),
         'genotype': datatypes.AffectedGenomicModelDTO(),
@@ -89,7 +89,7 @@ class DataHandler(object):
     datatype_objects = {
         'gene': datatypes.FBGene,
         # 'allele': datatypes.FBAllele,
-        # 'construct': datatypes.FBConstruct,
+        'construct': datatypes.FBConstruct,
         # 'variation': datatypes.FBVariant,
         'strain': datatypes.FBStrain,
         # 'disease': datatypes.FBDiseaseAlleleAnnotation
@@ -287,11 +287,11 @@ class PrimaryEntityHandler(DataHandler):
 
     # Mappings of input fb_data_type to various data handling objects and chado tables.
     main_chado_entity_types = {
-        'gene': 'feature',
         'allele': 'feature',
         'construct': 'feature',
+        'gene': 'feature',
+        'strain': 'strain',
         'variation': 'feature',
-        'strain': 'strain'
     }
     # Mappings of main data types to chado tables with associated data.
     chado_tables = {
@@ -307,8 +307,9 @@ class PrimaryEntityHandler(DataHandler):
     }
     # CVterms used to define a fb_data_type within a larger chado table.
     subtypes = {
-        'gene': ['gene'],
         'allele': ['allele'],
+        'construct': ['engineered_transposable_element', 'engineered_region', 'transgenic_transposable_element'],
+        'gene': ['gene'],
         'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion', 'point_mutation', 'sequence_alteration', 'sequence_variant']
     }
 
@@ -1185,6 +1186,86 @@ class FeatureHandler(PrimaryEntityHandler):
         return
 
 
+class ConstructHandler(FeatureHandler):
+    """This object gets, synthesizes and filters construct data for export."""
+    def __init__(self, log: Logger, fb_data_type: str, testing: bool):
+        """Create the ConstructHandler object."""
+        super().__init__(log, fb_data_type, testing)
+
+    test_set = {
+        'FBtp0008631': 'P{UAS-wg.H.T:HA1}',    # Expresses wg under UASt control.
+        'FBtp0010648': 'P{wg.FRT.B}',          # Expresses wg under sev control, has FRT casette.
+        'FBtp0032215': 'P{GD5007}',            # Targets wg under UASt control.
+    }
+    # Elaborate on export filters for ConstructHandler.
+    required_fields = [
+        'construct_symbol_dto',
+        'data_provider_dto',
+        'internal',
+        'mod_entity_id',
+    ]
+    output_fields = [
+        'construct_component_dtos',
+        'construct_full_name_dto',
+        'construct_symbol_dto',
+        'construct_synonym_dtos',
+        'created_by_curie',
+        'data_provider_dto',
+        'date_created',
+        'date_updated',
+        'internal',
+        'mod_entity_id',
+        'mod_internal_id',
+        'obsolete',
+        'reference_curies',
+        'secondary_identifiers',
+        'updated_by_curie',
+    ]
+    fb_agr_db_dict = {}
+
+    # Elaborate on get_general_data() sub-methods for ConstructHandler.
+    def get_general_data(self, session):
+        """Extend the method for the ConstructHandler."""
+        super().get_general_data(session)
+        return
+
+    # Elaborate on get_datatype_data() sub-methods for ConstructHandler.
+    def get_datatype_data(self, session):
+        """Extend the method for the ConstructHandler."""
+        super().get_datatype_data(session)
+        return
+
+    # Elaborate on synthesize_info() sub-methods for ConstructHandler.
+    def synthesize_info(self):
+        """Extend the method for the ConstructHandler."""
+        super().synthesize_info()
+        return
+
+    # Elaborate on map_fb_data_to_alliance() sub-methods for ConstructHandler.
+    def map_construct_basic(self):
+        """Map basic FlyBase construct data to the Alliance LinkML object."""
+        self.log.info('Map basic construct info to Alliance object.')
+        for construct in self.fb_data_entities.values():
+            agr_construct = datatypes.ConstructDTO()
+            agr_construct.obsolete = construct.chado_obj.is_obsolete
+            construct.linkmldto = agr_construct
+        return
+
+    def map_fb_data_to_alliance(self):
+        """Extend the method for the ConstructHandler."""
+        super().map_fb_data_to_alliance()
+        self.map_construct_basic()
+        self.map_synonyms()
+        self.map_data_provider_dto()
+        self.map_pubs()
+        self.map_timestamps()
+        # self.map_secondary_ids('construct_secondary_id_dtos')
+        for construct in self.fb_data_entities.values():
+            construct.linkmldto.secondary_identifiers = construct.alt_fb_ids
+        self.flag_internal_fb_entities()
+        return
+
+
 class GeneHandler(FeatureHandler):
     """This object gets, synthesizes and filters gene data for export."""
     def __init__(self, log: Logger, fb_data_type: str, testing: bool):
@@ -1192,7 +1273,6 @@ class GeneHandler(FeatureHandler):
         super().__init__(log, fb_data_type, testing)
         self.pthr_dict = {}    # Will be an 1:1 FBgn_ID-PTHR xref dict.
 
-    # Sample set for faster testing: use uniquename-keyed names of objects, tailored for each handler.
     test_set = {
         'FBgn0284084': 'wg',                # Current annotated nuclear protein_coding gene.
         'FBgn0004009': 'wg',                # Obsolete annotated nuclear protein_coding gene.
@@ -1211,7 +1291,7 @@ class GeneHandler(FeatureHandler):
         'FBgn0087003': 'tal',               # Current unannotated oddball.
         'FBgn0015267': 'Mmus\\Abl1',        # Current mouse gene with MGI xref.
     }
-    # Elaborate on export filters for StrainHandler.
+    # Elaborate on export filters for GeneHandler.
     required_fields = [
         'curie',
         'data_provider_dto',
@@ -1408,7 +1488,7 @@ class GeneHandler(FeatureHandler):
         return
 
     def map_fb_data_to_alliance(self):
-        """Extend the method for the StrainHandler."""
+        """Extend the method for the GeneHandler."""
         super().map_fb_data_to_alliance()
         self.map_gene_basic()
         self.map_synonyms()
@@ -1431,7 +1511,6 @@ class StrainHandler(PrimaryEntityHandler):
         """Create the StrainHandler object."""
         super().__init__(log, fb_data_type, testing)
 
-    # Sample set for faster testing: use uniquename-keyed names of objects, tailored for each handler.
     test_set = {
         'FBsn0000001': 'Oregon-R-modENCODE',
         'FBsn0000091': 'DGRP-373',
@@ -1530,7 +1609,7 @@ def get_handler(log: Logger, fb_data_type: str, testing: bool):
     handler_dict = {
         'gene': GeneHandler,
         # 'allele': AlleleHandler,
-        # 'construct': ConstructHandler,
+        'construct': ConstructHandler,
         # 'variation': VariationHandler,
         'strain': StrainHandler,
         # 'genotype': GenotypeHandler,
