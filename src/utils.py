@@ -21,7 +21,8 @@ from harvdev_utils.char_conversions import sub_sup_sgml_to_html
 from harvdev_utils.production import (
     Cvterm, Db, Dbxref, Organism, OrganismDbxref, Pub, PubDbxref, Featureloc,
     Strain, StrainPub, StrainSynonym, StrainDbxref, Strainprop, StrainpropPub, StrainCvterm, StrainCvtermprop,
-    Feature, FeaturePub, FeatureSynonym, FeatureDbxref, Featureprop, FeaturepropPub, FeatureCvterm, FeatureCvtermprop
+    Feature, FeaturePub, FeatureSynonym, FeatureDbxref, Featureprop, FeaturepropPub, FeatureCvterm, FeatureCvtermprop,
+    FeatureRelationship, FeatureRelationshipPub
 )
 import datatypes
 
@@ -1101,7 +1102,7 @@ class FeatureHandler(PrimaryEntityHandler):
         self.log.info(f'Ignored {pass_counter} chromosomal featurelocs for {self.fb_data_type} entities.')
         return
 
-    # Call get_chr_featurelocs() only for more specific FeatureHandler types.
+    # Call get_featureprops_by_type() only for more specific FeatureHandler types.
     def get_featureprops_by_type(self, session, fprop_type):
         """Return a list of featureprops of a given type."""
         self.log.info(f'Get featureprops of type {fprop_type} for {self.fb_data_type} entities.')
@@ -1127,6 +1128,104 @@ class FeatureHandler(PrimaryEntityHandler):
             filter(*filters).\
             distinct()
         return results
+
+    # Call get_entity_sbj_feat_rel_by_type() only for more specific FeatureHandler types.
+    def get_entity_sbj_feat_rel_by_type(self, session, result_slot, **kwargs):
+        """Return a list of FeatureRelationship/FeatureRelationshipPub tuples for handler's primary feature entities (as subject) by type.
+
+        Args:
+            result_slot (str): The name of the FB data entity attribute name to which results are appended.
+
+        Keyword Args:
+            rel_type (str): The CV term name for the feature_relationship of interest. If none given, any rel_type allowed.
+            obj_type (list): A list of CV terms for the object feature types. If none given, any object feature type allowed.
+            obj_regex (str): The regex for the object feature uniquename. If none given, any object uniquename allowed.
+        
+        """
+        self.log.info(f'Add feature_relationships to "{result_slot}" with these criteria: {kwargs}')
+        subject = aliased(Feature, name='subject')
+        object = aliased(Feature, name='object')
+        rel_type = aliased(Cvterm, name='rel_type')
+        obj_type = aliased(Cvterm, name='obj_type')
+        filters = (
+            subject.feature_id.in_(self.fb_data_entities.keys()),
+        )
+        try:
+            filters += (rel_type.name == kwargs['rel_type'], )
+        except KeyError:
+            pass
+        try:
+            filters += (obj_type.name == kwargs['obj_type'], )
+        except KeyError:
+            pass
+        try:
+            filters += (object.uniquename.op('~')(kwargs['obj_regex']), )
+        except KeyError:
+            pass
+        results = session(FeatureRelationship, FeatureRelationshipPub).\
+            select_from(subject).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == subject.feature_id)).\
+            join(object, (object.feature_id == FeatureRelationship.object_id)).\
+            join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
+            join(obj_type, (obj_type.cvterm_id == object.type_id)).\
+            join(FeatureRelationshipPub, (FeatureRelationshipPub.feature_relationship_id == FeatureRelationship.feature_relationship_id)).\
+            filter(*filters).\
+            distinct
+        counter = 0
+        for result in results:
+            self.fb_data_entity[result.FeatureRelationship.subject_id].__dict__[result_slot].append(result)
+            counter += 1
+        self.log.info(f'Added {counter} feature_relationship results to "{result_slot}" list.')
+        return
+
+    # Call get_entity_obj_feat_rel_by_type() only for more specific FeatureHandler types.
+    def get_entity_obj_feat_rel_by_type(self, session, result_slot, **kwargs):
+        """Return a list of FeatureRelationship/FeatureRelationshipPub tuples for handler's primary feature entities (as object) by type.
+
+        Args:
+            result_slot (str): The name of the FB data entity attribute name to which results are appended.
+
+        Keyword Args:
+            rel_type (str): The CV term name for the feature_relationship of interest. If none given, any rel_type allowed.
+            sbj_type (list): A list of CV terms for the subject feature types. If none given, any subject feature type allowed.
+            sbj_regex (str): The regex for the subject feature uniquename. If none given, any subject uniquename allowed.
+        
+        """
+        self.log.info(f'Add feature_relationships to "{result_slot}" with these criteria: {kwargs}')
+        subject = aliased(Feature, name='subject')
+        object = aliased(Feature, name='object')
+        rel_type = aliased(Cvterm, name='rel_type')
+        sbj_type = aliased(Cvterm, name='sbj_type')
+        filters = (
+            object.feature_id.in_(self.fb_data_entities.keys()),
+        )
+        try:
+            filters += (rel_type.name == kwargs['rel_type'], )
+        except KeyError:
+            pass
+        try:
+            filters += (sbj_type.name == kwargs['sbj_type'], )
+        except KeyError:
+            pass
+        try:
+            filters += (subject.uniquename.op('~')(kwargs['sbj_regex']), )
+        except KeyError:
+            pass
+        results = session(FeatureRelationship, FeatureRelationshipPub).\
+            select_from(subject).\
+            join(sbj_type, (sbj_type.cvterm_id == subject.type_id)).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == subject.feature_id)).\
+            join(object, (object.feature_id == FeatureRelationship.object_id)).\
+            join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
+            join(FeatureRelationshipPub, (FeatureRelationshipPub.feature_relationship_id == FeatureRelationship.feature_relationship_id)).\
+            filter(*filters).\
+            distinct
+        counter = 0
+        for result in results:
+            self.fb_data_entity[result.FeatureRelationship.object_id].__dict__[result_slot].append(result)
+            counter += 1
+        self.log.info(f'Added {counter} feature_relationship results to "{result_slot}" list.')
+        return
 
     def get_datatype_data(self, session):
         """Extend the method for the FeatureHandler."""
@@ -1193,9 +1292,11 @@ class ConstructHandler(FeatureHandler):
         super().__init__(log, fb_data_type, testing)
 
     test_set = {
-        'FBtp0008631': 'P{UAS-wg.H.T:HA1}',    # Expresses wg under UASt control.
-        'FBtp0010648': 'P{wg.FRT.B}',          # Expresses wg under sev control, has FRT casette.
-        'FBtp0032215': 'P{GD5007}',            # Targets wg under UASt control.
+        'FBtp0008631': 'P{UAS-wg.H.T:HA1}',                       # Expresses wg under UASt control.
+        'FBtp0010648': 'P{wg.FRT.B}',                             # Expresses wg under sev control, has FRT casette.
+        'FBtp0032215': 'P{GD5007}',                               # Targets wg under UASt control.
+        'FBtp0000352': 'P{GawB}',                                 # Expresses GAL4, a positional reporter.
+        'FBtp0161256': 'PBac{UAS-G-CEPIA1::TM-2A-TagRFP::TM}',    # Has two related alleles for Avic\GFP and Equa\eqFP578.
     }
     # Elaborate on export filters for ConstructHandler.
     required_fields = [
@@ -1230,9 +1331,23 @@ class ConstructHandler(FeatureHandler):
         return
 
     # Elaborate on get_datatype_data() sub-methods for ConstructHandler.
+    def get_construct_alleles(self, session):
+        """Get allele(s) to which constructs belongs."""
+        self.log.info(f'Get allele(s) to which constructs belong.')
+        self.get_entity_obj_feat_rel_by_type(session, 'parent_allele_rels', rel_type='associated_with', obj_type='allele', obj_regex=self.regex['allele'])
+        return
+
+    def get_construct_reg_regions(self, session):
+        """Get directly related reg_regions for the construct."""
+        self.log.info(f'Get allele(s) to which constructs belong.')
+        self.get_entity_sbj_feat_rel_by_type(session, 'reg_region_rels', rel_type='has_reg_region', sbj_regex=self.regex['feature'])
+        return
+
     def get_datatype_data(self, session):
         """Extend the method for the ConstructHandler."""
         super().get_datatype_data(session)
+        self.get_construct_alleles(session)
+        self.get_entity_sbj_feat_rel_by_type(session)
         return
 
     # Elaborate on synthesize_info() sub-methods for ConstructHandler.
