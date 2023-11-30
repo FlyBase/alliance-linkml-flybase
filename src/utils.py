@@ -55,9 +55,9 @@ class DataHandler(object):
         self.export_data = []         # List of data objects for export (as Alliance ingest set).
         # General data bins.
         self.bibliography = {}        # A pub_id-keyed dict of pub curies (PMID or FBrf).
-        self.feature_lookup = {}      # feature_id-keyed info: {'uniquename': 'FB:FBgn1', 'is_obsolete': False, 'name': 'alpha-T', 'symbol': 'α-T', 'exported': True}.
         self.cvterm_dict = {}         # A cvterm_id-keyed dict of Cvterm objects.
         self.ncbi_taxon_dict = {}     # An organism_id-keyed dict of NCBITaxon Dbxref.accession strings.
+        self.feature_lookup = {}      # feature_id-keyed lookup of basic feature info: uniquename, is_obsolete, name, symbol, exported, taxon_id and species.
         # Trackers.
         self.input_count = 0          # Count of entities found in FlyBase chado database.
         self.export_count = 0         # Count of exported Alliance entities.
@@ -169,49 +169,6 @@ class DataHandler(object):
         self.log.info(f'Found {pmid_counter} PMID IDs for {pub_counter} current FB publications.')
         return
 
-    def build_feature_lookup(self, session):
-        """Build a simple feature lookup for features."""
-        self.log.info('Build a simple feature lookup for features.')
-        # Feature types to add to the feature_lookup.
-        feat_type_export = {
-            'allele': True,
-            'construct': True,
-            'gene': True,
-            'aberration': False,
-            'balancer': False,
-            'chem': False,
-            'insertion': False,
-            'seqfeat': False,
-            'tool': False,
-        }
-        for feat_type, is_exported in feat_type_export.items():
-            self.log.info(f'Looking up {feat_type} features.')
-            filters = (
-                Feature.uniquename.op('~')(self.regex[feat_type]),
-                FeatureSynonym.is_current.is_(True),
-                Cvterm.name == 'symbol'
-            )
-            results = session.query(Feature, Synonym).\
-                select_from(Feature).\
-                join(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
-                join(Synonym, (Synonym.synonym_id == FeatureSynonym.synonym_id)).\
-                join(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
-                filter(*filters).\
-                distinct()
-            counter = 0
-            for result in results:
-                feat_dict = {
-                    'uniquename': result.Feature.uniquename,
-                    'is_obsolete': result.Feature.is_obsolete,
-                    'name': result.Feature.name,
-                    'symbol': sub_sup_sgml_to_html(result.Synonym.synonym_sgml),
-                    'exported': is_exported
-                }
-                self.feature_lookup[result.Feature.feature_id] = feat_dict
-                counter += 1
-            self.log.info(f'Added {counter} {feat_type} features to the feature_lookup.')
-        return
-
     def get_cvterms(self, session):
         """Create a cvterm_id-keyed dict of Cvterms."""
         self.log.info('Create a cvterm_id-keyed dict of Cvterms.')
@@ -246,13 +203,60 @@ class DataHandler(object):
         self.log.info(f'Found {counter} NCBITaxon IDs for FlyBase organisms.')
         return
 
+    def build_feature_lookup(self, session):
+        """Build a simple feature lookup."""
+        # Note - depends on prior construction of self.ncbi_taxon_dict and self.cvterm_dict.
+        self.log.info('Build a simple feature lookup.')
+        # Feature types to add to the feature_lookup.
+        feat_type_export = {
+            'allele': True,
+            'construct': True,
+            'gene': True,
+            'aberration': False,
+            'balancer': False,
+            'chem': False,
+            'insertion': False,
+            'seqfeat': False,
+            'tool': False,
+        }
+        for feat_type, is_exported in feat_type_export.items():
+            self.log.info(f'Looking up {feat_type} features.')
+            filters = (
+                Feature.uniquename.op('~')(self.regex[feat_type]),
+                FeatureSynonym.is_current.is_(True),
+                Cvterm.name == 'symbol'
+            )
+            results = session.query(Feature, Synonym).\
+                select_from(Feature).\
+                join(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
+                join(Synonym, (Synonym.synonym_id == FeatureSynonym.synonym_id)).\
+                join(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
+                filter(*filters).\
+                distinct()
+            counter = 0
+            for result in results:
+                feat_dict = {
+                    'uniquename': result.Feature.uniquename,
+                    'is_obsolete': result.Feature.is_obsolete,
+                    'type': self.cvterm_dict[result.Feature.type_id],
+                    'taxon_id': self.ncbi_taxon_dict[result.Feature.organism_id],
+                    'species': f'{result.Feature.organism.genus} {result.Feature.organism.species}',
+                    'name': result.Feature.name,
+                    'symbol': sub_sup_sgml_to_html(result.Synonym.synonym_sgml),
+                    'exported': is_exported
+                }
+                self.feature_lookup[result.Feature.feature_id] = feat_dict
+                counter += 1
+            self.log.info(f'Added {counter} {feat_type} features to the feature_lookup.')
+        return
+
     def get_general_data(self, session):
         """Get general FlyBase chado data."""
         self.log.info('Get general FlyBase data from chado.')
         self.build_bibliography(session)
-        self.build_feature_lookup(session)
         self.get_cvterms(session)
         self.get_ncbi_taxon_ids(session)
+        self.build_feature_lookup(session)
         return
 
     def get_datatype_data(self, session):
