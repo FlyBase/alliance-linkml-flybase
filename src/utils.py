@@ -1170,7 +1170,7 @@ class FeatureHandler(PrimaryEntityHandler):
             join(obj_type, (obj_type.cvterm_id == object.type_id)).\
             join(FeatureRelationshipPub, (FeatureRelationshipPub.feature_relationship_id == FeatureRelationship.feature_relationship_id)).\
             filter(*filters).\
-            distinct
+            distinct()
         counter = 0
         for result in results:
             self.fb_data_entity[result.FeatureRelationship.subject_id].__dict__[result_slot].append(result)
@@ -1219,7 +1219,7 @@ class FeatureHandler(PrimaryEntityHandler):
             join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
             join(FeatureRelationshipPub, (FeatureRelationshipPub.feature_relationship_id == FeatureRelationship.feature_relationship_id)).\
             filter(*filters).\
-            distinct
+            distinct()
         counter = 0
         for result in results:
             self.fb_data_entity[result.FeatureRelationship.object_id].__dict__[result_slot].append(result)
