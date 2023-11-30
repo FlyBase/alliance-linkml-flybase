@@ -1181,16 +1181,17 @@ class FeatureHandler(PrimaryEntityHandler):
 
     # Call get_entity_sbj_feat_rel_by_type() only for more specific FeatureHandler types.
     def get_entity_sbj_feat_rel_by_type(self, session, result_slot, **kwargs):
-        """Return a list of FeatureRelationship/FeatureRelationshipPub tuples for handler's primary feature entities (as subject) by type.
+        """Return a list of FeatureRelationship/FeatureRelationshipPub for primary feature entities (as subject) by type.
 
         Args:
+            session (Session): SQLAlchemy session for db queries.
             result_slot (str): The name of the FB data entity attribute name to which results are appended.
 
         Keyword Args:
             rel_type (str): The CV term name for the feature_relationship of interest. If none given, any rel_type allowed.
             obj_type (list): A list of CV terms for the object feature types. If none given, any object feature type allowed.
             obj_regex (str): The regex for the object feature uniquename. If none given, any object uniquename allowed.
-        
+
         """
         self.log.info(f'Add feature_relationships to "{result_slot}" with these criteria: {kwargs}')
         subject = aliased(Feature, name='subject')
@@ -1233,13 +1234,14 @@ class FeatureHandler(PrimaryEntityHandler):
         """Return a list of FeatureRelationship/FeatureRelationshipPub tuples for handler's primary feature entities (as object) by type.
 
         Args:
+            session (Session): SQLAlchemy session for db queries.
             result_slot (str): The name of the FB data entity attribute name to which results are appended.
 
         Keyword Args:
             rel_type (str): The CV term name for the feature_relationship of interest. If none given, any rel_type allowed.
             sbj_type (list): A list of CV terms for the subject feature types. If none given, any subject feature type allowed.
             sbj_regex (str): The regex for the subject feature uniquename. If none given, any subject uniquename allowed.
-        
+
         """
         self.log.info(f'Add feature_relationships to "{result_slot}" with these criteria: {kwargs}')
         subject = aliased(Feature, name='subject')
@@ -1387,13 +1389,13 @@ class ConstructHandler(FeatureHandler):
     # Elaborate on get_datatype_data() sub-methods for ConstructHandler.
     def get_construct_alleles(self, session):
         """Get allele(s) to which constructs belongs."""
-        self.log.info(f'Get allele(s) to which constructs belong.')
+        self.log.info('Get allele(s) to which constructs belong.')
         self.get_entity_obj_feat_rel_by_type(session, 'parent_allele_rels', rel_type='associated_with', sbj_type='allele', sbj_regex=self.regex['allele'])
         return
 
     def get_construct_reg_regions(self, session):
         """Get directly related reg_regions for the construct."""
-        self.log.info(f'Get reg_regions that belong to constructs.')
+        self.log.info('Get reg_regions that belong to constructs.')
         self.get_entity_sbj_feat_rel_by_type(session, 'reg_region_rels', rel_type='has_reg_region', obj_regex=self.regex['feature'])
         return
 
