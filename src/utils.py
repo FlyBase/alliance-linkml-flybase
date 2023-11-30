@@ -1173,7 +1173,7 @@ class FeatureHandler(PrimaryEntityHandler):
             distinct()
         counter = 0
         for result in results:
-            self.fb_data_entity[result.FeatureRelationship.subject_id].__dict__[result_slot].append(result)
+            self.fb_data_entities[result.FeatureRelationship.subject_id].__dict__[result_slot].append(result)
             counter += 1
         self.log.info(f'Added {counter} feature_relationship results to "{result_slot}" list.')
         return
@@ -1222,7 +1222,7 @@ class FeatureHandler(PrimaryEntityHandler):
             distinct()
         counter = 0
         for result in results:
-            self.fb_data_entity[result.FeatureRelationship.object_id].__dict__[result_slot].append(result)
+            self.fb_data_entities[result.FeatureRelationship.object_id].__dict__[result_slot].append(result)
             counter += 1
         self.log.info(f'Added {counter} feature_relationship results to "{result_slot}" list.')
         return
