@@ -1162,7 +1162,7 @@ class FeatureHandler(PrimaryEntityHandler):
             filters += (object.uniquename.op('~')(kwargs['obj_regex']), )
         except KeyError:
             pass
-        results = session(FeatureRelationship, FeatureRelationshipPub).\
+        results = session.query(FeatureRelationship, FeatureRelationshipPub).\
             select_from(subject).\
             join(FeatureRelationship, (FeatureRelationship.subject_id == subject.feature_id)).\
             join(object, (object.feature_id == FeatureRelationship.object_id)).\
@@ -1211,7 +1211,7 @@ class FeatureHandler(PrimaryEntityHandler):
             filters += (subject.uniquename.op('~')(kwargs['sbj_regex']), )
         except KeyError:
             pass
-        results = session(FeatureRelationship, FeatureRelationshipPub).\
+        results = session.query(FeatureRelationship, FeatureRelationshipPub).\
             select_from(subject).\
             join(sbj_type, (sbj_type.cvterm_id == subject.type_id)).\
             join(FeatureRelationship, (FeatureRelationship.subject_id == subject.feature_id)).\
