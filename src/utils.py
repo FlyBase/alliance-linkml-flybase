@@ -1297,6 +1297,10 @@ class ConstructHandler(FeatureHandler):
         'FBtp0032215': 'P{GD5007}',                               # Targets wg under UASt control.
         'FBtp0000352': 'P{GawB}',                                 # Expresses GAL4, a positional reporter.
         'FBtp0161256': 'PBac{UAS-G-CEPIA1::TM-2A-TagRFP::TM}',    # Has two related alleles for Avic\GFP and Equa\eqFP578.
+        'FBtp0051705': 'M{MtnBcDNA-MtnDcDNA.EGFP}',               # has_reg_region MtnB.
+        'FBtp0080064': 'P{UAS-Brainbow1.1-M}',                    # has_reg_region UASt.
+        'FBtp0080088': 'P{UAS-Brainbow}',                         # has_reg_region UAS.
+        'FBtp0083738': 'P{GR}',                                   # has_reg_region Act5C.
     }
     # Elaborate on export filters for ConstructHandler.
     required_fields = [
