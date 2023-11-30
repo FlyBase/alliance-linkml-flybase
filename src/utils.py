@@ -1347,7 +1347,7 @@ class ConstructHandler(FeatureHandler):
         """Extend the method for the ConstructHandler."""
         super().get_datatype_data(session)
         self.get_construct_alleles(session)
-        self.get_entity_sbj_feat_rel_by_type(session)
+        self.get_construct_reg_regions(session)
         return
 
     # Elaborate on synthesize_info() sub-methods for ConstructHandler.
