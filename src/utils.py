@@ -1334,13 +1334,13 @@ class ConstructHandler(FeatureHandler):
     def get_construct_alleles(self, session):
         """Get allele(s) to which constructs belongs."""
         self.log.info(f'Get allele(s) to which constructs belong.')
-        self.get_entity_obj_feat_rel_by_type(session, 'parent_allele_rels', rel_type='associated_with', obj_type='allele', obj_regex=self.regex['allele'])
+        self.get_entity_obj_feat_rel_by_type(session, 'parent_allele_rels', rel_type='associated_with', sbj_type='allele', sbj_regex=self.regex['allele'])
         return
 
     def get_construct_reg_regions(self, session):
         """Get directly related reg_regions for the construct."""
-        self.log.info(f'Get allele(s) to which constructs belong.')
-        self.get_entity_sbj_feat_rel_by_type(session, 'reg_region_rels', rel_type='has_reg_region', sbj_regex=self.regex['feature'])
+        self.log.info(f'Get reg_regions that belong to constructs.')
+        self.get_entity_sbj_feat_rel_by_type(session, 'reg_region_rels', rel_type='has_reg_region', obj_regex=self.regex['feature'])
         return
 
     def get_datatype_data(self, session):
