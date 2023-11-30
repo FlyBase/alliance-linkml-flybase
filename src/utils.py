@@ -239,12 +239,15 @@ class DataHandler(object):
                     'uniquename': result.Feature.uniquename,
                     'is_obsolete': result.Feature.is_obsolete,
                     'type': self.cvterm_dict[result.Feature.type_id],
-                    'taxon_id': self.ncbi_taxon_dict[result.Feature.organism_id],
                     'species': f'{result.Feature.organism.genus} {result.Feature.organism.species}',
                     'name': result.Feature.name,
                     'symbol': sub_sup_sgml_to_html(result.Synonym.synonym_sgml),
                     'exported': is_exported
                 }
+                try:
+                    feat_dict['taxon_id'] = self.ncbi_taxon_dict[result.Feature.organism_id]
+                except KeyError:
+                    feat_dict['taxon_id'] = 'NCBITaxon:32644'    # Unspecified taxon.
                 self.feature_lookup[result.Feature.feature_id] = feat_dict
                 counter += 1
             self.log.info(f'Added {counter} {feat_type} features to the feature_lookup.')
