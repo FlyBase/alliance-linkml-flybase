@@ -1248,6 +1248,7 @@ class ConstructHandler(FeatureHandler):
         for construct in self.fb_data_entities.values():
             agr_construct = datatypes.ConstructDTO()
             agr_construct.obsolete = construct.chado_obj.is_obsolete
+            agr_construct.mod_entity_id = construct.uniquename
             construct.linkmldto = agr_construct
         return
 
