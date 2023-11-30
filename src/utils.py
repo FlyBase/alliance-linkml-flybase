@@ -22,7 +22,7 @@ from harvdev_utils.production import (
     Cvterm, Db, Dbxref, Organism, OrganismDbxref, Pub, PubDbxref, Featureloc,
     Strain, StrainPub, StrainSynonym, StrainDbxref, Strainprop, StrainpropPub, StrainCvterm, StrainCvtermprop,
     Feature, FeaturePub, FeatureSynonym, FeatureDbxref, Featureprop, FeaturepropPub, FeatureCvterm, FeatureCvtermprop,
-    FeatureRelationship, FeatureRelationshipPub
+    FeatureRelationship, FeatureRelationshipPub, Synonym
 )
 import datatypes
 
@@ -55,6 +55,7 @@ class DataHandler(object):
         self.export_data = []         # List of data objects for export (as Alliance ingest set).
         # General data bins.
         self.bibliography = {}        # A pub_id-keyed dict of pub curies (PMID or FBrf).
+        self.feature_lookup = {}      # feature_id-keyed info: {'uniquename': 'FB:FBgn1', 'is_obsolete': False, 'name': 'alpha-T', 'symbol': 'α-T', 'exported': True}.
         self.cvterm_dict = {}         # A cvterm_id-keyed dict of Cvterm objects.
         self.ncbi_taxon_dict = {}     # An organism_id-keyed dict of NCBITaxon Dbxref.accession strings.
         # Trackers.
@@ -107,17 +108,18 @@ class DataHandler(object):
     # Useful regexes.
     regex = {
         'pub': r'^(FBrf[0-9]{7}|unattributed)$',
+        'abbal': r'^FB(ab|ba)[0-9]{7}$',
+        'aberration': r'^FBab[0-9]{7}$',
+        'allele': r'^FBal[0-9]{7}$',
+        'balancer': r'^FBba[0-9]{7}$',
+        'chem': r'^FBch[0-9]{7}$',
+        'consins': r'^FB(tp|ti)[0-9]{7}$',
+        'construct': r'^FBtp[0-9]{7}$',
         'feature': r'^FB[a-z]{2}[0-9]{7,10}$',
         'gene': r'^FBgn[0-9]{7}$',
-        'allele': r'^FBal[0-9]{7}$',
-        'construct': r'^FBtp[0-9]{7}$',
         'insertion': r'^FBti[0-9]{7}$',
-        'consins': r'^FB(tp|ti)[0-9]{7}$',
-        'aberration': r'^FBab[0-9]{7}$',
-        'balancer': r'^FBba[0-9]{7}$',
-        'abbal': r'^FB(ab|ba)[0-9]{7}$',
         'seqfeat': r'^FBsf[0-9]{10}$',
-        'chem': r'^FBch[0-9]{7}$',
+        'tool': r'^FBto[0-9]{7}$',
         'genotype': r'^FBgo[0-9]{7}$',
         'strain': r'^FBsn[0-9]{7}$',
         'library': r'^FBlc[0-9]{7}$',
@@ -167,6 +169,49 @@ class DataHandler(object):
         self.log.info(f'Found {pmid_counter} PMID IDs for {pub_counter} current FB publications.')
         return
 
+    def build_feature_lookup(self, session):
+        """Build a simple feature lookup for features."""
+        self.log.info('Build a simple feature lookup for features.')
+        # Feature types to add to the feature_lookup.
+        feat_type_export = {
+            'allele': True,
+            'construct': True,
+            'gene': True,
+            'aberration': False,
+            'balancer': False,
+            'chem': False,
+            'insertion': False,
+            'seqfeat': False,
+            'tool': False,
+        }
+        for feat_type, is_exported in feat_type_export.items():
+            self.log.info(f'Looking up {feat_type} features.')
+            filters = (
+                Feature.uniquename.op('~')(self.regex[feat_type]),
+                FeatureSynonym.is_current.is_(True),
+                Cvterm.name == 'symbol'
+            )
+            results = session.query(Feature, Synonym).\
+                select_from(Feature).\
+                join(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
+                join(Synonym, (Synonym.synonym_id == FeatureSynonym.synonym_id)).\
+                join(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
+                filter(*filters).\
+                distinct()
+            counter = 0
+            for result in results:
+                feat_dict = {
+                    'uniquename': result.Feature.uniquename,
+                    'is_obsolete': result.Feature.is_obsolete,
+                    'name': result.Feature.name,
+                    'symbol': sub_sup_sgml_to_html(result.Synonym.synonym_sgml),
+                    'exported': is_exported
+                }
+                self.feature_lookup[result.Feature.feature_id] = feat_dict
+                counter += 1
+            self.log.info(f'Added {counter} {feat_type} features to the feature_lookup.')
+        return
+
     def get_cvterms(self, session):
         """Create a cvterm_id-keyed dict of Cvterms."""
         self.log.info('Create a cvterm_id-keyed dict of Cvterms.')
@@ -205,6 +250,7 @@ class DataHandler(object):
         """Get general FlyBase chado data."""
         self.log.info('Get general FlyBase data from chado.')
         self.build_bibliography(session)
+        self.build_feature_lookup(session)
         self.get_cvterms(session)
         self.get_ncbi_taxon_ids(session)
         return
