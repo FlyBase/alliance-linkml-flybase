@@ -115,7 +115,7 @@ class DataHandler(object):
         'chem': r'^FBch[0-9]{7}$',
         'consins': r'^FB(tp|ti)[0-9]{7}$',
         'construct': r'^FBtp[0-9]{7}$',
-        'feature': r'^FB[a-z]{2}[0-9]{7,10}$',
+        'fb_uniquename': r'^FB[a-z]{2}[0-9]{7,10}$',
         'gene': r'^FBgn[0-9]{7}$',
         'insertion': r'^FBti[0-9]{7}$',
         'seqfeat': r'^FBsf[0-9]{10}$',
@@ -1107,6 +1107,34 @@ class FeatureHandler(PrimaryEntityHandler):
         self.log.info(f'Added {counter} current allele-gene relationships to the allele-gene lookup.')
         return
 
+    # Call build_seqfeat_gene_lookup() only for more specific FeatureHandler types.
+    def build_seqfeat_gene_lookup(self, session):
+        """Build an seqfeat-gene lookup dict, current features only."""
+        self.log.info('Build an seqfeat-gene lookup dict, current features only.')
+        seqfeat = aliased(Feature, name='seqfeat')
+        gene = aliased(Feature, name='gene')
+        rel_type = aliased(Cvterm, name='rel_type')
+        filters = (
+            seqfeat.is_obsolete.is_(False),
+            seqfeat.uniquename.op('~')(self.regex['seqfeat']),
+            gene.is_obsolete.is_(False),
+            gene.uniquename.op('~')(self.regex['gene']),
+            rel_type.name == 'associated_with'
+        )
+        results = session.query(seqfeat, gene).\
+            select_from(seqfeat).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == seqfeat.feature_id)).\
+            join(gene, (gene.feature_id == FeatureRelationship.object_id)).\
+            join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            self.seqfeat_gene_lookup[result.seqfeat.feature_id] = result.gene.feature_id
+            counter += 1
+        self.log.info(f'Added {counter} current seqfeat-gene relationships to the seqfeat-gene lookup.')
+        return
+
     def get_general_data(self, session):
         """Extend the method for the FeatureHandler."""
         super().get_general_data(session)
@@ -1373,7 +1401,8 @@ class ConstructHandler(FeatureHandler):
     def __init__(self, log: Logger, fb_data_type: str, testing: bool):
         """Create the ConstructHandler object."""
         super().__init__(log, fb_data_type, testing)
-        self.allele_gene_lookup = {}    # Will be allele feature_id-keyed gene feature_ids.
+        self.allele_gene_lookup = {}     # Will be allele feature_id-keyed gene feature_ids.
+        self.seqfeat_gene_lookup = {}    # Will be seqfeat feature_id-keyed gene feature_ids.
 
     test_set = {
         'FBtp0008631': 'P{UAS-wg.H.T:HA1}',                       # Expresses wg under UASt control.
@@ -1385,6 +1414,7 @@ class ConstructHandler(FeatureHandler):
         'FBtp0080064': 'P{UAS-Brainbow1.1-M}',                    # has_reg_region UASt.
         'FBtp0080088': 'P{UAS-Brainbow}',                         # has_reg_region UAS.
         'FBtp0083738': 'P{GR}',                                   # has_reg_region Act5C.
+        'FBtp0000074': 'P{ftzG}',                                 # Expresses and regulated by ftz.
     }
     # Elaborate on export filters for ConstructHandler.
     required_fields = [
@@ -1417,6 +1447,7 @@ class ConstructHandler(FeatureHandler):
         """Extend the method for the ConstructHandler."""
         super().get_general_data(session)
         self.build_allele_gene_lookup(session)
+        self.build_seqfeat_gene_lookup(session)
         return
 
     # Elaborate on get_datatype_data() sub-methods for ConstructHandler.
@@ -1429,7 +1460,7 @@ class ConstructHandler(FeatureHandler):
     def get_construct_reg_regions(self, session):
         """Get directly related reg_regions for the construct."""
         self.log.info('Get reg_regions that belong to constructs.')
-        self.get_entity_sbj_feat_rel_by_type(session, 'reg_region_rels', rel_type='has_reg_region', obj_regex=self.regex['feature'])
+        self.get_entity_sbj_feat_rel_by_type(session, 'reg_region_rels', rel_type='has_reg_region', obj_regex=self.regex['fb_uniquename'])
         return
 
     def get_datatype_data(self, session):
