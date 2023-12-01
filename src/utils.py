@@ -48,7 +48,7 @@ class DataHandler(object):
         """
         self.log = log
         self.fb_data_type = fb_data_type
-        self.agr_ingest_typef = self.agr_ingest_type_dict[fb_data_type]
+        self.agr_ingest_type = self.agr_ingest_type_dict[fb_data_type]
         self.testing = testing
         # Datatype bins.
         self.fb_data_entities = {}    # db_primary_id-keyed dict of chado objects to export.
