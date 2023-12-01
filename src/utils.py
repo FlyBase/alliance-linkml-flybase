@@ -1079,6 +1079,22 @@ class FeatureHandler(PrimaryEntityHandler):
         self.log.info(f'Got basic info for {counter} current Dmel chr scaffolds.')
         return
 
+    def build_feature_relationship_evidence_lookup(self, session):
+        """Build evidence lookup for feature_relationships."""
+        results = session.query(FeatureRelationshipPub).distinct()
+        counter = 0
+        fr_counter = 0
+        for result in results:
+            try:
+                self.feat_rel_pub_lookup[result.feature_relationship_id].append(result.pub_id)
+                counter += 1
+            except KeyError:
+                self.feat_rel_pub_lookup[result.feature_relationship_id] = [result.pub_id]
+                fr_counter += 1
+                counter += 1
+        self.log.info(f'Found {counter} pubs supporting {fr_counter} feature_relationships.')
+        return
+
     # Call build_allele_gene_lookup() only for more specific FeatureHandler types.
     def build_allele_gene_lookup(self, session):
         """Build an allele-gene lookup dict, current features only."""
@@ -1133,6 +1149,36 @@ class FeatureHandler(PrimaryEntityHandler):
             self.seqfeat_gene_lookup[result.seqfeat.feature_id] = result.gene.feature_id
             counter += 1
         self.log.info(f'Added {counter} current seqfeat-gene relationships to the seqfeat-gene lookup.')
+        return
+    # Call build_gene_tool_lookup() only for more specific Handler types.
+    def build_gene_tool_lookup(self, session):
+        """Build a lookup of gene-to-tool relationships for filtering reporting, current only."""
+        self.log.info('Build a lookup of gene-to-tool relationships for filtering reporting.')
+        gene = aliased(Feature, name='gene')
+        tool = aliased(Feature, name='tool')
+        filters = (
+            gene.is_obsolete.is_(False),
+            gene.uniquename.op('~')(self.regex['gene']),
+            tool.is_obsolete.is_(False),
+            tool.uniquename.op('~')(self.regex['tool']),
+            Cvterm.name == 'originates_from'
+        )
+        results = session.query(gene, tool).\
+            select_from(gene).\
+            join(FeatureRelationship, (FeatureRelationship.object_id == gene.feature_id)).\
+            join(tool, (tool.feature_id == FeatureRelationship.subject_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            try:
+                self.gene_tool_lookup[result.gene.feature_id].append(result.tool.feature_id)
+                counter += 1
+            except KeyError:
+                self.gene_tool_lookup[result.gene.feature_id] = [result.tool.feature_id]
+                counter += 1
+        self.log.info(f'Found {counter} gene-to-tool relationships.')
         return
 
     # Call build_allele_class_lookup() only for more specific FeatureHandler types.
@@ -1294,7 +1340,7 @@ class FeatureHandler(PrimaryEntityHandler):
 
     # Call get_entity_sbj_feat_rel_by_type() only for more specific FeatureHandler types.
     def get_entity_sbj_feat_rel_by_type(self, session, result_slot, **kwargs):
-        """Return a list of FeatureRelationship/FeatureRelationshipPub for primary feature entities (as subject) by type.
+        """Get a list of FeatureRelationship objects for primary feature entities (as subject) by type.
 
         Args:
             session (Session): SQLAlchemy session for db queries.
@@ -1326,25 +1372,24 @@ class FeatureHandler(PrimaryEntityHandler):
             filters += (object.uniquename.op('~')(kwargs['obj_regex']), )
         except KeyError:
             pass
-        results = session.query(FeatureRelationship, FeatureRelationshipPub).\
+        results = session.query(FeatureRelationship).\
             select_from(subject).\
             join(FeatureRelationship, (FeatureRelationship.subject_id == subject.feature_id)).\
             join(object, (object.feature_id == FeatureRelationship.object_id)).\
             join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
             join(obj_type, (obj_type.cvterm_id == object.type_id)).\
-            join(FeatureRelationshipPub, (FeatureRelationshipPub.feature_relationship_id == FeatureRelationship.feature_relationship_id)).\
             filter(*filters).\
             distinct()
         counter = 0
         for result in results:
-            self.fb_data_entities[result.FeatureRelationship.subject_id].__dict__[result_slot].append(result)
+            self.fb_data_entities[result.subject_id].__dict__[result_slot].append(result)
             counter += 1
         self.log.info(f'Added {counter} feature_relationship results to "{result_slot}" list.')
         return
 
     # Call get_entity_obj_feat_rel_by_type() only for more specific FeatureHandler types.
     def get_entity_obj_feat_rel_by_type(self, session, result_slot, **kwargs):
-        """Return a list of FeatureRelationship/FeatureRelationshipPub tuples for handler's primary feature entities (as object) by type.
+        """Return a list of FeatureRelationship objects for handler's primary feature entities (as object) by type.
 
         Args:
             session (Session): SQLAlchemy session for db queries.
@@ -1376,18 +1421,17 @@ class FeatureHandler(PrimaryEntityHandler):
             filters += (subject.uniquename.op('~')(kwargs['sbj_regex']), )
         except KeyError:
             pass
-        results = session.query(FeatureRelationship, FeatureRelationshipPub).\
+        results = session.query(FeatureRelationship).\
             select_from(subject).\
             join(sbj_type, (sbj_type.cvterm_id == subject.type_id)).\
             join(FeatureRelationship, (FeatureRelationship.subject_id == subject.feature_id)).\
             join(object, (object.feature_id == FeatureRelationship.object_id)).\
             join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
-            join(FeatureRelationshipPub, (FeatureRelationshipPub.feature_relationship_id == FeatureRelationship.feature_relationship_id)).\
             filter(*filters).\
             distinct()
         counter = 0
         for result in results:
-            self.fb_data_entities[result.FeatureRelationship.object_id].__dict__[result_slot].append(result)
+            self.fb_data_entities[result.object_id].__dict__[result_slot].append(result)
             counter += 1
         self.log.info(f'Added {counter} feature_relationship results to "{result_slot}" list.')
         return
@@ -1455,9 +1499,11 @@ class ConstructHandler(FeatureHandler):
     def __init__(self, log: Logger, fb_data_type: str, testing: bool):
         """Create the ConstructHandler object."""
         super().__init__(log, fb_data_type, testing)
+        self.feat_rel_pub_lookup = {}               # Will be feature_relationship_id-keyed lists of supporting pub_ids.
         self.allele_gene_lookup = {}                # Will be allele feature_id-keyed gene feature_ids.
         self.seqfeat_gene_lookup = {}               # Will be seqfeat feature_id-keyed gene feature_ids.
         self.transgenic_allele_class_lookup = {}    # Will be an allele feature_id-keyed list of "transgenic product class" CV terms.
+        self.gene_tool_lookup = {}                  # Will be gene feature_id-keyed lists of related FBto tools.
     test_set = {
         'FBtp0008631': 'P{UAS-wg.H.T:HA1}',                       # Expresses FBgn wg, regulated by FBto UASt.
         'FBtp0010648': 'P{wg.FRT.B}',                             # Expresses FBgn wg, regulated by FBgn sev, has FBto FRT.
@@ -1505,23 +1551,34 @@ class ConstructHandler(FeatureHandler):
     def get_general_data(self, session):
         """Extend the method for the ConstructHandler."""
         super().get_general_data(session)
+        self.build_feature_relationship_evidence_lookup(session)
         # self.build_allele_gene_lookup(session)     # BOB: temporarily disabled for faster dev
         # self.build_seqfeat_gene_lookup(session)    # BOB: temporarily disabled for faster dev
         self.build_allele_class_lookup(session)
+        self.build_gene_tool_lookup(session)
         return
 
     # Elaborate on get_datatype_data() sub-methods for ConstructHandler.
     def get_construct_alleles(self, session):
-        """Get allele(s) to which constructs belongs."""
+        """Get allele(s) to which constructs belong."""
         self.log.info('Get allele(s) to which constructs belong.')
         self.get_entity_obj_feat_rel_by_type(session, 'parent_allele_rels', rel_type='associated_with', sbj_type='allele', sbj_regex=self.regex['allele'])
         return
 
+    def get_construct_encoded_tools(self, session):
+        """Get directly related encoded FBto/FBsf objects for the construct."""
+        self.log.info('Get directly related encoded FBto/FBsf objects for the construct.')
+        self.get_entity_sbj_feat_rel_by_type(session, 'encodes_tool_rels', rel_type='encodes_tool', obj_regex=self.regex['fb_uniquename'])
+        return
+
     def get_construct_reg_regions(self, session):
-        """Get directly related reg_regions for the construct."""
-        self.log.info('Get reg_regions that belong to constructs.')
+        """Get directly related regulatory FBgn/FBto/FBsf objects for the construct."""
+        self.log.info('Get directly related regulatory FBgn/FBto/FBsf objects for the construct.')
         self.get_entity_sbj_feat_rel_by_type(session, 'reg_region_rels', rel_type='has_reg_region', obj_regex=self.regex['fb_uniquename'])
         return
+
+
+encodes_tool_rels
 
     def get_datatype_data(self, session):
         """Extend the method for the ConstructHandler."""
