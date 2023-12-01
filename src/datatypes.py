@@ -105,17 +105,14 @@ class FBConstruct(FBFeature):
         """Create the FBConstruct object."""
         super().__init__(chado_obj)
         # Primary FB chado data.
-        # Direct relationships.
-        self.encodes_tool_rels = []     # Will be (FeatureRelationship, FeatureRelationshipPub) results for direct "encodes" relationships.
-        self.reg_region_rels = []       # Will be (FeatureRelationship, FeatureRelationshipPub) results for direct "has_reg_region" relationships.
+        # Direct relationships (lists of (FeatureRelationship, FeatureRelationshipPub) results).
+        self.encodes_tool_rels = []     # Direct "encodes" relationships.
+        self.reg_region_rels = []       # Direct "has_reg_region" relationships.
         self.parent_allele_rels = []    # Will be (FeatureRelationship, FeatureRelationshipPub) results for parental allele(s).
-
-
-
         # Processed FB data.
-        self.expressed_features = []     # Will be list of feature_ids for expressed things.
-        self.targeted_features = []      # Will be list of feature_ids for targeted things.
-        self.regulating_features = []    # Will be list of feature_ids for things that regulate the construct.
+        self.expressed_features = []     # Will be list of feature_ids for expressed things: FBgn and FBto.
+        self.targeted_features = []      # Will be list of feature_ids for targeted things: FBgn.
+        self.regulating_features = []    # Will be list of feature_ids for things that regulate the construct: FBgn, FBto and FBsf.
 
 
 class FBStrain(FBDataEntity):
@@ -235,7 +232,12 @@ class GeneDTO(GenomicEntityDTO):
 class EvidenceAssociationDTO(AuditedObjectDTO):
     """EvidenceAssociationDTO class."""
     def __init__(self, evidence_curies: list):
-        """Create EvidenceAssociationDTO for FlyBase object."""
+        """Create EvidenceAssociationDTO for FlyBase object.
+
+        Args:
+            evidence_curies (list): A list of FB:FBrf or PMID:### curies.
+
+        """
         super().__init__()
         self.evidence_curies = evidence_curies
         self.required_fields.extend([])
@@ -250,6 +252,7 @@ class ConstructGenomicEntityAssociationDTO(EvidenceAssociationDTO):
             construct_id (str): The FB:FBtp curie for the construct subject.
             rel_type (str): A CV term from "Construct Genomic Entity Association Relation": expressed, targets, or, is_regulated_by.
             genomic_id (str): The FB:FB curie for the construct object, limited to LinkML exported entities.
+            evidence_curies (list): A list of FB:FBrf or PMID:### curies.
 
         """
         super().__init__(evidence_curies)

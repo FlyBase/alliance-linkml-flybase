@@ -1135,6 +1135,83 @@ class FeatureHandler(PrimaryEntityHandler):
         self.log.info(f'Added {counter} current seqfeat-gene relationships to the seqfeat-gene lookup.')
         return
 
+    # Call build_allele_class_lookup() only for more specific FeatureHandler types.
+    def build_allele_class_lookup(self, session):
+        """Build a lookup of allele "transgenic product class" values."""
+        self.log.info(f'Build a lookup of allele "transgenic product class" values.')
+        # FYI, these terms indicate that the allele targets its parent gene: ['RNAi_reagent', 'sgRNA', 'antisense'].
+        # Main query.
+        cvterm = aliased(Cvterm, name='cvterm')
+        qualifier = aliased(Cvterm, name='qualifier')
+        filters = (
+            Feature.uniquename.op('~')(self.regex['allele']),
+            cvterm.is_obsolete == 0,
+            qualifier.name == 'transgenic_product_class',
+        )
+        results = session.query(Feature, cvterm).\
+            select_from(Feature).\
+            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
+            join(cvterm, (cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
+            join(FeatureCvtermprop, (FeatureCvtermprop.feature_cvterm_id == FeatureCvterm.feature_cvterm_id)).\
+            join(qualifier, (qualifier.cvterm_id == FeatureCvtermprop.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            try:
+                self.transgenic_allele_class_lookup[result.Feature].append(result.cvterm.name)
+                counter += 1
+            except KeyError:
+                self.transgenic_allele_class_lookup[result.Feature] = [result.cvterm.name]
+                counter += 1
+        self.log.info(f'Found {counter} transgenic product class terms for alleles.')
+        # Back up 1. Look at mutagen terms.
+        filters = (
+            Feature.uniquename.op('~')(self.regex['allele']),
+            Cvterm.name == 'in vitro construct - RNAi',
+        )
+        results = session.query(Feature).\
+            select_from(Feature).\
+            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            if result.feature_id not in self.transgenic_allele_class_lookup.keys():
+                self.transgenic_allele_class_lookup[result.feature_id] = ['RNAi_reagent']
+                counter += 1
+            elif 'RNAi_reagent' not in self.transgenic_allele_class_lookup[result.feature_id]:
+                self.transgenic_allele_class_lookup[result.feature_id].append('RNAi_reagent')
+                counter += 1
+        self.log.info(f'Found an additional {counter} RNAi reagent alleles via mutagen terms.')
+        # Back up 2. Look at related seqfeats.
+        allele = aliased(Feature, name='allele')
+        seqfeat = aliased(Feature, name='seqfeat')
+        target_types = ['sgRNA', 'RNAi_reagent']
+        filters = (
+            allele.uniquename.op('~')(self.regex['allele']),
+            seqfeat.uniquename.op('~')(self.regex['seqfeat']),
+            Cvterm.name.in_((target_types))
+        )
+        results = session.query(allele, Cvterm).\
+            select_from(allele).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
+            join(seqfeat, (seqfeat.feature_id == FeatureRelationship.object_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == seqfeat.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            if result.allele.feature_id not in self.transgenic_allele_class_lookup.keys():
+                self.transgenic_allele_class_lookup[result.allele.feature_id] = [result.Cvterm.name]
+                counter += 1
+            elif result.Cvterm.name not in self.transgenic_allele_class_lookup[result.allele.feature_id]:
+                self.transgenic_allele_class_lookup[result.allele.feature_id].append(result.Cvterm.name)
+                counter += 1
+        self.log.info(f'Found an additional {counter} targeting alleles via associated seqfeats.')
+        return
+
     def get_general_data(self, session):
         """Extend the method for the FeatureHandler."""
         super().get_general_data(session)
@@ -1401,20 +1478,25 @@ class ConstructHandler(FeatureHandler):
     def __init__(self, log: Logger, fb_data_type: str, testing: bool):
         """Create the ConstructHandler object."""
         super().__init__(log, fb_data_type, testing)
-        self.allele_gene_lookup = {}     # Will be allele feature_id-keyed gene feature_ids.
-        self.seqfeat_gene_lookup = {}    # Will be seqfeat feature_id-keyed gene feature_ids.
-
+        self.allele_gene_lookup = {}                # Will be allele feature_id-keyed gene feature_ids.
+        self.seqfeat_gene_lookup = {}               # Will be seqfeat feature_id-keyed gene feature_ids.
+        self.transgenic_allele_class_lookup = []    # Will be an allele feature_id-keyed list of "transgenic product class" CV terms.
     test_set = {
-        'FBtp0008631': 'P{UAS-wg.H.T:HA1}',                       # Expresses wg under UASt control.
-        'FBtp0010648': 'P{wg.FRT.B}',                             # Expresses wg under sev control, has FRT casette.
-        'FBtp0032215': 'P{GD5007}',                               # Targets wg under UASt control.
-        'FBtp0000352': 'P{GawB}',                                 # Expresses GAL4, a positional reporter.
-        'FBtp0161256': 'PBac{UAS-G-CEPIA1::TM-2A-TagRFP::TM}',    # Has two related alleles for Avic\GFP and Equa\eqFP578.
+        'FBtp0008631': 'P{UAS-wg.H.T:HA1}',                       # Expresses FBgn wg, regulated by FBto UASt.
+        'FBtp0010648': 'P{wg.FRT.B}',                             # Expresses FBgn wg, regulated by FBgn sev, has FBto FRT.
+        'FBtp0145675': 'PBac{UAS-hHTT.ex1.Q97.S13D.mCherry}',     # Expresses FBgn Hsap\HTT, regulated by FBto UAS, tagged with FBto mCherry.
+        'FBtp0000074': 'P{ftzG}',                                 # Expresses FBgn ftz, regulated by FBgn ftz.
+        'FBtp0000326': 'P{SEV5}',                                 # Expresses FBgn sev, tagged with FBto MYC.
+        'FBtp0161516': 'P{lush-GAL4.3}',                          # Expresses FBto GAL4, regulated by FBgn lush.
+        'FBtp0032215': 'P{GD5007}',                               # Targets FBgn wg, regulated by FBto UASt.
+        'FBtp0031452': 'P{GD4157}',                               # Targets FBgn lbe, regulated by FBto UASt.
+        'FBtp0145396': 'P{TOE.GS00055}',                          # Targets FBgn wg, regulated by FBto UASt.
+        'FBtp0145394': 'P{TKO.GS00469}',                          # Targets FBgn Alp9, Alp10, regulated by FBto UASt.
+        'FBtp0000352': 'P{GawB}',                                 # Expresses FBto GAL4, FBgn Scer\GAL4. Report both?
+        'FBtp0161256': 'PBac{UAS-G-CEPIA1::TM-2A-TagRFP::TM}',    # 2 FBal; expresses FBto G-CEPIA1, RFP; expresses FBgn Equa\eqFP578, GFP; regulated by UAS.
         'FBtp0051705': 'M{MtnBcDNA-MtnDcDNA.EGFP}',               # has_reg_region MtnB.
-        'FBtp0080064': 'P{UAS-Brainbow1.1-M}',                    # has_reg_region UASt.
-        'FBtp0080088': 'P{UAS-Brainbow}',                         # has_reg_region UAS.
-        'FBtp0083738': 'P{GR}',                                   # has_reg_region Act5C.
-        'FBtp0000074': 'P{ftzG}',                                 # Expresses and regulated by ftz.
+        'FBtp0080088': 'P{UAS-Brainbow}',                         # Expresses EBFP2, EGFP, mKO2, has_reg_region UAS; tagged_with HA, MYC, V5; carries lox.
+        'FBtp0083738': 'P{GR}',                                   # Is regulated_by FBgn Act5C.
     }
     # Elaborate on export filters for ConstructHandler.
     required_fields = [
@@ -1448,6 +1530,7 @@ class ConstructHandler(FeatureHandler):
         super().get_general_data(session)
         # self.build_allele_gene_lookup(session)     # BOB: temporarily disabled for faster dev
         # self.build_seqfeat_gene_lookup(session)    # BOB: temporarily disabled for faster dev
+        self.build_allele_class_lookup(session)
         return
 
     # Elaborate on get_datatype_data() sub-methods for ConstructHandler.
