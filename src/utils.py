@@ -48,7 +48,7 @@ class DataHandler(object):
         """
         self.log = log
         self.fb_data_type = fb_data_type
-        self.agr_ingest_type = self.agr_ingest_type_dict[fb_data_type]
+        self.agr_ingest_typef = self.agr_ingest_type_dict[fb_data_type]
         self.testing = testing
         # Datatype bins.
         self.fb_data_entities = {}    # db_primary_id-keyed dict of chado objects to export.
@@ -1345,6 +1345,7 @@ class ConstructHandler(FeatureHandler):
     def __init__(self, log: Logger, fb_data_type: str, testing: bool):
         """Create the ConstructHandler object."""
         super().__init__(log, fb_data_type, testing)
+        self.allele_gene_lookup = {}    # Will be allele feature_id-keyed gene feature_ids.
 
     test_set = {
         'FBtp0008631': 'P{UAS-wg.H.T:HA1}',                       # Expresses wg under UASt control.
@@ -1384,9 +1385,37 @@ class ConstructHandler(FeatureHandler):
     fb_agr_db_dict = {}
 
     # Elaborate on get_general_data() sub-methods for ConstructHandler.
+    def build_allele_gene_lookup(self, session):
+        """Build an allele-gene lookup dict, current features only."""
+        self.log.info('Build an allele-gene lookup dict, current features only.')
+        allele = aliased(Feature, name='allele')
+        gene = aliased(Feature, name='gene')
+        rel_type = aliased(Cvterm, name='rel_type')
+        filters = (
+            allele.is_obsolete.is_(False),
+            allele.uniquename.op('~')(self.regex['allele']),
+            gene.is_obsolete.is_(False),
+            gene.uniquename.op('~')(self.regex['gene']),
+            rel_type.name == 'alleleof'
+        )
+        results = session.query(allele, gene).\
+            select_from(allele).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
+            join(gene, (gene.feature_id == FeatureRelationship.object_id)).\
+            join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            self.allele_gene_lookup[result.allele.feature_id] = result.gene.feature_id
+            counter += 1
+        self.log.info(f'Added {counter} current allele-gene relationships to the allele-gene lookup.')
+        return
+
     def get_general_data(self, session):
         """Extend the method for the ConstructHandler."""
         super().get_general_data(session)
+        self.build_allele_gene_lookup(session)
         return
 
     # Elaborate on get_datatype_data() sub-methods for ConstructHandler.
@@ -1825,7 +1854,7 @@ def generate_export_file(export_dict: dict, log: Logger, output_filename: str):
     """Print Alliance LinkML data to JSON file.
 
     Args:
-        export_dict (dict): A LinkML dict including some "ingest" list of data elements.
+        export_dict (dict): A dict of LinkML dicts for some "agr_ingest" set.
         log (Logger): The global Logger object in the script calling this function.
         output_filename (str): The global output_filename in the script calling this function.
 

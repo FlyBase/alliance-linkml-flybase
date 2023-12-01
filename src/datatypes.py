@@ -11,6 +11,7 @@ Author(s):
 
 
 # FlyBase Classes
+# Attributes are separated into "primary chado data" (i.e., raw SQLAlchemy results) and processed FB data (synthesis of sql results).
 class FBEntity(object):
     """An abstract, generic FlyBase entity."""
     def __init__(self):
