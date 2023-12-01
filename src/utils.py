@@ -1138,7 +1138,7 @@ class FeatureHandler(PrimaryEntityHandler):
     # Call build_allele_class_lookup() only for more specific FeatureHandler types.
     def build_allele_class_lookup(self, session):
         """Build a lookup of allele "transgenic product class" values."""
-        self.log.info(f'Build a lookup of allele "transgenic product class" values.')
+        self.log.info('Build a lookup of allele "transgenic product class" values.')
         # FYI, these terms indicate that the allele targets its parent gene: ['RNAi_reagent', 'sgRNA', 'antisense'].
         # Main query.
         cvterm = aliased(Cvterm, name='cvterm')
@@ -1167,32 +1167,7 @@ class FeatureHandler(PrimaryEntityHandler):
                 self.transgenic_allele_class_lookup[result.Feature.feature_id] = [result.cvterm.name]
                 counter += 1
         self.log.info(f'Found {counter} transgenic product class terms for alleles.')
-        # Back up 1. Look at related seqfeats.
-        allele = aliased(Feature, name='allele')
-        seqfeat = aliased(Feature, name='seqfeat')
-        target_types = ['sgRNA', 'RNAi_reagent']
-        filters = (
-            allele.uniquename.op('~')(self.regex['allele']),
-            seqfeat.uniquename.op('~')(self.regex['seqfeat']),
-            Cvterm.name.in_((target_types))
-        )
-        results = session.query(allele, Cvterm).\
-            select_from(allele).\
-            join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
-            join(seqfeat, (seqfeat.feature_id == FeatureRelationship.object_id)).\
-            join(Cvterm, (Cvterm.cvterm_id == seqfeat.type_id)).\
-            filter(*filters).\
-            distinct()
-        counter = 0
-        for result in results:
-            if result.allele.feature_id not in self.transgenic_allele_class_lookup.keys():
-                self.transgenic_allele_class_lookup[result.allele.feature_id] = [result.Cvterm.name]
-                counter += 1
-            elif result.Cvterm.name not in self.transgenic_allele_class_lookup[result.allele.feature_id]:
-                self.transgenic_allele_class_lookup[result.allele.feature_id].append(result.Cvterm.name)
-                counter += 1
-        self.log.info(f'Found an additional {counter} targeting alleles via associated seqfeats.')
-        # Back up 2. Look at mutagen terms.
+        # Back up. Look at mutagen terms to find old/obsolete alleles missed in the transgenic product class retrofit.
         filters = (
             Feature.uniquename.op('~')(self.regex['allele']),
             Cvterm.name == 'in vitro construct - RNAi',
