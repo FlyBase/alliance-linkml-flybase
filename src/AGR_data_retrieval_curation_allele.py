@@ -1340,6 +1340,7 @@ class AlleleHandler(object):
         log.info('Generating output JSON file of alleles.')
         output_dict = {
             'linkml_version': linkml_release,
+            'alliance_member_release_version': database_release,
             'allele_ingest_set': []
         }
         for allele in self.allele_dict.values():

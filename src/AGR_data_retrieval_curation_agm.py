@@ -6,11 +6,11 @@ Author(s):
     Gil dos Santos dossantos@morgan.harvard.edu
 
 Usage:
-    AGR_data_retrieval_curation_agm.py [-h] [-t TESTING] [-r FLYBASE_RELEASE]
+    AGR_data_retrieval_curation_agm.py [-h] [-t TESTING]
     [-l LINKML_RELEASE] [-v VERBOSE] [-c CONFIG]
 
 Example:
-    python AGR_data_retrieval_curation_agm.py -v -t -r 2023_05 -l v1.1.2
+    python AGR_data_retrieval_curation_agm.py -v -t -l v1.1.2
     -c /path/to/config.cfg
 
 Notes:
@@ -48,13 +48,11 @@ testing = set_up_dict['testing']
 # Process additional input parameters not handled by the set_up_db_reading() function above.
 parser = argparse.ArgumentParser(description='inputs')
 parser.add_argument('-l', '--linkml_release', help='The "agr_curation_schema" LinkML release number.', required=True)
-parser.add_argument('-r', '--fb_release', help='The FlyBase data release from which data was obtained.', required=True)
 
 # Use parse_known_args(), not parse_args(), to handle args specific to this script (outside of set_up_db_reading()).
 args, extra_args = parser.parse_known_args()
 log.info('Parsing args specific to this script; ignoring these: {}'.format(extra_args))
 linkml_release = args.linkml_release
-fb_release = args.fb_release
 
 # Create SQL Alchemy engines from environmental variables.
 engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server + '/' + database
@@ -69,7 +67,7 @@ def main():
     """Run the steps for exporting LinkML-compliant FlyBase AGM."""
     log.info(f'Running script "{__file__}"')
     log.info('Started main function.')
-    log.info(f'Exporting data from FlyBase release: {fb_release}')
+    log.info(f'Exporting data from FlyBase release: {database_release}')
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Get the data and process it.
@@ -79,7 +77,7 @@ def main():
     # Export the data.
     export_dict = {
         'linkml_version': linkml_release,
-        'alliance_member_release_version': fb_release,
+        'alliance_member_release_version': database_release,
     }
     # Start export list with strains.
     export_dict[strain_handler.agr_ingest_type] = []
