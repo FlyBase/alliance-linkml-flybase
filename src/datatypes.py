@@ -105,11 +105,13 @@ class FBConstruct(FBFeature):
         """Create the FBConstruct object."""
         super().__init__(chado_obj)
         # Primary FB chado data.
-        self.parent_allele_rels = []    # Will be (FeatureRelationship, FeatureRelationshipPub) results for parental allele.
-        self.reg_region_rels = []       # Will be (FeatureRelationship, FeatureRelationshipPub) results for reg regions.
-        # In progress.
+        self.parent_allele_rels = []    # Will be (FeatureRelationship, FeatureRelationshipPub) results for parental allele(s).
+        self.encodes_rels = []          # Will be (FeatureRelationship, FeatureRelationshipPub) results for direct "encodes" relationships.
+        self.reg_region_rels = []       # Will be (FeatureRelationship, FeatureRelationshipPub) results for direct "has_reg_region" relationships.
         # Processed FB data.
-        # In progress.
+        self.expressed_features = []     # Will be list of feature_ids for expressed things.
+        self.targeted_features = []      # Will be list of feature_ids for targeted things.
+        self.regulating_features = []    # Will be list of feature_ids for things that regulate the construct.
 
 
 class FBStrain(FBDataEntity):
@@ -130,7 +132,7 @@ class FBGenotype(FBDataEntity):
         self.db_primary_id = chado_obj.genotype_id
 
 
-# Primary Alliance DTO Classes for FlyBase data.
+# Primary Alliance DTO Classes for FlyBase entities, organized hierarchically, then alphabetically.
 class AuditedObjectDTO(object):
     """Base Alliance class."""
     def __init__(self):
@@ -163,12 +165,50 @@ class BiologicalEntityDTO(AuditedObjectDTO):
         self.required_fields.extend(['curie', 'taxon_curie', 'data_provider_dto'])
 
 
+class ReagentDTO(AuditedObjectDTO):
+    """ReagentDTO class."""
+    def __init__(self):
+        """Create ReagentDTO for FlyBase object."""
+        super().__init__()
+        self.mod_entity_id = None          # Will be the MOD curie.
+        self.mod_internal_id = None        # Will be the MOD internal db id, if no MOD curie.
+        self.secondary_identifiers = []    # Will be list of 2o FB IDs (curies, not DTOs).
+        self.data_provider_dto = None
+        self.required_fields.extend(['mod_entity_id', 'data_provider_dto'])
+
+
 class GenomicEntityDTO(BiologicalEntityDTO):
     """GenomicEntityDTO class."""
     def __init__(self):
         """Create GenomicEntityDTO for FlyBase object."""
         super().__init__()
         self.cross_reference_dtos = []
+
+
+class ConstructDTO(ReagentDTO):
+    """ConstructDTO class."""
+    def __init__(self):
+        """Create ConstructDTO for FlyBase object."""
+        super().__init__()
+        self.construct_symbol_dto = None       # Will be a single NameSlotAnnotationDTO.
+        self.construct_full_name_dto = None    # Will be a single NameSlotAnnotationDTO.
+        self.construct_synonym_dtos = None     # Will be a list of NameSlotAnnotationDTOs.
+        self.construct_component_dtos = []     # Will be a list of ConstructComponentSlotAnnotationDTOs.
+        self.reference_curies = []
+        self.required_fields.extend(['construct_symbol_dto'])
+
+
+class AffectedGenomicModelDTO(GenomicEntityDTO):
+    """AffectedGenomicModelDTO class."""
+    def __init__(self):
+        """Create AffectedGenomicModelDTO for FlyBase object."""
+        super().__init__()
+        self.name = None                   # The current fullname synonym, ASCII format.
+        self.subtype_name = None           # "strain" or "genotype".
+        self.agm_secondary_id_dtos = []    # Secondary IDs.
+        self.reference_curies = []         # Publication curies (PMID or FBrf).
+        self.component_dtos = []           # AffectedGenomicModelComponentDTO objects.
+        self.required_fields.extend(['subtype_name'])
 
 
 class GeneDTO(GenomicEntityDTO):
@@ -187,42 +227,33 @@ class GeneDTO(GenomicEntityDTO):
         self.required_fields.extend(['gene_symbol_dto'])
 
 
-class AffectedGenomicModelDTO(GenomicEntityDTO):
-    """AffectedGenomicModelDTO class."""
-    def __init__(self):
-        """Create AffectedGenomicModelDTO for FlyBase object."""
+# Primary Alliance DTO Classes for FlyBase relationships/annotations.
+class EvidenceAssociationDTO(AuditedObjectDTO):
+    """EvidenceAssociationDTO class."""
+    def __init__(self, evidence_curies: list):
+        """Create EvidenceAssociationDTO for FlyBase object."""
         super().__init__()
-        self.name = None                   # The current fullname synonym, ASCII format.
-        self.subtype_name = None           # "strain" or "genotype".
-        self.agm_secondary_id_dtos = []    # Secondary IDs.
-        self.reference_curies = []         # Publication curies (PMID or FBrf).
-        self.component_dtos = []           # AffectedGenomicModelComponentDTO objects.
-        self.required_fields.extend(['subtype_name'])
+        self.evidence_curies = evidence_curies
+        self.required_fields.extend([])
 
 
-class ReagentDTO(AuditedObjectDTO):
-    """ReagentDTO class."""
-    def __init__(self):
-        """Create ReagentDTO for FlyBase object."""
-        super().__init__()
-        self.mod_entity_id = None          # Will be the MOD curie.
-        self.mod_internal_id = None        # Will be the MOD internal db id, if no MOD curie.
-        self.secondary_identifiers = []    # Will be list of 2o FB IDs (curies, not DTOs).
-        self.data_provider_dto = None
-        self.required_fields.extend(['mod_entity_id', 'data_provider_dto'])
+class ConstructGenomicEntityAssociationDTO(EvidenceAssociationDTO):
+    """ConstructGenomicEntityAssociationDTO class."""
+    def __init__(self, construct_id: str, rel_type: str, genomic_id: str, evidence_curies: list):
+        """Create ConstructGenomicEntityAssociationDTO for FlyBase object.
 
+        Args:
+            construct_id (str): The FB:FBtp curie for the construct subject.
+            rel_type (str): A CV term from "Construct Genomic Entity Association Relation": expressed, targets, or, is_regulated_by.
+            genomic_id (str): The FB:FB curie for the construct object, limited to LinkML exported entities.
 
-class ConstructDTO(ReagentDTO):
-    """ConstructDTO class."""
-    def __init__(self):
-        """Create ConstructDTO for FlyBase object."""
-        super().__init__()
-        self.construct_symbol_dto = None       # Will be a single NameSlotAnnotationDTO.
-        self.construct_full_name_dto = None    # Will be a single NameSlotAnnotationDTO.
-        self.construct_synonym_dtos = None     # Will be a list of NameSlotAnnotationDTOs.
-        self.construct_component_dtos = []     # Will be a list of ConstructComponentSlotAnnotationDTOs.
-        self.reference_curies = []
-        self.required_fields.extend(['construct_symbol_dto'])
+        """
+        super().__init__(evidence_curies)
+        self.construct_identifier = construct_id
+        self.genomic_entity_relation_name = rel_type
+        self.genomic_entity_curie = genomic_id
+        self.note_dtos = []
+        self.required_fields.extend(['construct_identifier', 'genomic_entity_relation_name', 'genomic_entity_curie'])
 
 
 # Secondary Alliance DTO Classes for FlyBase data.
@@ -328,11 +359,11 @@ class NameSlotAnnotationDTO(SlotAnnotationDTO):
 
 class ConstructComponentSlotAnnotation(SlotAnnotationDTO):
     """ConstructComponentSlotAnnotation class."""
-    def __init__(self, relation_name: str, component_symbol: str, taxon_curie: str, taxon_text: str, evidence_curies: list):
+    def __init__(self, rel_type: str, component_symbol: str, taxon_curie: str, taxon_text: str, evidence_curies: list):
         """Create a ConstructComponentSlotAnnotation for a FlyBase construct component.
 
         Args:
-            relation_name (str): The relation type, CVterm from "Construct Genomic Entity Association Relation".
+            rel_type (str): A CV term from "Construct Genomic Entity Association Relation": expressed, targets, or, is_regulated_by.
             component_symbol (str): The symbol for the component.
             taxon_curie (str): The NCBITaxon ID of the component.
             taxon_text (str): The species name of the component.
@@ -340,7 +371,7 @@ class ConstructComponentSlotAnnotation(SlotAnnotationDTO):
 
         """
         super().__init__(evidence_curies)
-        self.relation_name = relation_name          # Should be one of the following: expresses, is_regulated_by, or targets.
+        self.relation_name = rel_type
         self.component_symbol = component_symbol
         self.taxon_curie = taxon_curie
         self.taxon_text = taxon_text
