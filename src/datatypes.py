@@ -105,14 +105,20 @@ class FBConstruct(FBFeature):
         """Create the FBConstruct object."""
         super().__init__(chado_obj)
         # Primary FB chado data.
-        # Direct relationships (lists of (FeatureRelationship, FeatureRelationshipPub) results).
-        self.encodes_tool_rels = []     # Direct "encodes" relationships.
-        self.reg_region_rels = []       # Direct "has_reg_region" relationships.
-        self.parent_allele_rels = []    # Will be (FeatureRelationship, FeatureRelationshipPub) results for parental allele(s).
+        # Direct relationships (FeatureRelationship objects); ignoring carries_tool and tagged_with.
+        self.parent_allele_rels = []      # Direct "associated_with" relationships to FBal allele(s).
+        self.encodes_tool_rels = []       # Direct "encodes_tool" relationships to FBto tools.
+        self.reg_region_rels = []         # Direct "has_reg_region" relationships to FBto/FBgn/FBsf tools/genes/seqfeats.
+        # Indirect relationships (lists of (FeatureRelationship, FeatureRelationshipPub) results) via the allele.
+        self.al_encodes_tool_rels = []    # Indirect "encodes" relationships.
+        self.al_reg_region_rels = []      # Indirect "has_reg_region" relationships.
+
+
         # Processed FB data.
-        self.expressed_features = []     # Will be list of feature_ids for expressed things: FBgn and FBto.
-        self.targeted_features = []      # Will be list of feature_ids for targeted things: FBgn.
-        self.regulating_features = []    # Will be list of feature_ids for things that regulate the construct: FBgn, FBto and FBsf.
+        # Final relationship assessments.
+        self.expressed_features = {}     # Will be list of feature_id-keyed pub_id list for expressed things: FBgn and FBto.
+        self.targeted_features = {}      # Will be list of feature_id-keyed pub_id list for targeted things: FBgn.
+        self.regulating_features = {}    # Will be list of feature_id-keyed pub_id list for things that regulate the construct: FBgn, FBto and FBsf.
 
 
 class FBStrain(FBDataEntity):
