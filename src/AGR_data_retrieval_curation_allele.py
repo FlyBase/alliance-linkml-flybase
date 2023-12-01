@@ -1105,7 +1105,7 @@ class AlleleHandler(object):
             collection_names = list(set(collection_names))
             allele.in_collection_name = collection_names[0].name
             if len(collection_names) > 1:
-                log.warning(f'\tFound {len(collection_names)} collection(s) for {allele.curie}: {allele.in_collection}')
+                log.warning(f'\tFound {len(collection_names)} collection(s) for {allele.curie}: {allele.in_collection_name}')
         return
 
     def synthesize_synonyms(self, feature):
