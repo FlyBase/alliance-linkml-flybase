@@ -1079,6 +1079,34 @@ class FeatureHandler(PrimaryEntityHandler):
         self.log.info(f'Got basic info for {counter} current Dmel chr scaffolds.')
         return
 
+    # Call build_allele_gene_lookup() only for more specific FeatureHandler types.
+    def build_allele_gene_lookup(self, session):
+        """Build an allele-gene lookup dict, current features only."""
+        self.log.info('Build an allele-gene lookup dict, current features only.')
+        allele = aliased(Feature, name='allele')
+        gene = aliased(Feature, name='gene')
+        rel_type = aliased(Cvterm, name='rel_type')
+        filters = (
+            allele.is_obsolete.is_(False),
+            allele.uniquename.op('~')(self.regex['allele']),
+            gene.is_obsolete.is_(False),
+            gene.uniquename.op('~')(self.regex['gene']),
+            rel_type.name == 'alleleof'
+        )
+        results = session.query(allele, gene).\
+            select_from(allele).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
+            join(gene, (gene.feature_id == FeatureRelationship.object_id)).\
+            join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            self.allele_gene_lookup[result.allele.feature_id] = result.gene.feature_id
+            counter += 1
+        self.log.info(f'Added {counter} current allele-gene relationships to the allele-gene lookup.')
+        return
+
     def get_general_data(self, session):
         """Extend the method for the FeatureHandler."""
         super().get_general_data(session)
@@ -1385,33 +1413,6 @@ class ConstructHandler(FeatureHandler):
     fb_agr_db_dict = {}
 
     # Elaborate on get_general_data() sub-methods for ConstructHandler.
-    def build_allele_gene_lookup(self, session):
-        """Build an allele-gene lookup dict, current features only."""
-        self.log.info('Build an allele-gene lookup dict, current features only.')
-        allele = aliased(Feature, name='allele')
-        gene = aliased(Feature, name='gene')
-        rel_type = aliased(Cvterm, name='rel_type')
-        filters = (
-            allele.is_obsolete.is_(False),
-            allele.uniquename.op('~')(self.regex['allele']),
-            gene.is_obsolete.is_(False),
-            gene.uniquename.op('~')(self.regex['gene']),
-            rel_type.name == 'alleleof'
-        )
-        results = session.query(allele, gene).\
-            select_from(allele).\
-            join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
-            join(gene, (gene.feature_id == FeatureRelationship.object_id)).\
-            join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
-            filter(*filters).\
-            distinct()
-        counter = 0
-        for result in results:
-            self.allele_gene_lookup[result.allele.feature_id] = result.gene.feature_id
-            counter += 1
-        self.log.info(f'Added {counter} current allele-gene relationships to the allele-gene lookup.')
-        return
-
     def get_general_data(self, session):
         """Extend the method for the ConstructHandler."""
         super().get_general_data(session)
