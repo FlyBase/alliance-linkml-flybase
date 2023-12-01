@@ -105,9 +105,13 @@ class FBConstruct(FBFeature):
         """Create the FBConstruct object."""
         super().__init__(chado_obj)
         # Primary FB chado data.
-        self.parent_allele_rels = []    # Will be (FeatureRelationship, FeatureRelationshipPub) results for parental allele(s).
-        self.encodes_rels = []          # Will be (FeatureRelationship, FeatureRelationshipPub) results for direct "encodes" relationships.
+        # Direct relationships.
+        self.encodes_tool_rels = []     # Will be (FeatureRelationship, FeatureRelationshipPub) results for direct "encodes" relationships.
         self.reg_region_rels = []       # Will be (FeatureRelationship, FeatureRelationshipPub) results for direct "has_reg_region" relationships.
+        self.parent_allele_rels = []    # Will be (FeatureRelationship, FeatureRelationshipPub) results for parental allele(s).
+
+
+
         # Processed FB data.
         self.expressed_features = []     # Will be list of feature_ids for expressed things.
         self.targeted_features = []      # Will be list of feature_ids for targeted things.

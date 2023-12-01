@@ -259,7 +259,7 @@ class DataHandler(object):
         self.build_bibliography(session)
         self.get_cvterms(session)
         self.get_ncbi_taxon_ids(session)
-        self.build_feature_lookup(session)
+        # self.build_feature_lookup(session)    # BOB: temporarily disabled for faster dev
         return
 
     def get_datatype_data(self, session):
@@ -1446,8 +1446,8 @@ class ConstructHandler(FeatureHandler):
     def get_general_data(self, session):
         """Extend the method for the ConstructHandler."""
         super().get_general_data(session)
-        self.build_allele_gene_lookup(session)
-        self.build_seqfeat_gene_lookup(session)
+        # self.build_allele_gene_lookup(session)     # BOB: temporarily disabled for faster dev
+        # self.build_seqfeat_gene_lookup(session)    # BOB: temporarily disabled for faster dev
         return
 
     # Elaborate on get_datatype_data() sub-methods for ConstructHandler.
