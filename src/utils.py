@@ -1158,6 +1158,8 @@ class FeatureHandler(PrimaryEntityHandler):
             distinct()
         counter = 0
         for result in results:
+            # self.log.debug(f'Have this allele: {result.Feature.name} ({result.Feature.uniquename})')
+            # self.log.debug(f'Have this CV term: {result.cvterm.name}')
             try:
                 self.transgenic_allele_class_lookup[result.Feature.feature_id].append(result.cvterm.name)
                 counter += 1
@@ -1480,7 +1482,7 @@ class ConstructHandler(FeatureHandler):
         super().__init__(log, fb_data_type, testing)
         self.allele_gene_lookup = {}                # Will be allele feature_id-keyed gene feature_ids.
         self.seqfeat_gene_lookup = {}               # Will be seqfeat feature_id-keyed gene feature_ids.
-        self.transgenic_allele_class_lookup = []    # Will be an allele feature_id-keyed list of "transgenic product class" CV terms.
+        self.transgenic_allele_class_lookup = {}    # Will be an allele feature_id-keyed list of "transgenic product class" CV terms.
     test_set = {
         'FBtp0008631': 'P{UAS-wg.H.T:HA1}',                       # Expresses FBgn wg, regulated by FBto UASt.
         'FBtp0010648': 'P{wg.FRT.B}',                             # Expresses FBgn wg, regulated by FBgn sev, has FBto FRT.
