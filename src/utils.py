@@ -1167,27 +1167,7 @@ class FeatureHandler(PrimaryEntityHandler):
                 self.transgenic_allele_class_lookup[result.Feature.feature_id] = [result.cvterm.name]
                 counter += 1
         self.log.info(f'Found {counter} transgenic product class terms for alleles.')
-        # Back up 1. Look at mutagen terms.
-        filters = (
-            Feature.uniquename.op('~')(self.regex['allele']),
-            Cvterm.name == 'in vitro construct - RNAi',
-        )
-        results = session.query(Feature).\
-            select_from(Feature).\
-            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
-            join(Cvterm, (Cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
-            filter(*filters).\
-            distinct()
-        counter = 0
-        for result in results:
-            if result.feature_id not in self.transgenic_allele_class_lookup.keys():
-                self.transgenic_allele_class_lookup[result.feature_id] = ['RNAi_reagent']
-                counter += 1
-            elif 'RNAi_reagent' not in self.transgenic_allele_class_lookup[result.feature_id]:
-                self.transgenic_allele_class_lookup[result.feature_id].append('RNAi_reagent')
-                counter += 1
-        self.log.info(f'Found an additional {counter} RNAi reagent alleles via mutagen terms.')
-        # Back up 2. Look at related seqfeats.
+        # Back up 1. Look at related seqfeats.
         allele = aliased(Feature, name='allele')
         seqfeat = aliased(Feature, name='seqfeat')
         target_types = ['sgRNA', 'RNAi_reagent']
@@ -1212,6 +1192,26 @@ class FeatureHandler(PrimaryEntityHandler):
                 self.transgenic_allele_class_lookup[result.allele.feature_id].append(result.Cvterm.name)
                 counter += 1
         self.log.info(f'Found an additional {counter} targeting alleles via associated seqfeats.')
+        # Back up 2. Look at mutagen terms.
+        filters = (
+            Feature.uniquename.op('~')(self.regex['allele']),
+            Cvterm.name == 'in vitro construct - RNAi',
+        )
+        results = session.query(Feature).\
+            select_from(Feature).\
+            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            if result.feature_id not in self.transgenic_allele_class_lookup.keys():
+                self.transgenic_allele_class_lookup[result.feature_id] = ['RNAi_reagent']
+                counter += 1
+            elif 'RNAi_reagent' not in self.transgenic_allele_class_lookup[result.feature_id]:
+                self.transgenic_allele_class_lookup[result.feature_id].append('RNAi_reagent')
+                counter += 1
+        self.log.info(f'Found an additional {counter} RNAi reagent alleles via mutagen terms.')
         return
 
     def get_general_data(self, session):
