@@ -1081,6 +1081,7 @@ class FeatureHandler(PrimaryEntityHandler):
 
     def build_feature_relationship_evidence_lookup(self, session):
         """Build evidence lookup for feature_relationships."""
+        self.log.info('Build evidence lookup for feature_relationships.')
         results = session.query(FeatureRelationshipPub).distinct()
         counter = 0
         fr_counter = 0
@@ -1552,11 +1553,11 @@ class ConstructHandler(FeatureHandler):
     def get_general_data(self, session):
         """Extend the method for the ConstructHandler."""
         super().get_general_data(session)
-        self.build_feature_relationship_evidence_lookup(session)
-        # self.build_allele_gene_lookup(session)     # BOB: temporarily disabled for faster dev
-        # self.build_seqfeat_gene_lookup(session)    # BOB: temporarily disabled for faster dev
-        self.build_allele_class_lookup(session)
-        self.build_gene_tool_lookup(session)
+        # self.build_feature_relationship_evidence_lookup(session)    # BOB: temporarily disabled for faster dev
+        # self.build_allele_gene_lookup(session)                      # BOB: temporarily disabled for faster dev
+        # self.build_seqfeat_gene_lookup(session)                     # BOB: temporarily disabled for faster dev
+        # self.build_allele_class_lookup(session)                     # BOB: temporarily disabled for faster dev
+        # self.build_gene_tool_lookup(session)                        # BOB: temporarily disabled for faster dev
         return
 
     # Elaborate on get_datatype_data() sub-methods for ConstructHandler.
