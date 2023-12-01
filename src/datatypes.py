@@ -112,8 +112,6 @@ class FBConstruct(FBFeature):
         # Indirect relationships (lists of (FeatureRelationship, FeatureRelationshipPub) results) via the allele.
         self.al_encodes_tool_rels = []    # Indirect "encodes" relationships.
         self.al_reg_region_rels = []      # Indirect "has_reg_region" relationships.
-
-
         # Processed FB data.
         # Final relationship assessments.
         self.expressed_features = {}     # Will be list of feature_id-keyed pub_id list for expressed things: FBgn and FBto.

@@ -1150,6 +1150,7 @@ class FeatureHandler(PrimaryEntityHandler):
             counter += 1
         self.log.info(f'Added {counter} current seqfeat-gene relationships to the seqfeat-gene lookup.')
         return
+
     # Call build_gene_tool_lookup() only for more specific Handler types.
     def build_gene_tool_lookup(self, session):
         """Build a lookup of gene-to-tool relationships for filtering reporting, current only."""
@@ -1576,9 +1577,6 @@ class ConstructHandler(FeatureHandler):
         self.log.info('Get directly related regulatory FBgn/FBto/FBsf objects for the construct.')
         self.get_entity_sbj_feat_rel_by_type(session, 'reg_region_rels', rel_type='has_reg_region', obj_regex=self.regex['fb_uniquename'])
         return
-
-
-encodes_tool_rels
 
     def get_datatype_data(self, session):
         """Extend the method for the ConstructHandler."""
