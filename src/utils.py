@@ -1159,10 +1159,10 @@ class FeatureHandler(PrimaryEntityHandler):
         counter = 0
         for result in results:
             try:
-                self.transgenic_allele_class_lookup[result.Feature].append(result.cvterm.name)
+                self.transgenic_allele_class_lookup[result.Feature.feature_id].append(result.cvterm.name)
                 counter += 1
             except KeyError:
-                self.transgenic_allele_class_lookup[result.Feature] = [result.cvterm.name]
+                self.transgenic_allele_class_lookup[result.Feature.feature_id] = [result.cvterm.name]
                 counter += 1
         self.log.info(f'Found {counter} transgenic product class terms for alleles.')
         # Back up 1. Look at mutagen terms.
