@@ -427,7 +427,6 @@ class DataHandler(object):
     def build_allele_class_lookup(self, session):
         """Build a lookup of allele "transgenic product class" values."""
         self.log.info('Build a lookup of allele "transgenic product class" values.')
-        # FYI, these terms indicate that the allele targets its parent gene: ['RNAi_reagent', 'sgRNA', 'antisense'].
         # Main query.
         cvterm = aliased(Cvterm, name='cvterm')
         qualifier = aliased(Cvterm, name='qualifier')
@@ -1557,10 +1556,10 @@ class ConstructHandler(FeatureHandler):
         """Extend the method for the ConstructHandler."""
         super().get_general_data(session)
         # self.build_feature_lookup(session)                          # BOB: temporarily disabled for faster dev
-        # self.build_feature_relationship_evidence_lookup(session)    # BOB: temporarily disabled for faster dev
-        # self.build_seqfeat_gene_lookup(session)                     # BOB: temporarily disabled for faster dev
-        # self.build_allele_class_lookup(session)                     # BOB: temporarily disabled for faster dev
-        # self.build_gene_tool_lookup(session)                        # BOB: temporarily disabled for faster dev
+        self.build_feature_relationship_evidence_lookup(session)
+        self.build_allele_class_lookup(session)
+        self.build_seqfeat_gene_lookup(session)
+        self.build_gene_tool_lookup(session)
         return
 
     # Elaborate on get_datatype_data() sub-methods for ConstructHandler.
@@ -1723,9 +1722,143 @@ class ConstructHandler(FeatureHandler):
         return
 
     # Elaborate on synthesize_info() sub-methods for ConstructHandler.
+    def synthesize_encoded_tools(self):
+        """Synthesize encoded components."""
+        self.log.info('Synthesize encoded components.')
+        counter = 0
+        for construct in self.fb_data_entities.values():
+            self.log.debug(f'Assess encoded tools for {construct}.')
+            # Direct encodes_tool relationships.
+            for rel in construct.encodes_tool_rels:
+                component_id = rel.object_id
+                pub_ids = self.feat_rel_pub_lookup[rel.feature_relationship_id]
+                try:
+                    construct.expressed_features[component_id].extend(pub_ids)
+                except KeyError:
+                    construct.expressed_features[component_id] = [pub_ids]
+            direct_count = len(construct.expressed_features.keys())
+            self.log.debug(f'For {construct}, found {direct_count} encoded tools via direct relationships.')
+            # Indirect encodes_tool relationships.
+            for rel in construct.al_encodes_tool_rels:
+                allele_id = rel.subject_id
+                component_id = rel.object_id
+                pub_ids = self.feat_rel_pub_lookup[rel.feature_relationship_id]
+                try:
+                    construct.expressed_features[component_id].extend(pub_ids)
+                except KeyError:
+                    construct.expressed_features[component_id] = [pub_ids]
+                # Fold in pubs supporting the construct-allele relationship.
+                for al_con_rel in construct.parent_allele_rels:
+                    if al_con_rel.subject_id == allele_id:
+                        al_con_pub_ids = self.feat_rel_pub_lookup[al_con_rel.feature_relationship_id]
+                        construct.expressed_features[component_id].extend(al_con_pub_ids)
+            indirect_count = len(construct.expressed_features.keys()) - direct_count
+            self.log.debug(f'For {construct}, found {indirect_count} encoded tools via indirect allele relationships.')
+            counter += len(construct.expressed_features.keys())
+        self.log.info(f'Found {counter} encoded tools for constructs via direct and indirect allele relationships.')
+        return
+
+    def synthesize_component_genes(self):
+        """Synthesize component genes."""
+        self.log.info('Synthesize component genes.')
+        all_expressed_gene_counter = 0
+        all_targeted_gene_counter = 0
+        for construct in self.fb_data_entities.values():
+            this_expressed_gene_counter = 0
+            this_targeted_gene_counter = 0
+            self.log.debug(f'Assess component genes for {construct}.')
+            for rel in construct.al_genes:
+                allele_id = rel.subject_id
+                gene_id = rel.object_id
+                pub_ids = self.feat_rel_pub_lookup[rel.feature_relationship_id]
+                # Slot for gene_id depends on the allele class.
+                if self.transgenic_allele_class_lookup[allele_id] in ['RNAi_reagent', 'sgRNA', 'antisense']:
+                    gene_slot = getattr(construct, 'targeted_features')
+                    this_targeted_gene_counter += 1
+                else:
+                    gene_slot = getattr(construct, 'expressed_features')
+                    this_expressed_gene_counter += 1
+                try:
+                    gene_slot[gene_id].extend(pub_ids)
+                except KeyError:
+                    gene_slot[gene_id] = [pub_ids]
+                # Fold in pubs supporting the construct-allele relationship.
+                for al_con_rel in construct.parent_allele_rels:
+                    if al_con_rel.subject_id == allele_id:
+                        al_con_pub_ids = self.feat_rel_pub_lookup[al_con_rel.feature_relationship_id]
+                        gene_slot[gene_id].extend(al_con_pub_ids)
+            self.log.debug(f'For {construct}, found {this_expressed_gene_counter} expressed genes and {this_targeted_gene_counter} targeted genes.')
+            counter += this_expressed_gene_counter
+            counter += this_targeted_gene_counter
+        self.log.info(f'Found {all_expressed_gene_counter} expressed genes and {all_targeted_gene_counter} targeted genes for constructs.')
+        return
+
+    def synthesize_reg_regions(self):
+        """Synthesize construct reg_region components."""
+        self.log.info('Synthesize construct reg_region components.')
+        # Key lookups:
+        # self.seqfeat_gene_lookup
+        # Input lists:
+        # self.parent_allele_rels = []
+        # self.reg_region_rels = []
+        # self.al_reg_region_rels = []      # Indirect "has_reg_region" relationships: a list of allele-to-FBto/FBsf/FBgn FeatureRelationship objects.
+        # self.al_genes = []                # Indirect gene relationships: a list of allele-to-FBgn FeatureRelationship objects.
+        # Output lists:
+        # self.expressed_features = {}     # Will be list of feature_id-keyed pub_id list for expressed things: FBgn and FBto.
+        # self.targeted_features = {}      # Will be list of feature_id-keyed pub_id list for targeted things: FBgn.
+        # self.regulating_features = {}    # Will be list of feature_id-keyed pub_id list for things that regulate the construct: FBgn, FBto and FBsf.
+        counter = 0
+        for construct in self.fb_data_entities.values():
+            self.log.debug(f'Assess reg_regions for {construct}.')
+            # Direct has_reg_region relationships.
+            for rel in construct.reg_region_rels:
+                component_id = rel.object_id
+                pub_ids = self.feat_rel_pub_lookup[rel.feature_relationship_id]
+                try:
+                    construct.regulating_features[component_id].extend(pub_ids)
+                except KeyError:
+                    construct.regulating_features[component_id] = [pub_ids]
+            direct_count = len(construct.regulating_features.keys())
+            self.log.debug(f'For {construct}, found {direct_count} reg_regions via direct relationships.')
+            # Indirect has_reg_region relationships.
+            for rel in construct.al_reg_region_rels:
+                allele_id = rel.subject_id
+                component_id = rel.object_id
+                pub_ids = self.feat_rel_pub_lookup[rel.feature_relationship_id]
+                try:
+                    construct.regulating_features[component_id].extend(pub_ids)
+                except KeyError:
+                    construct.regulating_features[component_id] = [pub_ids]
+                # Fold in pubs supporting the construct-allele relationship.
+                for al_con_rel in construct.parent_allele_rels:
+                    if al_con_rel.subject_id == allele_id:
+                        al_con_pub_ids = self.feat_rel_pub_lookup[al_con_rel.feature_relationship_id]
+                        construct.regulating_features[component_id].extend(al_con_pub_ids)
+            indirect_count = len(construct.regulating_features.keys()) - direct_count
+            self.log.debug(f'For {construct}, found {indirect_count} reg_regions tools via indirect allele relationships.')
+            # BILLY BOB - suppress until code above has been confirmed.
+            # # Indirect relationships to genes via seqfeats.
+            # for component_id, pub_ids in construct.regulating_features.items():
+            #     uniquename = self.feature_lookup[component_id]['uniquename']
+            #     feat_type = self.feature_lookup[component_id]['type']
+            #     if uniquename.startswith('FBsf') and feat_type in ['region', 'regulatory_region'] and component_id in self.seqfeat_gene_lookup.keys():
+            #         gene_id = self.seqfeat_gene_lookup[component_id]
+            #         try:
+            #             construct.regulating_features[gene_id].extend(pub_ids)
+            #         except KeyError:
+            #             construct.regulating_features[gene_id] = [pub_ids]
+            # genes_via_seqfeat_count = len(construct.regulating_features.keys()) - direct_count - indirect_count
+            # self.log.info(f'For {construct}, found an additional {genes_via_seqfeat_count} genes related to seqfeat reg_regions.')
+            counter += len(construct.regulating_features.keys())
+        self.log.info(f'Found {counter} reg_regions for constructs via direct and indirect allele relationships.')
+        return
+
     def synthesize_info(self):
         """Extend the method for the ConstructHandler."""
         super().synthesize_info()
+        self.synthesize_encoded_tools()
+        self.synthesize_component_genes()
+        self.synthesize_reg_regions()
         return
 
     # Elaborate on map_fb_data_to_alliance() sub-methods for ConstructHandler.
