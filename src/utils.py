@@ -1405,7 +1405,7 @@ class FeatureHandler(PrimaryEntityHandler):
 
         Keyword Args:
             rel_type (str): The CV term name for the feature_relationship of interest. If none given, any rel_type allowed.
-            sbj_type (list): A list of CV terms for the subject feature types. If none given, any subject feature type allowed.
+            sbj_type (str): The CV term for the subject feature types. If none given, any subject feature type allowed.
             sbj_regex (str): The regex for the subject feature uniquename. If none given, any subject uniquename allowed.
 
         """
@@ -1586,6 +1586,12 @@ class ConstructHandler(FeatureHandler):
         self.get_entity_sbj_feat_rel_by_type(session, 'reg_region_rels', rel_type='has_reg_region', obj_regex=self.regex['fb_uniquename'])
         return
 
+    def get_construct_reg_regions_old(self, session):
+        """Get directly related regulatory_region FBsf objects, old type of association."""
+        self.log.info('Get directly related regulatory_region FBsf objects, old type of association.')
+        self.get_entity_obj_feat_rel_by_type(session, 'seqfeat_rels', rel_type='associated_with', sbj_type='regulatory_region', sbj_regex=self.regex['seqfeat'])
+        return
+
     def get_allele_encoded_tools(self, session):
         """Get encoded FBto/FBsf objects for the constructs via alleles."""
         self.log.info('Get encoded FBto/FBsf objects for the constructs via alleles.')
@@ -1723,6 +1729,7 @@ class ConstructHandler(FeatureHandler):
         self.get_construct_reg_regions(session)
         self.get_allele_encoded_tools(session)
         self.get_allele_reg_regions(session)
+        self.get_construct_reg_regions_old(session)
         self.get_allele_genes(session)
         return
 
@@ -1821,6 +1828,16 @@ class ConstructHandler(FeatureHandler):
                     construct.regulating_features[component_id] = pub_ids
             direct_count = len(construct.regulating_features.keys())
             self.log.debug(f'For {construct}, found {direct_count} reg_regions via direct relationships.')
+            # Direct seqfeat relationships, old_style.
+            for rel in construct.seqfeat_rels:
+                component_id = rel.subject_id
+                pub_ids = self.feat_rel_pub_lookup[rel.feature_relationship_id]
+                try:
+                    construct.regulating_features[component_id].extend(pub_ids)
+                except KeyError:
+                    construct.regulating_features[component_id] = pub_ids
+            direct_count_old = len(construct.regulating_features.keys()) - direct_count
+            self.log.debug(f'For {construct}, found {direct_count_old} reg_regions via direct relationships, old style.')
             # Indirect has_reg_region relationships.
             for rel in construct.al_reg_region_rels:
                 allele_id = rel.subject_id
@@ -1835,7 +1852,7 @@ class ConstructHandler(FeatureHandler):
                     if al_con_rel.subject_id == allele_id:
                         al_con_pub_ids = self.feat_rel_pub_lookup[al_con_rel.feature_relationship_id]
                         construct.regulating_features[component_id].extend(al_con_pub_ids)
-            indirect_count = len(construct.regulating_features.keys()) - direct_count
+            indirect_count = len(construct.regulating_features.keys()) - direct_count - direct_count_old
             self.log.debug(f'For {construct}, found {indirect_count} reg_regions tools via indirect allele relationships.')
             # self.log.debug(f'For {construct}, reg_regions = {construct.regulating_features}')
             # Indirect relationships to genes via seqfeats.
@@ -1851,7 +1868,7 @@ class ConstructHandler(FeatureHandler):
                         gene = f'{self.feature_lookup[gene_id]["uniquename"]}'
                         self.log.debug(f'{seqfeat} pulls in {gene}')
                         construct.regulating_features[gene_id] = pub_ids
-            genes_via_seqfeat_count = len(construct.regulating_features.keys()) - direct_count - indirect_count
+            genes_via_seqfeat_count = len(construct.regulating_features.keys()) - direct_count - direct_count_old - indirect_count
             self.log.info(f'For {construct}, found an additional {genes_via_seqfeat_count} genes related to seqfeat reg_regions.')
             counter += len(construct.regulating_features.keys())
         self.log.info(f'Found {counter} reg_regions for constructs via direct and indirect allele relationships.')

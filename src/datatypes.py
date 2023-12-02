@@ -110,6 +110,7 @@ class FBConstruct(FBFeature):
         self.parent_allele_rels = []      # Direct "associated_with" relationships to FBal allele(s).
         self.encodes_tool_rels = []       # Direct "encodes_tool" relationships to FBto tools.
         self.reg_region_rels = []         # Direct "has_reg_region" relationships to FBto/FBgn/FBsf tools/genes/seqfeats.
+        self.seqfeat_rels = []            # Direct FBsf-FBtp "associated_with" relationships (old style).
         # Indirect relationships (lists of (FeatureRelationship, FeatureRelationshipPub) results) via the allele.
         self.al_encodes_tool_rels = []    # Indirect "encodes" relationships: a list of allele-to-FBto/FBsf FeatureRelationship objects.
         self.al_reg_region_rels = []      # Indirect "has_reg_region" relationships: a list of allele-to-FBto/FBsf/FBgn FeatureRelationship objects.
