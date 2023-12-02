@@ -1792,8 +1792,8 @@ class ConstructHandler(FeatureHandler):
                         al_con_pub_ids = self.feat_rel_pub_lookup[al_con_rel.feature_relationship_id]
                         gene_slot[gene_id].extend(al_con_pub_ids)
             self.log.debug(f'For {construct}, found {this_expressed_gene_counter} expressed genes and {this_targeted_gene_counter} targeted genes.')
-            counter += this_expressed_gene_counter
-            counter += this_targeted_gene_counter
+            all_expressed_gene_counter += this_expressed_gene_counter
+            all_targeted_gene_counter += this_targeted_gene_counter
         self.log.info(f'Found {all_expressed_gene_counter} expressed genes and {all_targeted_gene_counter} targeted genes for constructs.')
         return
 
