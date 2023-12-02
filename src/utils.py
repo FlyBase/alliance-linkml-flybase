@@ -1344,12 +1344,12 @@ class FeatureHandler(PrimaryEntityHandler):
         return results
 
     # Call get_entity_sbj_feat_rel_by_type() only for more specific FeatureHandler types.
-    def get_entity_sbj_feat_rel_by_type(self, session, result_slot, **kwargs):
+    def get_entity_sbj_feat_rel_by_type(self, session, slot_name, **kwargs):
         """Get a list of FeatureRelationship objects for primary feature entities (as subject) by type.
 
         Args:
             session (Session): SQLAlchemy session for db queries.
-            result_slot (str): The name of the FB data entity attribute name to which results are appended.
+            slot_name (str): The name of the FB data entity attribute name to which results are appended.
 
         Keyword Args:
             rel_type (str): The CV term name for the feature_relationship of interest. If none given, any rel_type allowed.
@@ -1357,7 +1357,7 @@ class FeatureHandler(PrimaryEntityHandler):
             obj_regex (str): The regex for the object feature uniquename. If none given, any object uniquename allowed.
 
         """
-        self.log.info(f'Add feature_relationships to "{result_slot}" with these criteria: {kwargs}')
+        self.log.info(f'Add feature_relationships to "{slot_name}" with these criteria: {kwargs}')
         subject = aliased(Feature, name='subject')
         object = aliased(Feature, name='object')
         rel_type = aliased(Cvterm, name='rel_type')
@@ -1387,18 +1387,18 @@ class FeatureHandler(PrimaryEntityHandler):
             distinct()
         counter = 0
         for result in results:
-            self.fb_data_entities[result.subject_id].__dict__[result_slot].append(result)
+            self.fb_data_entities[result.subject_id].__dict__[slot_name].append(result)
             counter += 1
-        self.log.info(f'Added {counter} feature_relationship results to "{result_slot}" list.')
+        self.log.info(f'Added {counter} feature_relationship results to "{slot_name}" list.')
         return
 
     # Call get_entity_obj_feat_rel_by_type() only for more specific FeatureHandler types.
-    def get_entity_obj_feat_rel_by_type(self, session, result_slot, **kwargs):
+    def get_entity_obj_feat_rel_by_type(self, session, slot_name, **kwargs):
         """Return a list of FeatureRelationship objects for handler's primary feature entities (as object) by type.
 
         Args:
             session (Session): SQLAlchemy session for db queries.
-            result_slot (str): The name of the FB data entity attribute name to which results are appended.
+            slot_name (str): The name of the FB data entity attribute name to which results are appended.
 
         Keyword Args:
             rel_type (str): The CV term name for the feature_relationship of interest. If none given, any rel_type allowed.
@@ -1406,7 +1406,7 @@ class FeatureHandler(PrimaryEntityHandler):
             sbj_regex (str): The regex for the subject feature uniquename. If none given, any subject uniquename allowed.
 
         """
-        self.log.info(f'Add feature_relationships to "{result_slot}" with these criteria: {kwargs}')
+        self.log.info(f'Add feature_relationships to "{slot_name}" with these criteria: {kwargs}')
         subject = aliased(Feature, name='subject')
         object = aliased(Feature, name='object')
         rel_type = aliased(Cvterm, name='rel_type')
@@ -1436,9 +1436,9 @@ class FeatureHandler(PrimaryEntityHandler):
             distinct()
         counter = 0
         for result in results:
-            self.fb_data_entities[result.object_id].__dict__[result_slot].append(result)
+            self.fb_data_entities[result.object_id].__dict__[slot_name].append(result)
             counter += 1
-        self.log.info(f'Added {counter} feature_relationship results to "{result_slot}" list.')
+        self.log.info(f'Added {counter} feature_relationship results to "{slot_name}" list.')
         return
 
     def get_datatype_data(self, session):
@@ -1558,7 +1558,6 @@ class ConstructHandler(FeatureHandler):
         super().get_general_data(session)
         # self.build_feature_lookup(session)                          # BOB: temporarily disabled for faster dev
         # self.build_feature_relationship_evidence_lookup(session)    # BOB: temporarily disabled for faster dev
-        # self.build_allele_gene_lookup(session)                      # BOB: temporarily disabled for faster dev
         # self.build_seqfeat_gene_lookup(session)                     # BOB: temporarily disabled for faster dev
         # self.build_allele_class_lookup(session)                     # BOB: temporarily disabled for faster dev
         # self.build_gene_tool_lookup(session)                        # BOB: temporarily disabled for faster dev
@@ -1589,9 +1588,9 @@ class ConstructHandler(FeatureHandler):
         allele = aliased(Feature, name='allele')
         component = aliased(Feature, name='component')
         filters = (
-            allele.is_obsolete.is_(False),
+            # allele.is_obsolete.is_(False),
             allele.uniquename.op('~')(self.regex['allele']),
-            component.is_obsolete.is_(False),
+            # component.is_obsolete.is_(False),
             component.uniquename.op('~')(self.regex['fb_uniquename']),
             Cvterm.name == 'encodes_tool',
         )
@@ -1632,9 +1631,9 @@ class ConstructHandler(FeatureHandler):
         allele = aliased(Feature, name='allele')
         component = aliased(Feature, name='component')
         filters = (
-            allele.is_obsolete.is_(False),
+            # allele.is_obsolete.is_(False),
             allele.uniquename.op('~')(self.regex['allele']),
-            component.is_obsolete.is_(False),
+            # component.is_obsolete.is_(False),
             component.uniquename.op('~')(self.regex['fb_uniquename']),
             Cvterm.name == 'has_reg_region',
         )
@@ -1675,9 +1674,9 @@ class ConstructHandler(FeatureHandler):
         allele = aliased(Feature, name='allele')
         gene = aliased(Feature, name='gene')
         filters = (
-            allele.is_obsolete.is_(False),
+            # allele.is_obsolete.is_(False),
             allele.uniquename.op('~')(self.regex['allele']),
-            gene.is_obsolete.is_(False),
+            # gene.is_obsolete.is_(False),
             gene.uniquename.op('~')(self.regex['gene']),
             Cvterm.name == 'alleleof',
         )
