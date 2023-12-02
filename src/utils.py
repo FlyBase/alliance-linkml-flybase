@@ -1588,20 +1588,18 @@ class ConstructHandler(FeatureHandler):
         self.log.info('Get encoded FBto/FBsf objects for the construct via alleles.')
         allele = aliased(Feature, name='allele')
         component = aliased(Feature, name='component')
-        al_comp = aliased(FeatureRelationship, name='al_comp')
-        al_comp_rel_type = aliased(Cvterm, name='al_comp_rel_type')
         filters = (
             allele.is_obsolete.is_(False),
             allele.uniquename.op('~')(self.regex['allele']),
             component.is_obsolete.is_(False),
             component.uniquename.op('~')(self.regex['fb_uniquename']),
-            al_comp_rel_type == 'encodes_tool',
+            Cvterm.name == 'encodes_tool',
         )
-        results = session.query(al_comp).\
+        results = session.query(FeatureRelationship).\
             select_from(allele).\
-            join(al_comp, (al_comp.subject_id == allele.feature_id)).\
-            join(al_comp_rel_type, (al_comp_rel_type.cvterm_id == al_comp.type_id)).\
-            join(component, (component.feature_id == al_comp.object_id)).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+            join(component, (component.feature_id == FeatureRelationship.object_id)).\
             filter(*filters).\
             distinct()
         # Create allele feature_id-keyed lists of allele-component "encodes_tool" FeatureRelationship objects.
