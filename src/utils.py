@@ -1583,9 +1583,9 @@ class ConstructHandler(FeatureHandler):
         self.get_entity_sbj_feat_rel_by_type(session, 'reg_region_rels', rel_type='has_reg_region', obj_regex=self.regex['fb_uniquename'])
         return
 
-    def get_allele_encoded_tools1(self, session):
-        """Get encoded FBto/FBsf objects for the construct via alleles - method 2."""
-        self.log.info('Get encoded FBto/FBsf objects for the construct via alleles.')
+    def get_allele_encoded_tools(self, session):
+        """Get encoded FBto/FBsf objects for the constructs via alleles."""
+        self.log.info('Get encoded FBto/FBsf objects for the constructs via alleles.')
         allele = aliased(Feature, name='allele')
         component = aliased(Feature, name='component')
         filters = (
@@ -1612,62 +1612,104 @@ class ConstructHandler(FeatureHandler):
             except KeyError:
                 al_comp_dict[result.subject_id] = [result]
                 counter += 1
-        self.log.info(f'Found {counter} allele-to-component relationships.')
-        self.log.info('Now map these relationships to constructs.')
+        self.log.info(f'Found {counter} allele-to-component "encodes_tool" relationships.')
+        self.log.info('Now map these "encodes_tool" relationships to constructs.')
         counter = 0
         for construct in self.fb_data_entities.values():
             for allele_rel in construct.parent_allele_rels:
                 allele_id = allele_rel.subject_id
                 try:
                     construct.al_encodes_tool_rels.extend(al_comp_dict[allele_id])
+                    counter += len(construct.al_encodes_tool_rels)
                 except KeyError:
                     pass
-                counter += len(construct.al_encodes_tool_rels)
-        self.log.info(f'Mapped {counter} allele-to-component relationships to related constructs.')
+        self.log.info(f'Mapped {counter} allele-to-component "encodes_tool" relationships to related constructs.')
         return
 
-    def get_allele_encoded_tools2(self, session):
-        """Get encoded FBto/FBsf objects for the construct via alleles."""
-        self.log.info('Get encoded FBto/FBsf objects for the construct via alleles.')
-        construct = aliased(Feature, name='construct')
+    def get_allele_reg_regions(self, session):
+        """Get regulatory FBto/FBsf/FBgn objects for the constructs via alleles."""
+        self.log.info('Get regulatory FBto/FBsf/FBgn objects for the constructs via alleles.')
         allele = aliased(Feature, name='allele')
         component = aliased(Feature, name='component')
-        cons_al = aliased(FeatureRelationship, name='cons_al')
-        al_comp = aliased(FeatureRelationship, name='al_comp')
-        cons_al_rel_type = aliased(Cvterm, name='cons_al_rel_type')
-        al_comp_rel_type = aliased(Cvterm, name='al_comp_rel_type')
         filters = (
-            construct.is_obsolete.is_(False),
-            construct.uniquename.op('~')(self.regex['construct']),
             allele.is_obsolete.is_(False),
             allele.uniquename.op('~')(self.regex['allele']),
             component.is_obsolete.is_(False),
             component.uniquename.op('~')(self.regex['fb_uniquename']),
-            cons_al_rel_type == 'associated_with',
-            al_comp_rel_type == 'encodes_tool',
+            Cvterm.name == 'has_reg_region',
         )
-        results = session.query(construct, al_comp).\
-            select_from(construct).\
-            join(cons_al, (cons_al.object_id == construct.feature_id)).\
-            join(cons_al_rel_type, (cons_al_rel_type.cvterm_id == cons_al.type_id)).\
-            join(allele, (allele.feature_id == cons_al.subject_id)).\
-            join(al_comp, (al_comp.subject_id == allele.feature_id)).\
-            join(al_comp_rel_type, (al_comp_rel_type.cvterm_id == al_comp.type_id)).\
-            join(component, (component.feature_id == al_comp.object_id)).\
+        results = session.query(FeatureRelationship).\
+            select_from(allele).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+            join(component, (component.feature_id == FeatureRelationship.object_id)).\
             filter(*filters).\
             distinct()
+        # Create allele feature_id-keyed lists of allele-component "has_reg_region" FeatureRelationship objects.
+        al_comp_dict = {}
         counter = 0
         for result in results:
-            self.fb_data_entites[result.construct.feature_id].al_encodes_tool_rels.append(result.al_comp)
-            counter += 1
-        self.log.info(f'Found {counter} indirect component relationships via alleles.')
+            try:
+                al_comp_dict[result.subject_id].append(result)
+                counter += 1
+            except KeyError:
+                al_comp_dict[result.subject_id] = [result]
+                counter += 1
+        self.log.info(f'Found {counter} allele-to-component "has_reg_region" relationships.')
+        self.log.info('Now map these "has_reg_region" relationships to constructs.')
+        counter = 0
+        for construct in self.fb_data_entities.values():
+            for allele_rel in construct.parent_allele_rels:
+                allele_id = allele_rel.subject_id
+                try:
+                    construct.al_reg_region_rels.extend(al_comp_dict[allele_id])
+                    counter += len(construct.al_reg_region_rels)
+                except KeyError:
+                    pass
+        self.log.info(f'Mapped {counter} allele-to-component "has_reg_region" relationships to related constructs.')
         return
 
-    def get_allele_reg_regions(self, session):
-        """Get regulatory FBto/FBsf/FBgn objects for the construct via alleles."""
-        self.log.info('Get regulatory FBto/FBsf/FBgn objects for the construct via alleles.')
-        # BOB to do
-        # self.al_reg_region_rels = []      # Indirect "has_reg_region" relationships.
+    def get_allele_genes(self, session):
+        """Get genes for the constructs via alleles."""
+        self.log.info('Get genes for the constructs via alleles.')
+        allele = aliased(Feature, name='allele')
+        gene = aliased(Feature, name='gene')
+        filters = (
+            allele.is_obsolete.is_(False),
+            allele.uniquename.op('~')(self.regex['allele']),
+            gene.is_obsolete.is_(False),
+            gene.uniquename.op('~')(self.regex['gene']),
+            Cvterm.name == 'alleleof',
+        )
+        results = session.query(FeatureRelationship).\
+            select_from(allele).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+            join(gene, (gene.feature_id == FeatureRelationship.object_id)).\
+            filter(*filters).\
+            distinct()
+        # Create allele feature_id-keyed lists of allele-gene "alleleof" FeatureRelationship objects.
+        al_comp_dict = {}
+        counter = 0
+        for result in results:
+            try:
+                al_comp_dict[result.subject_id].append(result)
+                counter += 1
+            except KeyError:
+                al_comp_dict[result.subject_id] = [result]
+                counter += 1
+        self.log.info(f'Found {counter} allele-to-gene "alleleof" relationships.')
+        self.log.info('Now map these "alleleof" relationships to constructs.')
+        counter = 0
+        for construct in self.fb_data_entities.values():
+            for allele_rel in construct.parent_allele_rels:
+                allele_id = allele_rel.subject_id
+                try:
+                    construct.al_genes.extend(al_comp_dict[allele_id])
+                    counter += len(construct.al_genes)
+                except KeyError:
+                    pass
+        self.log.info(f'Mapped {counter} allele-to-gene "alleleof" relationships to related constructs.')
         return
 
     def get_datatype_data(self, session):
@@ -1676,9 +1718,9 @@ class ConstructHandler(FeatureHandler):
         self.get_construct_alleles(session)
         self.get_construct_encoded_tools(session)
         self.get_construct_reg_regions(session)
-        self.get_allele_encoded_tools1(session)    # BOB - compare method 1 and 2 for speed.
-        self.get_allele_encoded_tools2(session)    # BOB - compare method 1 and 2 for speed.
-        # self.get_allele_reg_regions(session)    # BOB to do
+        self.get_allele_encoded_tools(session)
+        self.get_allele_reg_regions(session)
+        self.get_allele_genes(session)
         return
 
     # Elaborate on synthesize_info() sub-methods for ConstructHandler.
