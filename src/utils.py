@@ -1754,6 +1754,7 @@ class ConstructHandler(FeatureHandler):
                         construct.expressed_features[component_id].extend(al_con_pub_ids)
             indirect_count = len(construct.expressed_features.keys()) - direct_count
             self.log.debug(f'For {construct}, found {indirect_count} encoded tools via indirect allele relationships.')
+            self.log.debug(f'For {construct}, encoded tools = {construct.expressed_features}')
             counter += len(construct.expressed_features.keys())
         self.log.info(f'Found {counter} encoded tools for constructs via direct and indirect allele relationships.')
         return
@@ -1773,7 +1774,7 @@ class ConstructHandler(FeatureHandler):
                 pub_ids = self.feat_rel_pub_lookup[rel.feature_relationship_id]
                 # Slot for gene_id depends on the allele class.
                 try:
-                    if self.transgenic_allele_class_lookup[allele_id] in ['RNAi_reagent', 'sgRNA', 'antisense']:
+                    if set(self.transgenic_allele_class_lookup[allele_id]).intersection({'RNAi_reagent', 'sgRNA', 'antisense'}):
                         gene_slot = getattr(construct, 'targeted_features')
                         this_targeted_gene_counter += 1
                     else:
@@ -1792,6 +1793,8 @@ class ConstructHandler(FeatureHandler):
                         al_con_pub_ids = self.feat_rel_pub_lookup[al_con_rel.feature_relationship_id]
                         gene_slot[gene_id].extend(al_con_pub_ids)
             self.log.debug(f'For {construct}, found {this_expressed_gene_counter} expressed genes and {this_targeted_gene_counter} targeted genes.')
+            self.log.debug(f'For {construct}, expressed genes = {construct.expressed_features}')
+            self.log.debug(f'For {construct}, targeted genes = {construct.targeted_features}')
             all_expressed_gene_counter += this_expressed_gene_counter
             all_targeted_gene_counter += this_targeted_gene_counter
         self.log.info(f'Found {all_expressed_gene_counter} expressed genes and {all_targeted_gene_counter} targeted genes for constructs.')
@@ -1829,6 +1832,7 @@ class ConstructHandler(FeatureHandler):
                         construct.regulating_features[component_id].extend(al_con_pub_ids)
             indirect_count = len(construct.regulating_features.keys()) - direct_count
             self.log.debug(f'For {construct}, found {indirect_count} reg_regions tools via indirect allele relationships.')
+            self.log.debug(f'For {construct}, reg_regions = {construct.regulating_features}')
             # BILLY BOB - suppress until code above has been confirmed.
             # # Indirect relationships to genes via seqfeats.
             # for component_id, pub_ids in construct.regulating_features.items():
