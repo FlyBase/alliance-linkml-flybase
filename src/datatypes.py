@@ -105,13 +105,14 @@ class FBConstruct(FBFeature):
         """Create the FBConstruct object."""
         super().__init__(chado_obj)
         # Primary FB chado data.
+        # For constructs, relationships to components are key; may be direct or indirect via allele.
         # Direct relationships (FeatureRelationship objects); ignoring carries_tool and tagged_with.
         self.parent_allele_rels = []      # Direct "associated_with" relationships to FBal allele(s).
         self.encodes_tool_rels = []       # Direct "encodes_tool" relationships to FBto tools.
         self.reg_region_rels = []         # Direct "has_reg_region" relationships to FBto/FBgn/FBsf tools/genes/seqfeats.
         # Indirect relationships (lists of (FeatureRelationship, FeatureRelationshipPub) results) via the allele.
-        self.al_encodes_tool_rels = []    # Indirect "encodes" relationships.
-        self.al_reg_region_rels = []      # Indirect "has_reg_region" relationships.
+        self.al_encodes_tool_rels = []    # Indirect "encodes" relationships: a list of allele-to-FBto/FBsf FeatureRelationship objects.
+        self.al_reg_region_rels = []      # Indirect "has_reg_region" relationships: a list of allele-to-FBto/FBsf/FBgn FeatureRelationship objects.
         # Processed FB data.
         # Final relationship assessments.
         self.expressed_features = {}     # Will be list of feature_id-keyed pub_id list for expressed things: FBgn and FBto.

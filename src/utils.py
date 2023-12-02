@@ -51,19 +51,19 @@ class DataHandler(object):
         self.agr_ingest_type = self.agr_ingest_type_dict[fb_data_type]
         self.testing = testing
         # Datatype bins.
-        self.fb_data_entities = {}    # db_primary_id-keyed dict of chado objects to export.
-        self.export_data = []         # List of data objects for export (as Alliance ingest set).
+        self.fb_data_entities = {}     # db_primary_id-keyed dict of chado objects to export.
+        self.export_data = []          # List of data objects for export (as Alliance ingest set).
         # General data bins.
-        self.bibliography = {}        # A pub_id-keyed dict of pub curies (PMID or FBrf).
-        self.cvterm_dict = {}         # A cvterm_id-keyed dict of Cvterm objects.
-        self.ncbi_taxon_dict = {}     # An organism_id-keyed dict of NCBITaxon Dbxref.accession strings.
-        self.feature_lookup = {}      # feature_id-keyed lookup of basic feature info: uniquename, is_obsolete, name, symbol, exported, taxon_id and species.
+        self.bibliography = {}         # A pub_id-keyed dict of pub curies (PMID or FBrf).
+        self.cvterm_lookup = {}        # A cvterm_id-keyed dict of Cvterm objects.
+        self.ncbi_taxon_lookup = {}    # An organism_id-keyed dict of f'NCBITaxon:{Dbxref.accession}' strings.
+        self.feature_lookup = {}       # feature_id-keyed lookup of basic feature info: uniquename, is_obsolete, name, symbol, exported, taxon_id and species.
         # Trackers.
-        self.input_count = 0          # Count of entities found in FlyBase chado database.
-        self.export_count = 0         # Count of exported Alliance entities.
-        self.internal_count = 0       # Count of exported entities marked as internal.
-        self.warnings = []            # Handler issues of note.
-        self.errors = []              # Handler issues that break things.
+        self.input_count = 0           # Count of entities found in FlyBase chado database.
+        self.export_count = 0          # Count of exported Alliance entities.
+        self.internal_count = 0        # Count of exported entities marked as internal.
+        self.warnings = []             # Handler issues of note.
+        self.errors = []               # Handler issues that break things.
 
     # Sample set for faster testing: use uniquename-keyed names of objects, tailored for each handler.
     test_set = {}
@@ -129,11 +129,53 @@ class DataHandler(object):
     }
 
     # Methods
+    # General utilities.
     def __str__(self):
         """Print out data handler description."""
         handler_description = f'A data handler that exports FB {self.fb_data_type} to Alliance LinkML {self.agr_ingest_type}.'
         return handler_description
 
+    # Note - The get_pub_curies() method depends on the existence of self.bibliography dict.
+    def get_pub_curies(self, pub_id_list):
+        """Return a list of curies from a list of internal chado pub_ids."""
+        pub_curie_list = []
+        # First, try to get curies for each pub_id.
+        for pub_id in set(pub_id_list):
+            try:
+                pub_curie_list.append(self.bibliography[pub_id])
+            except KeyError:
+                pass
+        # Second, remove unattributed.
+        try:
+            pub_curie_list.remove('FB:unattributed')
+        except ValueError:
+            pass
+        return pub_curie_list
+
+    def get_primary_key_column(self, chado_table):
+        """Get the primary key Column object from a specified chado table Model object."""
+        primary_key_column = next((column for column in chado_table.__table__.c if column.primary_key), None)
+        if primary_key_column is None:
+            self.log.error(f'Could not get primary_key Column from {chado_table}')
+            raise ValueError
+        else:
+            pass
+            # self.log.debug(f'Found primary_key column: {primary_key_column.name}')
+        return primary_key_column
+
+    def get_foreign_key_column(self, chado_table, column_name):
+        """Get a foreign key column object, by name, from a specified chado table Model object."""
+        foreign_key_column = next((column for column in chado_table.__table__.c if column.foreign_keys and column.name == column_name), None)
+        if foreign_key_column is None:
+            self.log.error(f'Could not get foreign_key Column {column_name} from {chado_table}')
+            raise ValueError
+        else:
+            pass
+            # self.log.debug(f'Found primary_key column: {foreign_key_column.name}')
+        return foreign_key_column
+
+    # Elaborate on get_general_data() sub-methods for DataHandler.
+    # These sub-methods may only be called in more specific handlers as appropriate.
     def build_bibliography(self, session):
         """Build FlyBase bibliography."""
         self.log.info('Build FlyBase bibliography.')
@@ -169,8 +211,8 @@ class DataHandler(object):
         self.log.info(f'Found {pmid_counter} PMID IDs for {pub_counter} current FB publications.')
         return
 
-    def get_cvterms(self, session):
-        """Create a cvterm_id-keyed dict of Cvterms."""
+    def build_cvterm_lookup(self, session):
+        """Create a cvterm_id-keyed lookup of Cvterm objects."""
         self.log.info('Create a cvterm_id-keyed dict of Cvterms.')
         # First get all current pubs having an FBrf uniquename.
         filters = (
@@ -178,13 +220,13 @@ class DataHandler(object):
         )
         results = session.query(Cvterm).filter(*filters).distinct()
         cvterm_counter = 0
-        for cvterm in results:
-            self.cvterm_dict[cvterm.cvterm_id] = cvterm
+        for result in results:
+            self.cvterm_lookup[result.cvterm_id] = result
             cvterm_counter += 1
         self.log.info(f'Found {cvterm_counter} current CV terms in chado.')
         return
 
-    def get_ncbi_taxon_ids(self, session):
+    def build_ncbi_taxon_lookup(self, session):
         """Get FlyBase Organism-NCBITaxon ID correspondence."""
         self.log.info('Get FlyBase Organism-NCBITaxon ID correspondence.')
         filters = (
@@ -198,14 +240,14 @@ class DataHandler(object):
             distinct()
         counter = 0
         for xref in results:
-            self.ncbi_taxon_dict[xref.OrganismDbxref.organism_id] = xref.Dbxref.accession
+            self.ncbi_taxon_lookup[xref.OrganismDbxref.organism_id] = xref.Dbxref.accession
             counter += 1
         self.log.info(f'Found {counter} NCBITaxon IDs for FlyBase organisms.')
         return
 
     def build_feature_lookup(self, session):
         """Build a simple feature lookup."""
-        # Note - depends on prior construction of self.ncbi_taxon_dict and self.cvterm_dict.
+        # Note - depends on prior construction of self.ncbi_taxon_lookup and self.cvterm_lookup.
         self.log.info('Build a simple feature lookup.')
         # Feature types to add to the feature_lookup.
         feat_type_export = {
@@ -238,14 +280,14 @@ class DataHandler(object):
                 feat_dict = {
                     'uniquename': result.Feature.uniquename,
                     'is_obsolete': result.Feature.is_obsolete,
-                    'type': self.cvterm_dict[result.Feature.type_id],
+                    'type': self.cvterm_lookup[result.Feature.type_id],
                     'species': f'{result.Feature.organism.genus} {result.Feature.organism.species}',
                     'name': result.Feature.name,
                     'symbol': sub_sup_sgml_to_html(result.Synonym.synonym_sgml),
                     'exported': is_exported
                 }
                 try:
-                    feat_dict['taxon_id'] = self.ncbi_taxon_dict[result.Feature.organism_id]
+                    feat_dict['taxon_id'] = f'NCBITaxon:{self.ncbi_taxon_lookup[result.Feature.organism_id]}'
                 except KeyError:
                     feat_dict['taxon_id'] = 'NCBITaxon:32644'    # Unspecified taxon.
                 self.feature_lookup[result.Feature.feature_id] = feat_dict
@@ -253,13 +295,194 @@ class DataHandler(object):
             self.log.info(f'Added {counter} {feat_type} features to the feature_lookup.')
         return
 
+    # Elaborate on get_general_data() sub-methods for FeatureHandler.
+    # Call get_chr_info() only for more specific FeatureHandler types.
+    def get_chr_info(self, session):
+        """Build chr dict."""
+        self.log.info('Build chr dict.')
+        filters = (
+            Feature.is_obsolete.is_(False),
+            Feature.is_analysis.is_(False),
+            Cvterm.name == 'golden_path',
+            Organism.abbreviation == 'Dmel'
+        )
+        chr_results = session.query(Feature).\
+            join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
+            join(Organism, (Organism.organism_id == Feature.organism_id)).\
+            filter(*filters).\
+            distinct()
+        self.chr_dict = {}
+        counter = 0
+        for result in chr_results:
+            self.chr_dict[result.feature_id] = result.uniquename
+            counter += 1
+        self.log.info(f'Got basic info for {counter} current Dmel chr scaffolds.')
+        return
+
+    def build_feature_relationship_evidence_lookup(self, session):
+        """Build evidence lookup for feature_relationships."""
+        self.log.info('Build evidence lookup for feature_relationships.')
+        results = session.query(FeatureRelationshipPub).distinct()
+        counter = 0
+        fr_counter = 0
+        for result in results:
+            try:
+                self.feat_rel_pub_lookup[result.feature_relationship_id].append(result.pub_id)
+                counter += 1
+            except KeyError:
+                self.feat_rel_pub_lookup[result.feature_relationship_id] = [result.pub_id]
+                fr_counter += 1
+                counter += 1
+        self.log.info(f'Found {counter} pubs supporting {fr_counter} feature_relationships.')
+        return
+
+    # Call build_allele_gene_lookup() only for more specific FeatureHandler types.
+    def build_allele_gene_lookup(self, session):
+        """Build an allele-gene lookup dict, current features only."""
+        self.log.info('Build an allele-gene lookup dict, current features only.')
+        allele = aliased(Feature, name='allele')
+        gene = aliased(Feature, name='gene')
+        rel_type = aliased(Cvterm, name='rel_type')
+        filters = (
+            allele.is_obsolete.is_(False),
+            allele.uniquename.op('~')(self.regex['allele']),
+            gene.is_obsolete.is_(False),
+            gene.uniquename.op('~')(self.regex['gene']),
+            rel_type.name == 'alleleof'
+        )
+        results = session.query(allele, gene).\
+            select_from(allele).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
+            join(gene, (gene.feature_id == FeatureRelationship.object_id)).\
+            join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            self.allele_gene_lookup[result.allele.feature_id] = result.gene.feature_id
+            counter += 1
+        self.log.info(f'Added {counter} current allele-gene relationships to the allele-gene lookup.')
+        return
+
+    # Call build_seqfeat_gene_lookup() only for more specific FeatureHandler types.
+    def build_seqfeat_gene_lookup(self, session):
+        """Build an seqfeat-gene lookup dict, current features only."""
+        self.log.info('Build an seqfeat-gene lookup dict, current features only.')
+        seqfeat = aliased(Feature, name='seqfeat')
+        gene = aliased(Feature, name='gene')
+        rel_type = aliased(Cvterm, name='rel_type')
+        filters = (
+            seqfeat.is_obsolete.is_(False),
+            seqfeat.uniquename.op('~')(self.regex['seqfeat']),
+            gene.is_obsolete.is_(False),
+            gene.uniquename.op('~')(self.regex['gene']),
+            rel_type.name == 'associated_with'
+        )
+        results = session.query(seqfeat, gene).\
+            select_from(seqfeat).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == seqfeat.feature_id)).\
+            join(gene, (gene.feature_id == FeatureRelationship.object_id)).\
+            join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            self.seqfeat_gene_lookup[result.seqfeat.feature_id] = result.gene.feature_id
+            counter += 1
+        self.log.info(f'Added {counter} current seqfeat-gene relationships to the seqfeat-gene lookup.')
+        return
+
+    # Call build_gene_tool_lookup() only for more specific Handler types.
+    def build_gene_tool_lookup(self, session):
+        """Build a lookup of gene-to-tool relationships for filtering reporting, current only."""
+        self.log.info('Build a lookup of gene-to-tool relationships for filtering reporting.')
+        gene = aliased(Feature, name='gene')
+        tool = aliased(Feature, name='tool')
+        filters = (
+            gene.is_obsolete.is_(False),
+            gene.uniquename.op('~')(self.regex['gene']),
+            tool.is_obsolete.is_(False),
+            tool.uniquename.op('~')(self.regex['tool']),
+            Cvterm.name == 'originates_from'
+        )
+        results = session.query(gene, tool).\
+            select_from(gene).\
+            join(FeatureRelationship, (FeatureRelationship.object_id == gene.feature_id)).\
+            join(tool, (tool.feature_id == FeatureRelationship.subject_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            try:
+                self.gene_tool_lookup[result.gene.feature_id].append(result.tool.feature_id)
+                counter += 1
+            except KeyError:
+                self.gene_tool_lookup[result.gene.feature_id] = [result.tool.feature_id]
+                counter += 1
+        self.log.info(f'Found {counter} gene-to-tool relationships.')
+        return
+
+    # Call build_allele_class_lookup() only for more specific FeatureHandler types.
+    def build_allele_class_lookup(self, session):
+        """Build a lookup of allele "transgenic product class" values."""
+        self.log.info('Build a lookup of allele "transgenic product class" values.')
+        # FYI, these terms indicate that the allele targets its parent gene: ['RNAi_reagent', 'sgRNA', 'antisense'].
+        # Main query.
+        cvterm = aliased(Cvterm, name='cvterm')
+        qualifier = aliased(Cvterm, name='qualifier')
+        filters = (
+            Feature.uniquename.op('~')(self.regex['allele']),
+            cvterm.is_obsolete == 0,
+            qualifier.name == 'transgenic_product_class',
+        )
+        results = session.query(Feature, cvterm).\
+            select_from(Feature).\
+            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
+            join(cvterm, (cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
+            join(FeatureCvtermprop, (FeatureCvtermprop.feature_cvterm_id == FeatureCvterm.feature_cvterm_id)).\
+            join(qualifier, (qualifier.cvterm_id == FeatureCvtermprop.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            # self.log.debug(f'Have this allele: {result.Feature.name} ({result.Feature.uniquename})')
+            # self.log.debug(f'Have this CV term: {result.cvterm.name}')
+            try:
+                self.transgenic_allele_class_lookup[result.Feature.feature_id].append(result.cvterm.name)
+                counter += 1
+            except KeyError:
+                self.transgenic_allele_class_lookup[result.Feature.feature_id] = [result.cvterm.name]
+                counter += 1
+        self.log.info(f'Found {counter} transgenic product class terms for alleles.')
+        # Back up. Look at mutagen terms to find old/obsolete alleles missed in the transgenic product class retrofit.
+        filters = (
+            Feature.uniquename.op('~')(self.regex['allele']),
+            Cvterm.name == 'in vitro construct - RNAi',
+        )
+        results = session.query(Feature).\
+            select_from(Feature).\
+            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            if result.feature_id not in self.transgenic_allele_class_lookup.keys():
+                self.transgenic_allele_class_lookup[result.feature_id] = ['RNAi_reagent']
+                counter += 1
+            elif 'RNAi_reagent' not in self.transgenic_allele_class_lookup[result.feature_id]:
+                self.transgenic_allele_class_lookup[result.feature_id].append('RNAi_reagent')
+                counter += 1
+        self.log.info(f'Found an additional {counter} RNAi reagent alleles via mutagen terms.')
+        return
+
     def get_general_data(self, session):
         """Get general FlyBase chado data."""
         self.log.info('Get general FlyBase data from chado.')
         self.build_bibliography(session)
-        self.get_cvterms(session)
-        self.get_ncbi_taxon_ids(session)
-        # self.build_feature_lookup(session)    # BOB: temporarily disabled for faster dev
+        self.build_cvterm_lookup(session)
+        self.build_ncbi_taxon_lookup(session)
         return
 
     def get_datatype_data(self, session):
@@ -366,28 +589,6 @@ class PrimaryEntityHandler(DataHandler):
         'gene': ['gene'],
         'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion', 'point_mutation', 'sequence_alteration', 'sequence_variant']
     }
-
-    def get_primary_key_column(self, chado_table):
-        """Get the primary key Column object from a specified chado table Model object."""
-        primary_key_column = next((column for column in chado_table.__table__.c if column.primary_key), None)
-        if primary_key_column is None:
-            self.log.error(f'Could not get primary_key Column from {chado_table}')
-            raise ValueError
-        else:
-            pass
-            # self.log.debug(f'Found primary_key column: {primary_key_column.name}')
-        return primary_key_column
-
-    def get_foreign_key_column(self, chado_table, column_name):
-        """Get a foreign key column object, by name, from a specified chado table Model object."""
-        foreign_key_column = next((column for column in chado_table.__table__.c if column.foreign_keys and column.name == column_name), None)
-        if foreign_key_column is None:
-            self.log.error(f'Could not get foreign_key Column {column_name} from {chado_table}')
-            raise ValueError
-        else:
-            pass
-            # self.log.debug(f'Found primary_key column: {foreign_key_column.name}')
-        return foreign_key_column
 
     # BOB: Quick testing of general SQLAlchemy query approaches.
     def sqlalchemy_test(self, session):
@@ -737,7 +938,7 @@ class PrimaryEntityHandler(DataHandler):
                 return
             # Catch cases where the FB data entity has no corresponding NCBITaxon ID.
             try:
-                ncbi_taxon_id = f'NCBITaxon:{self.ncbi_taxon_dict[organism_id]}'
+                ncbi_taxon_id = self.ncbi_taxon_lookup[organism_id]
             except KeyError:
                 self.log.warning(f'Use "unidentified" NCBITaxon ID for {fb_data_entity}')
                 ncbi_taxon_id = 'NCBITaxon:32644'
@@ -890,22 +1091,6 @@ class PrimaryEntityHandler(DataHandler):
             sec_id_list.extend(secondary_id_dtos)
         return
 
-    def get_pub_curies(self, pub_id_list):
-        """Return a list of curies from a list of internal chado pub_ids."""
-        pub_curie_list = []
-        # First, try to get curies for each pub_id.
-        for pub_id in set(pub_id_list):
-            try:
-                pub_curie_list.append(self.bibliography[pub_id])
-            except KeyError:
-                pass
-        # Second, remove unattributed.
-        try:
-            pub_curie_list.remove('FB:unattributed')
-        except ValueError:
-            pass
-        return pub_curie_list
-
     def map_pubs(self):
         """Add pub curies to a FlyBase entity."""
         self.log.info('Map pubs to Alliance object.')
@@ -1054,188 +1239,6 @@ class FeatureHandler(PrimaryEntityHandler):
         """Create the FeatureHandler object."""
         super().__init__(log, fb_data_type, testing)
         self.chr_dict = {}    # Will be a feature_id-keyed dict of chr scaffold uniquenames.
-
-    # Elaborate on get_general_data() sub-methods for FeatureHandler.
-    # Call get_chr_info() only for more specific FeatureHandler types.
-    def get_chr_info(self, session):
-        """Build chr dict."""
-        self.log.info('Build chr dict.')
-        filters = (
-            Feature.is_obsolete.is_(False),
-            Feature.is_analysis.is_(False),
-            Cvterm.name == 'golden_path',
-            Organism.abbreviation == 'Dmel'
-        )
-        chr_results = session.query(Feature).\
-            join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
-            join(Organism, (Organism.organism_id == Feature.organism_id)).\
-            filter(*filters).\
-            distinct()
-        self.chr_dict = {}
-        counter = 0
-        for result in chr_results:
-            self.chr_dict[result.feature_id] = result.uniquename
-            counter += 1
-        self.log.info(f'Got basic info for {counter} current Dmel chr scaffolds.')
-        return
-
-    def build_feature_relationship_evidence_lookup(self, session):
-        """Build evidence lookup for feature_relationships."""
-        self.log.info('Build evidence lookup for feature_relationships.')
-        results = session.query(FeatureRelationshipPub).distinct()
-        counter = 0
-        fr_counter = 0
-        for result in results:
-            try:
-                self.feat_rel_pub_lookup[result.feature_relationship_id].append(result.pub_id)
-                counter += 1
-            except KeyError:
-                self.feat_rel_pub_lookup[result.feature_relationship_id] = [result.pub_id]
-                fr_counter += 1
-                counter += 1
-        self.log.info(f'Found {counter} pubs supporting {fr_counter} feature_relationships.')
-        return
-
-    # Call build_allele_gene_lookup() only for more specific FeatureHandler types.
-    def build_allele_gene_lookup(self, session):
-        """Build an allele-gene lookup dict, current features only."""
-        self.log.info('Build an allele-gene lookup dict, current features only.')
-        allele = aliased(Feature, name='allele')
-        gene = aliased(Feature, name='gene')
-        rel_type = aliased(Cvterm, name='rel_type')
-        filters = (
-            allele.is_obsolete.is_(False),
-            allele.uniquename.op('~')(self.regex['allele']),
-            gene.is_obsolete.is_(False),
-            gene.uniquename.op('~')(self.regex['gene']),
-            rel_type.name == 'alleleof'
-        )
-        results = session.query(allele, gene).\
-            select_from(allele).\
-            join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
-            join(gene, (gene.feature_id == FeatureRelationship.object_id)).\
-            join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
-            filter(*filters).\
-            distinct()
-        counter = 0
-        for result in results:
-            self.allele_gene_lookup[result.allele.feature_id] = result.gene.feature_id
-            counter += 1
-        self.log.info(f'Added {counter} current allele-gene relationships to the allele-gene lookup.')
-        return
-
-    # Call build_seqfeat_gene_lookup() only for more specific FeatureHandler types.
-    def build_seqfeat_gene_lookup(self, session):
-        """Build an seqfeat-gene lookup dict, current features only."""
-        self.log.info('Build an seqfeat-gene lookup dict, current features only.')
-        seqfeat = aliased(Feature, name='seqfeat')
-        gene = aliased(Feature, name='gene')
-        rel_type = aliased(Cvterm, name='rel_type')
-        filters = (
-            seqfeat.is_obsolete.is_(False),
-            seqfeat.uniquename.op('~')(self.regex['seqfeat']),
-            gene.is_obsolete.is_(False),
-            gene.uniquename.op('~')(self.regex['gene']),
-            rel_type.name == 'associated_with'
-        )
-        results = session.query(seqfeat, gene).\
-            select_from(seqfeat).\
-            join(FeatureRelationship, (FeatureRelationship.subject_id == seqfeat.feature_id)).\
-            join(gene, (gene.feature_id == FeatureRelationship.object_id)).\
-            join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
-            filter(*filters).\
-            distinct()
-        counter = 0
-        for result in results:
-            self.seqfeat_gene_lookup[result.seqfeat.feature_id] = result.gene.feature_id
-            counter += 1
-        self.log.info(f'Added {counter} current seqfeat-gene relationships to the seqfeat-gene lookup.')
-        return
-
-    # Call build_gene_tool_lookup() only for more specific Handler types.
-    def build_gene_tool_lookup(self, session):
-        """Build a lookup of gene-to-tool relationships for filtering reporting, current only."""
-        self.log.info('Build a lookup of gene-to-tool relationships for filtering reporting.')
-        gene = aliased(Feature, name='gene')
-        tool = aliased(Feature, name='tool')
-        filters = (
-            gene.is_obsolete.is_(False),
-            gene.uniquename.op('~')(self.regex['gene']),
-            tool.is_obsolete.is_(False),
-            tool.uniquename.op('~')(self.regex['tool']),
-            Cvterm.name == 'originates_from'
-        )
-        results = session.query(gene, tool).\
-            select_from(gene).\
-            join(FeatureRelationship, (FeatureRelationship.object_id == gene.feature_id)).\
-            join(tool, (tool.feature_id == FeatureRelationship.subject_id)).\
-            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
-            filter(*filters).\
-            distinct()
-        counter = 0
-        for result in results:
-            try:
-                self.gene_tool_lookup[result.gene.feature_id].append(result.tool.feature_id)
-                counter += 1
-            except KeyError:
-                self.gene_tool_lookup[result.gene.feature_id] = [result.tool.feature_id]
-                counter += 1
-        self.log.info(f'Found {counter} gene-to-tool relationships.')
-        return
-
-    # Call build_allele_class_lookup() only for more specific FeatureHandler types.
-    def build_allele_class_lookup(self, session):
-        """Build a lookup of allele "transgenic product class" values."""
-        self.log.info('Build a lookup of allele "transgenic product class" values.')
-        # FYI, these terms indicate that the allele targets its parent gene: ['RNAi_reagent', 'sgRNA', 'antisense'].
-        # Main query.
-        cvterm = aliased(Cvterm, name='cvterm')
-        qualifier = aliased(Cvterm, name='qualifier')
-        filters = (
-            Feature.uniquename.op('~')(self.regex['allele']),
-            cvterm.is_obsolete == 0,
-            qualifier.name == 'transgenic_product_class',
-        )
-        results = session.query(Feature, cvterm).\
-            select_from(Feature).\
-            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
-            join(cvterm, (cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
-            join(FeatureCvtermprop, (FeatureCvtermprop.feature_cvterm_id == FeatureCvterm.feature_cvterm_id)).\
-            join(qualifier, (qualifier.cvterm_id == FeatureCvtermprop.type_id)).\
-            filter(*filters).\
-            distinct()
-        counter = 0
-        for result in results:
-            # self.log.debug(f'Have this allele: {result.Feature.name} ({result.Feature.uniquename})')
-            # self.log.debug(f'Have this CV term: {result.cvterm.name}')
-            try:
-                self.transgenic_allele_class_lookup[result.Feature.feature_id].append(result.cvterm.name)
-                counter += 1
-            except KeyError:
-                self.transgenic_allele_class_lookup[result.Feature.feature_id] = [result.cvterm.name]
-                counter += 1
-        self.log.info(f'Found {counter} transgenic product class terms for alleles.')
-        # Back up. Look at mutagen terms to find old/obsolete alleles missed in the transgenic product class retrofit.
-        filters = (
-            Feature.uniquename.op('~')(self.regex['allele']),
-            Cvterm.name == 'in vitro construct - RNAi',
-        )
-        results = session.query(Feature).\
-            select_from(Feature).\
-            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
-            join(Cvterm, (Cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
-            filter(*filters).\
-            distinct()
-        counter = 0
-        for result in results:
-            if result.feature_id not in self.transgenic_allele_class_lookup.keys():
-                self.transgenic_allele_class_lookup[result.feature_id] = ['RNAi_reagent']
-                counter += 1
-            elif 'RNAi_reagent' not in self.transgenic_allele_class_lookup[result.feature_id]:
-                self.transgenic_allele_class_lookup[result.feature_id].append('RNAi_reagent')
-                counter += 1
-        self.log.info(f'Found an additional {counter} RNAi reagent alleles via mutagen terms.')
-        return
 
     def get_general_data(self, session):
         """Extend the method for the FeatureHandler."""
@@ -1553,6 +1556,7 @@ class ConstructHandler(FeatureHandler):
     def get_general_data(self, session):
         """Extend the method for the ConstructHandler."""
         super().get_general_data(session)
+        # self.build_feature_lookup(session)                          # BOB: temporarily disabled for faster dev
         # self.build_feature_relationship_evidence_lookup(session)    # BOB: temporarily disabled for faster dev
         # self.build_allele_gene_lookup(session)                      # BOB: temporarily disabled for faster dev
         # self.build_seqfeat_gene_lookup(session)                     # BOB: temporarily disabled for faster dev
@@ -1579,11 +1583,101 @@ class ConstructHandler(FeatureHandler):
         self.get_entity_sbj_feat_rel_by_type(session, 'reg_region_rels', rel_type='has_reg_region', obj_regex=self.regex['fb_uniquename'])
         return
 
+    def get_allele_encoded_tools1(self, session):
+        """Get encoded FBto/FBsf objects for the construct via alleles - method 2."""
+        self.log.info('Get encoded FBto/FBsf objects for the construct via alleles.')
+        allele = aliased(Feature, name='allele')
+        component = aliased(Feature, name='component')
+        al_comp = aliased(FeatureRelationship, name='al_comp')
+        al_comp_rel_type = aliased(Cvterm, name='al_comp_rel_type')
+        filters = (
+            allele.is_obsolete.is_(False),
+            allele.uniquename.op('~')(self.regex['allele']),
+            component.is_obsolete.is_(False),
+            component.uniquename.op('~')(self.regex['fb_uniquename']),
+            al_comp_rel_type == 'encodes_tool',
+        )
+        results = session.query(al_comp).\
+            select_from(allele).\
+            join(al_comp, (al_comp.subject_id == allele.feature_id)).\
+            join(al_comp_rel_type, (al_comp_rel_type.cvterm_id == al_comp.type_id)).\
+            join(component, (component.feature_id == al_comp.object_id)).\
+            filter(*filters).\
+            distinct()
+        # Create allele feature_id-keyed lists of allele-component "encodes_tool" FeatureRelationship objects.
+        al_comp_dict = {}
+        counter = 0
+        for result in results:
+            try:
+                al_comp_dict[result.subject_id].append(result)
+                counter += 1
+            except KeyError:
+                al_comp_dict[result.subject_id] = [result]
+                counter += 1
+        self.log.info(f'Found {counter} allele-to-component relationships.')
+        self.log.info('Now map these relationships to constructs.')
+        counter = 0
+        for construct in self.fb_data_entities.values():
+            for allele_rel in construct.parent_allele_rels:
+                allele_id = allele_rel.subject_id
+                construct.al_encodes_tool_rels.extend(al_comp_dict[allele_id])
+                counter += len(construct.al_encodes_tool_rels)
+        self.log.info(f'Mapped {counter} allele-to-component relationships to related constructs.')
+        return
+
+    def get_allele_encoded_tools2(self, session):
+        """Get encoded FBto/FBsf objects for the construct via alleles."""
+        self.log.info('Get encoded FBto/FBsf objects for the construct via alleles.')
+        construct = aliased(Feature, name='construct')
+        allele = aliased(Feature, name='allele')
+        component = aliased(Feature, name='component')
+        cons_al = aliased(FeatureRelationship, name='cons_al')
+        al_comp = aliased(FeatureRelationship, name='al_comp')
+        cons_al_rel_type = aliased(Cvterm, name='cons_al_rel_type')
+        al_comp_rel_type = aliased(Cvterm, name='al_comp_rel_type')
+        filters = (
+            construct.is_obsolete.is_(False),
+            construct.uniquename.op('~')(self.regex['construct']),
+            allele.is_obsolete.is_(False),
+            allele.uniquename.op('~')(self.regex['allele']),
+            component.is_obsolete.is_(False),
+            component.uniquename.op('~')(self.regex['fb_uniquename']),
+            cons_al_rel_type == 'associated_with',
+            al_comp_rel_type == 'encodes_tool',
+        )
+        results = session.query(construct, al_comp).\
+            select_from(construct).\
+            join(cons_al, (cons_al.object_id == construct.feature_id)).\
+            join(cons_al_rel_type, (cons_al_rel_type.cvterm_id == cons_al.type_id)).\
+            join(allele, (allele.feature_id == cons_al.subject_id)).\
+            join(al_comp, (al_comp.subject_id == allele.feature_id)).\
+            join(al_comp_rel_type, (al_comp_rel_type.cvterm_id == al_comp.type_id)).\
+            join(component, (component.feature_id == al_comp.object_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            self.fb_data_entites[result.construct.feature_id].al_encodes_tool_rels.append(result.al_comp)
+            counter += 1
+        self.log.info(f'Found {counter} indirect component relationships via alleles.')
+        return
+
+    def get_allele_reg_regions(self, session):
+        """Get regulatory FBto/FBsf/FBgn objects for the construct via alleles."""
+        self.log.info('Get regulatory FBto/FBsf/FBgn objects for the construct via alleles.')
+        # BOB to do
+        # self.al_reg_region_rels = []      # Indirect "has_reg_region" relationships.
+        return
+
     def get_datatype_data(self, session):
         """Extend the method for the ConstructHandler."""
         super().get_datatype_data(session)
         self.get_construct_alleles(session)
+        self.get_construct_encoded_tools(session)
         self.get_construct_reg_regions(session)
+        self.get_allele_encoded_tools1(session)    # BOB - compare method 1 and 2 for speed.
+        self.get_allele_encoded_tools2(session)    # BOB - compare method 1 and 2 for speed.
+        # self.get_allele_reg_regions(session)    # BOB to do
         return
 
     # Elaborate on synthesize_info() sub-methods for ConstructHandler.
