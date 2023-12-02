@@ -1796,17 +1796,6 @@ class ConstructHandler(FeatureHandler):
     def synthesize_reg_regions(self):
         """Synthesize construct reg_region components."""
         self.log.info('Synthesize construct reg_region components.')
-        # Key lookups:
-        # self.seqfeat_gene_lookup
-        # Input lists:
-        # self.parent_allele_rels = []
-        # self.reg_region_rels = []
-        # self.al_reg_region_rels = []      # Indirect "has_reg_region" relationships: a list of allele-to-FBto/FBsf/FBgn FeatureRelationship objects.
-        # self.al_genes = []                # Indirect gene relationships: a list of allele-to-FBgn FeatureRelationship objects.
-        # Output lists:
-        # self.expressed_features = {}     # Will be list of feature_id-keyed pub_id list for expressed things: FBgn and FBto.
-        # self.targeted_features = {}      # Will be list of feature_id-keyed pub_id list for targeted things: FBgn.
-        # self.regulating_features = {}    # Will be list of feature_id-keyed pub_id list for things that regulate the construct: FBgn, FBto and FBsf.
         counter = 0
         for construct in self.fb_data_entities.values():
             self.log.debug(f'Assess reg_regions for {construct}.')
