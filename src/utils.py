@@ -1620,7 +1620,10 @@ class ConstructHandler(FeatureHandler):
         for construct in self.fb_data_entities.values():
             for allele_rel in construct.parent_allele_rels:
                 allele_id = allele_rel.subject_id
-                construct.al_encodes_tool_rels.extend(al_comp_dict[allele_id])
+                try:
+                    construct.al_encodes_tool_rels.extend(al_comp_dict[allele_id])
+                except KeyError:
+                    pass
                 counter += len(construct.al_encodes_tool_rels)
         self.log.info(f'Mapped {counter} allele-to-component relationships to related constructs.')
         return
