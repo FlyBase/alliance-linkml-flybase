@@ -1731,7 +1731,7 @@ class ConstructHandler(FeatureHandler):
         self.log.info('Synthesize encoded components.')
         counter = 0
         for construct in self.fb_data_entities.values():
-            self.log.debug(f'Assess encoded tools for {construct}.')
+            # self.log.debug(f'Assess encoded tools for {construct}.')
             # Direct encodes_tool relationships.
             for rel in construct.encodes_tool_rels:
                 component_id = rel.object_id
@@ -1741,7 +1741,7 @@ class ConstructHandler(FeatureHandler):
                 except KeyError:
                     construct.expressed_features[component_id] = pub_ids
             direct_count = len(construct.expressed_features.keys())
-            self.log.debug(f'For {construct}, found {direct_count} encoded tools via direct relationships.')
+            # self.log.debug(f'For {construct}, found {direct_count} encoded tools via direct relationships.')
             # Indirect encodes_tool relationships.
             for rel in construct.al_encodes_tool_rels:
                 allele_id = rel.subject_id
@@ -1757,7 +1757,7 @@ class ConstructHandler(FeatureHandler):
                         al_con_pub_ids = self.feat_rel_pub_lookup[al_con_rel.feature_relationship_id]
                         construct.expressed_features[component_id].extend(al_con_pub_ids)
             indirect_count = len(construct.expressed_features.keys()) - direct_count
-            self.log.debug(f'For {construct}, found {indirect_count} encoded tools via indirect allele relationships.')
+            # self.log.debug(f'For {construct}, found {indirect_count} encoded tools via indirect allele relationships.')
             counter += len(construct.expressed_features.keys())
         self.log.info(f'Found {counter} encoded tools for constructs via direct and indirect allele relationships.')
         return
@@ -1770,7 +1770,7 @@ class ConstructHandler(FeatureHandler):
         for construct in self.fb_data_entities.values():
             this_expressed_gene_counter = 0
             this_targeted_gene_counter = 0
-            self.log.debug(f'Assess component genes for {construct}.')
+            # self.log.debug(f'Assess component genes for {construct}.')
             for rel in construct.al_genes:
                 allele_id = rel.subject_id
                 gene_id = rel.object_id
@@ -1795,7 +1795,7 @@ class ConstructHandler(FeatureHandler):
                     if al_con_rel.subject_id == allele_id:
                         al_con_pub_ids = self.feat_rel_pub_lookup[al_con_rel.feature_relationship_id]
                         gene_slot[gene_id].extend(al_con_pub_ids)
-            self.log.debug(f'For {construct}, found {this_expressed_gene_counter} expressed genes and {this_targeted_gene_counter} targeted genes.')
+            # self.log.debug(f'For {construct}, found {this_expressed_gene_counter} expressed genes and {this_targeted_gene_counter} targeted genes.')
             all_expressed_gene_counter += this_expressed_gene_counter
             all_targeted_gene_counter += this_targeted_gene_counter
         self.log.info(f'Found {all_expressed_gene_counter} expressed genes and {all_targeted_gene_counter} targeted genes for constructs.')
@@ -1806,7 +1806,7 @@ class ConstructHandler(FeatureHandler):
         self.log.info('Synthesize construct reg_region components.')
         counter = 0
         for construct in self.fb_data_entities.values():
-            self.log.debug(f'Assess reg_regions for {construct}.')
+            # self.log.debug(f'Assess reg_regions for {construct}.')
             # Direct has_reg_region relationships.
             for rel in construct.reg_region_rels:
                 component_id = rel.object_id
@@ -1816,7 +1816,7 @@ class ConstructHandler(FeatureHandler):
                 except KeyError:
                     construct.regulating_features[component_id] = pub_ids
             direct_count = len(construct.regulating_features.keys())
-            self.log.debug(f'For {construct}, found {direct_count} reg_regions via direct relationships.')
+            # self.log.debug(f'For {construct}, found {direct_count} reg_regions via direct relationships.')
             # Direct seqfeat relationships, old_style.
             for rel in construct.seqfeat_rels:
                 component_id = rel.subject_id
@@ -1826,7 +1826,7 @@ class ConstructHandler(FeatureHandler):
                 except KeyError:
                     construct.regulating_features[component_id] = pub_ids
             direct_count_old = len(construct.regulating_features.keys()) - direct_count
-            self.log.debug(f'For {construct}, found {direct_count_old} reg_regions via direct relationships, old style.')
+            # self.log.debug(f'For {construct}, found {direct_count_old} reg_regions via direct relationships, old style.')
             # Indirect has_reg_region relationships.
             for rel in construct.al_reg_region_rels:
                 allele_id = rel.subject_id
@@ -1842,7 +1842,7 @@ class ConstructHandler(FeatureHandler):
                         al_con_pub_ids = self.feat_rel_pub_lookup[al_con_rel.feature_relationship_id]
                         construct.regulating_features[component_id].extend(al_con_pub_ids)
             indirect_count = len(construct.regulating_features.keys()) - direct_count - direct_count_old
-            self.log.debug(f'For {construct}, found {indirect_count} reg_regions tools via indirect allele relationships.')
+            # self.log.debug(f'For {construct}, found {indirect_count} reg_regions tools via indirect allele relationships.')
             # Indirect relationships to genes via seqfeats.
             for component_id in list(construct.regulating_features.keys()):
                 pubs_ids = construct.regulating_features[component_id]
@@ -1859,7 +1859,7 @@ class ConstructHandler(FeatureHandler):
                         except KeyError:
                             construct.regulating_features[gene_id] = pubs_ids
             genes_via_seqfeat_count = len(construct.regulating_features.keys()) - direct_count - direct_count_old - indirect_count
-            self.log.info(f'For {construct}, found an additional {genes_via_seqfeat_count} genes related to seqfeat reg_regions.')
+            # self.log.debug(f'For {construct}, found an additional {genes_via_seqfeat_count} genes related to seqfeat reg_regions.')
             counter += len(construct.regulating_features.keys())
         self.log.info(f'Found {counter} reg_regions for constructs via direct and indirect allele relationships.')
         return
