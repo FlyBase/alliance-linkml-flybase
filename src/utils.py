@@ -449,8 +449,6 @@ class DataHandler(object):
             distinct()
         counter = 0
         for result in results:
-            # self.log.debug(f'Have this allele: {result.Feature.name} ({result.Feature.uniquename})')
-            # self.log.debug(f'Have this CV term: {result.cvterm.name}')
             try:
                 self.transgenic_allele_class_lookup[result.Feature.feature_id].append(result.cvterm.name)
                 counter += 1
@@ -969,7 +967,6 @@ class PrimaryEntityHandler(DataHandler):
             'synonym': 'unspecified',
         }
         for fb_data_entity in self.fb_data_entities.values():
-            # self.log.debug(f'Evaluate {len(fb_data_entity.synonyms)} feature_synonym entries for {fb_data_entity}.')
             # For each entity, gather synonym_id-keyed dict of synonym info.
             for feat_syno in fb_data_entity.synonyms:
                 try:
@@ -989,7 +986,6 @@ class PrimaryEntityHandler(DataHandler):
                     fb_data_entity.synonym_dict[feat_syno.synonym_id] = syno_dict
             # Go back over each synonym and refine each
             for syno_dict in fb_data_entity.synonym_dict.values():
-                # self.log.debug(f'For {fb_data_entity}, starting syno_dict: {syno_dict}')
                 # Then modify attributes as needed.
                 # Identify systematic names.
                 if re.match(self.regex['systematic_name'], syno_dict['format_text']) and syno_dict['name_type_name'] == 'nomenclature_symbol':
@@ -1007,10 +1003,8 @@ class PrimaryEntityHandler(DataHandler):
                 # Convert pub_ids into pub_curies.
                 syno_dict['pub_curies'] = self.get_pub_curies(syno_dict['pub_ids'])
                 # Finally, pick out current symbol for the entity.
-                # self.log.debug(f'For {fb_data_entity}, final syno_dict: {syno_dict}')
                 if syno_dict['is_current'] is True and syno_dict['name_type_name'] in ['systematic_name', 'nomenclature_symbol']:
                     fb_data_entity.curr_fb_symbol = syno_dict['display_text']
-            # self.log.debug(f'{fb_data_entity} has curr_fb_symbol={fb_data_entity.curr_fb_symbol}')
         return
 
     def synthesize_props(self):
@@ -1022,7 +1016,6 @@ class PrimaryEntityHandler(DataHandler):
         prop_types = []
         # Build prop dict.
         for fb_data_entity in self.fb_data_entities.values():
-            # self.log.debug(f'{fb_data_entity} has {len(fb_data_entity.props)} props')
             # Build prop_type-keyed lists of props.
             for prop in fb_data_entity.props:
                 prop_type = prop.type.name
@@ -1054,7 +1047,6 @@ class PrimaryEntityHandler(DataHandler):
             for pub_source in pub_sources:
                 fb_data_entity.all_pub_ids.extend([i.pub_id for i in getattr(fb_data_entity, pub_source)])
             fb_data_entity.all_pub_ids = list(set(fb_data_entity.all_pub_ids))
-            # self.log.debug(f'{fb_data_entity} has {len(fb_data_entity.all_pub_ids)} pubs')
         return
 
     def synthesize_info(self):
@@ -1766,7 +1758,6 @@ class ConstructHandler(FeatureHandler):
                         construct.expressed_features[component_id].extend(al_con_pub_ids)
             indirect_count = len(construct.expressed_features.keys()) - direct_count
             self.log.debug(f'For {construct}, found {indirect_count} encoded tools via indirect allele relationships.')
-            # self.log.debug(f'For {construct}, encoded tools = {construct.expressed_features}')
             counter += len(construct.expressed_features.keys())
         self.log.info(f'Found {counter} encoded tools for constructs via direct and indirect allele relationships.')
         return
@@ -1805,8 +1796,6 @@ class ConstructHandler(FeatureHandler):
                         al_con_pub_ids = self.feat_rel_pub_lookup[al_con_rel.feature_relationship_id]
                         gene_slot[gene_id].extend(al_con_pub_ids)
             self.log.debug(f'For {construct}, found {this_expressed_gene_counter} expressed genes and {this_targeted_gene_counter} targeted genes.')
-            # self.log.debug(f'For {construct}, expressed genes = {construct.expressed_features}')
-            # self.log.debug(f'For {construct}, targeted genes = {construct.targeted_features}')
             all_expressed_gene_counter += this_expressed_gene_counter
             all_targeted_gene_counter += this_targeted_gene_counter
         self.log.info(f'Found {all_expressed_gene_counter} expressed genes and {all_targeted_gene_counter} targeted genes for constructs.')
@@ -1854,25 +1843,18 @@ class ConstructHandler(FeatureHandler):
                         construct.regulating_features[component_id].extend(al_con_pub_ids)
             indirect_count = len(construct.regulating_features.keys()) - direct_count - direct_count_old
             self.log.debug(f'For {construct}, found {indirect_count} reg_regions tools via indirect allele relationships.')
-            # self.log.debug(f'For {construct}, reg_regions = {construct.regulating_features}')
             # Indirect relationships to genes via seqfeats.
-            # BILLY BOB - I do not think this is working - I would expect P{GMR16C10-GAL4} to pull in Brf and lute genes via FBsf0000162178
             for component_id, pub_ids in construct.regulating_features.items():
                 uniquename = self.feature_lookup[component_id]['uniquename']
-                name = self.feature_lookup[component_id]['name']
                 feat_type = self.feature_lookup[component_id]['type']
-                self.log.debug(f'For {construct}, assess {feat_type} component {name} ({uniquename})')
                 if uniquename.startswith('FBsf') and feat_type in ['region', 'regulatory_region']:
-                    self.log.debug(f'For {construct}, pull in genes for reg_region {name} ({uniquename})')
-                    if component_id not in self.seqfeat_gene_lookup.keys():
+                    try:
+                        gene_ids = self.seqfeat_gene_lookup[component_id]
+                    except KeyError:
                         continue
-                    gene_ids = self.seqfeat_gene_lookup[component_id]
                     for gene_id in gene_ids:
                         if gene_id in construct.regulating_features.keys():
                             continue
-                        seqfeat = f'{self.feature_lookup[component_id]["uniquename"]}'
-                        gene = f'{self.feature_lookup[gene_id]["uniquename"]}'
-                        self.log.debug(f'{seqfeat} pulls in {gene}')
                         construct.regulating_features[gene_id] = pub_ids
             genes_via_seqfeat_count = len(construct.regulating_features.keys()) - direct_count - direct_count_old - indirect_count
             self.log.info(f'For {construct}, found an additional {genes_via_seqfeat_count} genes related to seqfeat reg_regions.')
