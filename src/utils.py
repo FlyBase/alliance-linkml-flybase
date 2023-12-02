@@ -1772,10 +1772,14 @@ class ConstructHandler(FeatureHandler):
                 gene_id = rel.object_id
                 pub_ids = self.feat_rel_pub_lookup[rel.feature_relationship_id]
                 # Slot for gene_id depends on the allele class.
-                if self.transgenic_allele_class_lookup[allele_id] in ['RNAi_reagent', 'sgRNA', 'antisense']:
-                    gene_slot = getattr(construct, 'targeted_features')
-                    this_targeted_gene_counter += 1
-                else:
+                try:
+                    if self.transgenic_allele_class_lookup[allele_id] in ['RNAi_reagent', 'sgRNA', 'antisense']:
+                        gene_slot = getattr(construct, 'targeted_features')
+                        this_targeted_gene_counter += 1
+                    else:
+                        gene_slot = getattr(construct, 'expressed_features')
+                        this_expressed_gene_counter += 1
+                except KeyError:
                     gene_slot = getattr(construct, 'expressed_features')
                     this_expressed_gene_counter += 1
                 try:
