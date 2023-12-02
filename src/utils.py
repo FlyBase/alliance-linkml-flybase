@@ -1735,7 +1735,7 @@ class ConstructHandler(FeatureHandler):
                 try:
                     construct.expressed_features[component_id].extend(pub_ids)
                 except KeyError:
-                    construct.expressed_features[component_id] = [pub_ids]
+                    construct.expressed_features[component_id] = pub_ids
             direct_count = len(construct.expressed_features.keys())
             self.log.debug(f'For {construct}, found {direct_count} encoded tools via direct relationships.')
             # Indirect encodes_tool relationships.
@@ -1746,7 +1746,7 @@ class ConstructHandler(FeatureHandler):
                 try:
                     construct.expressed_features[component_id].extend(pub_ids)
                 except KeyError:
-                    construct.expressed_features[component_id] = [pub_ids]
+                    construct.expressed_features[component_id] = pub_ids
                 # Fold in pubs supporting the construct-allele relationship.
                 for al_con_rel in construct.parent_allele_rels:
                     if al_con_rel.subject_id == allele_id:
@@ -1786,7 +1786,7 @@ class ConstructHandler(FeatureHandler):
                 try:
                     gene_slot[gene_id].extend(pub_ids)
                 except KeyError:
-                    gene_slot[gene_id] = [pub_ids]
+                    gene_slot[gene_id] = pub_ids
                 # Fold in pubs supporting the construct-allele relationship.
                 for al_con_rel in construct.parent_allele_rels:
                     if al_con_rel.subject_id == allele_id:
@@ -1813,7 +1813,7 @@ class ConstructHandler(FeatureHandler):
                 try:
                     construct.regulating_features[component_id].extend(pub_ids)
                 except KeyError:
-                    construct.regulating_features[component_id] = [pub_ids]
+                    construct.regulating_features[component_id] = pub_ids
             direct_count = len(construct.regulating_features.keys())
             self.log.debug(f'For {construct}, found {direct_count} reg_regions via direct relationships.')
             # Indirect has_reg_region relationships.
@@ -1824,7 +1824,7 @@ class ConstructHandler(FeatureHandler):
                 try:
                     construct.regulating_features[component_id].extend(pub_ids)
                 except KeyError:
-                    construct.regulating_features[component_id] = [pub_ids]
+                    construct.regulating_features[component_id] = pub_ids
                 # Fold in pubs supporting the construct-allele relationship.
                 for al_con_rel in construct.parent_allele_rels:
                     if al_con_rel.subject_id == allele_id:
@@ -1843,7 +1843,7 @@ class ConstructHandler(FeatureHandler):
             #         try:
             #             construct.regulating_features[gene_id].extend(pub_ids)
             #         except KeyError:
-            #             construct.regulating_features[gene_id] = [pub_ids]
+            #             construct.regulating_features[gene_id] = pub_ids
             # genes_via_seqfeat_count = len(construct.regulating_features.keys()) - direct_count - indirect_count
             # self.log.info(f'For {construct}, found an additional {genes_via_seqfeat_count} genes related to seqfeat reg_regions.')
             counter += len(construct.regulating_features.keys())
