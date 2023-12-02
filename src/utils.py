@@ -387,8 +387,12 @@ class DataHandler(object):
             distinct()
         counter = 0
         for result in results:
-            self.seqfeat_gene_lookup[result.seqfeat.feature_id] = result.gene.feature_id
-            counter += 1
+            try:
+                self.seqfeat_gene_lookup[result.seqfeat.feature_id].append(result.gene.feature_id)
+                counter += 1
+            except KeyError:
+                self.seqfeat_gene_lookup[result.seqfeat.feature_id] = [result.gene.feature_id]
+                counter += 1
         self.log.info(f'Added {counter} current seqfeat-gene relationships to the seqfeat-gene lookup.')
         return
 
@@ -1504,8 +1508,8 @@ class ConstructHandler(FeatureHandler):
         """Create the ConstructHandler object."""
         super().__init__(log, fb_data_type, testing)
         self.feat_rel_pub_lookup = {}               # Will be feature_relationship_id-keyed lists of supporting pub_ids.
-        self.allele_gene_lookup = {}                # Will be allele feature_id-keyed gene feature_ids.
-        self.seqfeat_gene_lookup = {}               # Will be seqfeat feature_id-keyed gene feature_ids.
+        self.allele_gene_lookup = {}                # Will be allele feature_id-keyed of a single gene feature_id per allele.
+        self.seqfeat_gene_lookup = {}               # Will be seqfeat feature_id-keyed of a lists of gene feature_ids.
         self.transgenic_allele_class_lookup = {}    # Will be an allele feature_id-keyed list of "transgenic product class" CV terms.
         self.gene_tool_lookup = {}                  # Will be gene feature_id-keyed lists of related FBto tools.
     test_set = {
@@ -1515,6 +1519,7 @@ class ConstructHandler(FeatureHandler):
         'FBtp0000074': 'P{ftzG}',                                 # Expresses FBgn ftz, regulated by FBgn ftz.
         'FBtp0000326': 'P{SEV5}',                                 # Expresses FBgn sev, tagged with FBto MYC.
         'FBtp0161516': 'P{lush-GAL4.3}',                          # Expresses FBto GAL4, regulated by FBgn lush.
+        'FBtp0057873': 'P{GMR16C10-GAL4}',                        # Expresses FBto GAL4, regulated by GMR16C10 (related to two genes, Brf and lute).
         'FBtp0032215': 'P{GD5007}',                               # Targets FBgn wg, regulated by FBto UASt.
         'FBtp0031452': 'P{GD4157}',                               # Targets FBgn lbe, regulated by FBto UASt.
         'FBtp0145396': 'P{TOE.GS00055}',                          # Targets FBgn wg, regulated by FBto UASt.
@@ -1555,7 +1560,7 @@ class ConstructHandler(FeatureHandler):
     def get_general_data(self, session):
         """Extend the method for the ConstructHandler."""
         super().get_general_data(session)
-        # self.build_feature_lookup(session)                          # BOB: temporarily disabled for faster dev
+        self.build_feature_lookup(session)
         self.build_feature_relationship_evidence_lookup(session)
         self.build_allele_class_lookup(session)
         self.build_seqfeat_gene_lookup(session)
@@ -1754,7 +1759,7 @@ class ConstructHandler(FeatureHandler):
                         construct.expressed_features[component_id].extend(al_con_pub_ids)
             indirect_count = len(construct.expressed_features.keys()) - direct_count
             self.log.debug(f'For {construct}, found {indirect_count} encoded tools via indirect allele relationships.')
-            self.log.debug(f'For {construct}, encoded tools = {construct.expressed_features}')
+            # self.log.debug(f'For {construct}, encoded tools = {construct.expressed_features}')
             counter += len(construct.expressed_features.keys())
         self.log.info(f'Found {counter} encoded tools for constructs via direct and indirect allele relationships.')
         return
@@ -1793,8 +1798,8 @@ class ConstructHandler(FeatureHandler):
                         al_con_pub_ids = self.feat_rel_pub_lookup[al_con_rel.feature_relationship_id]
                         gene_slot[gene_id].extend(al_con_pub_ids)
             self.log.debug(f'For {construct}, found {this_expressed_gene_counter} expressed genes and {this_targeted_gene_counter} targeted genes.')
-            self.log.debug(f'For {construct}, expressed genes = {construct.expressed_features}')
-            self.log.debug(f'For {construct}, targeted genes = {construct.targeted_features}')
+            # self.log.debug(f'For {construct}, expressed genes = {construct.expressed_features}')
+            # self.log.debug(f'For {construct}, targeted genes = {construct.targeted_features}')
             all_expressed_gene_counter += this_expressed_gene_counter
             all_targeted_gene_counter += this_targeted_gene_counter
         self.log.info(f'Found {all_expressed_gene_counter} expressed genes and {all_targeted_gene_counter} targeted genes for constructs.')
@@ -1832,20 +1837,22 @@ class ConstructHandler(FeatureHandler):
                         construct.regulating_features[component_id].extend(al_con_pub_ids)
             indirect_count = len(construct.regulating_features.keys()) - direct_count
             self.log.debug(f'For {construct}, found {indirect_count} reg_regions tools via indirect allele relationships.')
-            self.log.debug(f'For {construct}, reg_regions = {construct.regulating_features}')
-            # BILLY BOB - suppress until code above has been confirmed.
-            # # Indirect relationships to genes via seqfeats.
-            # for component_id, pub_ids in construct.regulating_features.items():
-            #     uniquename = self.feature_lookup[component_id]['uniquename']
-            #     feat_type = self.feature_lookup[component_id]['type']
-            #     if uniquename.startswith('FBsf') and feat_type in ['region', 'regulatory_region'] and component_id in self.seqfeat_gene_lookup.keys():
-            #         gene_id = self.seqfeat_gene_lookup[component_id]
-            #         try:
-            #             construct.regulating_features[gene_id].extend(pub_ids)
-            #         except KeyError:
-            #             construct.regulating_features[gene_id] = pub_ids
-            # genes_via_seqfeat_count = len(construct.regulating_features.keys()) - direct_count - indirect_count
-            # self.log.info(f'For {construct}, found an additional {genes_via_seqfeat_count} genes related to seqfeat reg_regions.')
+            # self.log.debug(f'For {construct}, reg_regions = {construct.regulating_features}')
+            # Indirect relationships to genes via seqfeats.
+            for component_id, pub_ids in construct.regulating_features.items():
+                uniquename = self.feature_lookup[component_id]['uniquename']
+                feat_type = self.feature_lookup[component_id]['type']
+                if uniquename.startswith('FBsf') and feat_type in ['region', 'regulatory_region'] and component_id in self.seqfeat_gene_lookup.keys():
+                    gene_ids = self.seqfeat_gene_lookup[component_id]
+                    for gene_id in gene_ids:
+                        if gene_id in construct.regulating_features.keys():
+                            continue
+                        seqfeat = f'{self.feature_lookup[component_id]["uniquename"]}'
+                        gene = f'{self.feature_lookup[gene_id]["uniquename"]}'
+                        self.log.debug(f'{seqfeat} pulls in {gene}')
+                        construct.regulating_features[gene_id] = pub_ids
+            genes_via_seqfeat_count = len(construct.regulating_features.keys()) - direct_count - indirect_count
+            self.log.info(f'For {construct}, found an additional {genes_via_seqfeat_count} genes related to seqfeat reg_regions.')
             counter += len(construct.regulating_features.keys())
         self.log.info(f'Found {counter} reg_regions for constructs via direct and indirect allele relationships.')
         return
