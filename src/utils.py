@@ -1844,7 +1844,8 @@ class ConstructHandler(FeatureHandler):
             indirect_count = len(construct.regulating_features.keys()) - direct_count - direct_count_old
             self.log.debug(f'For {construct}, found {indirect_count} reg_regions tools via indirect allele relationships.')
             # Indirect relationships to genes via seqfeats.
-            for component_id, pub_ids in construct.regulating_features.items():
+            for component_id in list(construct.regulating_features.keys()):
+                pubs_ids = construct.regulating_features[component_id]
                 uniquename = self.feature_lookup[component_id]['uniquename']
                 feat_type = self.feature_lookup[component_id]['type']
                 if uniquename.startswith('FBsf') and feat_type in ['region', 'regulatory_region']:
@@ -1853,9 +1854,10 @@ class ConstructHandler(FeatureHandler):
                     except KeyError:
                         continue
                     for gene_id in gene_ids:
-                        if gene_id in construct.regulating_features.keys():
-                            continue
-                        construct.regulating_features[gene_id] = pub_ids
+                        try:
+                            construct.regulating_features[gene_id].extend(pub_ids)
+                        except KeyError:
+                            construct.regulating_features[gene_id] = pubs_ids
             genes_via_seqfeat_count = len(construct.regulating_features.keys()) - direct_count - direct_count_old - indirect_count
             self.log.info(f'For {construct}, found an additional {genes_via_seqfeat_count} genes related to seqfeat reg_regions.')
             counter += len(construct.regulating_features.keys())
