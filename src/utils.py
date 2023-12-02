@@ -1856,10 +1856,16 @@ class ConstructHandler(FeatureHandler):
             self.log.debug(f'For {construct}, found {indirect_count} reg_regions tools via indirect allele relationships.')
             # self.log.debug(f'For {construct}, reg_regions = {construct.regulating_features}')
             # Indirect relationships to genes via seqfeats.
+            # BILLY BOB - I do not think this is working - I would expect P{GMR16C10-GAL4} to pull in Brf and lute genes via FBsf0000162178
             for component_id, pub_ids in construct.regulating_features.items():
                 uniquename = self.feature_lookup[component_id]['uniquename']
+                name = self.feature_lookup[component_id]['name']
                 feat_type = self.feature_lookup[component_id]['type']
-                if uniquename.startswith('FBsf') and feat_type in ['region', 'regulatory_region'] and component_id in self.seqfeat_gene_lookup.keys():
+                self.log.debug(f'For {construct}, assess {feat_type} component {name} ({uniquename})')
+                if uniquename.startswith('FBsf') and feat_type in ['region', 'regulatory_region']:
+                    self.log.debug(f'For {construct}, pull in genes for reg_region {name} ({uniquename})')
+                    if component_id not in self.seqfeat_gene_lookup.keys():
+                        continue
                     gene_ids = self.seqfeat_gene_lookup[component_id]
                     for gene_id in gene_ids:
                         if gene_id in construct.regulating_features.keys():
