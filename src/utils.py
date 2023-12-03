@@ -159,6 +159,38 @@ class DataHandler(object):
 
     # Elaborate on get_general_data() sub-methods for DataHandler.
     # Some of these sub-methods may only be called in more specific handlers, as appropriate.
+
+    # BOB: Quick testing of general SQLAlchemy query approaches.
+    def sqlalchemy_test(self, session):
+        """Test SQLAlchemy behavior."""
+        self.log.info('Test SQLAlchemy behavior.')
+        lbe_types = {'gene': 'gene'}
+        table_dict = {'main': Feature}
+        main_table = table_dict['main']
+        pkey_col = self.get_primary_key_column(main_table)
+        fkey_col = self.get_foreign_key_column(main_table, 'type_id')
+        feat_ids = [3167743]
+        filters = (
+            main_table.uniquename == 'FBgn0011278',
+            pkey_col.in_((feat_ids)),
+            fkey_col == 219
+        )
+        filters += (
+            Cvterm.name.in_((lbe_types.keys())),
+        )
+        results = session.query(main_table).\
+            select_from(main_table).\
+            join(Cvterm, (Cvterm.cvterm_id == main_table.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for i in results:
+            self.log.info(f'Found this feature: {i.name} ({i.uniquename})')
+            self.log.info(f'Found this feature_id: {getattr(i, pkey_col.name)}')
+            counter += 1
+        self.log.info(f'Found {counter} test results using natural join.')
+        return
+
     def build_bibliography(self, session):
         """Build FlyBase bibliography."""
         self.log.info('Build FlyBase bibliography.')
@@ -511,6 +543,7 @@ class DataHandler(object):
     def get_general_data(self, session):
         """Get general FlyBase chado data."""
         self.log.info('Get general FlyBase data from chado.')
+        # self.sqlalchemy_test(session)    # For quick dev/debugging only.
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
         self.build_ncbi_taxon_lookup(session)
@@ -620,37 +653,6 @@ class PrimaryEntityHandler(DataHandler):
         'gene': ['gene'],
         'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion', 'point_mutation', 'sequence_alteration', 'sequence_variant']
     }
-
-    # BOB: Quick testing of general SQLAlchemy query approaches.
-    def sqlalchemy_test(self, session):
-        """Test SQLAlchemy behavior."""
-        self.log.info('Test SQLAlchemy behavior.')
-        lbe_types = {'gene': 'gene'}
-        table_dict = {'main': Feature}
-        main_table = table_dict['main']
-        pkey_col = self.get_primary_key_column(main_table)
-        fkey_col = self.get_foreign_key_column(main_table, 'type_id')
-        feat_ids = [3167743]
-        filters = (
-            main_table.uniquename == 'FBgn0011278',
-            pkey_col.in_((feat_ids)),
-            fkey_col == 219
-        )
-        filters += (
-            Cvterm.name.in_((lbe_types.keys())),
-        )
-        results = session.query(main_table).\
-            select_from(main_table).\
-            join(Cvterm, (Cvterm.cvterm_id == main_table.type_id)).\
-            filter(*filters).\
-            distinct()
-        counter = 0
-        for i in results:
-            self.log.info(f'Found this feature: {i.name} ({i.uniquename})')
-            self.log.info(f'Found this feature_id: {getattr(i, pkey_col.name)}')
-            counter += 1
-        self.log.info(f'Found {counter} test results using natural join.')
-        return
 
     # Elaborate on get_general_data() sub-methods for PrimaryEntityHandler.
     def get_general_data(self, session):
@@ -942,7 +944,6 @@ class PrimaryEntityHandler(DataHandler):
     def get_datatype_data(self, session):
         """Extend the method for the PrimaryEntityHandler."""
         super().get_datatype_data(session)
-        self.sqlalchemy_test(session)
         self.get_entities(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
