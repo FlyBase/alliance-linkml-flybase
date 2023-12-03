@@ -308,7 +308,7 @@ class DataHandler(object):
                 feat_dict = {
                     'uniquename': result.Feature.uniquename,
                     'is_obsolete': result.Feature.is_obsolete,
-                    'type': self.lookup_cvterm_name(Feature.type_id),
+                    'type': self.lookup_cvterm_name(result.Feature.type_id),
                     'species': f'{result.Feature.organism.genus} {result.Feature.organism.species}',
                     'name': result.Feature.name,
                     'symbol': sub_sup_sgml_to_html(result.Synonym.synonym_sgml),
