@@ -135,23 +135,6 @@ class DataHandler(object):
         handler_description = f'A data handler that exports FB {self.fb_data_type} to Alliance LinkML {self.agr_ingest_type}.'
         return handler_description
 
-    # Note - The get_pub_curies() method depends on the existence of self.bibliography dict.
-    def get_pub_curies(self, pub_id_list):
-        """Return a list of curies from a list of internal chado pub_ids."""
-        pub_curie_list = []
-        # First, try to get curies for each pub_id.
-        for pub_id in set(pub_id_list):
-            try:
-                pub_curie_list.append(self.bibliography[pub_id])
-            except KeyError:
-                pass
-        # Second, remove unattributed.
-        try:
-            pub_curie_list.remove('FB:unattributed')
-        except ValueError:
-            pass
-        return pub_curie_list
-
     def get_primary_key_column(self, chado_table):
         """Get the primary key Column object from a specified chado table Model object."""
         primary_key_column = next((column for column in chado_table.__table__.c if column.primary_key), None)
@@ -175,7 +158,7 @@ class DataHandler(object):
         return foreign_key_column
 
     # Elaborate on get_general_data() sub-methods for DataHandler.
-    # These sub-methods may only be called in more specific handlers as appropriate.
+    # Some of these sub-methods may only be called in more specific handlers, as appropriate.
     def build_bibliography(self, session):
         """Build FlyBase bibliography."""
         self.log.info('Build FlyBase bibliography.')
@@ -211,6 +194,22 @@ class DataHandler(object):
         self.log.info(f'Found {pmid_counter} PMID IDs for {pub_counter} current FB publications.')
         return
 
+    def lookup_pub_curies(self, pub_id_list):
+        """Return a list of curies from a list of internal chado pub_ids."""
+        pub_curie_list = []
+        # First, try to get curies for each pub_id.
+        for pub_id in set(pub_id_list):
+            try:
+                pub_curie_list.append(self.bibliography[pub_id])
+            except KeyError:
+                pass
+        # Second, remove unattributed.
+        try:
+            pub_curie_list.remove('FB:unattributed')
+        except ValueError:
+            pass
+        return pub_curie_list
+
     def build_cvterm_lookup(self, session):
         """Create a cvterm_id-keyed lookup of Cvterm objects."""
         self.log.info('Create a cvterm_id-keyed dict of Cvterms.')
@@ -226,6 +225,35 @@ class DataHandler(object):
         self.log.info(f'Found {cvterm_counter} current CV terms in chado.')
         return
 
+    def lookup_cvterm_name(self, cvterm_id):
+        """Return the name for a given chado cvterm.cvterm_id."""
+        try:
+            name = self.cvterm_lookup[cvterm_id].name
+        except KeyError:
+            self.log.error(f'The cvterm_id given is not recognized: {cvterm_id}')
+            name = None
+        return name
+
+    def lookup_cvterm_cv_name(self, cvterm_id):
+        """Return the CV name for a given chado cvterm.cvterm_id."""
+        try:
+            cv_name = self.cvterm_lookup[cvterm_id].cv.name
+        except KeyError:
+            self.log.error(f'The cvterm_id given is not recognized: {cvterm_id}')
+            cv_name = None
+        return cv_name
+
+    def lookup_cvterm_curie(self, cvterm_id):
+        """Return the curie for a given chado cvterm.cvterm_id."""
+        try:
+            db_name = self.cvterm_lookup[cvterm_id].dbxref.db.name
+            accession = self.cvterm_lookup[cvterm_id].dbxref.accession
+            curie = f'{db_name}:{accession}'
+        except KeyError:
+            self.log.error(f'The cvterm_id given is not recognized: {cvterm_id}')
+            curie = None
+        return curie
+
     def build_ncbi_taxon_lookup(self, session):
         """Get FlyBase Organism-NCBITaxon ID correspondence."""
         self.log.info('Get FlyBase Organism-NCBITaxon ID correspondence.')
@@ -239,8 +267,8 @@ class DataHandler(object):
             filter(*filters).\
             distinct()
         counter = 0
-        for xref in results:
-            self.ncbi_taxon_lookup[xref.OrganismDbxref.organism_id] = xref.Dbxref.accession
+        for result in results:
+            self.ncbi_taxon_lookup[result.OrganismDbxref.organism_id] = f'NCBITaxon:{result.Dbxref.accession}'
             counter += 1
         self.log.info(f'Found {counter} NCBITaxon IDs for FlyBase organisms.')
         return
@@ -280,14 +308,14 @@ class DataHandler(object):
                 feat_dict = {
                     'uniquename': result.Feature.uniquename,
                     'is_obsolete': result.Feature.is_obsolete,
-                    'type': self.cvterm_lookup[result.Feature.type_id].name,
+                    'type': self.lookup_cvterm_name(Feature.type_id),
                     'species': f'{result.Feature.organism.genus} {result.Feature.organism.species}',
                     'name': result.Feature.name,
                     'symbol': sub_sup_sgml_to_html(result.Synonym.synonym_sgml),
                     'exported': is_exported
                 }
                 try:
-                    feat_dict['taxon_id'] = f'NCBITaxon:{self.ncbi_taxon_lookup[result.Feature.organism_id]}'
+                    feat_dict['taxon_id'] = self.ncbi_taxon_lookup[result.Feature.organism_id]
                 except KeyError:
                     feat_dict['taxon_id'] = 'NCBITaxon:32644'    # Unspecified taxon.
                 self.feature_lookup[result.Feature.feature_id] = feat_dict
@@ -295,8 +323,6 @@ class DataHandler(object):
             self.log.info(f'Added {counter} {feat_type} features to the feature_lookup.')
         return
 
-    # Elaborate on get_general_data() sub-methods for FeatureHandler.
-    # Call get_chr_info() only for more specific FeatureHandler types.
     def get_chr_info(self, session):
         """Build chr dict."""
         self.log.info('Build chr dict.')
@@ -336,7 +362,14 @@ class DataHandler(object):
         self.log.info(f'Found {counter} pubs supporting {fr_counter} feature_relationships.')
         return
 
-    # Call build_allele_gene_lookup() only for more specific FeatureHandler types.
+    def lookup_feat_rel_pubs_ids(self, feature_relationship_id):
+        """Return a list of pub_ids supporting a given feature_relationship."""
+        try:
+            pub_ids = self.feat_rel_pub_lookup[feature_relationship_id]
+        except KeyError:
+            pub_ids = []
+        return pub_ids
+
     def build_allele_gene_lookup(self, session):
         """Build an allele-gene lookup dict, current features only."""
         self.log.info('Build an allele-gene lookup dict, current features only.')
@@ -364,7 +397,6 @@ class DataHandler(object):
         self.log.info(f'Added {counter} current allele-gene relationships to the allele-gene lookup.')
         return
 
-    # Call build_seqfeat_gene_lookup() only for more specific FeatureHandler types.
     def build_seqfeat_gene_lookup(self, session):
         """Build an seqfeat-gene lookup dict, current features only."""
         self.log.info('Build an seqfeat-gene lookup dict, current features only.')
@@ -396,7 +428,6 @@ class DataHandler(object):
         self.log.info(f'Added {counter} current seqfeat-gene relationships to the seqfeat-gene lookup.')
         return
 
-    # Call build_gene_tool_lookup() only for more specific Handler types.
     def build_gene_tool_lookup(self, session):
         """Build a lookup of gene-to-tool relationships for filtering reporting, current only."""
         self.log.info('Build a lookup of gene-to-tool relationships for filtering reporting.')
@@ -427,7 +458,6 @@ class DataHandler(object):
         self.log.info(f'Found {counter} gene-to-tool relationships.')
         return
 
-    # Call build_allele_class_lookup() only for more specific FeatureHandler types.
     def build_allele_class_lookup(self, session):
         """Build a lookup of allele "transgenic product class" values."""
         self.log.info('Build a lookup of allele "transgenic product class" values.')
@@ -1001,7 +1031,7 @@ class PrimaryEntityHandler(DataHandler):
                 else:
                     syno_dict['is_internal'] = True
                 # Convert pub_ids into pub_curies.
-                syno_dict['pub_curies'] = self.get_pub_curies(syno_dict['pub_ids'])
+                syno_dict['pub_curies'] = self.lookup_pub_curies(syno_dict['pub_ids'])
                 # Finally, pick out current symbol for the entity.
                 if syno_dict['is_current'] is True and syno_dict['name_type_name'] in ['systematic_name', 'nomenclature_symbol']:
                     fb_data_entity.curr_fb_symbol = syno_dict['display_text']
@@ -1735,7 +1765,7 @@ class ConstructHandler(FeatureHandler):
             # Direct encodes_tool relationships.
             for rel in construct.encodes_tool_rels:
                 component_id = rel.object_id
-                pub_ids = self.feat_rel_pub_lookup[rel.feature_relationship_id]
+                pub_ids = self.lookup_feat_rel_pubs_ids(rel.feature_relationship_id)
                 try:
                     construct.expressed_features[component_id].extend(pub_ids)
                 except KeyError:
@@ -1746,7 +1776,7 @@ class ConstructHandler(FeatureHandler):
             for rel in construct.al_encodes_tool_rels:
                 allele_id = rel.subject_id
                 component_id = rel.object_id
-                pub_ids = self.feat_rel_pub_lookup[rel.feature_relationship_id]
+                pub_ids = self.lookup_feat_rel_pubs_ids(rel.feature_relationship_id)
                 try:
                     construct.expressed_features[component_id].extend(pub_ids)
                 except KeyError:
@@ -1754,7 +1784,7 @@ class ConstructHandler(FeatureHandler):
                 # Fold in pubs supporting the construct-allele relationship.
                 for al_con_rel in construct.parent_allele_rels:
                     if al_con_rel.subject_id == allele_id:
-                        al_con_pub_ids = self.feat_rel_pub_lookup[al_con_rel.feature_relationship_id]
+                        al_con_pub_ids = self.lookup_feat_rel_pubs_ids(al_con_rel.feature_relationship_id)
                         construct.expressed_features[component_id].extend(al_con_pub_ids)
             indirect_count = len(construct.expressed_features.keys()) - direct_count
             # self.log.debug(f'For {construct}, found {indirect_count} encoded tools via indirect allele relationships.')
@@ -1774,7 +1804,7 @@ class ConstructHandler(FeatureHandler):
             for rel in construct.al_genes:
                 allele_id = rel.subject_id
                 gene_id = rel.object_id
-                pub_ids = self.feat_rel_pub_lookup[rel.feature_relationship_id]
+                pub_ids = self.lookup_feat_rel_pubs_ids(rel.feature_relationship_id)
                 # Slot for gene_id depends on the allele class.
                 try:
                     if set(self.transgenic_allele_class_lookup[allele_id]).intersection({'RNAi_reagent', 'sgRNA', 'antisense'}):
@@ -1793,7 +1823,7 @@ class ConstructHandler(FeatureHandler):
                 # Fold in pubs supporting the construct-allele relationship.
                 for al_con_rel in construct.parent_allele_rels:
                     if al_con_rel.subject_id == allele_id:
-                        al_con_pub_ids = self.feat_rel_pub_lookup[al_con_rel.feature_relationship_id]
+                        al_con_pub_ids = self.lookup_feat_rel_pubs_ids(al_con_rel.feature_relationship_id)
                         gene_slot[gene_id].extend(al_con_pub_ids)
             # self.log.debug(f'For {construct}, found {this_expressed_gene_counter} expressed genes and {this_targeted_gene_counter} targeted genes.')
             all_expressed_gene_counter += this_expressed_gene_counter
@@ -1810,7 +1840,7 @@ class ConstructHandler(FeatureHandler):
             # Direct has_reg_region relationships.
             for rel in construct.reg_region_rels:
                 component_id = rel.object_id
-                pub_ids = self.feat_rel_pub_lookup[rel.feature_relationship_id]
+                pub_ids = self.lookup_feat_rel_pubs_ids(rel.feature_relationship_id)
                 try:
                     construct.regulating_features[component_id].extend(pub_ids)
                 except KeyError:
@@ -1820,7 +1850,7 @@ class ConstructHandler(FeatureHandler):
             # Direct seqfeat relationships, old_style.
             for rel in construct.seqfeat_rels:
                 component_id = rel.subject_id
-                pub_ids = self.feat_rel_pub_lookup[rel.feature_relationship_id]
+                pub_ids = self.lookup_feat_rel_pubs_ids(rel.feature_relationship_id)
                 try:
                     construct.regulating_features[component_id].extend(pub_ids)
                 except KeyError:
@@ -1831,7 +1861,7 @@ class ConstructHandler(FeatureHandler):
             for rel in construct.al_reg_region_rels:
                 allele_id = rel.subject_id
                 component_id = rel.object_id
-                pub_ids = self.feat_rel_pub_lookup[rel.feature_relationship_id]
+                pub_ids = self.lookup_feat_rel_pubs_ids(rel.feature_relationship_id)
                 try:
                     construct.regulating_features[component_id].extend(pub_ids)
                 except KeyError:
@@ -1839,7 +1869,7 @@ class ConstructHandler(FeatureHandler):
                 # Fold in pubs supporting the construct-allele relationship.
                 for al_con_rel in construct.parent_allele_rels:
                     if al_con_rel.subject_id == allele_id:
-                        al_con_pub_ids = self.feat_rel_pub_lookup[al_con_rel.feature_relationship_id]
+                        al_con_pub_ids = self.lookup_feat_rel_pubs_ids(al_con_rel.feature_relationship_id)
                         construct.regulating_features[component_id].extend(al_con_pub_ids)
             indirect_count = len(construct.regulating_features.keys()) - direct_count - direct_count_old
             # self.log.debug(f'For {construct}, found {indirect_count} reg_regions tools via indirect allele relationships.')
