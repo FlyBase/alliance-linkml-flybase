@@ -232,7 +232,7 @@ class DataHandler(object):
             try:
                 pub_curie_list.append(self.bibliography[pub_id])
             except KeyError:
-                pass
+                pass    # This almost certainly represents an internal or obsolete publication.
         # Second, remove unattributed.
         try:
             pub_curie_list.remove('FB:unattributed')
@@ -1933,6 +1933,31 @@ class ConstructHandler(FeatureHandler):
             construct.linkmldto = agr_construct
         return
 
+    def map_construct_components(self):
+        """Map current construct components to the Alliance LinkML object."""
+        self.log.info('Map current construct components to the Alliance LinkML object.')
+        component_slots = {
+            'expressed_features': 'expresses',
+            'targeted_features': 'targets',
+            'regulating_features': 'is_regulated_by',
+        }
+        counter = 0
+        for construct in self.fb_data_entities.values():
+            for slot_name, rel_type in component_slots.items():
+                slot_bin = getattr(construct, slot_name)
+                for feature_id, pub_ids in slot_bin.items():
+                    if self.feature_lookup['is_obsolete'] is True:
+                        continue
+                    symbol = self.feature_lookup[feature_id]['symbol']
+                    pubs = self.lookup_pub_curies(pub_ids)
+                    taxon_curie = self.feature_lookup[feature_id]['taxon_id']
+                    taxon_text = self.feature_lookup[feature_id]['species']
+                    component_dto = datatypes.ConstructComponentSlotAnnotationDTO(rel_type, symbol, taxon_curie, taxon_text, pubs).dict_export()
+                    construct.linkmldto.construct_component_dtos.append(component_dto)
+                    counter += 1
+        self.log.info(f'Mapped construct components to {counter} ConstructcomponentDTOs.')
+        return
+
     def map_fb_data_to_alliance(self):
         """Extend the method for the ConstructHandler."""
         super().map_fb_data_to_alliance()
@@ -1941,9 +1966,10 @@ class ConstructHandler(FeatureHandler):
         self.map_data_provider_dto()
         self.map_pubs()
         self.map_timestamps()
-        # self.map_secondary_ids('construct_secondary_id_dtos')
+        # Not use self.map_secondary_ids() here because for reagents, we report only strings, not SecondaryIdSlotAnnotationDTOs.
         for construct in self.fb_data_entities.values():
             construct.linkmldto.secondary_identifiers = construct.alt_fb_ids
+        self.map_construct_components()
         self.flag_internal_fb_entities()
         return
 
