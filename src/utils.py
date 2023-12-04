@@ -1891,8 +1891,9 @@ class ConstructHandler(FeatureHandler):
         self.log.info('For constructs in which a gene and related tool are related, report only the tool.')
         counter = 0
         slot_names = ['expressed_features', 'regulating_features']
-        for construct in self.fb_data_entities.values():
-            for slot_name in slot_names:
+        for slot_name in slot_names:
+            self.log.info(f'Prune {slot_name} for constructs.')
+            for construct in self.fb_data_entities.values():
                 pruning_list = []
                 slot_bin = getattr(construct, slot_name)
                 for feature_id in slot_bin.keys():
