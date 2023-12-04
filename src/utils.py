@@ -48,11 +48,11 @@ class DataHandler(object):
         """
         self.log = log
         self.fb_data_type = fb_data_type
-        self.agr_ingest_type = self.agr_ingest_type_dict[fb_data_type]
+        self.primary_export_set = self.primary_agr_ingest_type_dict[fb_data_type]
         self.testing = testing
         # Datatype bins.
         self.fb_data_entities = {}     # db_primary_id-keyed dict of chado objects to export.
-        self.export_data = []          # List of data objects for export (as Alliance ingest set).
+        self.export_data = {}          # agr_ingest_set_name-keyed lists of data objects for export.
         # General data bins.
         self.bibliography = {}         # A pub_id-keyed dict of pub curies (PMID or FBrf).
         self.cvterm_lookup = {}        # A cvterm_id-keyed dict of Cvterm objects.
@@ -78,7 +78,7 @@ class DataHandler(object):
         'disease': 'TBD'
     }
     # Correspondence of FB data type to Alliance data transfer ingest set.
-    agr_ingest_type_dict = {
+    primary_agr_ingest_type_dict = {
         'gene': 'gene_ingest_set',
         'allele': 'allele_ingest_set',
         'construct': 'construct_ingest_set',
@@ -96,10 +96,10 @@ class DataHandler(object):
         'strain': datatypes.FBStrain,
         # 'disease': datatypes.FBDiseaseAlleleAnnotation
     }
-    # Export directions (must be filled out in detail for each specific data handler).
-    # The fields in the two lists below must be present in the datatype object specified in DataHandler.datatype_objects.values().
-    required_fields = []
-    output_fields = []
+    # Export directions (must be filled out in detail for each specific data handler), keyed by export set name.
+    # For a given export set, the list of field names must be present in the datatype object specified in DataHandler.datatype_objects.values().
+    required_fields = {}
+    output_fields = {}
     # A filter for non-FB xrefs to export, with dict keys as FB db.names and dict values as Alliance db names.
     # Alliance db names should correspond to the contents of this file:
     # https://github.com/alliance-genome/agr_schemas/blob/master/resourceDescriptors.yaml
@@ -132,7 +132,7 @@ class DataHandler(object):
     # General utilities.
     def __str__(self):
         """Print out data handler description."""
-        handler_description = f'A data handler that exports FB {self.fb_data_type} to Alliance LinkML {self.agr_ingest_type}.'
+        handler_description = f'A data handler that exports FB {self.fb_data_type} to Alliance LinkML {self.primary_export_set}.'
         return handler_description
 
     def get_primary_key_column(self, chado_table):
@@ -562,15 +562,21 @@ class DataHandler(object):
     # The map_fb_data_to_alliance() wrapper; sub-methods are defined and called in more specific DataHandler types.
     def map_fb_data_to_alliance(self):
         """Map FB data to the Alliance LinkML object."""
-        self.log.info(f'Map FlyBase "{self.fb_data_type}" data to the Alliance LinkML object for the "{self.agr_ingest_type}".')
+        self.log.info(f'Map FlyBase "{self.fb_data_type}" data to the Alliance LinkML object for the "{self.primary_export_set}".')
         return
 
     # The flag_unexportable_entities() general method.
-    def flag_unexportable_entities(self):
-        """Flag entities lacking information for a required field."""
+    def flag_unexportable_entities(self, input_list: list, output_set_name: str):
+        """Flag entities lacking information for a required field.
+
+        Args:
+            input_list (list): A list of objects having a linkmldto attribute that is to be exported as a dict.
+            output_set_name (str): The export_set_label for the list of exported dicts: e.g., 'agm_ingest_set'
+
+        """
         self.log.info(f'Flag FlyBase "{self.fb_data_type}" data lacking information for a required field.')
-        for i in self.fb_data_entities.values():
-            for attr in self.required_fields:
+        for i in input_list:
+            for attr in self.required_fields[output_set_name]:
                 if attr not in i.linkmldto.__dict__.keys():
                     i.for_export = False
                     i.export_warnings.append(f'Missing "{attr}" attribute.')
@@ -582,10 +588,18 @@ class DataHandler(object):
         return
 
     # The generate_export_dict() general method.
-    def generate_export_dict(self):
-        """Generate LinkML export dict from FB data."""
-        self.log.info('Generate LinkML export dict from FB data.')
-        for i in self.fb_data_entities.values():
+    def generate_export_dict(self, input_list: list, output_set_name: str):
+        """Generate LinkML export dict from FB data.
+
+        Args:
+            input_list (list): A list of LinkMLDTO objects to convert into dicts for export.
+            output_set_name (str): The "agr_ingest_set" label for the list of exported dicts.
+
+        """
+        self.log.info(f'Generate LinkML export dict from FB data for {output_set_name}')
+        # Create the export_data_list, keyed by the agr_ingest_set name.
+        self.export_data[output_set_name] = []
+        for i in input_list:
             self.input_count += 1
             if i.for_export is False:
                 continue
@@ -597,11 +611,12 @@ class DataHandler(object):
             for attr in self.output_fields:
                 if getattr(i.linkmldto, attr) is not None and getattr(i.linkmldto, attr) != []:
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)
-            self.export_data.append(export_agr_dict)
+            self.export_data[output_set_name].append(export_agr_dict)
         public_count = self.export_count - self.internal_count
-        self.log.info(f'Exported {self.export_count} of {self.input_count} {self.fb_data_type} entities.')
-        self.log.info(f'{public_count} of {self.export_count} exported {self.fb_data_type}s are PUBLIC.')
-        self.log.info(f'{self.internal_count} of {self.export_count} exported {self.fb_data_type}s are INTERNAL.')
+        self.log.info(f'SUMMARY FOR EXPORT OF {output_set_name}')
+        self.log.info(f'Exported {self.export_count} of {self.input_count} entities.')
+        self.log.info(f'{public_count} of {self.export_count} exported entities are PUBLIC.')
+        self.log.info(f'{self.internal_count} of {self.export_count} exported entities are INTERNAL.')
         return
 
     # The query_chado() wrapper that runs sub-methods - same order of steps for every DataHandler type.
@@ -612,8 +627,8 @@ class DataHandler(object):
         self.get_datatype_data(session)
         self.synthesize_info()
         self.map_fb_data_to_alliance()
-        self.flag_unexportable_entities()
-        self.generate_export_dict()
+        self.flag_unexportable_entities(self.fb_data_entities.values(), self.primary_export_set)
+        self.generate_export_dict(self.fb_data_entities.values(), self.primary_export_set)
         return
 
 
@@ -1545,29 +1560,39 @@ class ConstructHandler(FeatureHandler):
         'FBtp0083738': 'P{GR}',                                   # Is regulated_by FBgn Act5C.
     }
     # Elaborate on export filters for ConstructHandler.
-    required_fields = [
-        'construct_symbol_dto',
-        'data_provider_dto',
-        'internal',
-        'mod_entity_id',
-    ]
-    output_fields = [
-        'construct_component_dtos',
-        'construct_full_name_dto',
-        'construct_symbol_dto',
-        'construct_synonym_dtos',
-        'created_by_curie',
-        'data_provider_dto',
-        'date_created',
-        'date_updated',
-        'internal',
-        'mod_entity_id',
-        'mod_internal_id',
-        'obsolete',
-        'reference_curies',
-        'secondary_identifiers',
-        'updated_by_curie',
-    ]
+    required_fields = {
+        'construct_ingest_set': [
+            'construct_symbol_dto',
+            'data_provider_dto',
+            'internal',
+            'mod_entity_id',
+        ],
+        'construct_genomic_entity_association_ingest_set': [
+            'bob',
+        ],
+    }
+    output_fields = {
+        'construct_ingest_set': [
+            'construct_component_dtos',
+            'construct_full_name_dto',
+            'construct_symbol_dto',
+            'construct_synonym_dtos',
+            'created_by_curie',
+            'data_provider_dto',
+            'date_created',
+            'date_updated',
+            'internal',
+            'mod_entity_id',
+            'mod_internal_id',
+            'obsolete',
+            'reference_curies',
+            'secondary_identifiers',
+            'updated_by_curie',
+        ],
+        'construct_genomic_entity_association_ingest_set': [
+            'bob',
+        ],
+    }
     fb_agr_db_dict = {}
 
     # Elaborate on get_general_data() for the ConstructHandler.
@@ -1636,7 +1661,7 @@ class ConstructHandler(FeatureHandler):
                 al_comp_dict[result.subject_id] = [result]
                 counter += 1
         self.log.info(f'Found {counter} allele-to-component "encodes_tool" relationships.')
-        self.log.info('Now map these "encodes_tool" relationships to constructs.')
+        self.log.info('Now propagate these "encodes_tool" relationships to constructs.')
         counter = 0
         for construct in self.fb_data_entities.values():
             for allele_rel in construct.parent_allele_rels:
@@ -1646,7 +1671,7 @@ class ConstructHandler(FeatureHandler):
                     counter += len(construct.al_encodes_tool_rels)
                 except KeyError:
                     pass
-        self.log.info(f'Mapped {counter} allele-to-component "encodes_tool" relationships to related constructs.')
+        self.log.info(f'Propagated {counter} allele-to-component "encodes_tool" relationships to related constructs.')
         return
 
     def get_allele_reg_regions(self, session):
@@ -1679,7 +1704,7 @@ class ConstructHandler(FeatureHandler):
                 al_comp_dict[result.subject_id] = [result]
                 counter += 1
         self.log.info(f'Found {counter} allele-to-component "has_reg_region" relationships.')
-        self.log.info('Now map these "has_reg_region" relationships to constructs.')
+        self.log.info('Now propagate "has_reg_region" relationships to constructs.')
         counter = 0
         for construct in self.fb_data_entities.values():
             for allele_rel in construct.parent_allele_rels:
@@ -1689,7 +1714,7 @@ class ConstructHandler(FeatureHandler):
                     counter += len(construct.al_reg_region_rels)
                 except KeyError:
                     pass
-        self.log.info(f'Mapped {counter} allele-to-component "has_reg_region" relationships to related constructs.')
+        self.log.info(f'Propagated {counter} allele-to-component "has_reg_region" relationships to related constructs.')
         return
 
     def get_allele_genes(self, session):
@@ -1722,7 +1747,7 @@ class ConstructHandler(FeatureHandler):
                 al_comp_dict[result.subject_id] = [result]
                 counter += 1
         self.log.info(f'Found {counter} allele-to-gene "alleleof" relationships.')
-        self.log.info('Now map these "alleleof" relationships to constructs.')
+        self.log.info('Now propagate "alleleof" relationships to constructs.')
         counter = 0
         for construct in self.fb_data_entities.values():
             for allele_rel in construct.parent_allele_rels:
@@ -1732,7 +1757,7 @@ class ConstructHandler(FeatureHandler):
                     counter += len(construct.al_genes)
                 except KeyError:
                     pass
-        self.log.info(f'Mapped {counter} allele-to-gene "alleleof" relationships to related constructs.')
+        self.log.info(f'Propagated {counter} allele-to-gene "alleleof" relationships to related constructs.')
         return
 
     def get_datatype_data(self, session):
@@ -1946,7 +1971,7 @@ class ConstructHandler(FeatureHandler):
             for slot_name, rel_type in component_slots.items():
                 slot_bin = getattr(construct, slot_name)
                 for feature_id, pub_ids in slot_bin.items():
-                    if self.feature_lookup['is_obsolete'] is True:
+                    if self.feature_lookup[feature_id]['is_obsolete'] is True:
                         continue
                     symbol = self.feature_lookup[feature_id]['symbol']
                     pubs = self.lookup_pub_curies(pub_ids)
@@ -2000,32 +2025,36 @@ class GeneHandler(FeatureHandler):
         'FBgn0015267': 'Mmus\\Abl1',        # Current mouse gene with MGI xref.
     }
     # Elaborate on export filters for GeneHandler.
-    required_fields = [
-        'curie',
-        'data_provider_dto',
-        'gene_symbol_dto',
-        'internal',
-        'taxon_curie',
-    ]
-    output_fields = [
-        'created_by_curie',
-        'cross_reference_dtos',
-        'curie',
-        'data_provider_dto',
-        'date_created',
-        'date_updated',
-        'gene_full_name_dto',
-        'gene_symbol_dto',
-        'gene_synonym_dtos',
-        'gene_systematic_name_dto',
-        'gene_secondary_id_dtos',
-        'gene_type_curie',
-        'internal',
-        'obsolete',
-        # 'related_notes',    # Not present in GeneDTO.
-        'taxon_curie',
-        'updated_by_curie',
-    ]
+    required_fields = {
+        'gene_ingest_set': [
+            'curie',
+            'data_provider_dto',
+            'gene_symbol_dto',
+            'internal',
+            'taxon_curie',
+        ],
+    }
+    output_fields = {
+        'gene_ingest_set': [
+            'created_by_curie',
+            'cross_reference_dtos',
+            'curie',
+            'data_provider_dto',
+            'date_created',
+            'date_updated',
+            'gene_full_name_dto',
+            'gene_symbol_dto',
+            'gene_synonym_dtos',
+            'gene_systematic_name_dto',
+            'gene_secondary_id_dtos',
+            'gene_type_curie',
+            'internal',
+            'obsolete',
+            # 'related_notes',    # Not present in GeneDTO.
+            'taxon_curie',
+            'updated_by_curie',
+        ],
+    }
     fb_agr_db_dict = {
         'EntrezGene': 'NCBI_Gene',
         'RNAcentral': 'RNAcentral',
@@ -2228,29 +2257,33 @@ class StrainHandler(PrimaryEntityHandler):
         'FBsn0000284': 'DGRP_Flyland',
     }
     # Elaborate on export filters for StrainHandler.
-    required_fields = [
-        'curie',
-        'data_provider_dto',
-        'internal',
-        'subtype_name',
-        'taxon_curie'
-    ]
-    output_fields = [
-        'agm_secondary_id_dtos',
-        'created_by_curie',
-        'cross_reference_dtos',
-        'curie',
-        'data_provider_dto',
-        'date_created',
-        'date_updated',
-        'internal',
-        'updated_by_curie',
-        'name',
-        'obsolete',
-        'reference_curies',
-        'subtype_name',
-        'taxon_curie'
-    ]
+    required_fields = {
+        'agm_ingest_set': [
+            'curie',
+            'data_provider_dto',
+            'internal',
+            'subtype_name',
+            'taxon_curie',
+        ],
+    }
+    output_fields = {
+        'agm_ingest_set': [
+            'agm_secondary_id_dtos',
+            'created_by_curie',
+            'cross_reference_dtos',
+            'curie',
+            'data_provider_dto',
+            'date_created',
+            'date_updated',
+            'internal',
+            'updated_by_curie',
+            'name',
+            'obsolete',
+            'reference_curies',
+            'subtype_name',
+            'taxon_curie'
+        ],
+    }
 
     # Elaborate on get_general_data() for the StrainHandler.
     def get_general_data(self, session):

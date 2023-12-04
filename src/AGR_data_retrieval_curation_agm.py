@@ -80,9 +80,13 @@ def main():
         'alliance_member_release_version': database_release,
     }
     # Start export list with strains.
-    export_dict[strain_handler.agr_ingest_type] = []
-    export_dict[strain_handler.agr_ingest_type].extend(strain_handler.export_data)
-    # Add genotypes to export list: to do.
+    for export_label, export_data_list in strain_handler.export_data.items():
+        try:
+            export_dict[export_label].extend(export_data_list)
+        except KeyError:
+            export_dict[export_label] = export_data_list
+    # Add genotypes to export list.
+    # Future work.
     generate_export_file(export_dict, log, output_filename)
 
     log.info('Ended main function.\n')
