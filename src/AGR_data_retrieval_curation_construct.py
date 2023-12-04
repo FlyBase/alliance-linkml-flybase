@@ -87,7 +87,7 @@ def main():
         'linkml_version': linkml_release,
         'alliance_member_release_version': database_release,
     }
-    association_export_dict['construct_association_ingest_set'] = construct_handler.export_data['construct_association_ingest_set']
+    association_export_dict['construct_genomic_entity_association_ingest_set'] = construct_handler.export_data['construct_genomic_entity_association_ingest_set']
     generate_export_file(association_export_dict, log, association_output_filename)
 
     log.info('Ended main function.\n')
