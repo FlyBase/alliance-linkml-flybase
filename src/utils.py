@@ -608,7 +608,7 @@ class DataHandler(object):
                 self.internal_count += 1
                 self.log.debug(f'Export {i} but keep internal at the Alliance: {i.internal_reasons}')
             export_agr_dict = {}
-            for attr in self.output_fields:
+            for attr in self.output_fields[output_set_name]:
                 if getattr(i.linkmldto, attr) is not None and getattr(i.linkmldto, attr) != []:
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)
             self.export_data[output_set_name].append(export_agr_dict)
@@ -1536,6 +1536,8 @@ class ConstructHandler(FeatureHandler):
     def __init__(self, log: Logger, fb_data_type: str, testing: bool):
         """Create the ConstructHandler object."""
         super().__init__(log, fb_data_type, testing)
+        # Additional set for export added to the handler.
+        self.construct_relations = []               # Will be a list of things having a linkmldto attribute with value ConstructGenomicEntityAssociationDTO.
         self.feat_rel_pub_lookup = {}               # Will be feature_relationship_id-keyed lists of supporting pub_ids.
         self.allele_gene_lookup = {}                # Will be allele feature_id-keyed of a single gene feature_id per allele.
         self.seqfeat_gene_lookup = {}               # Will be seqfeat feature_id-keyed of a lists of gene feature_ids.
