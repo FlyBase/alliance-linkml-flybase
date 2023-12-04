@@ -1974,7 +1974,7 @@ class ConstructHandler(FeatureHandler):
 
     def synthesize_construct_genomic_entity_associations(self):
         """Synthesize construct-genomic entity associations."""
-        self.log.info(f'Synthesize construct-genomic entity associations.')
+        self.log.info('Synthesize construct-genomic entity associations.')
         slot_rel_types = {
             'expressed_features': 'expresses',
             'targeted_features': 'targets',
@@ -2101,6 +2101,7 @@ class ConstructHandler(FeatureHandler):
         self.flag_unexportable_entities(self.construct_associations, 'construct_genomic_entity_association_ingest_set')
         self.generate_export_dict(self.construct_associations, 'construct_genomic_entity_association_ingest_set')
         return
+
 
 class GeneHandler(FeatureHandler):
     """This object gets, synthesizes and filters gene data for export."""
