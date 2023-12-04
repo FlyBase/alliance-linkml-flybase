@@ -132,7 +132,7 @@ class DataHandler(object):
     # General utilities.
     def __str__(self):
         """Print out data handler description."""
-        handler_description = f'A data handler that exports FB {self.fb_data_type} to Alliance LinkML: {self.output_fields.keys()}.'
+        handler_description = f'A data handler that exports FB {self.fb_data_type} to Alliance LinkML: {list(self.output_fields.keys())}.'
         return handler_description
 
     def get_primary_key_column(self, chado_table):
@@ -613,7 +613,7 @@ class DataHandler(object):
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)
             self.export_data[output_set_name].append(export_agr_dict)
         public_count = self.export_count - self.internal_count
-        self.log.info(f'SUMMARY FOR EXPORT OF {output_set_name}')
+        self.log.info(f'SUMMARY FOR EXPORT OF {output_set_name}'.upper())
         self.log.info(f'Exported {self.export_count} of {self.input_count} entities.')
         self.log.info(f'{public_count} of {self.export_count} exported entities are PUBLIC.')
         self.log.info(f'{self.internal_count} of {self.export_count} exported entities are INTERNAL.')
