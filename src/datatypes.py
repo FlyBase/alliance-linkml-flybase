@@ -117,9 +117,11 @@ class FBConstruct(FBFeature):
         self.al_genes = []                # Indirect gene relationships: a list of allele-to-FBgn FeatureRelationship objects.
         # Processed FB data.
         # Final relationship assessments.
-        self.expressed_features = {}     # Will be list of feature_id-keyed pub_id list for expressed things: FBgn and FBto.
-        self.targeted_features = {}      # Will be list of feature_id-keyed pub_id list for targeted things: FBgn.
-        self.regulating_features = {}    # Will be list of feature_id-keyed pub_id list for things that regulate the construct: FBgn, FBto and FBsf.
+        self.expressed_features = {}      # Will be list of feature_id-keyed pub_id list for expressed things: FBgn and FBto.
+        self.targeted_features = {}       # Will be list of feature_id-keyed pub_id list for targeted things: FBgn.
+        self.regulating_features = {}     # Will be list of feature_id-keyed pub_id list for things that regulate the construct: FBgn, FBto and FBsf.
+        self.expressed_tool_genes = []    # Will be list of feature_ids for genes for which related tools are also associated in construct.expressed_features.
+        self.regulating_tool_genes = []   # Will be list of feature_ids for genes for which related tools are also associated in construct.targeted_features.
 
 
 class FBStrain(FBDataEntity):
