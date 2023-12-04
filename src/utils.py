@@ -1547,7 +1547,7 @@ class ConstructHandler(FeatureHandler):
         """Create the ConstructHandler object."""
         super().__init__(log, fb_data_type, testing)
         # Additional set for export added to the handler.
-        self.construct_relations = []               # Will be a list of things having a linkmldto attribute with value ConstructGenomicEntityAssociationDTO.
+        self.construct_associations = []            # Will be a list of FBEntity objects, map to ConstructGenomicEntityAssociationDTO.
         # Lookups needed.
         self.feat_rel_pub_lookup = {}               # Will be feature_relationship_id-keyed lists of supporting pub_ids.
         self.allele_gene_lookup = {}                # Will be allele feature_id-keyed of a single gene feature_id per allele.
@@ -1582,7 +1582,10 @@ class ConstructHandler(FeatureHandler):
             'mod_entity_id',
         ],
         'construct_genomic_entity_association_ingest_set': [
-            'bob',
+            'construct_identifier',
+            'genomic_entity_curie',
+            'genomic_entity_relation_name',
+            'internal',
         ],
     }
     output_fields = {
@@ -1604,7 +1607,16 @@ class ConstructHandler(FeatureHandler):
             'updated_by_curie',
         ],
         'construct_genomic_entity_association_ingest_set': [
-            'bob',
+            'construct_identifier',
+            'created_by_curie',
+            'date_created',
+            'date_updated',
+            'evidence_curies',
+            'genomic_entity_curie',
+            'genomic_entity_relation_name',
+            'internal',
+            'obsolete',
+            'updated_by_curie',
         ],
     }
     fb_agr_db_dict = {}
@@ -1957,6 +1969,42 @@ class ConstructHandler(FeatureHandler):
             self.log.info(f'Pruned {counter} genes from construct {slot_name} that are better represented as tools.')
         return
 
+    def synthesize_construct_genomic_entity_associations(self):
+        """Synthesize construct-genomic entity associations."""
+        self.log.info(f'Synthesize construct-genomic entity associations.')
+        slot_rel_types = {
+            'expressed_features': 'expresses',
+            'targeted_features': 'targets',
+            'regulating_features': 'is_regulated_by',
+        }
+        for feature_slot_name, rel_type in slot_rel_types.items():
+            self.log.info(f'Sort out Alliance genomic entities from "{feature_slot_name}" to "{rel_type}" associations.')
+            rel_type = slot_rel_types[feature_slot_name]
+            counter = 0
+            for construct in self.fb_data_entities.values():
+                component_slot = getattr(construct, feature_slot_name)
+                for feature_id, pub_ids in component_slot.items():
+                    if self.feature_lookup[feature_id]['type'] != 'gene' or not self.feature_lookup[feature_id]['uniquename'].startswith('FBgn'):
+                        continue
+                    rel_dict = {
+                        'construct_curie': f'FB:{construct.uniquename}',
+                        'rel_type': rel_type,
+                        'genomic_entity_curie': f'FB:{self.feature_lookup[feature_id]["uniquename"]}',
+                        'pub_curies': self.lookup_pub_curies(pub_ids),
+                        'obsolete': False,
+                    }
+                    # If either component in the relationship is obsolete, set the relationship to obsolete.
+                    if construct.chado_obj.is_obsolete is True:
+                        rel_dict['obsolete'] = True
+                    if self.feature_lookup[feature_id]['is_obsolete'] is True:
+                        rel_dict['obsolete'] = True
+                    feat_rel = datatypes.FBEntity()
+                    feat_rel.rel_dict = rel_dict
+                    self.construct_associations.append(feat_rel)
+                    counter += 1
+            self.log.info(f'Synthesized {counter} construct-gene associations.')
+        return
+
     def synthesize_info(self):
         """Extend the method for the ConstructHandler."""
         super().synthesize_info()
@@ -1964,6 +2012,7 @@ class ConstructHandler(FeatureHandler):
         self.synthesize_component_genes()
         self.synthesize_reg_regions()
         self.synthesize_redundant_tool_genes()
+        self.synthesize_construct_genomic_entity_associations()
         return
 
     # Elaborate on map_fb_data_to_alliance() for the ConstructHandler.
@@ -2008,6 +2057,19 @@ class ConstructHandler(FeatureHandler):
         self.log.info(f'Mapped construct components to {counter} ConstructcomponentDTOs.')
         return
 
+    def map_construct_genomic_associations(self):
+        """Map current construct relations to the Alliance LinkML object."""
+        self.log.info('Map current construct relations to the Alliance LinkML object.')
+        counter = 0
+        for cons_asso in self.construct_associations:
+            rel_dto = datatypes.ConstructGenomicEntityAssociationDTO(cons_asso.rel_dict['construct_curie'], cons_asso.rel_dict['rel_type'],
+                                                                     cons_asso.rel_dict['genomic_entity_curie'], cons_asso.rel_dict['pub_curies'])
+            rel_dto.obsolete = cons_asso.rel_dict['obsolete']
+            cons_asso.linkmldto = rel_dto
+            counter += 1
+        self.log.info(f'Mapped construct_relationships to {counter} ConstructGenomicEntityAssociationDTOs.')
+        return
+
     def map_fb_data_to_alliance(self):
         """Extend the method for the ConstructHandler."""
         super().map_fb_data_to_alliance()
@@ -2021,8 +2083,17 @@ class ConstructHandler(FeatureHandler):
             construct.linkmldto.secondary_identifiers = construct.alt_fb_ids
         self.map_construct_components()
         self.flag_internal_fb_entities('fb_data_entities')
+        self.map_construct_genomic_associations()
+        self.flag_internal_fb_entities('construct_associations')
         return
 
+    # Elaborate on query_chado().
+    def query_chado(self, session):
+        """Elaborate on query_chado method for the ConstructHandler."""
+        super().query_chado(session)
+        self.flag_unexportable_entities(self.construct_associations, 'construct_genomic_entity_association_ingest_set')
+        self.generate_export_dict(self.construct_associations, 'construct_genomic_entity_association_ingest_set')
+        return
 
 class GeneHandler(FeatureHandler):
     """This object gets, synthesizes and filters gene data for export."""

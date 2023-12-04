@@ -29,7 +29,7 @@ class FBAssociation(FBEntity):
     def __init__(self, chado_objs):
         """Create the generic FlyBase association/annotation object from the main db entry/entries."""
         super().__init__()
-        self.chado_objs = chado_objs    # The defining SQLAlchemy chado object(s).
+        self.chado_objs = chado_objs    # The defining entity/entities for the association.
 
 
 class FBDataEntity(FBEntity):
@@ -116,7 +116,7 @@ class FBConstruct(FBFeature):
         self.al_reg_region_rels = []      # Indirect "has_reg_region" relationships: a list of allele-to-FBto/FBsf/FBgn FeatureRelationship objects.
         self.al_genes = []                # Indirect gene relationships: a list of allele-to-FBgn FeatureRelationship objects.
         # Processed FB data.
-        # Final relationship assessments.
+        # Final relationship assessments for ConstructComponentSlotAnnotationDTO mapping.
         self.expressed_features = {}      # Will be list of feature_id-keyed pub_id list for expressed things: FBgn and FBto.
         self.targeted_features = {}       # Will be list of feature_id-keyed pub_id list for targeted things: FBgn.
         self.regulating_features = {}     # Will be list of feature_id-keyed pub_id list for things that regulate the construct: FBgn, FBto and FBsf.
@@ -140,22 +140,6 @@ class FBGenotype(FBDataEntity):
         """Create the FBStrain object."""
         super().__init__(chado_obj)
         self.db_primary_id = chado_obj.genotype_id
-
-
-class FBFeatureAssociation(FBAssociation):
-    """A FBFeatureAssociation with all its related data."""
-    def __init__(self, chado_objs):
-        """Create the FBFeatureAssociation object."""
-        super().__init__(chado_objs)
-        # Attributes listed below have been inherited from FBEntity.
-        # self.db_primary_id = None     # The chado table primary key (or concatenation of primary keys).
-        # self.uniq_key = None          # A string derived from the uniquely defining properties of the entity.
-        # self.linkmldto = None         # The Alliance LinkML object containing mapped data.
-        # self.for_export = True        # Change to False if object should be excluded from export.
-        # self.internal_reasons = []    # Reasons for marking an object as internal in the export file.
-        # self.export_warnings = []     # Reasons for suppressing an object from the export file.
-        # Attributes listed below have been inherited from FBAssociation.
-        # self.chado_objs = chado_objs    # The defining SQLAlchemy chado object(s).
 
 
 # Primary Alliance DTO Classes for FlyBase entities, organized hierarchically, then alphabetically.
