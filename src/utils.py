@@ -2006,6 +2006,7 @@ class ConstructHandler(FeatureHandler):
                         rel_dict['internal'] = True
                     feat_rel = datatypes.FBEntity()
                     feat_rel.rel_dict = rel_dict
+                    feat_rel.entity_desc = f'{rel_dict["construct_curie"]}_{rel_dict["rel_type"]}_{rel_dict["genomic_entity_curie"]}'
                     self.construct_associations.append(feat_rel)
                     counter += 1
             self.log.info(f'Synthesized {counter} construct-gene associations.')
