@@ -13,7 +13,7 @@ Author(s):
 # FlyBase Classes
 # Attributes are separated into "primary chado data" (i.e., raw SQLAlchemy results) and processed FB data (synthesis of sql results).
 class FBEntity(object):
-    """An abstract, generic FlyBase entity."""
+    """A generic FlyBase entity."""
     def __init__(self):
         """Create the generic FlyBase entity with bins for Alliance mapping."""
         self.db_primary_id = None     # The chado table primary key (or concatenation of primary keys).
@@ -22,6 +22,11 @@ class FBEntity(object):
         self.for_export = True        # Change to False if object should be excluded from export.
         self.internal_reasons = []    # Reasons for marking an object as internal in the export file.
         self.export_warnings = []     # Reasons for suppressing an object from the export file.
+        self.entity_desc = None       # A string that succinctly describes the data entity.
+
+    def __str__(self):
+        """Basic descriptive info for the object."""
+        return self.entity_desc
 
 
 class FBAssociation(FBEntity):
@@ -46,6 +51,7 @@ class FBDataEntity(FBEntity):
             self.organism_abbr = chado_obj.organism.abbreviation
         except AttributeError:
             self.organism_abbr = None
+        self.entity_desc = f'{self.name} ({self.uniquename})'
         # Primary FB chado data - direct db query results, no processing.
         self.chado_obj = chado_obj      # The primary SQLAlchemy chado object.
         self.pubs = []                  # Pub associations: e.g., FeaturePub, StrainPub.
@@ -65,11 +71,6 @@ class FBDataEntity(FBEntity):
         self.all_pub_ids = []           # Pub.pub_id db IDs for pubs associated in any way with the entity.
         self.prop_dict = {}             # cvterm name-keyed lists of prop objects: e.g., Featureprop, Strainprop.
         self.prop_pub_dict = {}         # prop_id-keyed lists of pub_ids.
-
-    def __str__(self):
-        """Basic descriptive info for the object."""
-        entity_desc = f'{self.name} ({self.uniquename})'
-        return entity_desc
 
 
 class FBFeature(FBDataEntity):
