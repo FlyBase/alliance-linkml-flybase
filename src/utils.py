@@ -132,7 +132,7 @@ class DataHandler(object):
     # General utilities.
     def __str__(self):
         """Print out data handler description."""
-        handler_description = f'A data handler that exports FB {self.fb_data_type} to Alliance LinkML {self.primary_export_set}.'
+        handler_description = f'A data handler that exports FB {self.fb_data_type} to Alliance LinkML: {self.output_fields.keys()}.'
         return handler_description
 
     def get_primary_key_column(self, chado_table):
@@ -540,7 +540,7 @@ class DataHandler(object):
 
     def get_general_data(self, session):
         """Get general FlyBase chado data."""
-        self.log.info('Get general FlyBase data from chado.')
+        self.log.info('GET GENERAL FLYBASE DATA FROM CHADO.')
         # self.sqlalchemy_test(session)    # For quick dev/debugging only.
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
@@ -550,19 +550,19 @@ class DataHandler(object):
     # The get_datatype_data() wrapper; sub-methods are defined and called in more specific DataHandler types.
     def get_datatype_data(self, session):
         """Get datatype-specific FlyBase data from chado."""
-        self.log.info(f'Get FlyBase {self.fb_data_type} data from chado.')
+        self.log.info(f'GET FLYBASE {self.fb_data_type.upper()} DATA FROM CHADO.')
         return
 
     # The synthesize_info() wrapper; sub-methods are defined and called in more specific DataHandler types.
     def synthesize_info(self):
         """Synthesize FB info for each data object."""
-        self.log.info(f'Synthesize FlyBase "{self.fb_data_type}" data.')
+        self.log.info(f'SYNTHESIZE FLYBASE {self.fb_data_type.upper()} DATA FROM CHADO.')
         return
 
     # The map_fb_data_to_alliance() wrapper; sub-methods are defined and called in more specific DataHandler types.
     def map_fb_data_to_alliance(self):
         """Map FB data to the Alliance LinkML object."""
-        self.log.info(f'Map FlyBase "{self.fb_data_type}" data to the Alliance LinkML object for the "{self.primary_export_set}".')
+        self.log.info(f'Map FlyBase "{self.fb_data_type}" data to the Alliance LinkML object for the "{self.primary_export_set}".'.upper())
         return
 
     # The flag_unexportable_entities() general method.
@@ -574,7 +574,7 @@ class DataHandler(object):
             output_set_name (str): The export_set_label for the list of exported dicts: e.g., 'agm_ingest_set'
 
         """
-        self.log.info(f'Flag FlyBase data lacking information for a required field in the {output_set_name}.')
+        self.log.info(f'Flag FlyBase data lacking information for a required field in the {output_set_name}.'.upper())
         for i in input_list:
             for attr in self.required_fields[output_set_name]:
                 if attr not in i.linkmldto.__dict__.keys():
@@ -596,7 +596,7 @@ class DataHandler(object):
             output_set_name (str): The "agr_ingest_set" label for the list of exported dicts.
 
         """
-        self.log.info(f'Generate LinkML export dict from FB data for {output_set_name}')
+        self.log.info(f'Generate LinkML export dict from FB data for {output_set_name}.'.upper())
         # Create the export_data_list, keyed by the agr_ingest_set name.
         self.export_data[output_set_name] = []
         for i in input_list:
@@ -622,7 +622,7 @@ class DataHandler(object):
     # The query_chado() wrapper that runs sub-methods - same order of steps for every DataHandler type.
     def query_chado(self, session):
         """Wrapper that runs all methods within an SQLAlchemy session."""
-        self.log.info('Run main query_chado() handler method.')
+        self.log.info('Run main query_chado() handler method.'.upper())
         self.get_general_data(session)
         self.get_datatype_data(session)
         self.synthesize_info()
