@@ -1271,9 +1271,12 @@ class PrimaryEntityHandler(DataHandler):
         elif type(input_data) is list:
             input_list = input_data
         for fb_data_entity in input_list:
-            if fb_data_entity.chado_obj.is_obsolete is True:
-                fb_data_entity.linkmldto.internal = True
-                fb_data_entity.internal_reasons.append('Obsolete')
+            try:
+                if fb_data_entity.linkmldto.obsolete is True:
+                    fb_data_entity.linkmldto.internal = True
+                    fb_data_entity.internal_reasons.append('Obsolete')
+            except AttributeError:
+                self.log.error('LinkMLDTO entity lacks obsolete attribute.')
         return
 
     def map_fb_data_to_alliance(self):
@@ -1992,12 +1995,15 @@ class ConstructHandler(FeatureHandler):
                         'genomic_entity_curie': f'FB:{self.feature_lookup[feature_id]["uniquename"]}',
                         'pub_curies': self.lookup_pub_curies(pub_ids),
                         'obsolete': False,
+                        'internal': False,
                     }
                     # If either component in the relationship is obsolete, set the relationship to obsolete.
                     if construct.chado_obj.is_obsolete is True:
                         rel_dict['obsolete'] = True
+                        rel_dict['internal'] = True
                     if self.feature_lookup[feature_id]['is_obsolete'] is True:
                         rel_dict['obsolete'] = True
+                        rel_dict['internal'] = True
                     feat_rel = datatypes.FBEntity()
                     feat_rel.rel_dict = rel_dict
                     self.construct_associations.append(feat_rel)
@@ -2065,6 +2071,7 @@ class ConstructHandler(FeatureHandler):
             rel_dto = datatypes.ConstructGenomicEntityAssociationDTO(cons_asso.rel_dict['construct_curie'], cons_asso.rel_dict['rel_type'],
                                                                      cons_asso.rel_dict['genomic_entity_curie'], cons_asso.rel_dict['pub_curies'])
             rel_dto.obsolete = cons_asso.rel_dict['obsolete']
+            rel_dto.internal = cons_asso.rel_dict['internal']
             cons_asso.linkmldto = rel_dto
             counter += 1
         self.log.info(f'Mapped construct_relationships to {counter} ConstructGenomicEntityAssociationDTOs.')
