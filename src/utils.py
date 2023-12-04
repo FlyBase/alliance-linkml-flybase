@@ -157,10 +157,8 @@ class DataHandler(object):
             # self.log.debug(f'Found primary_key column: {foreign_key_column.name}')
         return foreign_key_column
 
-    # Elaborate on get_general_data() sub-methods for DataHandler.
+    # Sub-methods for the get_general_data() wrapper.
     # Some of these sub-methods may only be called in more specific handlers, as appropriate.
-
-    # BOB: Quick testing of general SQLAlchemy query approaches.
     def sqlalchemy_test(self, session):
         """Test SQLAlchemy behavior."""
         self.log.info('Test SQLAlchemy behavior.')
@@ -549,21 +547,25 @@ class DataHandler(object):
         self.build_ncbi_taxon_lookup(session)
         return
 
+    # The get_datatype_data() wrapper; sub-methods are defined and called in more specific DataHandler types.
     def get_datatype_data(self, session):
         """Get datatype-specific FlyBase data from chado."""
         self.log.info(f'Get FlyBase {self.fb_data_type} data from chado.')
         return
 
+    # The synthesize_info() wrapper; sub-methods are defined and called in more specific DataHandler types.
     def synthesize_info(self):
         """Synthesize FB info for each data object."""
         self.log.info(f'Synthesize FlyBase "{self.fb_data_type}" data.')
         return
 
+    # The map_fb_data_to_alliance() wrapper; sub-methods are defined and called in more specific DataHandler types.
     def map_fb_data_to_alliance(self):
         """Map FB data to the Alliance LinkML object."""
         self.log.info(f'Map FlyBase "{self.fb_data_type}" data to the Alliance LinkML object for the "{self.agr_ingest_type}".')
         return
 
+    # The flag_unexportable_entities() general method.
     def flag_unexportable_entities(self):
         """Flag entities lacking information for a required field."""
         self.log.info(f'Flag FlyBase "{self.fb_data_type}" data lacking information for a required field.')
@@ -579,6 +581,7 @@ class DataHandler(object):
                 self.log.debug(f'DO NOT EXPORT {i}: {i.export_warnings}')
         return
 
+    # The generate_export_dict() general method.
     def generate_export_dict(self):
         """Generate LinkML export dict from FB data."""
         self.log.info('Generate LinkML export dict from FB data.')
@@ -601,6 +604,7 @@ class DataHandler(object):
         self.log.info(f'{self.internal_count} of {self.export_count} exported {self.fb_data_type}s are INTERNAL.')
         return
 
+    # The query_chado() wrapper that runs sub-methods - same order of steps for every DataHandler type.
     def query_chado(self, session):
         """Wrapper that runs all methods within an SQLAlchemy session."""
         self.log.info('Run main query_chado() handler method.')
@@ -654,13 +658,13 @@ class PrimaryEntityHandler(DataHandler):
         'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion', 'point_mutation', 'sequence_alteration', 'sequence_variant']
     }
 
-    # Elaborate on get_general_data() sub-methods for PrimaryEntityHandler.
+    # Elaborate on get_general_data() for the PrimaryEntityHandler.
     def get_general_data(self, session):
         """Extend the method for the PrimaryEntityHandler."""
         super().get_general_data(session)
         return
 
-    # Elaborate on get_datatype_data() sub-methods for PrimaryEntityHandler.
+    # Elaborate on get_datatype_data() for the PrimaryEntityHandler; sub-methods might only be used in some more specific Datahandlers.
     def get_entities(self, session):
         """Get primary FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
@@ -812,17 +816,14 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Ignored {pass_counter} xrefs for irrelevant {self.fb_data_type} entities.')
         return
 
-    # BOB - unused
     def get_entity_props(self, session):
         """Placeholder."""
         return
 
-    # BOB - unused
     def get_entity_cvterms(self, session):
         """Placeholder."""
         return
 
-    # BOB - unused
     def get_entity_associated_data(self, session):
         """Get data associated with primary FlyBase data entities."""
         associated_data_types = ['pubs', 'synonyms', 'dbxrefs', 'props', 'cvterms']
@@ -852,7 +853,6 @@ class PrimaryEntityHandler(DataHandler):
             self.log.info(f'Ignored {pass_counter} {i} for irrelevant {self.fb_data_type} entities.')
         return
 
-    # BOB - unused
     def get_entity_prop_pubs(self, session):
         """Get prop pubs for primary FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
@@ -887,7 +887,6 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Ignored {pass_counter} props for irrelevant {self.fb_data_type} entities.')
         return
 
-    # BOB - unused
     def get_entity_cvtermprops(self, session):
         """Get CV term props for primary FlyBase data entities."""
         chado_type = self.main_chado_entity_types[self.fb_data_type]
@@ -957,7 +956,7 @@ class PrimaryEntityHandler(DataHandler):
         self.get_entity_timestamps(session)
         return
 
-    # Elaborate on synthesize_info() sub-methods for PrimaryEntityHandler.
+    # Elaborate on synthesize_info() for the PrimaryEntityHandler; sub-methods might only be used in some more specific DataHandlers.
     def synthesize_ncbi_taxon_id(self):
         """Determine the NCBITaxon ID for FB entities."""
         self.log.info('Determine the NCBITaxon ID for FB entities.')
@@ -1090,8 +1089,7 @@ class PrimaryEntityHandler(DataHandler):
         self.synthesize_pubs()
         return
 
-    # Elaborate on map_fb_data_to_alliance() sub-methods for PrimaryEntityHandler.
-    # However, as they're not useful for all data types, call them in tailored handler Classes.
+    # Elaborate on map_fb_data_to_alliance() for the PrimaryEntityHandler; sub-methods might only be used in some more specific DataHandlers.
     def map_data_provider_dto(self):
         """Return the DataProviderDTO for the FB data entity."""
         # Note - this method is depends on previous determination of fb_data_entity.curr_fb_symbol by map_synonyms(), if applicable.
@@ -1271,8 +1269,7 @@ class FeatureHandler(PrimaryEntityHandler):
         super().get_general_data(session)
         return
 
-    # Elaborate on get_datatype_data() sub-methods for FeatureHandler.
-    # Call get_annotation_ids() only for more specific FeatureHandler types.
+    # Elaborate on get_datatype_data() for the FeatureHandler; sub-methods might only be used in some more specific Datahandlers.
     def get_annotation_ids(self, session):
         """Get annotation IDs (current and non-current)."""
         self.log.info('Get annotation IDs (current and non-current).')
@@ -1307,7 +1304,6 @@ class FeatureHandler(PrimaryEntityHandler):
         self.log.info(f'Ignored {pass_counter} annotation IDs for {self.fb_data_type} entities.')
         return
 
-    # Call get_chr_featurelocs() only for more specific FeatureHandler types.
     def get_chr_featurelocs(self, session):
         """Get chromosomal featureloc data."""
         self.log.info('Get chromosomal featureloc data.')
@@ -1342,7 +1338,6 @@ class FeatureHandler(PrimaryEntityHandler):
         self.log.info(f'Ignored {pass_counter} chromosomal featurelocs for {self.fb_data_type} entities.')
         return
 
-    # Call get_featureprops_by_type() only for more specific FeatureHandler types.
     def get_featureprops_by_type(self, session, fprop_type):
         """Return a list of featureprops of a given type."""
         self.log.info(f'Get featureprops of type {fprop_type} for {self.fb_data_type} entities.')
@@ -1369,7 +1364,6 @@ class FeatureHandler(PrimaryEntityHandler):
             distinct()
         return results
 
-    # Call get_entity_sbj_feat_rel_by_type() only for more specific FeatureHandler types.
     def get_entity_sbj_feat_rel_by_type(self, session, slot_name, **kwargs):
         """Get a list of FeatureRelationship objects for primary feature entities (as subject) by type.
 
@@ -1418,7 +1412,6 @@ class FeatureHandler(PrimaryEntityHandler):
         self.log.info(f'Added {counter} feature_relationship results to "{slot_name}" list.')
         return
 
-    # Call get_entity_obj_feat_rel_by_type() only for more specific FeatureHandler types.
     def get_entity_obj_feat_rel_by_type(self, session, slot_name, **kwargs):
         """Return a list of FeatureRelationship objects for handler's primary feature entities (as object) by type.
 
@@ -1472,8 +1465,7 @@ class FeatureHandler(PrimaryEntityHandler):
         super().get_datatype_data(session)
         return
 
-    # Elaborate on synthesize_info() sub-methods for FeatureHandler.
-    # Call these methods only for more specific FeatureHandler types.
+    # Elaborate on synthesize_info() for the FeatureHandler; sub-methods might only be used in some more specific DataHandlers.
     def synthesize_anno_ids(self):
         """Synthesize annotation IDs."""
         self.log.info('Synthesize annotation IDs.')
@@ -1500,8 +1492,7 @@ class FeatureHandler(PrimaryEntityHandler):
         super().synthesize_info()
         return
 
-    # Elaborate on map_fb_data_to_alliance() sub-methods for FeatureHandler.
-    # Call these methods only for more specific FeatureHandler types.
+    # Elaborate on map_fb_data_to_alliance() for the FeatureHandler; sub-methods might only be used in some more specific DataHandlers.
     def map_anno_ids_to_secondary_ids(self, slot_name):
         """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for annotation IDs."""
         self.log.info('Map annotation IDs to Alliance object.')
@@ -1579,7 +1570,7 @@ class ConstructHandler(FeatureHandler):
     ]
     fb_agr_db_dict = {}
 
-    # Elaborate on get_general_data() sub-methods for ConstructHandler.
+    # Elaborate on get_general_data() for the ConstructHandler.
     def get_general_data(self, session):
         """Extend the method for the ConstructHandler."""
         super().get_general_data(session)
@@ -1590,7 +1581,7 @@ class ConstructHandler(FeatureHandler):
         self.build_gene_tool_lookup(session)
         return
 
-    # Elaborate on get_datatype_data() sub-methods for ConstructHandler.
+    # Elaborate on get_datatype_data() for the ConstructHandler.
     def get_construct_alleles(self, session):
         """Get allele(s) to which constructs belong."""
         self.log.info('Get allele(s) to which constructs belong.')
@@ -1756,7 +1747,7 @@ class ConstructHandler(FeatureHandler):
         self.get_allele_genes(session)
         return
 
-    # Elaborate on synthesize_info() sub-methods for ConstructHandler.
+    # Elaborate on synthesize_info() for the ConstructHandler.
     def synthesize_encoded_tools(self):
         """Synthesize encoded components."""
         self.log.info('Synthesize encoded components.')
@@ -1771,7 +1762,7 @@ class ConstructHandler(FeatureHandler):
                     construct.expressed_features[component_id].extend(pub_ids)
                 except KeyError:
                     construct.expressed_features[component_id] = pub_ids
-            direct_count = len(construct.expressed_features.keys())
+            # direct_count = len(construct.expressed_features.keys())
             # self.log.debug(f'For {construct}, found {direct_count} encoded tools via direct relationships.')
             # Indirect encodes_tool relationships.
             for rel in construct.al_encodes_tool_rels:
@@ -1787,7 +1778,7 @@ class ConstructHandler(FeatureHandler):
                     if al_con_rel.subject_id == allele_id:
                         al_con_pub_ids = self.lookup_feat_rel_pubs_ids(al_con_rel.feature_relationship_id)
                         construct.expressed_features[component_id].extend(al_con_pub_ids)
-            indirect_count = len(construct.expressed_features.keys()) - direct_count
+            # indirect_count = len(construct.expressed_features.keys()) - direct_count
             # self.log.debug(f'For {construct}, found {indirect_count} encoded tools via indirect allele relationships.')
             counter += len(construct.expressed_features.keys())
         self.log.info(f'Found {counter} encoded tools for constructs via direct and indirect allele relationships.')
@@ -1846,7 +1837,7 @@ class ConstructHandler(FeatureHandler):
                     construct.regulating_features[component_id].extend(pub_ids)
                 except KeyError:
                     construct.regulating_features[component_id] = pub_ids
-            direct_count = len(construct.regulating_features.keys())
+            # direct_count = len(construct.regulating_features.keys())
             # self.log.debug(f'For {construct}, found {direct_count} reg_regions via direct relationships.')
             # Direct seqfeat relationships, old_style.
             for rel in construct.seqfeat_rels:
@@ -1856,7 +1847,7 @@ class ConstructHandler(FeatureHandler):
                     construct.regulating_features[component_id].extend(pub_ids)
                 except KeyError:
                     construct.regulating_features[component_id] = pub_ids
-            direct_count_old = len(construct.regulating_features.keys()) - direct_count
+            # direct_count_old = len(construct.regulating_features.keys()) - direct_count
             # self.log.debug(f'For {construct}, found {direct_count_old} reg_regions via direct relationships, old style.')
             # Indirect has_reg_region relationships.
             for rel in construct.al_reg_region_rels:
@@ -1872,7 +1863,7 @@ class ConstructHandler(FeatureHandler):
                     if al_con_rel.subject_id == allele_id:
                         al_con_pub_ids = self.lookup_feat_rel_pubs_ids(al_con_rel.feature_relationship_id)
                         construct.regulating_features[component_id].extend(al_con_pub_ids)
-            indirect_count = len(construct.regulating_features.keys()) - direct_count - direct_count_old
+            # indirect_count = len(construct.regulating_features.keys()) - direct_count - direct_count_old
             # self.log.debug(f'For {construct}, found {indirect_count} reg_regions tools via indirect allele relationships.')
             # Indirect relationships to genes via seqfeats.
             for component_id in list(construct.regulating_features.keys()):
@@ -1889,7 +1880,7 @@ class ConstructHandler(FeatureHandler):
                             construct.regulating_features[gene_id].extend(pub_ids)
                         except KeyError:
                             construct.regulating_features[gene_id] = pubs_ids
-            genes_via_seqfeat_count = len(construct.regulating_features.keys()) - direct_count - direct_count_old - indirect_count
+            # genes_via_seqfeat_count = len(construct.regulating_features.keys()) - direct_count - direct_count_old - indirect_count
             # self.log.debug(f'For {construct}, found an additional {genes_via_seqfeat_count} genes related to seqfeat reg_regions.')
             counter += len(construct.regulating_features.keys())
         self.log.info(f'Found {counter} reg_regions for constructs via direct and indirect allele relationships.')
@@ -1903,7 +1894,7 @@ class ConstructHandler(FeatureHandler):
         self.synthesize_reg_regions()
         return
 
-    # Elaborate on map_fb_data_to_alliance() sub-methods for ConstructHandler.
+    # Elaborate on map_fb_data_to_alliance() for the ConstructHandler.
     def map_construct_basic(self):
         """Map basic FlyBase construct data to the Alliance LinkML object."""
         self.log.info('Map basic construct info to Alliance object.')
@@ -2011,14 +2002,14 @@ class GeneHandler(FeatureHandler):
         'transposable_element_gene'
     ]
 
-    # Elaborate on get_general_data() sub-methods for GeneHandler.
+    # Elaborate on get_general_data() for the GeneHandler.
     def get_general_data(self, session):
         """Extend the method for the GeneHandler."""
         super().get_general_data(session)
         self.get_chr_info(session)
         return
 
-    # Elaborate on get_datatype_data() sub-methods for GeneHandler.
+    # Elaborate on get_datatype_data() for the GeneHandler.
     def get_panther_info(self):
         """Extract panther information from file."""
         self.log.info('Extract panther information from file.')
@@ -2082,7 +2073,7 @@ class GeneHandler(FeatureHandler):
         self.get_gene_types(session)
         return
 
-    # Elaborate on synthesize_info() sub-methods for GeneHandler.
+    # Elaborate on synthesize_info() for the GeneHandler.
     def synthesize_gene_type(self):
         """Synthesize gene type."""
         self.log.info('Synthesize gene type.')
@@ -2102,7 +2093,7 @@ class GeneHandler(FeatureHandler):
         self.synthesize_anno_ids()
         return
 
-    # Elaborate on map_fb_data_to_alliance() sub-methods for GeneHandler.
+    # Elaborate on map_fb_data_to_alliance() for the GeneHandler.
     def map_gene_basic(self):
         """Map basic FlyBase gene data to the Alliance LinkML object."""
         self.log.info('Map basic gene info to Alliance object.')
@@ -2207,25 +2198,25 @@ class StrainHandler(PrimaryEntityHandler):
         'taxon_curie'
     ]
 
-    # Elaborate on get_general_data() sub-methods for StrainHandler.
+    # Elaborate on get_general_data() for the StrainHandler.
     def get_general_data(self, session):
         """Extend the method for the StrainHandler."""
         super().get_general_data(session)
         return
 
-    # Elaborate on get_datatype_data() sub-methods for StrainHandler.
+    # Elaborate on get_datatype_data() for the StrainHandler.
     def get_datatype_data(self, session):
         """Extend the method for the StrainHandler."""
         super().get_datatype_data(session)
         return
 
-    # Elaborate on synthesize_info() sub-methods for StrainHandler.
+    # Elaborate on synthesize_info() for the StrainHandler.
     def synthesize_info(self):
         """Extend the method for the StrainHandler."""
         super().synthesize_info()
         return
 
-    # Elaborate on map_fb_data_to_alliance() sub-methods for StrainHandler.
+    # Elaborate on map_fb_data_to_alliance() for the StrainHandler.
     def map_strain_basic(self):
         """Map basic FlyBase strain data to the Alliance object."""
         self.log.info('Map basic strain info.')
