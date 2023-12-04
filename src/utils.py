@@ -1886,12 +1886,39 @@ class ConstructHandler(FeatureHandler):
         self.log.info(f'Found {counter} reg_regions for constructs via direct and indirect allele relationships.')
         return
 
+    def synthesize_genes_vs_tools(self):
+        """For constructs in which a gene and related tool are related, report only the tool."""
+        self.log.info('For constructs in which a gene and related tool are related, report only the tool.')
+        counter = 0
+        slot_names = ['expressed_features', 'regulating_features']
+        for construct in self.fb_data_entities.values():
+            for slot_name in slot_names:
+                pruning_list = []
+                slot_bin = getattr(construct, slot_name)
+                for feature_id in slot_bin.keys():
+                    try:
+                        all_related_tool_ids = set(self.gene_tool_lookup[feature_id])
+                        tool_overlap = all_related_tool_ids.intersection(set(slot_bin.keys()))
+                        if tool_overlap:
+                            pruning_list.append(feature_id)
+                            pruned_gene = f'{self.feature_lookup["name"]} ({self.feature_lookup["uniquename"]})'
+                            tool_overlap_str = '|'.join([f'{self.feature_lookup[i]["name"]} ({self.feature_lookup[i]["uniquename"]})' for i in tool_overlap])
+                            self.log.info(f'For {construct}, prune {pruned_gene} since related tools are more informative: {tool_overlap_str}')
+                    except KeyError:
+                        pass
+                for gene_id in pruning_list:
+                    slot_bin.pop(gene_id)
+                    counter += 1
+        self.log.info(f'Pruned {counter} genes from constructs that are better represented as tools.')
+        return
+
     def synthesize_info(self):
         """Extend the method for the ConstructHandler."""
         super().synthesize_info()
         self.synthesize_encoded_tools()
         self.synthesize_component_genes()
         self.synthesize_reg_regions()
+        self.synthesize_genes_vs_tools()
         return
 
     # Elaborate on map_fb_data_to_alliance() for the ConstructHandler.
