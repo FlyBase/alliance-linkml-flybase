@@ -29,7 +29,7 @@ import datatypes
 
 # Classes
 class DataHandler(object):
-    """A generic, abstract data handler that gets FlyBase data and maps it to a single Alliance LinkML model.
+    """A generic, abstract data handler that gets FlyBase data and maps it to LinkML model(s).
 
     Specific classes of DataHandler will only map a given FB data type to a single Alliance ingest
     set (i.e., a set of LinkML DTO objects, in JSON format). In some cases, multiple handlers will
@@ -574,7 +574,7 @@ class DataHandler(object):
             output_set_name (str): The export_set_label for the list of exported dicts: e.g., 'agm_ingest_set'
 
         """
-        self.log.info(f'Flag FlyBase "{self.fb_data_type}" data lacking information for a required field.')
+        self.log.info(f'Flag FlyBase data lacking information for a required field in the {output_set_name}.')
         for i in input_list:
             for attr in self.required_fields[output_set_name]:
                 if attr not in i.linkmldto.__dict__.keys():

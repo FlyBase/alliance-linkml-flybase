@@ -371,8 +371,8 @@ class NameSlotAnnotationDTO(SlotAnnotationDTO):
         self.required_fields.extend(['name_type_name', 'format_text', 'display_text', 'synonym_scope'])
 
 
-class ConstructComponentSlotAnnotation(SlotAnnotationDTO):
-    """ConstructComponentSlotAnnotation class."""
+class ConstructComponentSlotAnnotationDTO(SlotAnnotationDTO):
+    """ConstructComponentSlotAnnotationDTO class."""
     def __init__(self, rel_type: str, component_symbol: str, taxon_curie: str, taxon_text: str, evidence_curies: list):
         """Create a ConstructComponentSlotAnnotation for a FlyBase construct component.
 
