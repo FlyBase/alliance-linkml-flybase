@@ -592,7 +592,7 @@ class DataHandler(object):
         """Generate LinkML export dict from FB data.
 
         Args:
-            input_list (list): A list of LinkMLDTO objects to convert into dicts for export.
+            input_list (list): A list of objects with LinkMLDTO objects under the linkmldto attribute.
             output_set_name (str): The "agr_ingest_set" label for the list of exported dicts.
 
         """
@@ -1257,10 +1257,20 @@ class PrimaryEntityHandler(DataHandler):
                     timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(max(fb_data_entity.timestamps)))
         return
 
-    def flag_internal_fb_entities(self):
-        """Flag obsolete FB objects as internal."""
-        self.log.info('Flag obsolete FB objects as internal.')
-        for fb_data_entity in self.fb_data_entities.values():
+    def flag_internal_fb_entities(self, input_list_name: str):
+        """Flag obsolete FB objects in some list as internal.
+
+        Args:
+            input_list_name (str): The name of a handler list/dict with objects with LinkMLDTO objects under the linkmldto attribute.
+
+        """
+        self.log.info(f'Flag obsolete FB objects in {input_list_name}.')
+        input_data = getattr(self, input_list_name)
+        if type(input_data) is dict:
+            input_list = list(input_data.values())
+        elif type(input_data) is list:
+            input_list = input_data
+        for fb_data_entity in input_list:
             if fb_data_entity.chado_obj.is_obsolete is True:
                 fb_data_entity.linkmldto.internal = True
                 fb_data_entity.internal_reasons.append('Obsolete')
@@ -1538,11 +1548,13 @@ class ConstructHandler(FeatureHandler):
         super().__init__(log, fb_data_type, testing)
         # Additional set for export added to the handler.
         self.construct_relations = []               # Will be a list of things having a linkmldto attribute with value ConstructGenomicEntityAssociationDTO.
+        # Lookups needed.
         self.feat_rel_pub_lookup = {}               # Will be feature_relationship_id-keyed lists of supporting pub_ids.
         self.allele_gene_lookup = {}                # Will be allele feature_id-keyed of a single gene feature_id per allele.
         self.seqfeat_gene_lookup = {}               # Will be seqfeat feature_id-keyed of a lists of gene feature_ids.
         self.transgenic_allele_class_lookup = {}    # Will be an allele feature_id-keyed list of "transgenic product class" CV terms.
         self.gene_tool_lookup = {}                  # Will be gene feature_id-keyed lists of related FBto tools.
+
     test_set = {
         'FBtp0008631': 'P{UAS-wg.H.T:HA1}',                       # Expresses FBgn wg, regulated by FBto UASt.
         'FBtp0010648': 'P{wg.FRT.B}',                             # Expresses FBgn wg, regulated by FBgn sev, has FBto FRT.
@@ -1913,11 +1925,14 @@ class ConstructHandler(FeatureHandler):
         self.log.info(f'Found {counter} reg_regions for constructs via direct and indirect allele relationships.')
         return
 
-    def synthesize_genes_vs_tools(self):
-        """For constructs in which a gene and related tool are related, report only the tool."""
-        self.log.info('For constructs in which a gene and related tool are related, report only the tool.')
-        slot_names = ['expressed_features', 'regulating_features']
-        for slot_name in slot_names:
+    def synthesize_redundant_tool_genes(self):
+        """For constructs in which a gene and related tool are related, sort out redundant genes."""
+        self.log.info('For constructs in which a gene and related tool are related, sort out redundant genes.')
+        slot_names = {
+            'expressed_features': 'expressed_tool_genes',
+            'regulating_features': 'regulating_tool_genes',
+        }
+        for slot_name, tool_gene_slot_name in slot_names.items():
             self.log.info(f'Prune {slot_name} for constructs.')
             counter = 0
             for construct in self.fb_data_entities.values():
@@ -1932,11 +1947,12 @@ class ConstructHandler(FeatureHandler):
                             pruning_list.append(feature_id)
                             pruned_gene = f'{self.feature_lookup[feature_id]["name"]} ({self.feature_lookup[feature_id]["uniquename"]})'
                             tool_overlap_str = '|'.join([f'{self.feature_lookup[i]["name"]} ({self.feature_lookup[i]["uniquename"]})' for i in tool_overlap])
-                            self.log.debug(f'For {construct}, prune {pruned_gene} since related tools are more informative: {tool_overlap_str}')
+                            self.log.debug(f'For {construct}, sort out {pruned_gene} since related tools are more informative: {tool_overlap_str}')
                     except KeyError:
                         pass
                 for gene_id in pruning_list:
-                    slot_bin.pop(gene_id)
+                    tool_gene_bin = getattr(construct, tool_gene_slot_name)
+                    tool_gene_bin.append(gene_id)
                     counter += 1
             self.log.info(f'Pruned {counter} genes from construct {slot_name} that are better represented as tools.')
         return
@@ -1947,7 +1963,7 @@ class ConstructHandler(FeatureHandler):
         self.synthesize_encoded_tools()
         self.synthesize_component_genes()
         self.synthesize_reg_regions()
-        self.synthesize_genes_vs_tools()
+        self.synthesize_redundant_tool_genes()
         return
 
     # Elaborate on map_fb_data_to_alliance() for the ConstructHandler.
@@ -1957,7 +1973,7 @@ class ConstructHandler(FeatureHandler):
         for construct in self.fb_data_entities.values():
             agr_construct = datatypes.ConstructDTO()
             agr_construct.obsolete = construct.chado_obj.is_obsolete
-            agr_construct.mod_entity_id = construct.uniquename
+            agr_construct.mod_entity_id = f'FB:{construct.uniquename}'
             construct.linkmldto = agr_construct
         return
 
@@ -1974,7 +1990,13 @@ class ConstructHandler(FeatureHandler):
             for slot_name, rel_type in component_slots.items():
                 slot_bin = getattr(construct, slot_name)
                 for feature_id, pub_ids in slot_bin.items():
+                    # Do not report obsolete components.
                     if self.feature_lookup[feature_id]['is_obsolete'] is True:
+                        continue
+                    # Do not report genes that are better reported as tools.
+                    elif slot_name == 'expressed_features' and feature_id in construct.expressed_tool_genes:
+                        continue
+                    elif slot_name == 'regulating_features' and feature_id in construct.regulating_tool_genes:
                         continue
                     symbol = self.feature_lookup[feature_id]['symbol']
                     pubs = self.lookup_pub_curies(pub_ids)
@@ -1998,7 +2020,7 @@ class ConstructHandler(FeatureHandler):
         for construct in self.fb_data_entities.values():
             construct.linkmldto.secondary_identifiers = construct.alt_fb_ids
         self.map_construct_components()
-        self.flag_internal_fb_entities()
+        self.flag_internal_fb_entities('fb_data_entities')
         return
 
 
@@ -2241,7 +2263,7 @@ class GeneHandler(FeatureHandler):
         self.map_gene_type()
         self.map_gene_panther_xrefs()
         self.map_anno_ids_to_secondary_ids('gene_secondary_id_dtos')
-        self.flag_internal_fb_entities()
+        self.flag_internal_fb_entities('fb_data_entities')
         return
 
 
@@ -2329,7 +2351,7 @@ class StrainHandler(PrimaryEntityHandler):
         self.map_xrefs()
         self.map_timestamps()
         self.map_secondary_ids('agm_secondary_id_dtos')
-        self.flag_internal_fb_entities()
+        self.flag_internal_fb_entities('fb_data_entities')
         return
 
 
