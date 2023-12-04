@@ -140,6 +140,22 @@ class FBGenotype(FBDataEntity):
         self.db_primary_id = chado_obj.genotype_id
 
 
+class FBFeatureAssociation(FBAssociation):
+    """A FBFeatureAssociation with all its related data."""
+    def __init__(self, chado_objs):
+        """Create the FBFeatureAssociation object."""
+        super().__init__(chado_objs)
+        # Attributes listed below have been inherited from FBEntity.
+        # self.db_primary_id = None     # The chado table primary key (or concatenation of primary keys).
+        # self.uniq_key = None          # A string derived from the uniquely defining properties of the entity.
+        # self.linkmldto = None         # The Alliance LinkML object containing mapped data.
+        # self.for_export = True        # Change to False if object should be excluded from export.
+        # self.internal_reasons = []    # Reasons for marking an object as internal in the export file.
+        # self.export_warnings = []     # Reasons for suppressing an object from the export file.
+        # Attributes listed below have been inherited from FBAssociation.
+        # self.chado_objs = chado_objs    # The defining SQLAlchemy chado object(s).
+
+
 # Primary Alliance DTO Classes for FlyBase entities, organized hierarchically, then alphabetically.
 class AuditedObjectDTO(object):
     """Base Alliance class."""
