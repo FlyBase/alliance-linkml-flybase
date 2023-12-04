@@ -67,7 +67,7 @@ class DataHandler(object):
 
     # Sample set for faster testing: use uniquename-keyed names of objects, tailored for each handler.
     test_set = {}
-    # Correspondence of FB data type to Alliance LinkML object.
+    # Correspondence of FB data type to primary Alliance LinkML object.
     agr_linkmldto_dict = {
         'gene': datatypes.GeneDTO(),
         'allele': 'TBD',
@@ -1889,10 +1889,10 @@ class ConstructHandler(FeatureHandler):
     def synthesize_genes_vs_tools(self):
         """For constructs in which a gene and related tool are related, report only the tool."""
         self.log.info('For constructs in which a gene and related tool are related, report only the tool.')
-        counter = 0
         slot_names = ['expressed_features', 'regulating_features']
         for slot_name in slot_names:
             self.log.info(f'Prune {slot_name} for constructs.')
+            counter = 0
             for construct in self.fb_data_entities.values():
                 pruning_list = []
                 slot_bin = getattr(construct, slot_name)
@@ -1910,7 +1910,7 @@ class ConstructHandler(FeatureHandler):
                 for gene_id in pruning_list:
                     slot_bin.pop(gene_id)
                     counter += 1
-        self.log.info(f'Pruned {counter} genes from constructs that are better represented as tools.')
+            self.log.info(f'Pruned {counter} genes from construct {slot_name} that are better represented as tools.')
         return
 
     def synthesize_info(self):
