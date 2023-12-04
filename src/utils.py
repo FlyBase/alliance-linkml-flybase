@@ -1926,16 +1926,19 @@ class ConstructHandler(FeatureHandler):
                 for feature_id in slot_bin.keys():
                     try:
                         all_related_tool_ids = set(self.gene_tool_lookup[feature_id])
+                        self.log.info(f'For {construct}, {self.feature_lookup[feature_id]["name"]} has {len(all_related_tool_ids)}.')
                         tool_overlap = all_related_tool_ids.intersection(set(slot_bin.keys()))
+                        self.log.info(f'For {construct}, {self.feature_lookup[feature_id]["name"]} has {len(tool_overlap)} redundantly associated tools.')
                         if tool_overlap:
                             pruning_list.append(feature_id)
-                            pruned_gene = f'{self.feature_lookup["name"]} ({self.feature_lookup["uniquename"]})'
+                            pruned_gene = f'{self.feature_lookup[feature_id]["name"]} ({self.feature_lookup[feature_id]["uniquename"]})'
                             tool_overlap_str = '|'.join([f'{self.feature_lookup[i]["name"]} ({self.feature_lookup[i]["uniquename"]})' for i in tool_overlap])
                             self.log.info(f'For {construct}, prune {pruned_gene} since related tools are more informative: {tool_overlap_str}')
                     except KeyError:
                         pass
                 for gene_id in pruning_list:
                     slot_bin.pop(gene_id)
+                    self.log.info(f'For {construct}, prune {self.feature_lookup[gene_id]["name"]}.')
                     counter += 1
             self.log.info(f'Pruned {counter} genes from construct {slot_name} that are better represented as tools.')
         return
