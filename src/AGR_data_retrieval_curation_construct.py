@@ -73,19 +73,22 @@ def main():
     construct_handler = get_handler(log, FB_DATA_TYPE, testing)
     db_query_transaction(session, log, construct_handler)
 
-    # Export the data.
+    # Export the construct data.
     export_dict = {
         'linkml_version': linkml_release,
         'alliance_member_release_version': database_release,
     }
-    for export_label, export_data_list in construct_handler.export_data.items():
-        try:
-            export_dict[export_label].extend(export_data_list)
-        except KeyError:
-            export_dict[export_label] = export_data_list
-    # export_dict[construct_handler.agr_ingest_type] = []
-    # export_dict[construct_handler.agr_ingest_type].extend(construct_handler.export_data)
+    export_dict['construct_ingest_set'] = construct_handler.export_data['construct_ingest_set']
     generate_export_file(export_dict, log, output_filename)
+
+    # Export the construct associations to a separate file.
+    association_output_filename = output_filename.replace('construct', 'construct_association')
+    association_export_dict = {
+        'linkml_version': linkml_release,
+        'alliance_member_release_version': database_release,
+    }
+    association_export_dict['construct_association_ingest_set'] = construct_handler.export_data['construct_association_ingest_set']
+    generate_export_file(association_export_dict, log, association_output_filename)
 
     log.info('Ended main function.\n')
 

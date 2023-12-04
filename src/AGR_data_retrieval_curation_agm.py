@@ -79,14 +79,13 @@ def main():
         'linkml_version': linkml_release,
         'alliance_member_release_version': database_release,
     }
-    # Start export list with strains.
-    for export_label, export_data_list in strain_handler.export_data.items():
-        try:
-            export_dict[export_label].extend(export_data_list)
-        except KeyError:
-            export_dict[export_label] = export_data_list
-    # Add genotypes to export list.
+
+    # Export strains first.
+    export_dict[strain_handler.primary_export_set] = strain_handler.export_data[strain_handler.primary_export_set]
+
+    # Then add genotypes to export list.
     # Future work.
+
     generate_export_file(export_dict, log, output_filename)
 
     log.info('Ended main function.\n')

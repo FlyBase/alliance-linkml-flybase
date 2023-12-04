@@ -78,13 +78,7 @@ def main():
         'linkml_version': linkml_release,
         'alliance_member_release_version': database_release,
     }
-    for export_label, export_data_list in gene_handler.export_data.items():
-        try:
-            export_dict[export_label].extend(export_data_list)
-        except KeyError:
-            export_dict[export_label] = export_data_list
-    # export_dict[gene_handler.agr_ingest_type] = []
-    # export_dict[gene_handler.agr_ingest_type].extend(gene_handler.export_data)
+    export_dict[gene_handler.primary_export_set] = gene_handler.export_data[gene_handler.primary_export_set]
     generate_export_file(export_dict, log, output_filename)
 
     log.info('Ended main function.\n')
