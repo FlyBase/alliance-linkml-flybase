@@ -70,15 +70,15 @@ def main():
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Get the data and process it.
-    construct_handler = get_handler(log, FB_DATA_TYPE, testing)
-    db_query_transaction(session, log, construct_handler)
+    cons_handler = get_handler(log, FB_DATA_TYPE, testing)
+    db_query_transaction(session, log, cons_handler)
 
     # Export the construct data.
     export_dict = {
         'linkml_version': linkml_release,
         'alliance_member_release_version': database_release,
     }
-    export_dict['construct_ingest_set'] = construct_handler.export_data['construct_ingest_set']
+    export_dict['construct_ingest_set'] = cons_handler.export_data['construct_ingest_set']
     generate_export_file(export_dict, log, output_filename)
 
     # Export the construct associations to a separate file.
@@ -87,7 +87,7 @@ def main():
         'linkml_version': linkml_release,
         'alliance_member_release_version': database_release,
     }
-    association_export_dict['construct_genomic_entity_association_ingest_set'] = construct_handler.export_data['construct_genomic_entity_association_ingest_set']
+    association_export_dict['construct_genomic_entity_association_ingest_set'] = cons_handler.export_data['construct_genomic_entity_association_ingest_set']
     generate_export_file(association_export_dict, log, association_output_filename)
 
     log.info('Ended main function.\n')
