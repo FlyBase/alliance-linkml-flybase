@@ -598,6 +598,7 @@ class DAFMaker(object):
         log.info('Generating output JSON file of disease annotations.')
         output_dict = {
             'linkml_version': linkml_release,
+            'alliance_member_release_version': database_release,
             'disease_allele_ingest_set': []
         }
         # For each AGR unique key, just process the 1st disease annotation in the list of redundant FB annotations.
