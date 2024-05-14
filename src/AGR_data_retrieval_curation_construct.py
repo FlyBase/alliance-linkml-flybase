@@ -28,7 +28,7 @@ from harvdev_utils.psycopg_functions import set_up_db_reading
 from utils import get_handler, db_query_transaction, generate_export_file
 
 # Data types handled by this script.
-FB_DATA_TYPE = 'construct'
+FB_DATA_TYPE = 'bob_construct'
 REPORT_LABEL = 'construct_curation'
 
 # Now proceed with generic setup.
