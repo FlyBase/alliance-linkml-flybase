@@ -6,11 +6,11 @@ Author(s):
     Gil dos Santos dossantos@morgan.harvard.edu
 
 Usage:
-    AGR_data_retrieval_curation_agm.py [-h] [-t TESTING]
+    AGR_data_retrieval_curation_agm.py [-h] [-r FLYBASE_RELEASE]
     [-l LINKML_RELEASE] [-v VERBOSE] [-c CONFIG]
 
 Example:
-    python AGR_data_retrieval_curation_agm.py -v -t -l v1.1.2
+    python AGR_data_retrieval_curation_agm.py -v -r 2023_05 -l v1.1.2
     -c /path/to/config.cfg
 
 Notes:
