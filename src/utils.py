@@ -793,7 +793,7 @@ class PrimaryEntityHandler(DataHandler):
         for result in results:
             entity_pkey_id = getattr(result, main_pkey_name)
             try:
-                self.fb_data_entities[entity_pkey_id].fb_dbxrefs.append(result)
+                self.fb_data_entities[entity_pkey_id].fb_sec_dbxrefs.append(result)
                 counter += 1
             except KeyError:
                 pass_counter += 1
@@ -996,7 +996,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info('Process secondary IDs and return a list of old FB uniquenames.')
         for fb_data_entity in self.fb_data_entities.values():
             secondary_ids = []
-            for xref in fb_data_entity.fb_dbxrefs:
+            for xref in fb_data_entity.fb_sec_dbxrefs:
                 secondary_ids.append(f'FB:{xref.dbxref.accession}')
             fb_data_entity.alt_fb_ids = list(set(secondary_ids))
         return
@@ -1792,7 +1792,7 @@ class ConstructHandler(FeatureHandler):
     def get_datatype_data(self, session):
         """Extend the method for the ConstructHandler."""
         super().get_datatype_data(session)
-        self.get_construct_alleles(session)
+        # self.get_construct_alleles(session)    # BOB: SUPER SLOW STEP - FIX IT
         self.get_construct_encoded_tools(session)
         self.get_construct_reg_regions(session)
         self.get_allele_encoded_tools(session)

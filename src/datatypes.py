@@ -1,7 +1,7 @@
 """Module:: datatypes.
 
 Synopsis:
-    Datatype objects representing FlyBaseData retrieval utils from FlyBase chado for export to the Alliance in
+    Ojects representing FlyBase chado data types, for export to the Alliance in
     LinkML-compliant JSON files.
 
 Author(s):
@@ -11,65 +11,62 @@ Author(s):
 
 
 # FlyBase Classes
-# Attributes are separated into "primary chado data" (i.e., raw SQLAlchemy results) and processed FB data (synthesis of sql results).
+# Attributes are sorted into "primary chado data" (i.e., query results) and
+# processed data (synthesis of sql results).
 class FBEntity(object):
     """A generic FlyBase entity."""
     def __init__(self):
-        """Create the generic FlyBase entity with bins for Alliance mapping."""
-        self.db_primary_id = None     # The chado table primary key (or concatenation of primary keys).
-        self.uniq_key = None          # A string derived from the uniquely defining properties of the entity.
-        self.linkmldto = None         # The Alliance LinkML object containing mapped data.
-        self.for_export = True        # Change to False if object should be excluded from export.
-        self.internal_reasons = []    # Reasons for marking an object as internal in the export file.
-        self.export_warnings = []     # Reasons for suppressing an object from the export file.
-        self.entity_desc = None       # A string that succinctly describes the data entity.
+        """Create a FBEntity object with bins for Alliance mapping."""
+        self.db_primary_id = None     # Table primary key (or concatenation).
+        self.uniq_key = None          # Uniquely identifying string.
+        self.linkmldto = None         # Alliance LinkML object for mapped data.
+        self.for_export = True        # Made False to prevent Alliance export.
+        self.internal_reasons = []    # Reasons an object was marked internal.
+        self.export_warnings = []     # Reasons an object was not exported.
+        self.entity_desc = None       # A succinct description for this entity.
 
     def __str__(self):
         """Basic descriptive info for the object."""
         return self.entity_desc
 
 
+# A placeholder for development of association/annotation export.
 class FBAssociation(FBEntity):
     """An abstract, generic FlyBase association/annotation."""
-    def __init__(self, chado_objs):
-        """Create the generic FlyBase association/annotation object from the main db entry/entries."""
+    def __init__(self):
+        """Create a FBAssociation object."""
         super().__init__()
-        self.chado_objs = chado_objs    # The defining entity/entities for the association.
 
 
+# Objects below exclude associations/annotations.
 class FBDataEntity(FBEntity):
-    """An abstract, generic FlyBase data entity with all it related data, excluding associations/annotations."""
+    """An abstract, generic FlyBase data entity with all it related data."""
     def __init__(self, chado_obj):
-        """Create the generic FlyBase data entity object from the main db entry."""
+        """Create a FBDataEntity object from the main db entry."""
         super().__init__()
-        self.uniquename = chado_obj.uniquename
-        try:
-            self.name = chado_obj.name
-        except AttributeError:
-            self.name = None
+        self.entity_desc = f'{self.chado_obj.name} ({self.chado_obj.uniquename})'
         try:
             self.organism_abbr = chado_obj.organism.abbreviation
         except AttributeError:
             self.organism_abbr = None
-        self.entity_desc = f'{self.name} ({self.uniquename})'
         # Primary FB chado data - direct db query results, no processing.
         self.chado_obj = chado_obj      # The primary SQLAlchemy chado object.
-        self.pubs = []                  # Pub associations: e.g., FeaturePub, StrainPub.
-        self.synonyms = []              # Synonym associations: e.g., FeatureSynonym, StrainSynonym.
-        self.fb_dbxrefs = []            # Dbxref non-current associations for "FlyBase" db: e.g., FeatureDbxref, StrainDbxref.
-        self.dbxrefs = []               # Dbxref associations: e.g., FeatureDbxref, StrainDbxref.
-        self.props = []                 # entity props: e.g., Featureprop, Strainprop.
-        self.prop_pubs = []             # entity prop_pubs: e.g., Featureprop_pub, Strainprop_pub.
-        self.cvterms = []               # Cvterm associations: e.g., FeatureCvterm, StrainCvterm.
-        self.cvtermprops = []           # Cvtermprop associations: e.g., FeatureCvtermprop, StrainDbxref.
+        self.pubs = []                  # Pub associations: e.g., FeaturePub.
+        self.synonyms = []              # Synonym associations: e.g., FeatureSynonym.
+        self.fb_sec_dbxrefs = []        # Dbxref non-current associations for "FlyBase" db: e.g., FeatureDbxref.
+        self.dbxrefs = []               # Dbxref associations: e.g., FeatureDbxref.
+        self.props = []                 # entity props: e.g., Featureprop.
+        self.prop_pubs = []             # entity prop_pubs: e.g., Featureprop_pub.
+        self.cvterms = []               # Cvterm associations: e.g., FeatureCvterm.
+        self.cvtermprops = []           # Cvtermprop associations: e.g., FeatureCvtermprop.
         self.timestamps = []            # FB timestamps.
         # Processed FB data - processed from primary FB chado data above.
         self.ncbi_taxon_id = None       # The NCBITaxon dbxref.accession (str).
         self.synonym_dict = {}          # Will be synonym_id-keyed dicts of processed synonym info, similar to NameDTO.
         self.curr_fb_symbol = None      # The current symbol for the entity (UTF-8).
         self.alt_fb_ids = []            # Secondary FB IDs (including the "FB:" prefix).
-        self.all_pub_ids = []           # Pub.pub_id db IDs for pubs associated in any way with the entity.
-        self.prop_dict = {}             # cvterm name-keyed lists of prop objects: e.g., Featureprop, Strainprop.
+        self.all_pub_ids = []           # Pub.pub_ids for pubs associated in any way with the entity.
+        self.prop_dict = {}             # cvterm name-keyed lists of prop objects: e.g., Featureprop.
         self.prop_pub_dict = {}         # prop_id-keyed lists of pub_ids.
 
 
@@ -143,7 +140,8 @@ class FBGenotype(FBDataEntity):
         self.db_primary_id = chado_obj.genotype_id
 
 
-# Primary Alliance DTO Classes for FlyBase entities, organized hierarchically, then alphabetically.
+# Primary Alliance DTO Classes for FB entities.
+# Organized hierarchically, then alphabetically.
 class AuditedObjectDTO(object):
     """Base Alliance class."""
     def __init__(self):
@@ -157,7 +155,7 @@ class AuditedObjectDTO(object):
         self.required_fields = ['internal']
 
     def dict_export(self):
-        """Return a JSON-friendly dict for cases where inlined object is required."""
+        """Return a JSON-friendly dict for cases where inlined object needed."""
         export_dict = {}
         for k, v in self.__dict__.items():
             if k != 'required_fields' and v is not None and v != []:
@@ -182,8 +180,8 @@ class ReagentDTO(AuditedObjectDTO):
         """Create ReagentDTO for FlyBase object."""
         super().__init__()
         self.mod_entity_id = None          # Will be the MOD curie.
-        self.mod_internal_id = None        # Will be the MOD internal db id, if no MOD curie.
-        self.secondary_identifiers = []    # Will be list of 2o FB IDs (curies, not DTOs).
+        self.mod_internal_id = None        # Will be the MOD internal db id.
+        self.secondary_identifiers = []    # Will be list of 2o FB IDs (strings)
         self.data_provider_dto = None
         self.required_fields.extend(['mod_entity_id', 'data_provider_dto'])
 
@@ -201,10 +199,10 @@ class ConstructDTO(ReagentDTO):
     def __init__(self):
         """Create ConstructDTO for FlyBase object."""
         super().__init__()
-        self.construct_symbol_dto = None       # Will be a single NameSlotAnnotationDTO.
-        self.construct_full_name_dto = None    # Will be a single NameSlotAnnotationDTO.
-        self.construct_synonym_dtos = None     # Will be a list of NameSlotAnnotationDTOs.
-        self.construct_component_dtos = []     # Will be a list of ConstructComponentSlotAnnotationDTOs.
+        self.construct_symbol_dto = None       # One NameSlotAnnotationDTO.
+        self.construct_full_name_dto = None    # One NameSlotAnnotationDTO.
+        self.construct_synonym_dtos = None     # NameSlotAnnotationDTOs.
+        self.construct_component_dtos = []     # ConstructComponentSlotAnnotationDTOs.
         self.reference_curies = []
         self.required_fields.extend(['construct_symbol_dto'])
 
@@ -214,11 +212,11 @@ class AffectedGenomicModelDTO(GenomicEntityDTO):
     def __init__(self):
         """Create AffectedGenomicModelDTO for FlyBase object."""
         super().__init__()
-        self.name = None                   # The current fullname synonym, ASCII format.
+        self.name = None                   # Current fullname synonym (ASCII).
         self.subtype_name = None           # "strain" or "genotype".
         self.agm_secondary_id_dtos = []    # Secondary IDs.
         self.reference_curies = []         # Publication curies (PMID or FBrf).
-        self.component_dtos = []           # AffectedGenomicModelComponentDTO objects.
+        self.component_dtos = []           # AffectedGenomicModelComponentDTOs.
         self.required_fields.extend(['subtype_name'])
 
 
@@ -227,11 +225,11 @@ class GeneDTO(GenomicEntityDTO):
     def __init__(self):
         """Create GeneDTO for FlyBase object."""
         super().__init__()
-        self.gene_symbol_dto = None             # Will be a single NameSlotAnnotationDTO.
-        self.gene_full_name_dto = None          # Will be a single NameSlotAnnotationDTO.
-        self.gene_systematic_name_dto = None    # Will be a single NameSlotAnnotationDTO.
-        self.gene_synonym_dtos = []             # Will be list of NameSlotAnnotationDTO objects.
-        self.gene_type_curie = None             # Will be the SO term ID corresponding to the gene's promoted_gene_type.
+        self.gene_symbol_dto = None             # One NameSlotAnnotationDTO.
+        self.gene_full_name_dto = None          # One NameSlotAnnotationDTO.
+        self.gene_systematic_name_dto = None    # One NameSlotAnnotationDTO.
+        self.gene_synonym_dtos = []             # Many NameSlotAnnotationDTO objects.
+        self.gene_type_curie = None             # SO term ID for gene's promoted_gene_type.
         self.gene_secondary_id_dtos = []        # Annotation IDs and 2o FlyBase IDs.
         self.reference_curies = []              # Not yet part of LinkML, so not exported - should be added to LinkML model?
         self.related_notes = []                 # Will be NoteDTO objects.
