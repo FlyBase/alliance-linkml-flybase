@@ -352,7 +352,7 @@ class DataHandler(object):
                 JOIN cvterm t ON t.cvterm_id = s.type_id AND t.name = 'symbol'
                 WHERE f.uniquename ~ '{self.regex[feat_type]}';
             """
-            self.log.info(f'Have this query: {test_query}')
+            self.log.info(test_query)
             results = session.execute(test_query).fetchall()
             FEATURE_ID = 0
             UNIQUENAME = 1
@@ -376,7 +376,6 @@ class DataHandler(object):
                 #     'exported': is_exported
                 # }
                 # BILLY: Try conventional handling below.
-                self.log.info(f'BILLY: {result}')
                 feat_dict = {
                     'uniquename': result[UNIQUENAME],
                     'is_obsolete': result[OBSOLETE],
