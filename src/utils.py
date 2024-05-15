@@ -337,6 +337,7 @@ class DataHandler(object):
                 # distinct()
             test_query = f"""
                 SELECT DISTINCT
+                    f.feature_id,
                     f.uniquename,
                     f.is_obsolete,
                     f.type_id,
@@ -351,15 +352,17 @@ class DataHandler(object):
                 JOIN cvterm t ON t.cvterm_id = s.type_id AND t.name = 'symbol'
                 WHERE f.uniquename ~ '{self.regex[feat_type]}';
             """
+            self.log.info(f'Have this query: {test_query}')
             results = session.execute(test_query).fetchall()
-            UNIQUENAME = 0
-            OBSOLETE = 1
-            TYPE_ID = 2
-            ORG_ID = 3
-            SPECIES_NAME = 4
-            NAME = 5
-            SYMBOL = 6
-            self.log.info(f'BOBBY: Process {len(results)} {feat_type} features.')
+            FEATURE_ID = 0
+            UNIQUENAME = 1
+            OBSOLETE = 2
+            TYPE_ID = 3
+            ORG_ID = 4
+            SPECIES_NAME = 5
+            NAME = 6
+            SYMBOL = 7
+            self.log.info(f'BILLY: Process {len(results)} {feat_type} features.')
             counter = 0
             for result in results:
                 # BOB: Suppress ORM handling.
@@ -388,7 +391,8 @@ class DataHandler(object):
                     feat_dict['taxon_id'] = self.ncbi_taxon_lookup[result[ORG_ID]]                   # BILLY: Use conventional processing
                 except KeyError:
                     feat_dict['taxon_id'] = 'NCBITaxon:32644'    # Unspecified taxon.
-                self.feature_lookup[result.Feature.feature_id] = feat_dict
+                # self.feature_lookup[result.Feature.feature_id] = feat_dict    # BOB: Suppress ORM processing
+                self.feature_lookup[result[FEATURE_ID]] = feat_dict             # BILLY: Use conventional processing
                 counter += 1
             self.log.info(f'Added {counter} {feat_type} features to the feature_lookup.')
         return
