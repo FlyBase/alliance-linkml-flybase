@@ -334,7 +334,7 @@ class DataHandler(object):
                 join(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
                 filter(*filters).\
                 distinct()
-            self.log.info(f'Process {feat_type} features.')
+            self.log.info(f'BOB: Process {feat_type} features.')
             counter = 0
             for result in results:
                 feat_dict = {
