@@ -340,12 +340,33 @@ class DataHandler(object):
                 join(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
                 filter(*filters).\
                 distinct()
+            FEATURE_ID = 0
+            UNIQUENAME = 1
+            OBSOLETE = 2
+            TYPE_ID = 3
+            ORG_ID = 4
+            GENUS = 5
+            SPECIES = 6
+            NAME = 7
+            SYMBOL = 8
             counter = 0
             for result in results:
-                print(result)
+                feat_dict = {
+                    'uniquename': result[UNIQUENAME],
+                    'is_obsolete': result[OBSOLETE],
+                    'type': self.cvterm_lookup[result[TYPE_ID]],
+                    'species': f'{result[GENUS]} {result[SPECIES]}',
+                    'name': result[NAME],
+                    'symbol': sub_sup_sgml_to_html(result[SYMBOL]),
+                    'exported': is_exported,
+                }
+                try:
+                    feat_dict['taxon_id'] = self.ncbi_taxon_lookup[result[ORG_ID]]
+                except KeyError:
+                    feat_dict['taxon_id'] = 'NCBITaxon:32644'    # Unspecified taxon.
+                self.feature_lookup[result[FEATURE_ID]] = feat_dict
                 counter += 1
             self.log.info(f'Added {counter} {feat_type} features to the feature_lookup.')
-            quit()
         return
 
     def old_build_feature_lookup(self, session):
