@@ -413,7 +413,7 @@ class DataHandler(object):
             'tool': False,
         }
         for feat_type, is_exported in feat_type_export.items():
-            self.log.info(f'Looking up {feat_type} features.')
+            self.log.info(f'BOB: Looking up {feat_type} features.')
             filters = (
                 Feature.uniquename.op('~')(self.regex[feat_type]),
                 FeatureSynonym.is_current.is_(True),
