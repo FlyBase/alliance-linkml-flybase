@@ -326,8 +326,9 @@ class DataHandler(object):
                 FeatureSynonym.is_current.is_(True),
                 Cvterm.name == 'symbol'
             )
-            results = session.query(Feature, Synonym).\
+            results = session.query(Feature, Organism, Synonym).\
                 select_from(Feature).\
+                join(Organism, (Organism.organism_id == Feature.organism_id)).\
                 join(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
                 join(Synonym, (Synonym.synonym_id == FeatureSynonym.synonym_id)).\
                 join(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
@@ -340,7 +341,7 @@ class DataHandler(object):
                     'uniquename': result.Feature.uniquename,
                     'is_obsolete': result.Feature.is_obsolete,
                     'type': self.lookup_cvterm_name(result.Feature.type_id),
-                    'species': f'{result.Feature.organism.genus} {result.Feature.organism.species}',
+                    'species': f'{result.Organism.genus} {result.Organism.species}',
                     'name': result.Feature.name,
                     'symbol': sub_sup_sgml_to_html(result.Synonym.synonym_sgml),
                     'exported': is_exported
