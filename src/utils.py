@@ -321,6 +321,75 @@ class DataHandler(object):
         }
         for feat_type, is_exported in feat_type_export.items():
             self.log.info(f'Looking up {feat_type} features.')
+            filters = (
+                Feature.uniquename.op('~')(self.regex[feat_type]),
+                FeatureSynonym.is_current.is_(True),
+                Cvterm.name == 'symbol',
+
+            )
+            orm_query = session.query(Feature.feature_id, Feature.uniquename, Feature.is_obsolete,
+                                      Feature.type_id, Organism.organism_id, Organism.genus,
+                                      Organism.species, Feature.name, Synonym.synonym_sgml).\
+                select_from(Feature).\
+                join(Organism, (Organism.organism_id == Feature.organism_id)).\
+                join(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
+                join(Synonym, (Synonym.synonym_id == FeatureSynonym.synonym_id)).\
+                join(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
+                filter(*filters).\
+                distinct()
+            self.log.info(f'Define ORM query for {feat_type}.')
+            feature_query = str(orm_query)
+            self.log.info(f'Convert ORM query for {feat_type} to string.')
+            self.log.info(feature_query)
+            results = session.execute(feature_query).fetchall()
+            self.log.info(f'Executed text query for {feat_type}.')
+            FEATURE_ID = 0
+            UNIQUENAME = 1
+            OBSOLETE = 2
+            TYPE_ID = 3
+            ORG_ID = 4
+            GENUS = 5
+            SPECIES = 6
+            NAME = 7
+            SYMBOL = 8
+            counter = 0
+            for result in results:
+                feat_dict = {
+                    'uniquename': result[UNIQUENAME],
+                    'is_obsolete': result[OBSOLETE],
+                    'type': self.cvterm_lookup[result[TYPE_ID]],
+                    'species': f'{result[GENUS]} {result[SPECIES]}',
+                    'name': result[NAME],
+                    'symbol': sub_sup_sgml_to_html(result[SYMBOL]),
+                    'exported': is_exported,
+                }
+                try:
+                    feat_dict['taxon_id'] = self.ncbi_taxon_lookup[result[ORG_ID]]
+                except KeyError:
+                    feat_dict['taxon_id'] = 'NCBITaxon:32644'    # Unspecified taxon.
+                self.feature_lookup[result[FEATURE_ID]] = feat_dict
+                counter += 1
+            self.log.info(f'Added {counter} {feat_type} features to the feature_lookup.')
+        return
+
+    def old_build_feature_lookup(self, session):
+        """Build a simple feature lookup."""
+        # Note - depends on prior construction of self.ncbi_taxon_lookup and self.cvterm_lookup.
+        self.log.info('Build a simple feature lookup.')
+        # Feature types to add to the feature_lookup.
+        feat_type_export = {
+            'allele': True,
+            'construct': True,
+            'gene': True,
+            'aberration': False,
+            'balancer': False,
+            'chem': False,
+            'insertion': False,
+            'seqfeat': False,
+            'tool': False,
+        }
+        for feat_type, is_exported in feat_type_export.items():
+            self.log.info(f'Looking up {feat_type} features.')
             # Using conventional query rather than ORM because it's 3X faster, saving 3m.
             feature_query = f"""
                 SELECT DISTINCT
@@ -348,6 +417,7 @@ class DataHandler(object):
             SPECIES_NAME = 5
             NAME = 6
             SYMBOL = 7
+            self.log.info(f'BILLY: Process {len(results)} {feat_type} features.')
             counter = 0
             for result in results:
                 feat_dict = {
