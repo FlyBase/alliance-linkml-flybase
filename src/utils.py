@@ -308,18 +308,15 @@ class DataHandler(object):
         # Note - depends on prior construction of self.ncbi_taxon_lookup and self.cvterm_lookup.
         self.log.info('Build a simple feature lookup.')
         # Feature types to add to the feature_lookup.
-        # feat_type_export = {
-        #     'allele': True,
-        #     'construct': True,
-        #     'gene': True,
-        #     'aberration': False,
-        #     'balancer': False,
-        #     'chem': False,
-        #     'insertion': False,
-        #     'seqfeat': False,
-        #     'tool': False,
-        # }
         feat_type_export = {
+            'allele': True,
+            'construct': True,
+            'gene': True,
+            'aberration': False,
+            'balancer': False,
+            'chem': False,
+            'insertion': False,
+            'seqfeat': False,
             'tool': False,
         }
         for feat_type, is_exported in feat_type_export.items():
