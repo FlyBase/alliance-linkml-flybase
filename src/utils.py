@@ -321,36 +321,73 @@ class DataHandler(object):
         }
         for feat_type, is_exported in feat_type_export.items():
             self.log.info(f'Looking up {feat_type} features.')
-            filters = (
-                Feature.uniquename.op('~')(self.regex[feat_type]),
-                FeatureSynonym.is_current.is_(True),
-                Cvterm.name == 'symbol'
-            )
-            results = session.query(Feature, Organism, Synonym).\
-                select_from(Feature).\
-                join(Organism, (Organism.organism_id == Feature.organism_id)).\
-                join(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
-                join(Synonym, (Synonym.synonym_id == FeatureSynonym.synonym_id)).\
-                join(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
-                filter(*filters).\
-                distinct()
-            self.log.info(f'BOBBY: Process {feat_type} features.')
+            # BOB: Suppress the SQLAlchemy ORM way to see if other way is faster.
+            # filters = (
+            #     Feature.uniquename.op('~')(self.regex[feat_type]),
+            #     FeatureSynonym.is_current.is_(True),
+            #     Cvterm.name == 'symbol'
+            # )
+            # results = session.query(Feature, Organism, Synonym).\
+                # select_from(Feature).\
+                # join(Organism, (Organism.organism_id == Feature.organism_id)).\
+                # join(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
+                # join(Synonym, (Synonym.synonym_id == FeatureSynonym.synonym_id)).\
+                # join(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
+                # filter(*filters).\
+                # distinct()
+            test_query = f"""
+                SELECT DISTINCT
+                    f.uniquename,
+                    f.is_obsolete,
+                    f.type_id,
+                    o.organism_id,
+                    o.genus||' '||o.species,
+                    f.name,
+                    s.synonym_sgml
+                FROM feature f
+                JOIN organism o ON o.organism_id = f.organism_id
+                JOIN feature_synonym fs ON fs.feature_id = f.feature_id AND fs.is_current IS TRUE
+                JOIN synonym s ON s.synonym_id = fs.synonym_id
+                JOIN cvterm t ON t.cvterm_id = s.type_id AND t.name = 'symbol'
+                WHERE f.uniquename ~ '{self.regex[feat_type]}';
+            """
+            results = session.execute(test_query).fetchall()
+            UNIQUENAME = 0
+            OBSOLETE = 1
+            TYPE_ID = 2
+            ORG_ID = 3
+            SPECIES_NAME = 4
+            NAME = 5
+            SYMBOL = 6
+            self.log.info(f'BOBBY: Process {len(results)} {feat_type} features.')
             counter = 0
             for result in results:
+                # BOB: Suppress ORM handling.
+                # feat_dict = {
+                #     'uniquename': result.Feature.uniquename,
+                #     'is_obsolete': result.Feature.is_obsolete,
+                #     'type': self.lookup_cvterm_name(result.Feature.type_id),
+                #     'species': f'{result.Organism.genus} {result.Organism.species}',
+                #     'name': result.Feature.name,
+                #     'symbol': sub_sup_sgml_to_html(result.Synonym.synonym_sgml),
+                #     'exported': is_exported
+                # }
+                # BILLY: Try conventional handling below.
+                self.log.info(f'BILLY: {result}')
                 feat_dict = {
-                    'uniquename': result.Feature.uniquename,
-                    'is_obsolete': result.Feature.is_obsolete,
-                    'type': self.lookup_cvterm_name(result.Feature.type_id),
-                    'species': f'{result.Organism.genus} {result.Organism.species}',
-                    'name': result.Feature.name,
-                    'symbol': sub_sup_sgml_to_html(result.Synonym.synonym_sgml),
-                    'exported': is_exported
+                    'uniquename': result[UNIQUENAME],
+                    'is_obsolete': result[OBSOLETE],
+                    'type': self.cvterm_lookup[result[TYPE_ID]],
+                    'species': result[SPECIES_NAME],
+                    'name': result[NAME],
+                    'symbol': sub_sup_sgml_to_html(result[SYMBOL]),
+                    'exported': is_exported,
                 }
-                # BOB: Try skipping this step, and doing only later for small number of features that need it.
-                # try:
-                #     feat_dict['taxon_id'] = self.ncbi_taxon_lookup[result.Feature.organism_id]
-                # except KeyError:
-                #     feat_dict['taxon_id'] = 'NCBITaxon:32644'    # Unspecified taxon.
+                try:
+                    # feat_dict['taxon_id'] = self.ncbi_taxon_lookup[result.Feature.organism_id]]    # BOB: Suppress ORM processing
+                    feat_dict['taxon_id'] = self.ncbi_taxon_lookup[result[ORG_ID]]                   # BILLY: Use conventional processing
+                except KeyError:
+                    feat_dict['taxon_id'] = 'NCBITaxon:32644'    # Unspecified taxon.
                 self.feature_lookup[result.Feature.feature_id] = feat_dict
                 counter += 1
             self.log.info(f'Added {counter} {feat_type} features to the feature_lookup.')
@@ -2060,12 +2097,7 @@ class ConstructHandler(FeatureHandler):
                     symbol = self.feature_lookup[feature_id]['symbol']
                     pubs = self.lookup_pub_curies(pub_ids)
                     taxon_text = self.feature_lookup[feature_id]['species']
-                    # BOB: Try NCBI taxon lookup only if needed, not for all features, to see if this is a slow step.
-                    # taxon_curie = self.feature_lookup[feature_id]['taxon_id']
-                    try:
-                        taxon_curie = self.ncbi_taxon_lookup[self.feature_lookup[feature_id]['organism_id']]
-                    except KeyError:
-                        taxon_curie = 'NCBITaxon:32644'    # Unspecified taxon.
+                    taxon_curie = self.feature_lookup[feature_id]['taxon_id']
                     component_dto = datatypes.ConstructComponentSlotAnnotationDTO(rel_type, symbol, taxon_curie, taxon_text, pubs).dict_export()
                     construct.linkmldto.construct_component_dtos.append(component_dto)
                     counter += 1
