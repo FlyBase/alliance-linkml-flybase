@@ -348,7 +348,6 @@ class DataHandler(object):
             SPECIES_NAME = 5
             NAME = 6
             SYMBOL = 7
-            self.log.info(f'BILLY: Process {len(results)} {feat_type} features.')
             counter = 0
             for result in results:
                 feat_dict = {
