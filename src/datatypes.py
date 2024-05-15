@@ -44,7 +44,7 @@ class FBDataEntity(FBEntity):
     def __init__(self, chado_obj):
         """Create a FBDataEntity object from the main db entry."""
         super().__init__()
-        self.entity_desc = f'{self.chado_obj.name} ({self.chado_obj.uniquename})'
+        self.entity_desc = f'{chado_obj.name} ({chado_obj.uniquename})'
         try:
             self.organism_abbr = chado_obj.organism.abbreviation
         except AttributeError:
