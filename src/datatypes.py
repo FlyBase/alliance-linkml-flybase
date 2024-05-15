@@ -44,13 +44,15 @@ class FBDataEntity(FBEntity):
     def __init__(self, chado_obj):
         """Create a FBDataEntity object from the main db entry."""
         super().__init__()
+        self.chado_obj = chado_obj      # The primary SQLAlchemy chado object.
+        self.uniquename = chado_obj.uniquename
+        self.name = chado_obj.name
         self.entity_desc = f'{chado_obj.name} ({chado_obj.uniquename})'
         try:
             self.organism_abbr = chado_obj.organism.abbreviation
         except AttributeError:
             self.organism_abbr = None
         # Primary FB chado data - direct db query results, no processing.
-        self.chado_obj = chado_obj      # The primary SQLAlchemy chado object.
         self.pubs = []                  # Pub associations: e.g., FeaturePub.
         self.synonyms = []              # Synonym associations: e.g., FeatureSynonym.
         self.fb_sec_dbxrefs = []        # Dbxref non-current associations for "FlyBase" db: e.g., FeatureDbxref.

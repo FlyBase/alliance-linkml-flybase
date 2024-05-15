@@ -334,7 +334,7 @@ class DataHandler(object):
                 join(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
                 filter(*filters).\
                 distinct()
-            self.log.info(f'BOB: Process {feat_type} features.')
+            self.log.info(f'BOBBY: Process {feat_type} features.')
             counter = 0
             for result in results:
                 feat_dict = {
@@ -346,10 +346,11 @@ class DataHandler(object):
                     'symbol': sub_sup_sgml_to_html(result.Synonym.synonym_sgml),
                     'exported': is_exported
                 }
-                try:
-                    feat_dict['taxon_id'] = self.ncbi_taxon_lookup[result.Feature.organism_id]
-                except KeyError:
-                    feat_dict['taxon_id'] = 'NCBITaxon:32644'    # Unspecified taxon.
+                # BOB: Try skipping this step, and doing only later for small number of features that need it.
+                # try:
+                #     feat_dict['taxon_id'] = self.ncbi_taxon_lookup[result.Feature.organism_id]
+                # except KeyError:
+                #     feat_dict['taxon_id'] = 'NCBITaxon:32644'    # Unspecified taxon.
                 self.feature_lookup[result.Feature.feature_id] = feat_dict
                 counter += 1
             self.log.info(f'Added {counter} {feat_type} features to the feature_lookup.')
@@ -2058,8 +2059,13 @@ class ConstructHandler(FeatureHandler):
                         continue
                     symbol = self.feature_lookup[feature_id]['symbol']
                     pubs = self.lookup_pub_curies(pub_ids)
-                    taxon_curie = self.feature_lookup[feature_id]['taxon_id']
                     taxon_text = self.feature_lookup[feature_id]['species']
+                    # BOB: Try NCBI taxon lookup only if needed, not for all features, to see if this is a slow step.
+                    # taxon_curie = self.feature_lookup[feature_id]['taxon_id']
+                    try:
+                        taxon_curie = self.ncbi_taxon_lookup[self.feature_lookup[feature_id]['organism_id']]
+                    except KeyError:
+                        taxon_curie = 'NCBITaxon:32644'    # Unspecified taxon.
                     component_dto = datatypes.ConstructComponentSlotAnnotationDTO(rel_type, symbol, taxon_curie, taxon_text, pubs).dict_export()
                     construct.linkmldto.construct_component_dtos.append(component_dto)
                     counter += 1
