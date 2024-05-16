@@ -1292,7 +1292,7 @@ class PrimaryEntityHandler(DataHandler):
                     linkml_synonym_bins['synonym_bin'].append(name_dto)
                 # Also add to current systematic name for current Dmel genes only.
                 if syno_dict['name_type_name'] == 'systematic_name' and syno_dict['display_text'] == fb_data_entity.curr_anno_id:
-                    if fb_data_entity.chado_obj.is_obsolete is False and fb_data_entity.organism_abbr == 'Dmel':
+                    if fb_data_entity.chado_obj.is_obsolete is False and fb_data_entity.org_abbr == 'Dmel':
                         linkml_synonym_bins['systematic_name_bin'].append(name_dto)
             # Review the linkml_synonym_bins for each fb_data_entity.
             # 1. Symbol.

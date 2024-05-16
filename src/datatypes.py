@@ -19,6 +19,9 @@ class FBEntity(object):
         """Create a FBEntity object with bins for Alliance mapping."""
         self.db_primary_id = None     # Table primary key (or concatenation).
         self.uniq_key = None          # Uniquely identifying string.
+        self.org_abbr = None          # Organism.abbreviation, if applicable.
+        self.org_genus = None         # Organism.genus, if applicable.
+        self.org_species = None       # Organism.species, if applicable.
         self.linkmldto = None         # Alliance LinkML object for mapped data.
         self.for_export = True        # Made False to prevent Alliance export.
         self.internal_reasons = []    # Reasons an object was marked internal.
@@ -42,16 +45,37 @@ class FBAssociation(FBEntity):
 class FBDataEntity(FBEntity):
     """An abstract, generic FlyBase data entity with all it related data."""
     def __init__(self, chado_obj):
-        """Create a FBDataEntity object from the main db entry."""
+        """Create a FBDataEntity object from the main db entry.
+
+        Args:
+            chado_obj (SQLAlchemy object): The object representing the table entry.
+
+        Returns:
+            A FBDataEntity object.
+        """
         super().__init__()
-        self.chado_obj = chado_obj      # The primary SQLAlchemy chado object.
-        self.uniquename = chado_obj.uniquename
-        self.name = chado_obj.name
-        self.entity_desc = f'{chado_obj.name} ({chado_obj.uniquename})'
+        self.chado_obj = chado_obj
+        table_columns = [
+            'uniquename',
+            'name',
+            'type_id',
+            'organism_id',
+            'is_obsolete',
+            'is_analysis',
+            'timeaccessioned',
+            'timelastmodified']
+        for column_name in table_columns:
+            try:
+                setattr(self, column_name, getattr(chado_obj, column_name))
+            except AttributeError:
+                pass
         try:
-            self.organism_abbr = chado_obj.organism.abbreviation
+            self.org_abbr = chado_obj.organism.abbreviation
+            self.org_genus = chado_obj.organism.genus
+            self.org_species = chado_obj.organism.species
         except AttributeError:
-            self.organism_abbr = None
+            pass
+        self.entity_desc = f'{self.name} ({self.uniquename})'
         # Primary FB chado data - direct db query results, no processing.
         self.pubs = []                  # Pub associations: e.g., FeaturePub.
         self.synonyms = []              # Synonym associations: e.g., FeatureSynonym.
