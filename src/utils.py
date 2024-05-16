@@ -2009,10 +2009,6 @@ class ConstructHandler(FeatureHandler):
             counter = 0
             for construct in self.fb_data_entities.values():
                 component_slot = getattr(construct, feature_slot_name)
-
-
-
-
                 for feature_id, pub_ids in component_slot.items():
                     if self.feature_lookup[feature_id]['type'] != 'gene' or not self.feature_lookup[feature_id]['uniquename'].startswith('FBgn'):
                         continue
