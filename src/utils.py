@@ -1813,7 +1813,7 @@ class ConstructHandler(FeatureHandler):
     def get_datatype_data(self, session):
         """Extend the method for the ConstructHandler."""
         super().get_datatype_data(session)
-        # self.get_construct_alleles(session)    # BOB: SUPER SLOW STEP - FIX IT
+        self.get_construct_alleles(session)    # BOB: SUPER SLOW
         self.get_construct_encoded_tools(session)
         self.get_construct_reg_regions(session)
         self.get_allele_encoded_tools(session)
