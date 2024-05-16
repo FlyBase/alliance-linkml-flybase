@@ -7,7 +7,7 @@ Author(s):
 
 Usage:
     AGR_data_retrieval_curation_construct.py [-h]
-    [-l LINKML_RELEASE] [-v VERBOSE] [-c CONFIG]
+    [-l LINKML_RELEASE] [-v VERBOSE] [-c CONFIG] [-t TESTING]
 
 Example:
     python AGR_data_retrieval_curation_construct.py -v -l v1.1.2

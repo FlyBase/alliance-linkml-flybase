@@ -6,8 +6,8 @@ Author(s):
     Gil dos Santos dossantos@morgan.harvard.edu
 
 Usage:
-    AGR_data_retrieval_curation_agm.py [-h] [-r FLYBASE_RELEASE]
-    [-l LINKML_RELEASE] [-v VERBOSE] [-c CONFIG]
+    AGR_data_retrieval_curation_agm.py [-h]
+    [-l LINKML_RELEASE] [-v VERBOSE] [-c CONFIG] [-t TESTING]
 
 Example:
     python AGR_data_retrieval_curation_agm.py -v -r 2023_05 -l v1.1.2
