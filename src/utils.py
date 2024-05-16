@@ -1471,12 +1471,13 @@ class FeatureHandler(PrimaryEntityHandler):
         """
         self.log.info(f'Add feature_relationships to "{slot_name}" with these criteria: {kwargs}')
         subject = aliased(Feature, name='subject')
-        object = aliased(Feature, name='object')
+        # object = aliased(Feature, name='object')
         rel_type = aliased(Cvterm, name='rel_type')
         sbj_type = aliased(Cvterm, name='sbj_type')
-        filters = (
-            object.feature_id.in_(self.fb_data_entities.keys()),
-        )
+        # filters = (
+        #     object.feature_id.in_(self.fb_data_entities.keys()),
+        # )
+        filters = ()
         try:
             filters += (rel_type.name == kwargs['rel_type'], )
         except KeyError:
@@ -1489,18 +1490,22 @@ class FeatureHandler(PrimaryEntityHandler):
             filters += (subject.uniquename.op('~')(kwargs['sbj_regex']), )
         except KeyError:
             pass
+        self.log.info('BOB: built sqlalchemy query; about to start query.')
         results = session.query(FeatureRelationship).\
             select_from(subject).\
             join(sbj_type, (sbj_type.cvterm_id == subject.type_id)).\
             join(FeatureRelationship, (FeatureRelationship.subject_id == subject.feature_id)).\
-            join(object, (object.feature_id == FeatureRelationship.object_id)).\
             join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
             filter(*filters).\
             distinct()
         counter = 0
+        self.log.info('BOB: sqlalchemy query done; about to start processing.')
         for result in results:
-            self.fb_data_entities[result.object_id].__dict__[slot_name].append(result)
-            counter += 1
+            try:
+                self.fb_data_entities[result.object_id].__dict__[slot_name].append(result)
+                counter += 1
+            except KeyError:
+                pass
         self.log.info(f'Added {counter} feature_relationship results to "{slot_name}" list.')
         return
 
