@@ -2580,9 +2580,8 @@ def generate_export_file(export_dict: dict, log: Logger, output_filename: str):
         output_filename (str): The global output_filename in the script calling this function.
 
     """
-    log.info('Writing output Alliance LinkML data dict to JSON file.')
+    log.info('Writing output Alliance LinkML data dict to JSON file..upper()')
     with open(output_filename, 'w') as outfile:
         json.dump(export_dict, outfile, sort_keys=True, indent=2, separators=(',', ': '))
         outfile.close()
-    log.info('Done writing data to output JSON file.')
     return
