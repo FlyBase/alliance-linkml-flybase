@@ -24,7 +24,8 @@ from harvdev_utils.production import (
     Feature, FeaturePub, FeatureSynonym, FeatureDbxref, Featureprop, FeaturepropPub, FeatureCvterm, FeatureCvtermprop,
     FeatureRelationship, FeatureRelationshipPub, Synonym
 )
-import datatypes
+import fb_datatypes
+import agr_datatypes
 
 
 # Classes
@@ -69,12 +70,12 @@ class DataHandler(object):
     test_set = {}
     # Correspondence of FB data type to primary Alliance LinkML object.
     agr_linkmldto_dict = {
-        'gene': datatypes.GeneDTO(),
+        'gene': agr_datatypes.GeneDTO(),
         'allele': 'TBD',
-        'construct': datatypes.ConstructDTO(),
+        'construct': agr_datatypes.ConstructDTO(),
         'variation': 'TBD',
-        'strain': datatypes.AffectedGenomicModelDTO(),
-        'genotype': datatypes.AffectedGenomicModelDTO(),
+        'strain': agr_datatypes.AffectedGenomicModelDTO(),
+        'genotype': agr_datatypes.AffectedGenomicModelDTO(),
         'disease': 'TBD'
     }
     # Correspondence of FB data type to Alliance data transfer ingest set.
@@ -89,12 +90,12 @@ class DataHandler(object):
     }
     # Mappings of fb_data_type to a datatype Class that will be used to represent each FB entity.
     datatype_objects = {
-        'gene': datatypes.FBGene,
-        # 'allele': datatypes.FBAllele,
-        'construct': datatypes.FBConstruct,
-        # 'variation': datatypes.FBVariant,
-        'strain': datatypes.FBStrain,
-        # 'disease': datatypes.FBDiseaseAlleleAnnotation
+        'gene': fb_datatypes.FBGene,
+        # 'allele': fb_datatypes.FBAllele,
+        'construct': fb_datatypes.FBConstruct,
+        # 'variation': fb_datatypes.FBVariant,
+        'strain': fb_datatypes.FBStrain,
+        # 'disease': fb_datatypes.FBDiseaseAlleleAnnotation
     }
     # Export directions (must be filled out in detail for each specific data handler), keyed by export set name.
     # For a given export set, the list of field names must be present in the datatype object specified in DataHandler.datatype_objects.values().
@@ -1130,8 +1131,8 @@ class PrimaryEntityHandler(DataHandler):
                 display_name = fb_data_entity.curr_fb_symbol
             else:
                 display_name = fb_data_entity.name
-            dp_xref = datatypes.CrossReferenceDTO('FB', f'FB:{fb_data_entity.uniquename}', self.fb_data_type, display_name).dict_export()
-            fb_data_entity.linkmldto.data_provider_dto = datatypes.DataProviderDTO(dp_xref).dict_export()
+            dp_xref = agr_datatypes.CrossReferenceDTO('FB', f'FB:{fb_data_entity.uniquename}', self.fb_data_type, display_name).dict_export()
+            fb_data_entity.linkmldto.data_provider_dto = agr_datatypes.DataProviderDTO(dp_xref).dict_export()
         return
 
     def map_secondary_ids(self, slot_name):
@@ -1140,7 +1141,7 @@ class PrimaryEntityHandler(DataHandler):
         for fb_data_entity in self.fb_data_entities.values():
             secondary_id_dtos = []
             for secondary_id in fb_data_entity.alt_fb_ids:
-                sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(secondary_id, []).dict_export()
+                sec_dto = agr_datatypes.SecondaryIdSlotAnnotationDTO(secondary_id, []).dict_export()
                 secondary_id_dtos.append(sec_dto)
             sec_id_list = getattr(fb_data_entity.linkmldto, slot_name)
             sec_id_list.extend(secondary_id_dtos)
@@ -1180,7 +1181,7 @@ class PrimaryEntityHandler(DataHandler):
                     cleaned_accession = xref.dbxref.accession
                 curie = f'{prefix}:{cleaned_accession}'
                 display_name = curie
-                xref_dto = datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
+                xref_dto = agr_datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
                 cross_reference_dtos.append(xref_dto)
             fb_data_entity.linkmldto.cross_reference_dtos = cross_reference_dtos
         return
@@ -1218,7 +1219,7 @@ class PrimaryEntityHandler(DataHandler):
             # Create NameSlotAnnotationDTO objects and sort them out.
             for syno_dict in fb_data_entity.synonym_dict.values():
                 # Sort into current symbol, current fullname or synonym.
-                name_dto = datatypes.NameSlotAnnotationDTO(syno_dict['name_type_name'], syno_dict['format_text'],
+                name_dto = agr_datatypes.NameSlotAnnotationDTO(syno_dict['name_type_name'], syno_dict['format_text'],
                                                            syno_dict['display_text'], syno_dict['pub_curies']).dict_export()
                 name_dto['internal'] = syno_dict['is_internal']
                 if syno_dict['is_current'] is True and syno_dict['name_type_name'] in ['nomenclature_symbol', 'systematic_name']:
@@ -1235,7 +1236,7 @@ class PrimaryEntityHandler(DataHandler):
             # 1. Symbol.
             if len(linkml_synonym_bins['symbol_bin']) == 0:
                 self.log.warning(f'No current symbols found for {fb_data_entity}: create a generic one.')
-                generic_symbol_dto = datatypes.NameSlotAnnotationDTO('nomenclature_symbol', fb_data_entity.name, fb_data_entity.name, []).dict_export()
+                generic_symbol_dto = agr_datatypes.NameSlotAnnotationDTO('nomenclature_symbol', fb_data_entity.name, fb_data_entity.name, []).dict_export()
                 setattr(fb_data_entity.linkmldto, linkml_synonym_slots['symbol_bin'], generic_symbol_dto)
             else:
                 setattr(fb_data_entity.linkmldto, linkml_synonym_slots['symbol_bin'], linkml_synonym_bins['symbol_bin'][0])
@@ -1251,7 +1252,7 @@ class PrimaryEntityHandler(DataHandler):
             # 3. Systematic name.
             if len(linkml_synonym_bins['systematic_name_bin']) == 0 and fb_data_entity.curr_anno_id and fb_data_entity.chado_obj.is_obsolete is False:
                 self.log.warning(f'No current systematic names found for current annotated {fb_data_entity}: create a generic one.')
-                sys_name_dto = datatypes.NameSlotAnnotationDTO('systematic_name', fb_data_entity.curr_anno_id, fb_data_entity.curr_anno_id, []).dict_export()
+                sys_name_dto = agr_datatypes.NameSlotAnnotationDTO('systematic_name', fb_data_entity.curr_anno_id, fb_data_entity.curr_anno_id, []).dict_export()
                 setattr(fb_data_entity.linkmldto, linkml_synonym_slots['systematic_name_bin'], sys_name_dto)
             elif len(linkml_synonym_bins['systematic_name_bin']) == 1:
                 setattr(fb_data_entity.linkmldto, linkml_synonym_slots['systematic_name_bin'], linkml_synonym_bins['systematic_name_bin'][0])
@@ -1556,7 +1557,7 @@ class FeatureHandler(PrimaryEntityHandler):
                 anno_ids.extend(fb_data_entity.alt_anno_ids)
             anno_secondary_id_dtos = []
             for anno_id in anno_ids:
-                sec_dto = datatypes.SecondaryIdSlotAnnotationDTO(f'FB:{anno_id}', []).dict_export()
+                sec_dto = agr_datatypes.SecondaryIdSlotAnnotationDTO(f'FB:{anno_id}', []).dict_export()
                 anno_secondary_id_dtos.append(sec_dto)
             curr_sec_id_dtos = getattr(fb_data_entity.linkmldto, slot_name)
             curr_sec_id_dtos.extend(anno_secondary_id_dtos)
@@ -2027,7 +2028,7 @@ class ConstructHandler(FeatureHandler):
                     if self.feature_lookup[feature_id]['is_obsolete'] is True:
                         rel_dict['obsolete'] = True
                         rel_dict['internal'] = True
-                    feat_rel = datatypes.FBEntity()
+                    feat_rel = fb_datatypes.FBEntity()
                     feat_rel.rel_dict = rel_dict
                     feat_rel.entity_desc = f'{rel_dict["construct_curie"]}_{rel_dict["rel_type"]}_{rel_dict["genomic_entity_curie"]}'
                     self.construct_associations.append(feat_rel)
@@ -2050,7 +2051,7 @@ class ConstructHandler(FeatureHandler):
         """Map basic FlyBase construct data to the Alliance LinkML object."""
         self.log.info('Map basic construct info to Alliance object.')
         for construct in self.fb_data_entities.values():
-            agr_construct = datatypes.ConstructDTO()
+            agr_construct = agr_datatypes.ConstructDTO()
             agr_construct.obsolete = construct.chado_obj.is_obsolete
             agr_construct.mod_entity_id = f'FB:{construct.uniquename}'
             construct.linkmldto = agr_construct
@@ -2081,7 +2082,7 @@ class ConstructHandler(FeatureHandler):
                     pubs = self.lookup_pub_curies(pub_ids)
                     taxon_text = self.feature_lookup[feature_id]['species']
                     taxon_curie = self.feature_lookup[feature_id]['taxon_id']
-                    component_dto = datatypes.ConstructComponentSlotAnnotationDTO(rel_type, symbol, taxon_curie, taxon_text, pubs).dict_export()
+                    component_dto = agr_datatypes.ConstructComponentSlotAnnotationDTO(rel_type, symbol, taxon_curie, taxon_text, pubs).dict_export()
                     construct.linkmldto.construct_component_dtos.append(component_dto)
                     counter += 1
         self.log.info(f'Mapped construct components to {counter} ConstructcomponentDTOs.')
@@ -2092,7 +2093,7 @@ class ConstructHandler(FeatureHandler):
         self.log.info('Map current construct relations to the Alliance LinkML object.')
         counter = 0
         for cons_asso in self.construct_associations:
-            rel_dto = datatypes.ConstructGenomicEntityAssociationDTO(cons_asso.rel_dict['construct_curie'], cons_asso.rel_dict['rel_type'],
+            rel_dto = agr_datatypes.ConstructGenomicEntityAssociationDTO(cons_asso.rel_dict['construct_curie'], cons_asso.rel_dict['rel_type'],
                                                                      cons_asso.rel_dict['genomic_entity_curie'], cons_asso.rel_dict['pub_curies'])
             rel_dto.obsolete = cons_asso.rel_dict['obsolete']
             rel_dto.internal = cons_asso.rel_dict['internal']
@@ -2309,7 +2310,7 @@ class GeneHandler(FeatureHandler):
         """Map basic FlyBase gene data to the Alliance LinkML object."""
         self.log.info('Map basic gene info to Alliance object.')
         for gene in self.fb_data_entities.values():
-            agr_gene = datatypes.GeneDTO()
+            agr_gene = agr_datatypes.GeneDTO()
             agr_gene.obsolete = gene.chado_obj.is_obsolete
             agr_gene.curie = f'FB:{gene.uniquename}'
             agr_gene.taxon_curie = gene.ncbi_taxon_id
@@ -2331,7 +2332,7 @@ class GeneHandler(FeatureHandler):
                 note_type_name = 'MOD_provided_gene_description'
                 free_text = gene.gene_snapshots[0].value.replace('@', '')
                 pub_curies = ['FB:FBrf0232436']
-                snapshot_note_dto = datatypes.NoteDTO(note_type_name, free_text, pub_curies).dict_export()
+                snapshot_note_dto = agr_datatypes.NoteDTO(note_type_name, free_text, pub_curies).dict_export()
                 gene.linkmldto.related_notes.append(snapshot_note_dto)
             elif len(gene.gene_snapshots) > 1:
                 self.log.warning(f'{gene} has many gene snapshots.')
@@ -2348,7 +2349,7 @@ class GeneHandler(FeatureHandler):
             page_area = 'FB'
             curie = f'{prefix}:{self.pthr_dict[gene.uniquename]}'
             display_name = curie
-            xref_dto = datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
+            xref_dto = agr_datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
             gene.linkmldto.cross_reference_dtos.append(xref_dto)
         return
 
@@ -2436,7 +2437,7 @@ class StrainHandler(PrimaryEntityHandler):
         """Map basic FlyBase strain data to the Alliance object."""
         self.log.info('Map basic strain info.')
         for strain in self.fb_data_entities.values():
-            agr_strain = datatypes.AffectedGenomicModelDTO()
+            agr_strain = agr_datatypes.AffectedGenomicModelDTO()
             agr_strain.obsolete = strain.chado_obj.is_obsolete
             agr_strain.curie = f'FB:{strain.uniquename}'
             agr_strain.taxon_curie = strain.ncbi_taxon_id
