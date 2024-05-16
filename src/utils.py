@@ -391,15 +391,18 @@ class DataHandler(object):
     def build_feature_relationship_evidence_lookup(self, session):
         """Build evidence lookup for feature_relationships."""
         self.log.info('Build evidence lookup for feature_relationships.')
-        results = session.query(FeatureRelationshipPub).distinct()
+        results = session.query(FeatureRelationshipPub.feature_relationship_id,
+                                FeatureRelationshipPub.pub_id).distinct()
+        FEAT_REL_ID = 0
+        PUB_ID = 1
         counter = 0
         fr_counter = 0
         for result in results:
             try:
-                self.feat_rel_pub_lookup[result.feature_relationship_id].append(result.pub_id)
+                self.feat_rel_pub_lookup[result[FEAT_REL_ID]].append(result[PUB_ID])
                 counter += 1
             except KeyError:
-                self.feat_rel_pub_lookup[result.feature_relationship_id] = [result.pub_id]
+                self.feat_rel_pub_lookup[result[FEAT_REL_ID]] = [result[PUB_ID]]
                 fr_counter += 1
                 counter += 1
         self.log.info(f'Found {counter} pubs supporting {fr_counter} feature_relationships.')
@@ -750,7 +753,7 @@ class PrimaryEntityHandler(DataHandler):
         for result in results:
             entity_pkey_id = getattr(result, main_pkey_name)
             try:
-                self.fb_data_entities[entity_pkey_id].pubs.append(result.pub_id)
+                self.fb_data_entities[entity_pkey_id].pubs.append(result)
                 counter += 1
             except KeyError:
                 pass_counter += 1

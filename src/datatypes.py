@@ -77,7 +77,7 @@ class FBDataEntity(FBEntity):
             pass
         self.entity_desc = f'{self.name} ({self.uniquename})'
         # Primary FB chado data - direct db query results, no processing.
-        self.pubs = []                  # A list of pub_ids for associated publications.
+        self.pubs = []                  # Pub associations: e.g., FeaturePub, StrainPub.
         self.synonyms = []              # Synonym associations: e.g., FeatureSynonym.
         self.fb_sec_dbxrefs = []        # Dbxref non-current associations for "FlyBase" db: e.g., FeatureDbxref.
         self.dbxrefs = []               # Dbxref associations: e.g., FeatureDbxref.
