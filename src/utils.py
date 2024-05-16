@@ -1409,7 +1409,10 @@ class FeatureHandler(PrimaryEntityHandler):
         return results
 
     def get_entity_sbj_feat_rel_by_type(self, session, slot_name, **kwargs):
-        """Get a list of FeatureRelationship objects for primary feature entities (as subject) by type.
+        """Get a list of FeatureRelationships for primary feature entities (subject).
+
+        Get FeatureRelationships where the primary feature entity is the subject,
+        restricted by relationship type and related object.
 
         Args:
             session (Session): SQLAlchemy session for db queries.
@@ -1422,13 +1425,10 @@ class FeatureHandler(PrimaryEntityHandler):
 
         """
         self.log.info(f'Add feature_relationships to "{slot_name}" with these criteria: {kwargs}')
-        subject = aliased(Feature, name='subject')
         object = aliased(Feature, name='object')
         rel_type = aliased(Cvterm, name='rel_type')
         obj_type = aliased(Cvterm, name='obj_type')
-        filters = (
-            subject.feature_id.in_(self.fb_data_entities.keys()),
-        )
+        filters = ()
         try:
             filters += (rel_type.name == kwargs['rel_type'], )
         except KeyError:
@@ -1442,22 +1442,27 @@ class FeatureHandler(PrimaryEntityHandler):
         except KeyError:
             pass
         results = session.query(FeatureRelationship).\
-            select_from(subject).\
-            join(FeatureRelationship, (FeatureRelationship.subject_id == subject.feature_id)).\
-            join(object, (object.feature_id == FeatureRelationship.object_id)).\
+            select_from(object).\
+            join(FeatureRelationship, (FeatureRelationship.object_id == object.feature_id)).\
             join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
             join(obj_type, (obj_type.cvterm_id == object.type_id)).\
             filter(*filters).\
             distinct()
         counter = 0
         for result in results:
-            self.fb_data_entities[result.subject_id].__dict__[slot_name].append(result)
-            counter += 1
+            try:
+                self.fb_data_entities[result.subject_id].__dict__[slot_name].append(result)
+                counter += 1
+            except KeyError:
+                pass
         self.log.info(f'Added {counter} feature_relationship results to "{slot_name}" list.')
         return
 
     def get_entity_obj_feat_rel_by_type(self, session, slot_name, **kwargs):
-        """Return a list of FeatureRelationship objects for handler's primary feature entities (as object) by type.
+        """Get a list of FeatureRelationships for primary feature entities (object).
+
+        Get FeatureRelationships where the primary feature entity is the object,
+        restricted by relationship type and related subject.
 
         Args:
             session (Session): SQLAlchemy session for db queries.
@@ -1490,7 +1495,6 @@ class FeatureHandler(PrimaryEntityHandler):
             filters += (subject.uniquename.op('~')(kwargs['sbj_regex']), )
         except KeyError:
             pass
-        self.log.info('BOB: built sqlalchemy query; about to start query.')
         results = session.query(FeatureRelationship).\
             select_from(subject).\
             join(sbj_type, (sbj_type.cvterm_id == subject.type_id)).\
@@ -1499,7 +1503,6 @@ class FeatureHandler(PrimaryEntityHandler):
             filter(*filters).\
             distinct()
         counter = 0
-        self.log.info('BOB: sqlalchemy query done; about to start processing.')
         for result in results:
             try:
                 self.fb_data_entities[result.object_id].__dict__[slot_name].append(result)
@@ -1813,7 +1816,7 @@ class ConstructHandler(FeatureHandler):
     def get_datatype_data(self, session):
         """Extend the method for the ConstructHandler."""
         super().get_datatype_data(session)
-        self.get_construct_alleles(session)    # BOB: SUPER SLOW
+        self.get_construct_alleles(session)
         self.get_construct_encoded_tools(session)
         self.get_construct_reg_regions(session)
         self.get_allele_encoded_tools(session)
