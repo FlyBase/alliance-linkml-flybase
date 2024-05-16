@@ -1770,7 +1770,7 @@ class ConstructHandler(FeatureHandler):
         self.log.info(f'Propagated {counter} allele-to-component "has_reg_region" relationships to related constructs.')
         return
 
-    def get_allele_genes(self, session):
+    def get_cons_genes_via_alleles(self, session):
         """Get genes for the constructs via alleles."""
         self.log.info('Get genes for the constructs via alleles.')
         # First, create allele feature_id-keyed lists of allele-gene "alleleof" FeatureRelationship objects.
@@ -1807,9 +1807,9 @@ class ConstructHandler(FeatureHandler):
                 allele_id = allele_rel.subject_id
                 try:
                     construct.al_genes.extend(al_comp_dict[allele_id])
-                    counter += len(construct.al_genes)
                 except KeyError:
                     pass
+            counter += len(construct.al_genes)
         self.log.info(f'Propagated {counter} allele-to-gene "alleleof" relationships to related constructs.')
         return
 
@@ -1822,7 +1822,7 @@ class ConstructHandler(FeatureHandler):
         self.get_allele_encoded_tools(session)
         self.get_allele_reg_regions(session)
         self.get_construct_reg_regions_old(session)
-        self.get_allele_genes(session)
+        self.get_cons_genes_via_alleles(session)
         return
 
     # Elaborate on synthesize_info() for the ConstructHandler.
