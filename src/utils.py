@@ -351,7 +351,7 @@ class DataHandler(object):
                 feat_dict = {
                     'uniquename': result[UNIQUENAME],
                     'is_obsolete': result[OBSOLETE],
-                    'type': self.cvterm_lookup[result[TYPE_ID]],
+                    'type': self.cvterm_lookup[result[TYPE_ID]].name,
                     'species': f'{result[GENUS]} {result[SPECIES]}',
                     'name': result[NAME],
                     'symbol': sub_sup_sgml_to_html(result[SYMBOL]),
@@ -1773,6 +1773,7 @@ class ConstructHandler(FeatureHandler):
     def get_allele_genes(self, session):
         """Get genes for the constructs via alleles."""
         self.log.info('Get genes for the constructs via alleles.')
+        # First, create allele feature_id-keyed lists of allele-gene "alleleof" FeatureRelationship objects.
         allele = aliased(Feature, name='allele')
         gene = aliased(Feature, name='gene')
         filters = (
@@ -1789,7 +1790,6 @@ class ConstructHandler(FeatureHandler):
             join(gene, (gene.feature_id == FeatureRelationship.object_id)).\
             filter(*filters).\
             distinct()
-        # Create allele feature_id-keyed lists of allele-gene "alleleof" FeatureRelationship objects.
         al_comp_dict = {}
         counter = 0
         for result in results:
@@ -2006,10 +2006,13 @@ class ConstructHandler(FeatureHandler):
         }
         for feature_slot_name, rel_type in slot_rel_types.items():
             self.log.info(f'Sort out Alliance genomic entities from "{feature_slot_name}" to "{rel_type}" associations.')
-            rel_type = slot_rel_types[feature_slot_name]
             counter = 0
             for construct in self.fb_data_entities.values():
                 component_slot = getattr(construct, feature_slot_name)
+
+
+
+
                 for feature_id, pub_ids in component_slot.items():
                     if self.feature_lookup[feature_id]['type'] != 'gene' or not self.feature_lookup[feature_id]['uniquename'].startswith('FBgn'):
                         continue
@@ -2119,7 +2122,7 @@ class ConstructHandler(FeatureHandler):
         self.flag_internal_fb_entities('construct_associations')
         return
 
-    # Elaborate on query_chado().
+    # Elaborate on query_chado() for the ConstructHandler.
     def query_chado(self, session):
         """Elaborate on query_chado method for the ConstructHandler."""
         super().query_chado(session)
@@ -2525,7 +2528,7 @@ def generate_export_file(export_dict: dict, log: Logger, output_filename: str):
         output_filename (str): The global output_filename in the script calling this function.
 
     """
-    log.info('Writing output Alliance LinkML data dict to JSON file..upper()')
+    log.info('Writing output Alliance LinkML data dict to JSON file.'.upper())
     with open(output_filename, 'w') as outfile:
         json.dump(export_dict, outfile, sort_keys=True, indent=2, separators=(',', ': '))
         outfile.close()
