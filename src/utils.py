@@ -328,8 +328,8 @@ class DataHandler(object):
 
             )
             results = session.query(Feature.feature_id, Feature.uniquename, Feature.is_obsolete,
-                                      Feature.type_id, Organism.organism_id, Organism.genus,
-                                      Organism.species, Feature.name, Synonym.synonym_sgml).\
+                                    Feature.type_id, Organism.organism_id, Organism.genus,
+                                    Organism.species, Feature.name, Synonym.synonym_sgml).\
                 select_from(Feature).\
                 join(Organism, (Organism.organism_id == Feature.organism_id)).\
                 join(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
