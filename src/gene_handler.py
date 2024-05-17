@@ -228,6 +228,7 @@ class GeneHandler(FeatureHandler):
                     rel_dict['internal'] = True
                 feat_rel = fb_datatypes.FBEntity()
                 feat_rel.rel_dict = rel_dict
+                feat_rel.entity_desc = f'{rel_dict["allele_curie"]}_{rel_dict["rel_type"]}_{rel_dict["gene_curie"]}'
                 self.gene_allele_associations.append(feat_rel)
             allele_counter += len(gene.alleles.keys())
         self.log.info(f'Found {allele_counter} alleles for {gene_counter} genes.')
