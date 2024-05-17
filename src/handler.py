@@ -15,6 +15,7 @@ import datetime
 import re
 import strict_rfc3339
 from logging import Logger
+from sqlalchemy import or_, and_
 from sqlalchemy.orm import aliased
 from harvdev_utils.char_conversions import sub_sup_sgml_to_html
 from harvdev_utils.production import (
@@ -343,8 +344,9 @@ class DataHandler(object):
             if feat_type == 'allele':
                 filters += (
                     Feature.uniquename == 'FBal0008966',
-                    FeatureSynonym.is_current.in_((True, None)),
                 )
+            or_filters = or_(FeatureSynonym.is_current.is_(True), FeatureSynonym.is_current == None)
+            combined_filters = and_(filters, or_filters)
             results = session.query(Feature.feature_id, Feature.uniquename, Feature.is_obsolete,
                                     Feature.type_id, Organism.organism_id, Organism.genus,
                                     Organism.species, Feature.name, Synonym.synonym_sgml,
@@ -354,7 +356,7 @@ class DataHandler(object):
                 outerjoin(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
                 outerjoin(Synonym, (Synonym.synonym_id == FeatureSynonym.synonym_id)).\
                 outerjoin(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
-                filter(*filters).\
+                filter(*combined_filters).\
                 distinct()
             # BOB
             FEATURE_ID = 0
@@ -881,7 +883,7 @@ class PrimaryEntityHandler(DataHandler):
         return
 
     def get_entity_associated_data(self, session):
-    #     """Get data associated with primary FlyBase data entities."""
+        """Get data associated with primary FlyBase data entities."""
     #     associated_data_types = ['pubs', 'synonyms', 'dbxrefs', 'props', 'cvterms']
     #     chado_type = self.main_chado_entity_types[self.fb_data_type]
     #     self.log.info(f'Get associated data for {self.fb_data_type} data entities from {chado_type}-related chado tables.')
