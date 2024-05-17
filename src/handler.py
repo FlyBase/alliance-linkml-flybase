@@ -340,7 +340,7 @@ class DataHandler(object):
             filters = (
                 Feature.uniquename.op('~')(self.regex[feat_type]),
                 FeatureSynonym.is_current.in_(allowed_feature_synonym_values),
-                Cvterm.in_(allowed_cvterm_names),
+                Cvterm.name.in_(allowed_cvterm_names),
             )
             results = session.query(Feature.feature_id, Feature.uniquename, Feature.is_obsolete,
                                     Feature.type_id, Organism.organism_id, Organism.genus,
