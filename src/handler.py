@@ -362,8 +362,6 @@ class DataHandler(object):
                 filter(*filters).\
                 distinct()
             # BOB
-            if feat_type == 'allele':
-                self.log.debug(f'BOB: {results}')
             FEATURE_ID = 0
             UNIQUENAME = 1
             OBSOLETE = 2
@@ -375,6 +373,8 @@ class DataHandler(object):
             SYMBOL = 8
             counter = 0
             for result in results:
+                if feat_type == 'allele':
+                    self.log.debug(f'BOB: {result}')
                 feat_dict = {
                     'uniquename': result[UNIQUENAME],
                     'is_obsolete': result[OBSOLETE],
