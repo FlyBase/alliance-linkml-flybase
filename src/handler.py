@@ -347,8 +347,8 @@ class DataHandler(object):
                 select_from(Feature).\
                 join(Organism, (Organism.organism_id == Feature.organism_id)).\
                 join(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
-                join(Synonym, (Synonym.synonym_id == FeatureSynonym.synonym_id)).\
-                join(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
+                outerjoin(Synonym, (Synonym.synonym_id == FeatureSynonym.synonym_id)).\
+                outerjoin(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
                 filter(*filters).\
                 distinct()
             FEATURE_ID = 0
@@ -375,6 +375,8 @@ class DataHandler(object):
                     feat_dict['taxon_id'] = self.ncbi_taxon_lookup[result[ORG_ID]]
                 except KeyError:
                     feat_dict['taxon_id'] = 'NCBITaxon:32644'    # Unspecified taxon.
+                if feat_dict['symbol'] is None:
+                    feat_dict['symbol'] = feat_dict['name']      # Some old obsolete features have no symbol synonym.
                 self.feature_lookup[result[FEATURE_ID]] = feat_dict
                 counter += 1
             self.log.info(f'Added {counter} {feat_type} features to the feature_lookup.')
