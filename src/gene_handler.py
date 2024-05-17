@@ -296,8 +296,8 @@ class GeneHandler(FeatureHandler):
         for feat_rel in self.gene_allele_associations:
             rel_dto = agr_datatypes.AlleleGeneAssociationDTO(feat_rel.rel_dict['allele_curie'], 'alleleof',
                                                              feat_rel.rel_dict['gene_curie'], feat_rel.rel_dict['pub_curies'])
-            rel_dto.obsolete = feat_rel['obsolete']
-            rel_dto.internal = feat_rel['internal']
+            rel_dto.obsolete = feat_rel.rel_dict['obsolete']
+            rel_dto.internal = feat_rel.rel_dict['internal']
             feat_rel.linkmldto = rel_dto
             counter += 1
         self.log.info(f'Generated {counter} allele-gene associations.')
