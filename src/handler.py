@@ -335,14 +335,14 @@ class DataHandler(object):
             'tool': False,
         }
         for feat_type, is_exported in feat_type_export.items():
+            # BOB
+            if feat_type != 'allele':
+                continue
             self.log.info(f'Looking up {feat_type} features.')
-            # filters = [Feature.uniquename.op('~')(self.regex[feat_type])]
-            # filters = [Feature.uniquename == 'FBal0008966']
-            # current_filter = or_(FeatureSynonym.is_current.is_(True), FeatureSynonym.is_current.is_(None))
-            # filters.append(current_filter)
             filters = [
                 Feature.uniquename == 'FBal0008966',
-                or_(FeatureSynonym.is_current.is_(True), FeatureSynonym.is_current.is_(None))
+                or_(FeatureSynonym.is_current.is_(True), FeatureSynonym.is_current.is_(None)),
+                or_(Cvterm.name == 'symbol', Cvterm.name.is_(None)),
             ]
             results = session.query(Feature.feature_id, Feature.uniquename, Feature.is_obsolete,
                                     Feature.type_id, Organism.organism_id, Organism.genus,
@@ -370,11 +370,6 @@ class DataHandler(object):
             for result in results:
                 if feat_type == 'allele':
                     self.log.debug(f'BOB: {result}')
-                # Skip results in which a non-current and/or non-symbol synonym is returned.
-                # But keep results where no synonym is returned at all.
-                # if result[CURRENT] is False or result[SYMBOL_TYPE] not in [True, None]:
-                #     continue
-                self.log.debug(f'BILLY: {result}')
                 feat_dict = {
                     'uniquename': result[UNIQUENAME],
                     'is_obsolete': result[OBSOLETE],
