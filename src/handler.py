@@ -335,8 +335,6 @@ class DataHandler(object):
         }
         for feat_type, is_exported in feat_type_export.items():
             self.log.info(f'Looking up {feat_type} features.')
-            allowed_feature_synonym_values = (True, None)    # BOB: Allow None in case there is no current symbol.
-            allowed_cvterm_names = ['symbol', None]
             filters = (
                 Feature.uniquename.op('~')(self.regex[feat_type]),
                 # FeatureSynonym.is_current.in_((allowed_feature_synonym_values)),
@@ -345,12 +343,7 @@ class DataHandler(object):
             if feat_type == 'allele':
                 filters += (
                     Feature.uniquename == 'FBal0008966',
-                    FeatureSynonym.is_current.in_((allowed_feature_synonym_values, )),
-                )
-            else:
-                filters += (
-                    FeatureSynonym.is_current.in_((allowed_feature_synonym_values)),
-                    Cvterm.name.in_((allowed_cvterm_names)),
+                    FeatureSynonym.is_current.in_((True, None)),
                 )
             results = session.query(Feature.feature_id, Feature.uniquename, Feature.is_obsolete,
                                     Feature.type_id, Organism.organism_id, Organism.genus,
