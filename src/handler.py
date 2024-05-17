@@ -345,7 +345,7 @@ class DataHandler(object):
             if feat_type == 'allele':
                 filters += (
                     Feature.uniquename == 'FBal0008966',
-                    FeatureSynonym.is_current.in_(allowed_feature_synonym_values),
+                    FeatureSynonym.is_current.in_((allowed_feature_synonym_values, )),
                 )
             else:
                 filters += (
