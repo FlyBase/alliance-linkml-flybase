@@ -337,9 +337,13 @@ class DataHandler(object):
         for feat_type, is_exported in feat_type_export.items():
             self.log.info(f'Looking up {feat_type} features.')
             # filters = [Feature.uniquename.op('~')(self.regex[feat_type])]
-            filters = [Feature.uniquename == 'FBal0008966']
-            current_filter = or_(FeatureSynonym.is_current.is_(True), FeatureSynonym.is_current == None)
-            filters.append(current_filter)
+            # filters = [Feature.uniquename == 'FBal0008966']
+            # current_filter = or_(FeatureSynonym.is_current.is_(True), FeatureSynonym.is_current.is_(None))
+            # filters.append(current_filter)
+            filters = [
+                Feature.uniquename == 'FBal0008966',
+                or_(FeatureSynonym.is_current.is_(True), FeatureSynonym.is_current.is_(None))
+            ]
             results = session.query(Feature.feature_id, Feature.uniquename, Feature.is_obsolete,
                                     Feature.type_id, Organism.organism_id, Organism.genus,
                                     Organism.species, Feature.name, Synonym.synonym_sgml,
@@ -392,6 +396,7 @@ class DataHandler(object):
                 self.feature_lookup[result[FEATURE_ID]] = feat_dict
                 counter += 1
             self.log.info(f'Added {counter} {feat_type} features to the feature_lookup.')
+        quit()    # BOB
         return
 
     def get_chr_info(self, session):
