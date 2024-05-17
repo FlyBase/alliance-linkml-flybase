@@ -9,23 +9,9 @@ Author(s):
 
 """
 
-import csv
-import datetime
 import json
-import re
-import strict_rfc3339
 from logging import Logger
-from sqlalchemy.orm import aliased, Session
-# from sqlalchemy.inspection import inspect
-from harvdev_utils.char_conversions import sub_sup_sgml_to_html
-from harvdev_utils.production import (
-    Cvterm, Db, Dbxref, Organism, OrganismDbxref, Pub, PubDbxref, Featureloc,
-    Strain, StrainPub, StrainSynonym, StrainDbxref, Strainprop, StrainpropPub, StrainCvterm, StrainCvtermprop,
-    Feature, FeaturePub, FeatureSynonym, FeatureDbxref, Featureprop, FeaturepropPub, FeatureCvterm, FeatureCvtermprop,
-    FeatureRelationship, FeatureRelationshipPub, Synonym
-)
-import fb_datatypes
-import agr_datatypes
+from sqlalchemy.orm import Session
 from handler import DataHandler
 from agm_handlers import StrainHandler
 from construct_handler import ConstructHandler

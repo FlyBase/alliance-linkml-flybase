@@ -11,20 +11,18 @@ Author(s):
 
 """
 
-import csv
 import datetime
-import json
 import re
 import strict_rfc3339
 from logging import Logger
-from sqlalchemy.orm import aliased, Session
-# from sqlalchemy.inspection import inspect
+from sqlalchemy.orm import aliased
 from harvdev_utils.char_conversions import sub_sup_sgml_to_html
 from harvdev_utils.production import (
-    Cvterm, Db, Dbxref, Organism, OrganismDbxref, Pub, PubDbxref, Featureloc,
-    Strain, StrainPub, StrainSynonym, StrainDbxref, Strainprop, StrainpropPub, StrainCvterm, StrainCvtermprop,
-    Feature, FeaturePub, FeatureSynonym, FeatureDbxref, Featureprop, FeaturepropPub, FeatureCvterm, FeatureCvtermprop,
-    FeatureRelationship, FeatureRelationshipPub, Synonym
+    Cvterm, Db, Dbxref, Feature, FeatureCvterm, FeatureCvtermprop, FeatureDbxref,
+    Featureprop, FeaturepropPub, FeaturePub, FeatureRelationship,
+    FeatureRelationshipPub, FeatureSynonym, Organism, OrganismDbxref, Pub,
+    PubDbxref, Strain, StrainCvterm, StrainCvtermprop, StrainDbxref, Strainprop,
+    StrainpropPub, StrainPub, StrainSynonym, Synonym
 )
 import fb_datatypes
 import agr_datatypes
@@ -1221,7 +1219,7 @@ class PrimaryEntityHandler(DataHandler):
             for syno_dict in fb_data_entity.synonym_dict.values():
                 # Sort into current symbol, current fullname or synonym.
                 name_dto = agr_datatypes.NameSlotAnnotationDTO(syno_dict['name_type_name'], syno_dict['format_text'],
-                                                           syno_dict['display_text'], syno_dict['pub_curies']).dict_export()
+                                                               syno_dict['display_text'], syno_dict['pub_curies']).dict_export()
                 name_dto['internal'] = syno_dict['is_internal']
                 if syno_dict['is_current'] is True and syno_dict['name_type_name'] in ['nomenclature_symbol', 'systematic_name']:
                     linkml_synonym_bins['symbol_bin'].append(name_dto)
@@ -1253,7 +1251,8 @@ class PrimaryEntityHandler(DataHandler):
             # 3. Systematic name.
             if len(linkml_synonym_bins['systematic_name_bin']) == 0 and fb_data_entity.curr_anno_id and fb_data_entity.chado_obj.is_obsolete is False:
                 self.log.warning(f'No current systematic names found for current annotated {fb_data_entity}: create a generic one.')
-                sys_name_dto = agr_datatypes.NameSlotAnnotationDTO('systematic_name', fb_data_entity.curr_anno_id, fb_data_entity.curr_anno_id, []).dict_export()
+                sys_name_dto = agr_datatypes.NameSlotAnnotationDTO('systematic_name', fb_data_entity.curr_anno_id,
+                                                                   fb_data_entity.curr_anno_id, []).dict_export()
                 setattr(fb_data_entity.linkmldto, linkml_synonym_slots['systematic_name_bin'], sys_name_dto)
             elif len(linkml_synonym_bins['systematic_name_bin']) == 1:
                 setattr(fb_data_entity.linkmldto, linkml_synonym_slots['systematic_name_bin'], linkml_synonym_bins['systematic_name_bin'][0])

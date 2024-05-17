@@ -9,20 +9,10 @@ Author(s):
 
 """
 
-import csv
-import datetime
-import json
-import re
-import strict_rfc3339
 from logging import Logger
-from sqlalchemy.orm import aliased, Session
-# from sqlalchemy.inspection import inspect
-from harvdev_utils.char_conversions import sub_sup_sgml_to_html
+from sqlalchemy.orm import aliased
 from harvdev_utils.production import (
-    Cvterm, Db, Dbxref, Organism, OrganismDbxref, Pub, PubDbxref, Featureloc,
-    Strain, StrainPub, StrainSynonym, StrainDbxref, Strainprop, StrainpropPub, StrainCvterm, StrainCvtermprop,
-    Feature, FeaturePub, FeatureSynonym, FeatureDbxref, Featureprop, FeaturepropPub, FeatureCvterm, FeatureCvtermprop,
-    FeatureRelationship, FeatureRelationshipPub, Synonym
+    Cvterm, Feature, FeatureRelationship
 )
 import fb_datatypes
 import agr_datatypes
@@ -554,7 +544,7 @@ class ConstructHandler(FeatureHandler):
         counter = 0
         for cons_asso in self.construct_associations:
             rel_dto = agr_datatypes.ConstructGenomicEntityAssociationDTO(cons_asso.rel_dict['construct_curie'], cons_asso.rel_dict['rel_type'],
-                                                                     cons_asso.rel_dict['genomic_entity_curie'], cons_asso.rel_dict['pub_curies'])
+                                                                         cons_asso.rel_dict['genomic_entity_curie'], cons_asso.rel_dict['pub_curies'])
             rel_dto.obsolete = cons_asso.rel_dict['obsolete']
             rel_dto.internal = cons_asso.rel_dict['internal']
             cons_asso.linkmldto = rel_dto
