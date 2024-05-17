@@ -338,15 +338,11 @@ class DataHandler(object):
             self.log.info(f'Looking up {feat_type} features.')
             filters = (
                 Feature.uniquename.op('~')(self.regex[feat_type]),
-                # FeatureSynonym.is_current.in_((allowed_feature_synonym_values)),
-                # Cvterm.name.in_((allowed_cvterm_names)),
             )
             if feat_type == 'allele':
                 filters += (
                     Feature.uniquename == 'FBal0008966',
                 )
-            or_filters = or_(FeatureSynonym.is_current.is_(True), FeatureSynonym.is_current == None)
-            combined_filters = and_(filters, or_filters)
             results = session.query(Feature.feature_id, Feature.uniquename, Feature.is_obsolete,
                                     Feature.type_id, Organism.organism_id, Organism.genus,
                                     Organism.species, Feature.name, Synonym.synonym_sgml,
@@ -356,9 +352,8 @@ class DataHandler(object):
                 outerjoin(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
                 outerjoin(Synonym, (Synonym.synonym_id == FeatureSynonym.synonym_id)).\
                 outerjoin(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
-                filter(*combined_filters).\
+                filter(*filters).\
                 distinct()
-            # BOB
             FEATURE_ID = 0
             UNIQUENAME = 1
             OBSOLETE = 2
@@ -368,20 +363,29 @@ class DataHandler(object):
             SPECIES = 6
             NAME = 7
             SYMBOL = 8
+            CURRENT = 9
+            SYMBOL_TYPE = 10
             counter = 0
             for result in results:
                 if feat_type == 'allele':
                     self.log.debug(f'BOB: {result}')
-                quit()    # BOB
+                # Skip results in which a non-current and/or non-symbol synonym is returned.
+                # But keep results where no synonym is returned at all.
+                if result[CURRENT] is False or result[SYMBOL_TYPE] not in [True, None]:
+                    continue
+                self.log.debug(f'BILLY: {result}')
                 feat_dict = {
                     'uniquename': result[UNIQUENAME],
                     'is_obsolete': result[OBSOLETE],
                     'type': self.cvterm_lookup[result[TYPE_ID]].name,
                     'species': f'{result[GENUS]} {result[SPECIES]}',
                     'name': result[NAME],
-                    'symbol': sub_sup_sgml_to_html(result[SYMBOL]),
                     'exported': is_exported,
                 }
+                if result[SYMBOL] is not None:
+                    feat_dict['symbol'] = sub_sup_sgml_to_html(result[SYMBOL])
+                else:
+                    feat_dict['symbol'] = result[NAME]
                 try:
                     feat_dict['taxon_id'] = self.ncbi_taxon_lookup[result[ORG_ID]]
                 except KeyError:
@@ -391,6 +395,8 @@ class DataHandler(object):
                 self.feature_lookup[result[FEATURE_ID]] = feat_dict
                 counter += 1
             self.log.info(f'Added {counter} {feat_type} features to the feature_lookup.')
+        if feat_type != 'allele':
+            quit()    # BOB
         return
 
     def get_chr_info(self, session):
