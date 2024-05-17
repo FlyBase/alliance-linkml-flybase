@@ -224,8 +224,8 @@ class GeneHandler(FeatureHandler):
                     'internal': False,
                 }
                 if gene.is_obsolete is True or self.feature_lookup[allele_id]['is_obsolete'] is True:
-                    feat_rel['obsolete'] = True
-                    feat_rel['internal'] = True
+                    rel_dict['obsolete'] = True
+                    rel_dict['internal'] = True
                 feat_rel = fb_datatypes.FBEntity()
                 feat_rel.rel_dict = rel_dict
                 self.gene_allele_associations.append(feat_rel)
