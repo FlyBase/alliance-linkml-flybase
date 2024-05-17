@@ -281,6 +281,9 @@ class GeneHandler(FeatureHandler):
                 allele_curie = f'FB:{self.feature_lookup[allele_id]["uniquename"]}'
                 gene_curie = f'FB:{gene.uniquename}'
                 gene_allele_rel = agr_datatypes.AlleleGeneAssociationDTO(allele_curie, 'alleleof', gene_curie, pub_curies)
+                if gene.is_obsolete is True or self.feature_lookup[allele_id]['is_obsolete'] is True:
+                    gene_allele_rel.obsolete = True
+                    gene_allele_rel.internal = True
                 self.gene_allele_associations.append(gene_allele_rel)
         self.log.info(f'Generated {counter} allele-gene associations.')
         return
