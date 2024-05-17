@@ -21,6 +21,9 @@ class GeneHandler(FeatureHandler):
     def __init__(self, log: Logger, fb_data_type: str, testing: bool):
         """Create the GeneHandler object."""
         super().__init__(log, fb_data_type, testing)
+        # Additional set for export added to the handler.
+        self.gene_allele_associations = []    # Will be list of FBEntity objects (relationships).
+        # Lookups needed.
         self.pthr_dict = {}    # Will be an 1:1 FBgn_ID-PTHR xref dict.
 
     test_set = {
@@ -50,6 +53,10 @@ class GeneHandler(FeatureHandler):
             'internal',
             'taxon_curie',
         ],
+        'allele_gene_association_ingest_set': [
+            'allele_curie',
+            'gene_curie',
+        ]
     }
     output_fields = {
         'gene_ingest_set': [
@@ -71,20 +78,11 @@ class GeneHandler(FeatureHandler):
             'taxon_curie',
             'updated_by_curie',
         ],
-    }
-    fb_agr_db_dict = {
-        'EntrezGene': 'NCBI_Gene',
-        'RNAcentral': 'RNAcentral',
-        # 'UniProt/GCRP': 'UniProt/GCRP',
-        'UniProt/Swiss-Prot': 'UniProtKB',
-        'UniProt/TrEMBL': 'UniProtKB',
-        'SGD': 'SGD',
-        'WormBase': 'WB',
-        'ZFIN': 'ZFIN',
-        'Xenbase': 'Xenbase',
-        'RGD': 'RGD',
-        'MGD': 'MGI',
-        'MGI': 'MGI'
+        'allele_gene_association_ingest_set': [
+            'allele_curie',
+            'gene_curie',
+            'evidence_curies',
+        ]
     }
     # Reference dicts.
     internal_gene_types = [
@@ -107,6 +105,8 @@ class GeneHandler(FeatureHandler):
         """Extend the method for the GeneHandler."""
         super().get_general_data(session)
         self.get_chr_info(session)
+        self.build_feature_lookup(session)
+        self.build_feature_relationship_evidence_lookup(session)
         return
 
     # Elaborate on get_datatype_data() for the GeneHandler.
@@ -163,6 +163,12 @@ class GeneHandler(FeatureHandler):
         self.log.info(f'Ignored {pass_counter} promoted_gene_types for {self.fb_data_type} entities.')
         return
 
+    def get_gene_alleles(self, session):
+        """Get alleles for genes."""
+        self.log.info('Get alleles for genes.')
+        self.get_entity_obj_feat_rel_by_type(session, 'allele_rels', rel_type='alleleof', sbj_type='allele', sbj_regex=self.regex['allele'])
+        return
+
     def get_datatype_data(self, session):
         """Extend the method for the GeneHandler."""
         super().get_datatype_data(session)
@@ -171,6 +177,7 @@ class GeneHandler(FeatureHandler):
         self.get_chr_featurelocs(session)
         self.get_gene_snapshots(session)
         self.get_gene_types(session)
+        self.get_gene_alleles(session)
         return
 
     # Elaborate on synthesize_info() for the GeneHandler.
@@ -186,11 +193,35 @@ class GeneHandler(FeatureHandler):
                 self.log.warning(f'{gene} has many promoted gene types.')
         return
 
+    def synthesize_gene_alleles(self):
+        """Synthesize gene allele relationships."""
+        self.log.info('Synthesize gene allele relationships.')
+        gene_counter = 0
+        allele_counter = 0
+        for gene in self.fb_data_entities.values():
+            if not gene.allele_rels:
+                continue
+            gene_counter += 1
+            for rel in gene.allele_rels:
+                allele_id = rel.subject_id
+                pub_ids = self.lookup_feat_rel_pubs_ids(rel.feature_relationship_id)
+                pub_curies = self.lookup_pub_curies(pub_ids)
+                try:
+                    gene.alleles[allele_id].extend(pub_curies)
+                except KeyError:
+                    gene.alleles[allele_id] = pub_curies
+            for pub_curie_list in gene.alleles.values():
+                pub_curie_list = list(set(pub_curie_list))
+            allele_counter += len(gene.alleles.keys())
+        self.log.info(f'Found {allele_counter} alleles for {gene_counter} genes.')
+        return
+
     def synthesize_info(self):
         """Extend the method for the GeneHandler."""
         super().synthesize_info()
         self.synthesize_gene_type()
         self.synthesize_anno_ids()
+        self.synthesize_gene_alleles()
         return
 
     # Elaborate on map_fb_data_to_alliance() for the GeneHandler.
@@ -241,6 +272,19 @@ class GeneHandler(FeatureHandler):
             gene.linkmldto.cross_reference_dtos.append(xref_dto)
         return
 
+    def map_gene_allele_associations(self):
+        """Map gene-allele associations to Alliance object."""
+        self.log.info('Map gene-allele associations to Alliance object.')
+        counter = 0
+        for gene in self.fb_data_entities.values():
+            for allele_id, pub_curies in gene.alleles.items():
+                allele_curie = f'FB:{self.feature_lookup[allele_id]["uniquename"]}'
+                gene_curie = f'FB:{gene.uniquename}'
+                gene_allele_rel = agr_datatypes.AlleleGeneAssociationDTO(allele_curie, 'alleleof', gene_curie, pub_curies)
+                self.gene_allele_associations.append(gene_allele_rel)
+        self.log.info(f'Generated {counter} allele-gene associations.')
+        return
+
     def map_fb_data_to_alliance(self):
         """Extend the method for the GeneHandler."""
         super().map_fb_data_to_alliance()
@@ -256,4 +300,14 @@ class GeneHandler(FeatureHandler):
         self.map_gene_panther_xrefs()
         self.map_anno_ids_to_secondary_ids('gene_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
+        self.map_gene_allele_associations()
+        self.flag_internal_fb_entities('gene_allele_associations')
+        return
+
+    # Elaborate on query_chado() for the GeneHandler.
+    def query_chado(self, session):
+        """Elaborate on query_chado method for the GeneHandler."""
+        super().query_chado(session)
+        self.flag_unexportable_entities(self.gene_allele_associations, 'allele_gene_association_ingest_set')
+        self.generate_export_dict(self.gene_allele_associations, 'allele_gene_association_ingest_set')
         return

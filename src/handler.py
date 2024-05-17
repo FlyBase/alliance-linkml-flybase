@@ -51,19 +51,21 @@ class DataHandler(object):
         self.primary_export_set = self.primary_agr_ingest_type_dict[fb_data_type]
         self.testing = testing
         # Datatype bins.
-        self.fb_data_entities = {}     # db_primary_id-keyed dict of chado objects to export.
-        self.export_data = {}          # agr_ingest_set_name-keyed lists of data objects for export.
+        self.fb_data_entities = {}       # db_primary_id-keyed dict of chado objects to export.
+        self.export_data = {}            # agr_ingest_set_name-keyed lists of data objects for export.
         # General data bins.
-        self.bibliography = {}         # A pub_id-keyed dict of pub curies (PMID or FBrf).
-        self.cvterm_lookup = {}        # A cvterm_id-keyed dict of Cvterm objects.
-        self.ncbi_taxon_lookup = {}    # An organism_id-keyed dict of f'NCBITaxon:{Dbxref.accession}' strings.
-        self.feature_lookup = {}       # feature_id-keyed lookup of basic feature info: uniquename, is_obsolete, name, symbol, exported, taxon_id and species.
+        self.bibliography = {}           # A pub_id-keyed dict of pub curies (PMID or FBrf).
+        self.cvterm_lookup = {}          # A cvterm_id-keyed dict of Cvterm objects.
+        self.ncbi_taxon_lookup = {}      # An organism_id-keyed dict of f'NCBITaxon:{Dbxref.accession}' strings.
+        self.chr_dict = {}               # Will be a feature_id-keyed dict of chr scaffold uniquenames.
+        self.feature_lookup = {}         # feature_id-keyed lookup of basic feature info: uniquename, is_obsolete, name, symbol, exported, taxon_id and species.
+        self.feat_rel_pub_lookup = {}    # Will be feature_relationship_id-keyed lists of supporting pub_ids.
         # Trackers.
-        self.input_count = 0           # Count of entities found in FlyBase chado database.
-        self.export_count = 0          # Count of exported Alliance entities.
-        self.internal_count = 0        # Count of exported entities marked as internal.
-        self.warnings = []             # Handler issues of note.
-        self.errors = []               # Handler issues that break things.
+        self.input_count = 0             # Count of entities found in FlyBase chado database.
+        self.export_count = 0            # Count of exported Alliance entities.
+        self.internal_count = 0          # Count of exported entities marked as internal.
+        self.warnings = []               # Handler issues of note.
+        self.errors = []                 # Handler issues that break things.
 
     # Sample set for faster testing: use uniquename-keyed names of objects, tailored for each handler.
     test_set = {}
@@ -103,8 +105,20 @@ class DataHandler(object):
     # A filter for non-FB xrefs to export, with dict keys as FB db.names and dict values as Alliance db names.
     # Alliance db names should correspond to the contents of this file:
     # https://github.com/alliance-genome/agr_schemas/blob/master/resourceDescriptors.yaml
-    fb_agr_db_dict = {}
-
+    fb_agr_db_dict = {
+        'EntrezGene': 'NCBI_Gene',
+        'RNAcentral': 'RNAcentral',
+        # 'UniProt/GCRP': 'UniProt/GCRP',
+        'UniProt/Swiss-Prot': 'UniProtKB',
+        'UniProt/TrEMBL': 'UniProtKB',
+        'SGD': 'SGD',
+        'WormBase': 'WB',
+        'ZFIN': 'ZFIN',
+        'Xenbase': 'Xenbase',
+        'RGD': 'RGD',
+        'MGD': 'MGI',
+        'MGI': 'MGI'
+    }
     # Useful regexes.
     regex = {
         'pub': r'^(FBrf[0-9]{7}|unattributed)$',
@@ -855,7 +869,7 @@ class PrimaryEntityHandler(DataHandler):
         """Placeholder."""
         return
 
-    # def get_entity_associated_data(self, session):
+    def get_entity_associated_data(self, session):
     #     """Get data associated with primary FlyBase data entities."""
     #     associated_data_types = ['pubs', 'synonyms', 'dbxrefs', 'props', 'cvterms']
     #     chado_type = self.main_chado_entity_types[self.fb_data_type]
@@ -882,7 +896,7 @@ class PrimaryEntityHandler(DataHandler):
     #                 pass_counter += 1
     #         self.log.info(f'Found {counter} {i} for {self.fb_data_type} entities.')
     #         self.log.info(f'Ignored {pass_counter} {i} for irrelevant {self.fb_data_type} entities.')
-    #     return
+        return
 
     def get_entity_prop_pubs(self, session):
         """Get prop pubs for primary FlyBase data entities."""
@@ -981,7 +995,6 @@ class PrimaryEntityHandler(DataHandler):
         self.get_entity_xrefs(session)
         # self.get_entity_props(session)
         # self.get_entity_cvterms(session)
-        # self.get_entity_associated_data(session)
         # self.get_entity_prop_pubs(session)
         # self.get_entity_cvtermprops(session)
         self.get_entity_timestamps(session)

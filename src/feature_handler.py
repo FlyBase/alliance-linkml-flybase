@@ -26,7 +26,6 @@ class FeatureHandler(PrimaryEntityHandler):
     def __init__(self, log: Logger, fb_data_type: str, testing: bool):
         """Create the FeatureHandler object."""
         super().__init__(log, fb_data_type, testing)
-        self.chr_dict = {}    # Will be a feature_id-keyed dict of chr scaffold uniquenames.
 
     def get_general_data(self, session):
         """Extend the method for the FeatureHandler."""

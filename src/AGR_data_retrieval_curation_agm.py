@@ -61,8 +61,6 @@ engine = create_engine(engine_var_rep)
 Session = sessionmaker(bind=engine)
 session = Session()
 
-# BOB - to do. Fill in components for strains.
-
 
 # The main process.
 def main():

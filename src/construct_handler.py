@@ -25,9 +25,8 @@ class ConstructHandler(FeatureHandler):
         """Create the ConstructHandler object."""
         super().__init__(log, fb_data_type, testing)
         # Additional set for export added to the handler.
-        self.construct_associations = []            # Will be a list of FBEntity objects, map to ConstructGenomicEntityAssociationDTO.
+        self.construct_associations = []            # Will be a list of FBEntity objects (relationships), map to ConstructGenomicEntityAssociationDTO.
         # Lookups needed.
-        self.feat_rel_pub_lookup = {}               # Will be feature_relationship_id-keyed lists of supporting pub_ids.
         self.allele_gene_lookup = {}                # Will be allele feature_id-keyed of a single gene feature_id per allele.
         self.seqfeat_gene_lookup = {}               # Will be seqfeat feature_id-keyed of a lists of gene feature_ids.
         self.transgenic_allele_class_lookup = {}    # Will be an allele feature_id-keyed list of "transgenic product class" CV terms.
@@ -97,7 +96,6 @@ class ConstructHandler(FeatureHandler):
             'updated_by_curie',
         ],
     }
-    fb_agr_db_dict = {}
 
     # Elaborate on get_general_data() for the ConstructHandler.
     def get_general_data(self, session):

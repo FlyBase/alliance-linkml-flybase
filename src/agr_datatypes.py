@@ -118,6 +118,26 @@ class EvidenceAssociationDTO(AuditedObjectDTO):
         self.evidence_curies = evidence_curies
         self.required_fields.extend([])
 
+class AlleleGeneAssociationDTO(EvidenceAssociationDTO):
+    """AlleleGeneAssociationDTO class."""
+    def __init__(self, allele_id: str, rel_type: str, gene_id: str, evidence_curies: list):
+        """Create ConstructGenomicEntityAssociationDTO for FlyBase object.
+
+        Args:
+            allele_id (str): The FB:FBal curie for the allele subject.
+            rel_type (str): A CV term: TBD.
+            gene_id (str): The FB:FBgn curie for the gene object.
+            evidence_curies (list): A list of FB:FBrf or PMID:### curies.
+
+        """
+        super().__init__(evidence_curies)
+        self.allele_curie = allele_id
+        self.relation_name = rel_type
+        self.gene_curie = gene_id
+        self.evidence_code_curie = None
+        self.note_dto = None
+        self.required_fields.extend(['allele_curie', 'gene_curie'])
+
 
 class ConstructGenomicEntityAssociationDTO(EvidenceAssociationDTO):
     """ConstructGenomicEntityAssociationDTO class."""

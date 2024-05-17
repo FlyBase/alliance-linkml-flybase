@@ -118,9 +118,11 @@ class FBGene(FBFeature):
         # Primary FB chado data.
         self.gene_type_names = []     # Will be "promoted_gene_type" Featureprops.
         self.gene_snapshots = []      # Will be "gene_summary_text" Featureprops.
+        self.allele_rels = []         # Direct FBal "alleleof" FBgn FeatureRelationships.
         # Processed FB data.
         self.gene_type_name = None    # Will be SO term name from "promoted_gene_type" Featureprop.
         self.gene_type_id = None      # Will be SO term ID from "promoted_gene_type" Featureprop.
+        self.alleles = {}             # Will be allele_id-keyed list of pub curies.
 
 
 class FBConstruct(FBFeature):
