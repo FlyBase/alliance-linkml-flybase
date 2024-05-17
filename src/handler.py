@@ -353,7 +353,8 @@ class DataHandler(object):
                 )
             results = session.query(Feature.feature_id, Feature.uniquename, Feature.is_obsolete,
                                     Feature.type_id, Organism.organism_id, Organism.genus,
-                                    Organism.species, Feature.name, Synonym.synonym_sgml).\
+                                    Organism.species, Feature.name, Synonym.synonym_sgml,
+                                    FeatureSynonym.is_current, Cvterm.name).\
                 select_from(Feature).\
                 join(Organism, (Organism.organism_id == Feature.organism_id)).\
                 outerjoin(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
