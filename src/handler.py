@@ -347,7 +347,7 @@ class DataHandler(object):
                                     Organism.species, Feature.name, Synonym.synonym_sgml).\
                 select_from(Feature).\
                 join(Organism, (Organism.organism_id == Feature.organism_id)).\
-                join(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
+                outerjoin(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
                 outerjoin(Synonym, (Synonym.synonym_id == FeatureSynonym.synonym_id)).\
                 outerjoin(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
                 filter(*filters).\
