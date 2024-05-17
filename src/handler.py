@@ -336,13 +336,10 @@ class DataHandler(object):
         }
         for feat_type, is_exported in feat_type_export.items():
             self.log.info(f'Looking up {feat_type} features.')
-            filters = (
-                Feature.uniquename.op('~')(self.regex[feat_type]),
-            )
-            if feat_type == 'allele':
-                filters += (
-                    Feature.uniquename == 'FBal0008966',
-                )
+            # filters = [Feature.uniquename.op('~')(self.regex[feat_type])]
+            filters = [Feature.uniquename == 'FBal0008966']
+            new_filter = or_(FeatureSynonym.is_current == True, FeatureSynonym.is_current == None)
+            filters.append(new_filter)
             results = session.query(Feature.feature_id, Feature.uniquename, Feature.is_obsolete,
                                     Feature.type_id, Organism.organism_id, Organism.genus,
                                     Organism.species, Feature.name, Synonym.synonym_sgml,
@@ -371,8 +368,8 @@ class DataHandler(object):
                     self.log.debug(f'BOB: {result}')
                 # Skip results in which a non-current and/or non-symbol synonym is returned.
                 # But keep results where no synonym is returned at all.
-                if result[CURRENT] is False or result[SYMBOL_TYPE] not in [True, None]:
-                    continue
+                # if result[CURRENT] is False or result[SYMBOL_TYPE] not in [True, None]:
+                #     continue
                 self.log.debug(f'BILLY: {result}')
                 feat_dict = {
                     'uniquename': result[UNIQUENAME],
@@ -395,8 +392,6 @@ class DataHandler(object):
                 self.feature_lookup[result[FEATURE_ID]] = feat_dict
                 counter += 1
             self.log.info(f'Added {counter} {feat_type} features to the feature_lookup.')
-        if feat_type != 'allele':
-            quit()    # BOB
         return
 
     def get_chr_info(self, session):
