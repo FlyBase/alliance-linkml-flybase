@@ -335,7 +335,7 @@ class DataHandler(object):
         }
         for feat_type, is_exported in feat_type_export.items():
             self.log.info(f'Looking up {feat_type} features.')
-            allowed_feature_synonym_values = [True, None]    # BOB: Allow None in case there is no current symbol.
+            allowed_feature_synonym_values = (True, None)    # BOB: Allow None in case there is no current symbol.
             allowed_cvterm_names = ['symbol', None]
             filters = (
                 Feature.uniquename.op('~')(self.regex[feat_type]),
@@ -345,7 +345,7 @@ class DataHandler(object):
             if feat_type == 'allele':
                 filters += (
                     Feature.uniquename == 'FBal0008966',
-                    FeatureSynonym.is_current.in_((allowed_feature_synonym_values)),
+                    FeatureSynonym.is_current.in_(allowed_feature_synonym_values),
                 )
             else:
                 filters += (
@@ -377,6 +377,7 @@ class DataHandler(object):
             for result in results:
                 if feat_type == 'allele':
                     self.log.debug(f'BOB: {result}')
+                quit()    # BOB
                 feat_dict = {
                     'uniquename': result[UNIQUENAME],
                     'is_obsolete': result[OBSOLETE],
