@@ -339,9 +339,18 @@ class DataHandler(object):
             allowed_cvterm_names = ['symbol', None]
             filters = (
                 Feature.uniquename.op('~')(self.regex[feat_type]),
-                FeatureSynonym.is_current.in_((allowed_feature_synonym_values)),
-                Cvterm.name.in_((allowed_cvterm_names)),
+                # FeatureSynonym.is_current.in_((allowed_feature_synonym_values)),
+                # Cvterm.name.in_((allowed_cvterm_names)),
             )
+            if feat_type == 'allele':
+                filters += (
+                    Feature.uniquename == 'FBal0008966',
+                )
+            else:
+                filters += (
+                    FeatureSynonym.is_current.in_((allowed_feature_synonym_values)),
+                    Cvterm.name.in_((allowed_cvterm_names)),
+                )
             results = session.query(Feature.feature_id, Feature.uniquename, Feature.is_obsolete,
                                     Feature.type_id, Organism.organism_id, Organism.genus,
                                     Organism.species, Feature.name, Synonym.synonym_sgml).\
@@ -352,6 +361,9 @@ class DataHandler(object):
                 outerjoin(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
                 filter(*filters).\
                 distinct()
+            # BOB
+            if feat_type == 'allele':
+                self.log.debug(f'BOB: {results}')
             FEATURE_ID = 0
             UNIQUENAME = 1
             OBSOLETE = 2
