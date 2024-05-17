@@ -12,6 +12,7 @@ Author(s):
 import csv
 import re
 from logging import Logger
+import fb_datatypes
 import agr_datatypes
 from feature_handler import FeatureHandler
 
@@ -202,6 +203,7 @@ class GeneHandler(FeatureHandler):
             if not gene.allele_rels:
                 continue
             gene_counter += 1
+            # Find all pubs for a given gene-allele relationship.
             for rel in gene.allele_rels:
                 allele_id = rel.subject_id
                 pub_ids = self.lookup_feat_rel_pubs_ids(rel.feature_relationship_id)
@@ -210,8 +212,23 @@ class GeneHandler(FeatureHandler):
                     gene.alleles[allele_id].extend(pub_curies)
                 except KeyError:
                     gene.alleles[allele_id] = pub_curies
-            for pub_curie_list in gene.alleles.values():
+            # Create an intermediate object to represent this info.
+            for allele_id, pub_curie_list in gene.alleles.items():
                 pub_curie_list = list(set(pub_curie_list))
+                rel_dict = {
+                    'allele_curie': f'FB:{self.feature_lookup[allele_id]["uniquename"]}',
+                    'gene_curie': f'FB:{gene.uniquename}',
+                    'rel_type': 'alleleof',
+                    'pub_curies': pub_curie_list,
+                    'obsolete': False,
+                    'internal': False,
+                }
+                if gene.is_obsolete is True or self.feature_lookup[allele_id]['is_obsolete'] is True:
+                    feat_rel['obsolete'] = True
+                    feat_rel['internal'] = True
+                feat_rel = fb_datatypes.FBEntity()
+                feat_rel.rel_dict = rel_dict
+                self.gene_allele_associations.append(feat_rel)
             allele_counter += len(gene.alleles.keys())
         self.log.info(f'Found {allele_counter} alleles for {gene_counter} genes.')
         return
@@ -276,15 +293,13 @@ class GeneHandler(FeatureHandler):
         """Map gene-allele associations to Alliance object."""
         self.log.info('Map gene-allele associations to Alliance object.')
         counter = 0
-        for gene in self.fb_data_entities.values():
-            for allele_id, pub_curies in gene.alleles.items():
-                allele_curie = f'FB:{self.feature_lookup[allele_id]["uniquename"]}'
-                gene_curie = f'FB:{gene.uniquename}'
-                gene_allele_rel = agr_datatypes.AlleleGeneAssociationDTO(allele_curie, 'alleleof', gene_curie, pub_curies)
-                if gene.is_obsolete is True or self.feature_lookup[allele_id]['is_obsolete'] is True:
-                    gene_allele_rel.obsolete = True
-                    gene_allele_rel.internal = True
-                self.gene_allele_associations.append(gene_allele_rel)
+        for feat_rel in self.gene_allele_associations:
+            rel_dto = agr_datatypes.AlleleGeneAssociationDTO(feat_rel['allele_curie'], 'alleleof',
+                                                             feat_rel['gene_curie'], feat_rel['pub_curies'])
+            rel_dto.obsolete = feat_rel['obsolete']
+            rel_dto.internal = feat_rel['internal']
+            feat_rel.linkmldto = rel_dto
+            counter += 1
         self.log.info(f'Generated {counter} allele-gene associations.')
         return
 
