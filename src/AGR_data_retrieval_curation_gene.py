@@ -81,6 +81,15 @@ def main():
     export_dict[gene_handler.primary_export_set] = gene_handler.export_data[gene_handler.primary_export_set]
     generate_export_file(export_dict, log, output_filename)
 
+    # Export the gene-allele associations to a separate file.
+    association_output_filename = output_filename.replace('gene', 'gene_allele_association')
+    association_export_dict = {
+        'linkml_version': linkml_release,
+        'alliance_member_release_version': database_release,
+    }
+    association_export_dict['allele_gene_association_ingest_set'] = gene_handler.export_data['allele_gene_association_ingest_set']
+    generate_export_file(association_export_dict, log, association_output_filename)
+
     log.info('Ended main function.\n')
 
 
