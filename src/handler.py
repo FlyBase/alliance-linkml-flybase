@@ -335,9 +335,6 @@ class DataHandler(object):
             'tool': False,
         }
         for feat_type, is_exported in feat_type_export.items():
-            # BOB
-            if feat_type != 'allele':
-                continue
             self.log.info(f'Looking up {feat_type} features.')
             filters = (
                 Feature.uniquename.op('~')(self.regex[feat_type]),
@@ -346,7 +343,7 @@ class DataHandler(object):
             )
             results = session.query(Feature.feature_id, Feature.uniquename, Feature.is_obsolete,
                                     Feature.type_id, Organism.organism_id, Organism.genus,
-                                    Organism.species, Feature.name, Synonym.synonym_sgml, Cvterm.name).\
+                                    Organism.species, Feature.name, Synonym.synonym_sgml).\
                 select_from(Feature).\
                 join(Organism, (Organism.organism_id == Feature.organism_id)).\
                 outerjoin(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
@@ -365,7 +362,6 @@ class DataHandler(object):
             SYMBOL = 8
             counter = 0
             for result in results:
-                self.log.debug(f'BOB: {result}')
                 feat_dict = {
                     'uniquename': result[UNIQUENAME],
                     'is_obsolete': result[OBSOLETE],
@@ -386,9 +382,7 @@ class DataHandler(object):
                     feat_dict['symbol'] = feat_dict['name']      # Some old obsolete features have no symbol synonym.
                 self.feature_lookup[result[FEATURE_ID]] = feat_dict
                 counter += 1
-                self.log.debug(f'BILLY: {feat_dict}')
             self.log.info(f'Added {counter} {feat_type} features to the feature_lookup.')
-        quit()    # BOB
         return
 
     def get_chr_info(self, session):
