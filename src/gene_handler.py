@@ -294,8 +294,8 @@ class GeneHandler(FeatureHandler):
         self.log.info('Map gene-allele associations to Alliance object.')
         counter = 0
         for feat_rel in self.gene_allele_associations:
-            rel_dto = agr_datatypes.AlleleGeneAssociationDTO(feat_rel['allele_curie'], 'alleleof',
-                                                             feat_rel['gene_curie'], feat_rel['pub_curies'])
+            rel_dto = agr_datatypes.AlleleGeneAssociationDTO(feat_rel.rel_dict['allele_curie'], 'alleleof',
+                                                             feat_rel.rel_dict['gene_curie'], feat_rel.rel_dict['pub_curies'])
             rel_dto.obsolete = feat_rel['obsolete']
             rel_dto.internal = feat_rel['internal']
             feat_rel.linkmldto = rel_dto
