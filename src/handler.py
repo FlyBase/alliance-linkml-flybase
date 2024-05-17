@@ -338,8 +338,8 @@ class DataHandler(object):
             self.log.info(f'Looking up {feat_type} features.')
             # filters = [Feature.uniquename.op('~')(self.regex[feat_type])]
             filters = [Feature.uniquename == 'FBal0008966']
-            new_filter = or_(FeatureSynonym.is_current == True, FeatureSynonym.is_current == None)
-            filters.append(new_filter)
+            current_filter = or_(FeatureSynonym.is_current.is_(True), FeatureSynonym.is_current == None)
+            filters.append(current_filter)
             results = session.query(Feature.feature_id, Feature.uniquename, Feature.is_obsolete,
                                     Feature.type_id, Organism.organism_id, Organism.genus,
                                     Organism.species, Feature.name, Synonym.synonym_sgml,
