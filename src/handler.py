@@ -395,6 +395,7 @@ class DataHandler(object):
                     feat_dict['symbol'] = feat_dict['name']      # Some old obsolete features have no symbol synonym.
                 self.feature_lookup[result[FEATURE_ID]] = feat_dict
                 counter += 1
+                self.log.debug(f'{feat_dict}')
             self.log.info(f'Added {counter} {feat_type} features to the feature_lookup.')
         quit()    # BOB
         return
