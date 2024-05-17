@@ -27,7 +27,7 @@ from harvdev_utils.production import (
 import fb_datatypes
 import agr_datatypes
 from handler import DataHandler
-from agm_handler import StrainHandler
+from agm_handlers import StrainHandler
 from construct_handler import ConstructHandler
 from gene_handler import GeneHandler
 
