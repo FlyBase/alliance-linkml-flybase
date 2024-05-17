@@ -118,6 +118,7 @@ class EvidenceAssociationDTO(AuditedObjectDTO):
         self.evidence_curies = evidence_curies
         self.required_fields.extend([])
 
+
 class AlleleGeneAssociationDTO(EvidenceAssociationDTO):
     """AlleleGeneAssociationDTO class."""
     def __init__(self, allele_id: str, rel_type: str, gene_id: str, evidence_curies: list):

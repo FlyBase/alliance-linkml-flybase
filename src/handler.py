@@ -15,7 +15,7 @@ import datetime
 import re
 import strict_rfc3339
 from logging import Logger
-from sqlalchemy import or_, and_
+from sqlalchemy import or_
 from sqlalchemy.orm import aliased
 from harvdev_utils.char_conversions import sub_sup_sgml_to_html
 from harvdev_utils.production import (

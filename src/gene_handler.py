@@ -57,6 +57,7 @@ class GeneHandler(FeatureHandler):
         'allele_gene_association_ingest_set': [
             'allele_curie',
             'gene_curie',
+            'relation_name',
         ]
     }
     output_fields = {
@@ -82,6 +83,7 @@ class GeneHandler(FeatureHandler):
         'allele_gene_association_ingest_set': [
             'allele_curie',
             'gene_curie',
+            'relation_name',
             'evidence_curies',
         ]
     }
