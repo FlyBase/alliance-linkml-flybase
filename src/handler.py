@@ -341,7 +341,6 @@ class DataHandler(object):
             self.log.info(f'Looking up {feat_type} features.')
             filters = (
                 Feature.uniquename.op('~')(self.regex[feat_type]),
-                Feature.uniquename == 'FBal0018482',
                 or_(FeatureSynonym.is_current.is_(True), FeatureSynonym.is_current.is_(None)),
                 or_(Cvterm.name == 'symbol', Cvterm.name.is_(None)),
             )
