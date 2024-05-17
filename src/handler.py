@@ -339,15 +339,14 @@ class DataHandler(object):
             if feat_type != 'allele':
                 continue
             self.log.info(f'Looking up {feat_type} features.')
-            filters = [
+            filters = (
                 Feature.uniquename == 'FBal0008966',
                 or_(FeatureSynonym.is_current.is_(True), FeatureSynonym.is_current.is_(None)),
                 or_(Cvterm.name == 'symbol', Cvterm.name.is_(None)),
-            ]
+            )
             results = session.query(Feature.feature_id, Feature.uniquename, Feature.is_obsolete,
                                     Feature.type_id, Organism.organism_id, Organism.genus,
-                                    Organism.species, Feature.name, Synonym.synonym_sgml,
-                                    FeatureSynonym.is_current, Cvterm.name).\
+                                    Organism.species, Feature.name, Synonym.synonym_sgml).\
                 select_from(Feature).\
                 join(Organism, (Organism.organism_id == Feature.organism_id)).\
                 outerjoin(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
@@ -364,8 +363,8 @@ class DataHandler(object):
             SPECIES = 6
             NAME = 7
             SYMBOL = 8
-            CURRENT = 9
-            SYMBOL_TYPE = 10
+            # CURRENT = 9
+            # SYMBOL_TYPE = 10
             counter = 0
             for result in results:
                 if feat_type == 'allele':
