@@ -101,6 +101,9 @@ class ConstructHandler(FeatureHandler):
     def get_general_data(self, session):
         """Extend the method for the ConstructHandler."""
         super().get_general_data(session)
+        self.build_bibliography(session)
+        self.build_cvterm_lookup(session)
+        self.build_ncbi_taxon_lookup(session)
         self.build_feature_lookup(session)
         self.build_feature_relationship_evidence_lookup(session)
         self.build_allele_class_lookup(session)
@@ -265,6 +268,12 @@ class ConstructHandler(FeatureHandler):
     def get_datatype_data(self, session):
         """Extend the method for the ConstructHandler."""
         super().get_datatype_data(session)
+        self.get_entities(session)
+        self.get_entity_pubs(session)
+        self.get_entity_synonyms(session)
+        self.get_entity_fb_xrefs(session)
+        self.get_entity_xrefs(session)
+        self.get_entity_timestamps(session)
         self.get_construct_alleles(session)
         self.get_construct_encoded_tools(session)
         self.get_construct_reg_regions(session)
