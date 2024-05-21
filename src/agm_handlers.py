@@ -11,7 +11,7 @@ Author(s):
 
 from logging import Logger
 import agr_datatypes
-from handler import PrimaryEntityHandler
+from entity_handler import PrimaryEntityHandler
 
 
 class StrainHandler(PrimaryEntityHandler):
