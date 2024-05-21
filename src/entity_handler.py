@@ -14,15 +14,13 @@ import datetime
 import re
 import strict_rfc3339
 from logging import Logger
-from sqlalchemy import or_
 from sqlalchemy.orm import aliased
 from harvdev_utils.char_conversions import sub_sup_sgml_to_html
 from harvdev_utils.production import (
-    Cvterm, Db, Dbxref, Feature, FeatureCvterm, FeatureCvtermprop, FeatureDbxref,
-    Featureprop, FeaturepropPub, FeaturePub, FeatureRelationship,
-    FeatureRelationshipPub, FeatureSynonym, Organism, OrganismDbxref, Pub,
-    PubDbxref, Strain, StrainCvterm, StrainCvtermprop, StrainDbxref, Strainprop,
-    StrainpropPub, StrainPub, StrainSynonym, Synonym
+    Cvterm, Db, Dbxref, Feature, FeatureCvterm, FeatureCvtermprop,
+    FeatureDbxref, Featureprop, FeaturepropPub, FeaturePub, FeatureSynonym,
+    Strain, StrainCvterm, StrainCvtermprop, StrainDbxref, Strainprop,
+    StrainpropPub, StrainPub, StrainSynonym
 )
 import agr_datatypes
 from handler import DataHandler
