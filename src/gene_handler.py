@@ -178,6 +178,12 @@ class GeneHandler(FeatureHandler):
     def get_datatype_data(self, session):
         """Extend the method for the GeneHandler."""
         super().get_datatype_data(session)
+        self.get_entities(session)
+        self.get_entity_pubs(session)
+        self.get_entity_synonyms(session)
+        self.get_entity_fb_xrefs(session)
+        self.get_entity_xrefs(session)
+        self.get_entity_timestamps(session)
         self.get_panther_info()
         self.get_annotation_ids(session)
         self.get_chr_featurelocs(session)
