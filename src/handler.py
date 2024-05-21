@@ -639,7 +639,9 @@ class DataHandler(object):
                 self.log.debug(f'Export {i} but keep internal at the Alliance: {i.internal_reasons}')
             export_agr_dict = {}
             for attr in self.output_fields[output_set_name]:
-                if getattr(i.linkmldto, attr) is not None and getattr(i.linkmldto, attr) != []:
+                if attr in self.required_fields[output_set_name]:
+                    export_agr_dict[attr] = getattr(i.linkmldto, attr)
+                elif getattr(i.linkmldto, attr) is not None and getattr(i.linkmldto, attr) != []:
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)
             self.export_data[output_set_name].append(export_agr_dict)
         public_count = self.export_count - self.internal_count
