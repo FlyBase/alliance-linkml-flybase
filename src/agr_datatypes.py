@@ -35,6 +35,7 @@ class SubmittedObjectDTO(AuditedObjectDTO):
     """SubmittedObjectDTO Alliance class."""
     def __init__(self):
         """Create base AuditedObjectDTO for FlyBase objects."""
+        super().__init__()
         self.mod_entity_id = None
         self.mod_internal_id = None
         self.data_provider_dto = None
@@ -58,8 +59,7 @@ class ReagentDTO(AuditedObjectDTO):
         self.mod_entity_id = None          # Will be the MOD curie.
         self.mod_internal_id = None        # Will be the MOD internal db id.
         self.secondary_identifiers = []    # Will be list of 2o FB IDs (strings)
-        self.data_provider_dto = None
-        self.required_fields.extend(['mod_entity_id', 'data_provider_dto'])
+        self.required_fields.extend(['mod_entity_id'])
 
 
 class GenomicEntityDTO(BiologicalEntityDTO):
