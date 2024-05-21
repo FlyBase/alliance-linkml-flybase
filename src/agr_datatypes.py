@@ -156,7 +156,7 @@ class AlleleGeneAssociationDTO(AlleleGenomicEntityAssociationDTO):
             evidence_curies (list): A list of FB:FBrf or PMID:### curies.
 
         """
-        super().__init__(evidence_curies)
+        super().__init__()
         self.allele_identifier = allele_id
         self.relation_name = rel_type
         self.gene_identifier = gene_id
