@@ -59,6 +59,7 @@ class GeneHandler(FeatureHandler):
             'gene_curie',
             'internal',
             'relation_name',
+            'evidence_curies',
         ]
     }
     output_fields = {
