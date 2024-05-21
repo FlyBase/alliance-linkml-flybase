@@ -31,15 +31,23 @@ class AuditedObjectDTO(object):
         return export_dict
 
 
-class BiologicalEntityDTO(AuditedObjectDTO):
+class SubmittedObjectDTO(AuditedObjectDTO):
+    """SubmittedObjectDTO Alliance class."""
+    def __init__(self):
+        """Create base AuditedObjectDTO for FlyBase objects."""
+        self.mod_entity_id = None
+        self.mod_internal_id = None
+        self.data_provider_dto = None
+        self.required_fields.extend(['data_provider_dto'])
+
+
+class BiologicalEntityDTO(SubmittedObjectDTO):
     """BiologicalEntityDTO class."""
     def __init__(self):
         """Create BiologicalEntityDTO for FlyBase object."""
         super().__init__()
-        self.curie = None
         self.taxon_curie = None
-        self.data_provider_dto = None
-        self.required_fields.extend(['curie', 'taxon_curie', 'data_provider_dto'])
+        self.required_fields.extend(['taxon_curie'])
 
 
 class ReagentDTO(AuditedObjectDTO):
@@ -107,7 +115,7 @@ class GeneDTO(GenomicEntityDTO):
 # Primary Alliance DTO Classes for FlyBase relationships/annotations.
 class EvidenceAssociationDTO(AuditedObjectDTO):
     """EvidenceAssociationDTO class."""
-    def __init__(self, evidence_curies: list):
+    def __init__(self):
         """Create EvidenceAssociationDTO for FlyBase object.
 
         Args:
@@ -115,11 +123,28 @@ class EvidenceAssociationDTO(AuditedObjectDTO):
 
         """
         super().__init__()
-        self.evidence_curies = evidence_curies
+        self.evidence_curies = []
         self.required_fields.extend([])
 
 
-class AlleleGeneAssociationDTO(EvidenceAssociationDTO):
+class AlleleGenomicEntityAssociationDTO(EvidenceAssociationDTO):
+    """EvidenceAssociationDTO class."""
+    def __init__(self):
+        """Create EvidenceAssociationDTO for FlyBase object.
+
+        Args:
+            evidence_curies (list): A list of FB:FBrf or PMID:### curies.
+
+        """
+        super().__init__()
+        self.allele_identifier = None
+        self.relation_name = None
+        self.evidence_code_curie = None
+        self.note_dto = None
+        self.required_fields.extend(['allele_identifier', 'relation_name'])
+
+
+class AlleleGeneAssociationDTO(AlleleGenomicEntityAssociationDTO):
     """AlleleGeneAssociationDTO class."""
     def __init__(self, allele_id: str, rel_type: str, gene_id: str, evidence_curies: list):
         """Create ConstructGenomicEntityAssociationDTO for FlyBase object.
@@ -132,12 +157,11 @@ class AlleleGeneAssociationDTO(EvidenceAssociationDTO):
 
         """
         super().__init__(evidence_curies)
-        self.allele_curie = allele_id
+        self.allele_identifier = allele_id
         self.relation_name = rel_type
-        self.gene_curie = gene_id
-        self.evidence_code_curie = None
-        self.note_dto = None
-        self.required_fields.extend(['allele_curie', 'gene_curie'])
+        self.gene_identifier = gene_id
+        self.evidence_curies = evidence_curies
+        self.required_fields.extend(['gene_identifier'])
 
 
 class ConstructGenomicEntityAssociationDTO(EvidenceAssociationDTO):

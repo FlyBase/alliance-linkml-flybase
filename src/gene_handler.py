@@ -48,25 +48,23 @@ class GeneHandler(FeatureHandler):
     # Elaborate on export filters for GeneHandler.
     required_fields = {
         'gene_ingest_set': [
-            'curie',
             'data_provider_dto',
             'gene_symbol_dto',
             'internal',
+            'mod_entity_id',
             'taxon_curie',
         ],
         'allele_gene_association_ingest_set': [
-            'allele_curie',
-            'gene_curie',
+            'allele_identifier',
+            'gene_identifier',
             'internal',
             'relation_name',
-            'evidence_curies',
         ]
     }
     output_fields = {
         'gene_ingest_set': [
             'created_by_curie',
             'cross_reference_dtos',
-            'curie',
             'data_provider_dto',
             'date_created',
             'date_updated',
@@ -77,17 +75,18 @@ class GeneHandler(FeatureHandler):
             'gene_secondary_id_dtos',
             'gene_type_curie',
             'internal',
+            'mod_entity_id',
             'obsolete',
             # 'related_notes',    # Not present in GeneDTO.
             'taxon_curie',
             'updated_by_curie',
         ],
         'allele_gene_association_ingest_set': [
-            'allele_curie',
-            'gene_curie',
+            'allele_identifier',
+            'evidence_curies',
+            'gene_identifier',
             'internal',
             'relation_name',
-            'evidence_curies',
         ]
     }
     # Reference dicts.
@@ -232,7 +231,7 @@ class GeneHandler(FeatureHandler):
                 rel_dict = {
                     'allele_curie': f'FB:{self.feature_lookup[allele_id]["uniquename"]}',
                     'gene_curie': f'FB:{gene.uniquename}',
-                    'rel_type': 'alleleof',
+                    'rel_type': 'is_allele_of',
                     'pub_curies': pub_curie_list,
                     'obsolete': False,
                     'internal': False,
@@ -269,7 +268,7 @@ class GeneHandler(FeatureHandler):
         for gene in self.fb_data_entities.values():
             agr_gene = agr_datatypes.GeneDTO()
             agr_gene.obsolete = gene.chado_obj.is_obsolete
-            agr_gene.curie = f'FB:{gene.uniquename}'
+            agr_gene.mod_entity_id = f'FB:{gene.uniquename}'
             agr_gene.taxon_curie = gene.ncbi_taxon_id
             gene.linkmldto = agr_gene
         return
@@ -315,7 +314,7 @@ class GeneHandler(FeatureHandler):
         self.log.info('Map gene-allele associations to Alliance object.')
         counter = 0
         for feat_rel in self.gene_allele_associations:
-            rel_dto = agr_datatypes.AlleleGeneAssociationDTO(feat_rel.rel_dict['allele_curie'], 'alleleof',
+            rel_dto = agr_datatypes.AlleleGeneAssociationDTO(feat_rel.rel_dict['allele_curie'], feat_rel.rel_dict['rel_type'],
                                                              feat_rel.rel_dict['gene_curie'], feat_rel.rel_dict['pub_curies'])
             rel_dto.obsolete = feat_rel.rel_dict['obsolete']
             rel_dto.internal = feat_rel.rel_dict['internal']
