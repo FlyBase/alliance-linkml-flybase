@@ -283,7 +283,7 @@ class ConstructHandler(FeatureHandler):
         self.get_cons_genes_via_alleles(session)
         return
 
-    # Elaborate on synthesize_info() for the ConstructHandler.
+    # Add methods to be run by synthesize_info() below.
     def synthesize_encoded_tools(self):
         """Synthesize encoded components."""
         self.log.info('Synthesize encoded components.')
@@ -493,9 +493,15 @@ class ConstructHandler(FeatureHandler):
             self.log.info(f'Synthesized {counter} construct-gene associations.')
         return
 
+    # Elaborate on synthesize_info() for the ConstructHandler.
     def synthesize_info(self):
         """Extend the method for the ConstructHandler."""
         super().synthesize_info()
+        self.synthesize_ncbi_taxon_id()
+        self.synthesize_secondary_ids()
+        self.synthesize_synonyms()
+        self.synthesize_props()
+        self.synthesize_pubs()
         self.synthesize_encoded_tools()
         self.synthesize_component_genes()
         self.synthesize_reg_regions()
@@ -503,7 +509,7 @@ class ConstructHandler(FeatureHandler):
         self.synthesize_construct_genomic_entity_associations()
         return
 
-    # Elaborate on map_fb_data_to_alliance() for the ConstructHandler.
+    # Add methods to be run by map_fb_data_to_alliance() below.
     def map_construct_basic(self):
         """Map basic FlyBase construct data to the Alliance LinkML object."""
         self.log.info('Map basic construct info to Alliance object.')
@@ -559,6 +565,7 @@ class ConstructHandler(FeatureHandler):
         self.log.info(f'Mapped construct_relationships to {counter} ConstructGenomicEntityAssociationDTOs.')
         return
 
+    # Elaborate on map_fb_data_to_alliance() for the ConstructHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the ConstructHandler."""
         super().map_fb_data_to_alliance()

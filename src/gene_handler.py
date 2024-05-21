@@ -186,7 +186,7 @@ class GeneHandler(FeatureHandler):
         self.get_gene_alleles(session)
         return
 
-    # Elaborate on synthesize_info() for the GeneHandler.
+    # Add methods to be run by synthesize_info() below.
     def synthesize_gene_type(self):
         """Synthesize gene type."""
         self.log.info('Synthesize gene type.')
@@ -239,15 +239,21 @@ class GeneHandler(FeatureHandler):
         self.log.info(f'Found {allele_counter} alleles for {gene_counter} genes.')
         return
 
+    # Elaborate on synthesize_info() for the GeneHandler.
     def synthesize_info(self):
         """Extend the method for the GeneHandler."""
         super().synthesize_info()
+        self.synthesize_ncbi_taxon_id()
+        self.synthesize_secondary_ids()
+        self.synthesize_synonyms()
+        self.synthesize_props()
+        self.synthesize_pubs()
         self.synthesize_gene_type()
         self.synthesize_anno_ids()
         self.synthesize_gene_alleles()
         return
 
-    # Elaborate on map_fb_data_to_alliance() for the GeneHandler.
+    # Add methods to be run by map_fb_data_to_alliance() below.
     def map_gene_basic(self):
         """Map basic FlyBase gene data to the Alliance LinkML object."""
         self.log.info('Map basic gene info to Alliance object.')
@@ -309,6 +315,7 @@ class GeneHandler(FeatureHandler):
         self.log.info(f'Generated {counter} allele-gene associations.')
         return
 
+    # Elaborate on map_fb_data_to_alliance() for the GeneHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the GeneHandler."""
         super().map_fb_data_to_alliance()

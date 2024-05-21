@@ -18,7 +18,7 @@ from harvdev_utils.production import (
     FeatureRelationship
 )
 import agr_datatypes
-from handler import PrimaryEntityHandler
+from entity_handler import PrimaryEntityHandler
 
 
 class FeatureHandler(PrimaryEntityHandler):
@@ -27,12 +27,9 @@ class FeatureHandler(PrimaryEntityHandler):
         """Create the FeatureHandler object."""
         super().__init__(log, fb_data_type, testing)
 
-    def get_general_data(self, session):
-        """Extend the method for the FeatureHandler."""
-        super().get_general_data(session)
-        return
+    # Add methods to be run by get_general_data() below.
 
-    # Elaborate on get_datatype_data() for the FeatureHandler; sub-methods might only be used in some more specific Datahandlers.
+    # Add methods to be run by get_datatype_data() below.
     def get_annotation_ids(self, session):
         """Get annotation IDs (current and non-current)."""
         self.log.info('Get annotation IDs (current and non-current).')
@@ -231,12 +228,7 @@ class FeatureHandler(PrimaryEntityHandler):
         self.log.info(f'Added {counter} feature_relationship results to "{slot_name}" list.')
         return
 
-    def get_datatype_data(self, session):
-        """Extend the method for the FeatureHandler."""
-        super().get_datatype_data(session)
-        return
-
-    # Elaborate on synthesize_info() for the FeatureHandler; sub-methods might only be used in some more specific DataHandlers.
+    # Add methods to be run by synthesize_info() below.
     def synthesize_anno_ids(self):
         """Synthesize annotation IDs."""
         self.log.info('Synthesize annotation IDs.')
@@ -258,12 +250,7 @@ class FeatureHandler(PrimaryEntityHandler):
             fb_data_entity.alt_anno_ids.extend(alt_anno_ids)
         return
 
-    def synthesize_info(self):
-        """Extend the method for the FeatureHandler."""
-        super().synthesize_info()
-        return
-
-    # Elaborate on map_fb_data_to_alliance() for the FeatureHandler; sub-methods might only be used in some more specific DataHandlers.
+    # Add methods to be run by map_fb_data_to_alliance() below.
     def map_anno_ids_to_secondary_ids(self, slot_name):
         """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for annotation IDs."""
         self.log.info('Map annotation IDs to Alliance object.')
@@ -280,8 +267,3 @@ class FeatureHandler(PrimaryEntityHandler):
             curr_sec_id_dtos = getattr(fb_data_entity.linkmldto, slot_name)
             curr_sec_id_dtos.extend(anno_secondary_id_dtos)
         return anno_secondary_id_dtos
-
-    def map_fb_data_to_alliance(self):
-        """Extend the method for the FeatureHandler."""
-        super().map_fb_data_to_alliance()
-        return

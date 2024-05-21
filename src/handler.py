@@ -571,13 +571,10 @@ class DataHandler(object):
         self.log.info(f'Found an additional {counter} RNAi reagent alleles via mutagen terms.')
         return
 
+    # The get_general_data() wrapper; sub-methods are defined and called in more specific DataHandler types.
     def get_general_data(self, session):
         """Get general FlyBase chado data."""
         self.log.info('GET GENERAL FLYBASE DATA FROM CHADO.')
-        # self.sqlalchemy_test(session)    # For quick dev/debugging only.
-        self.build_bibliography(session)
-        self.build_cvterm_lookup(session)
-        self.build_ncbi_taxon_lookup(session)
         return
 
     # The get_datatype_data() wrapper; sub-methods are defined and called in more specific DataHandler types.

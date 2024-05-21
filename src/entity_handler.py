@@ -354,7 +354,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Obtained timestamps for {audit_chado_counter} entities directly from the audit_chado table.')
         return
 
-    # Elaborate on synthesize_info() for the PrimaryEntityHandler; sub-methods might only be used in some more specific DataHandlers.
+    # Add methods to be run by synthesize_info() below.
     def synthesize_ncbi_taxon_id(self):
         """Determine the NCBITaxon ID for FB entities."""
         self.log.info('Determine the NCBITaxon ID for FB entities.')
@@ -477,17 +477,7 @@ class PrimaryEntityHandler(DataHandler):
             fb_data_entity.all_pub_ids = list(set(fb_data_entity.all_pub_ids))
         return
 
-    def synthesize_info(self):
-        """Extend the method for the PrimaryEntityHandler."""
-        super().synthesize_info()
-        self.synthesize_ncbi_taxon_id()
-        self.synthesize_secondary_ids()
-        self.synthesize_synonyms()
-        self.synthesize_props()
-        self.synthesize_pubs()
-        return
-
-    # Elaborate on map_fb_data_to_alliance() for the PrimaryEntityHandler; sub-methods might only be used in some more specific DataHandlers.
+    # Add methods to be run by map_fb_data_to_alliance() below.
     def map_data_provider_dto(self):
         """Return the DataProviderDTO for the FB data entity."""
         # Note - this method is depends on previous determination of fb_data_entity.curr_fb_symbol by map_synonyms(), if applicable.
@@ -661,9 +651,4 @@ class PrimaryEntityHandler(DataHandler):
                     fb_data_entity.internal_reasons.append('Obsolete')
             except AttributeError:
                 self.log.error('LinkMLDTO entity lacks obsolete attribute.')
-        return
-
-    def map_fb_data_to_alliance(self):
-        """Extend the method for the PrimaryEntityHandler."""
-        super().map_fb_data_to_alliance()
         return
