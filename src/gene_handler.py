@@ -50,6 +50,7 @@ class GeneHandler(FeatureHandler):
         'gene_ingest_set': [
             'data_provider_dto',
             'gene_symbol_dto',
+            'gene_type_curie',
             'internal',
             'mod_entity_id',
             'taxon_curie',
