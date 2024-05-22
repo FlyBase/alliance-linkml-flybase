@@ -118,6 +118,13 @@ class DataHandler(object):
         'MGD': 'MGI',
         'MGI': 'MGI'
     }
+    # Specify page_area for cross-references for specific external databases.
+    # For Alliance MODs, the page_area will be the data type: e.g., gene.s
+    agr_page_area_dict = {
+        'NCBI_Gene': 'default',
+        'RNAcentral': 'default',
+        'UniProtKB': 'default',
+    }
     # Useful regexes.
     regex = {
         'pub': r'^(FBrf[0-9]{7}|unattributed)$',
