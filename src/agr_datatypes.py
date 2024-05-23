@@ -58,7 +58,7 @@ class ReagentDTO(AuditedObjectDTO):
         super().__init__()
         self.mod_entity_id = None          # Will be the MOD curie.
         self.mod_internal_id = None        # Will be the MOD internal db id.
-        self.secondary_identifiers = []    # Will be list of 2o FB IDs (strings)
+        self.secondary_identifiers = []    # Will be list of 2o FB IDs (strings).
         self.required_fields.extend(['mod_entity_id'])
 
 
