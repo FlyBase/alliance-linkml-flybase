@@ -124,7 +124,7 @@ class AllianceAllele(object):
         self.date_updated = None                               # Latest timestamp.
         # Attributes for the Alliance SubmittedObjectDTO.
         self.mod_entity_id = 'FB:{}'.format(feature.uniquename)
-        self.mod_internal_id = self.feature.feature_id
+        self.mod_internal_id = str(self.feature.feature_id)
         self.data_provider_dto = None                          # Will be DataProviderDTO object.
         # Attributes for the Alliance BiologicalEntityDTO.
         self.taxon_curie = None                                # A string representing the NCBI taxon ID. We have no NCBI taxonID for 223 alleles.
