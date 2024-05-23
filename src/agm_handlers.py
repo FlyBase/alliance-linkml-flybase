@@ -31,9 +31,9 @@ class StrainHandler(PrimaryEntityHandler):
     # Elaborate on export filters for StrainHandler.
     required_fields = {
         'agm_ingest_set': [
-            'curie',
             'data_provider_dto',
             'internal',
+            'mod_entity_id',
             'subtype_name',
             'taxon_curie',
         ],
@@ -43,11 +43,12 @@ class StrainHandler(PrimaryEntityHandler):
             'agm_secondary_id_dtos',
             'created_by_curie',
             'cross_reference_dtos',
-            'curie',
             'data_provider_dto',
             'date_created',
             'date_updated',
             'internal',
+            'mod_entity_id',
+            'mod_internal_id',
             'updated_by_curie',
             'name',
             'obsolete',
@@ -96,7 +97,8 @@ class StrainHandler(PrimaryEntityHandler):
         for strain in self.fb_data_entities.values():
             agr_strain = agr_datatypes.AffectedGenomicModelDTO()
             agr_strain.obsolete = strain.chado_obj.is_obsolete
-            agr_strain.curie = f'FB:{strain.uniquename}'
+            agr_strain.mod_entity_id = f'FB:{strain.uniquename}'
+            agr_strain.mod_internal_id = str(agr_strain.chado_obj.strain_id)
             agr_strain.taxon_curie = strain.ncbi_taxon_id
             agr_strain.name = strain.name
             agr_strain.subtype_name = 'strain'
