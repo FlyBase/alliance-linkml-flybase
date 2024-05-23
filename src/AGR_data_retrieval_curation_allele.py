@@ -92,8 +92,6 @@ class AllianceAllele(object):
         """
         # Attributes representing unprocessed FlyBase data.
         # Note: use attribute names that do not match an Alliance LinkML slot name.
-        # Problems with Allele LinkML:
-        # 1. Allele.taxon_curie is required, but even after updating NCBITaxon info at FlyBase, not all alleles will have NCBI taxon ID.
         self.feature = feature                             # The Feature object corresponding to the FlyBase allele, insertion or aberration/balancer.
         self.organism_abbr = None                          # Will be the organism.abbreviation for the allele's species of origin.
         self.adj_organism_abbr = 'Dmel'                    # Assume allele is Dmel (classical/transgenic) unless allele is of classical type in another insect.
@@ -117,46 +115,45 @@ class AllianceAllele(object):
         self.ins_libraries = []                            # Will be a list of Library objects related to the allele via insertion (FBti).
         self.cons_libraries = []                           # Will be a list of Library objects related to the allele via construct (FBtp).
         self.sf_libraries = []                             # Will be a list of Library objects related to the allele via seq. feature (FBsf).
-        # Attributes for the Alliance AuditedObject.
+        # Attributes for the Alliance AuditedObjectDTO.
         self.obsolete = feature.is_obsolete                    # Will be the FlyBase value here.
         self.internal = False                                  # Change to true if not public on FlyBase.
         self.created_by_curie = 'FB:FB_curator'                # Use placeholder value since no Person object at FlyBase.
         self.updated_by_curie = 'FB:FB_curator'                # Use placeholder value since no Person object at FlyBase.
         self.date_created = None                               # Earliest timestamp.
         self.date_updated = None                               # Latest timestamp.
-        # Attributes for the Alliance BiologicalEntity. BiologicalEntity is_a AuditedObject.
-        self.curie = 'FB:{}'.format(feature.uniquename)
-        self.taxon_curie = None                                # A string representing the NCBI taxon ID. We have no NCBI taxonID for 223 alleles.
+        # Attributes for the Alliance SubmittedObjectDTO.
+        self.mod_entity_id = 'FB:{}'.format(feature.uniquename)
+        self.mod_internal_id = self.feature.feature_id
         self.data_provider_dto = None                          # Will be DataProviderDTO object.
-        # Attributes for the Alliance GenomicEntity. GenomicEntity is_a BiologicalEntity.
+        # Attributes for the Alliance BiologicalEntityDTO.
+        self.taxon_curie = None                                # A string representing the NCBI taxon ID. We have no NCBI taxonID for 223 alleles.
+        # Attributes for the Alliance GenomicEntityDTO.
         self.cross_reference_dtos = []                         # Report only select dbs, using AGR-accepted db_prefix.
-        self.genomic_location_association_dtos = []            # N/A.
-        # Attributes for the Alliance Allele. Allele is_a GenomicEntity.
+        # Attributes for the Alliance AlleleDTO.
         self.allele_symbol_dto = None                          # Will be a single SymbolSlotAnnotationDTO.
         self.allele_full_name_dto = None                       # Will be a single FullNameSlotAnnotation.
-        self.allele_synonym_dtos = []                          # Will be list of NameSlotAnnotationDTO objects.
-        self.allele_secondary_id_dtos = []                     # Only 2o FlyBase IDs
-        self.in_collection_name = None                         # Will be library.name.
-        self.is_extinct = None                                 # Make True if extinction reported; make False is stock exists; leave as None otherwise.
         self.reference_curies = []                             # Will be a list of reference curies (directly or indirectly related).
-        self.allele_database_status_dto = None                 # Use term from "allele database status" CV.
-        self.allele_inheritance_mode_dtos = []                 # Will be list of slot annotations. TEMPORARY: Suppress phenotype_curie_term.
+        self.in_collection_name = None                         # Will be library.name.
+        self.laboratory_of_origin_curie = None                 # N/A (WB).
+        self.is_extinct = None                                 # Make True if extinction reported; make False is stock exists; leave as None otherwise.
+        self.is_extrachromosomal = None                        # N/A (WB).
+        self.is_integrated = None                              # N/A (WB).
+        self.transgene_chromosome_location_curie = None        # ToDo - get chr via FBtp from FBti floc, derived_chromosome_location featureprop, or dock site.
+        self.note_dtos = []                                    # ToDo - Waiting on "Allele Note Type" CV. Get from featureprop.
         self.allele_mutation_type_dtos = []                    # Will be list of slot annotations.
-        # Future ToDo:
+        self.allele_inheritance_mode_dtos = []                 # Will be list of slot annotations. TEMPORARY: Suppress phenotype_curie_term.
+        self.allele_germline_transmission_status_dto = None    # N/A (MGI).
         self.allele_functional_impact_dtos = []                # ToDo - Waiting on "Functional Impact" CV. Get feature_cvterm, child of "allele class" term.
+        self.allele_database_status_dto = None                 # Use term from "allele database status" CV.
+        self.allele_secondary_id_dtos = []                     # Only 2o FlyBase IDs
+        self.allele_nomenclature_event_dtos = []               # N/A.
+        self.allele_synonym_dtos = []                          # Will be list of NameSlotAnnotationDTO objects.
+        # Future ToDo:
         # Possibly relevant
         # cvterms from "FlyBase miscellaneous CV" in the "allele class" branch.
         # cvterms from "FlyBase miscellaneous CV" having "tool_uses" feature_cvtermprop type.
         # cvterms from "SO" having "transgenic_product_class" feature_cvtermprop type.
-
-        self.transgene_chromosome_location_curie = None        # ToDo - get chr via FBtp from FBti floc, derived_chromosome_location featureprop, or dock site.
-        self.allele_note_dtos = []                             # ToDo - Waiting on "Allele Note Type" CV. Get from featureprop.
-        # These do not apply to FlyBase.
-        self.allele_nomenclature_event_dtos = []               # N/A.
-        self.allele_germline_transmission_status_dto = None    # N/A (MGI).
-        self.is_extrachromosomal = None                        # N/A (WB).
-        self.is_integrated = None                              # N/A (WB).
-        self.laboratory_of_origin_curie = None                 # N/A (WB).
         # Notes associated with the object.
         self.for_alliance_export = True                        # Change to False if object should be excluded from export.
         self.internal_reasons = []                             # Reasons for marking an object as internal in the export file.
@@ -209,7 +206,7 @@ class AlleleHandler(object):
     # Export fields.
     required_fields = [
         'allele_symbol_dto',
-        'curie',
+        'mod_entity_id',
         'data_provider_dto',
         'internal',
         'taxon_curie',
@@ -220,13 +217,14 @@ class AlleleHandler(object):
         # 'allele_functional_impact_dtos',
         'allele_inheritance_mode_dtos',
         'allele_mutation_type_dtos',
-        # 'allele_note_dtos',
+        # 'note_dtos',
         'allele_secondary_id_dtos',
         'allele_symbol_dto',
         'allele_synonym_dtos',
         'created_by_curie',
         'cross_reference_dtos',
-        'curie',
+        'mod_entity_id',
+        'mod_internal_id',
         'data_provider_dto',
         'date_created',
         'date_updated',
@@ -615,7 +613,8 @@ class AlleleHandler(object):
             try:
                 allele.taxon_curie = f'NCBITaxon:{organism_taxon_dict[allele.adj_organism_abbr]}'
             except KeyError:
-                log.debug('No NCBI taxon ID available for: {}'.format(allele))
+                log.warning(f'Use "unidentified" NCBITaxon ID for {allele}')
+                allele.taxon_curie = 'NCBITaxon:32644'
         return
 
     def get_synonyms(self, session):
