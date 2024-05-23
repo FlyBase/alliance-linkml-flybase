@@ -525,7 +525,10 @@ class PrimaryEntityHandler(DataHandler):
                 # Build Alliance xref DTO
                 prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
                 # The page_area assignment assumes that the self.fb_data_type has a matching value in the Alliance resourceDescriptors.yaml page.
-                page_area = self.fb_data_type
+                try:
+                    page_area = self.agr_page_area_dict[prefix]
+                except KeyError:
+                    page_area = self.fb_data_type
                 # Clean up cases where the db prefix is redundantly included at the start of the dbxref.accession.
                 redundant_prefix = f'{prefix}:'
                 if xref.dbxref.accession.startswith(redundant_prefix):

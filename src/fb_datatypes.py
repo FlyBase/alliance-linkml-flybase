@@ -13,10 +13,10 @@ Author(s):
 # FlyBase Classes
 # Attributes are sorted into "primary chado data" (i.e., query results) and
 # processed data (synthesis of sql results).
-class FBEntity(object):
-    """A generic FlyBase entity."""
+class FBExportEntity(object):
+    """A generic FlyBase data export entity."""
     def __init__(self):
-        """Create a FBEntity object with bins for Alliance mapping."""
+        """Create a FBExportEntity object with bins for Alliance mapping."""
         self.db_primary_id = None     # Table primary key (or concatenation).
         self.uniq_key = None          # Uniquely identifying string.
         self.org_abbr = None          # Organism.abbreviation, if applicable.
@@ -34,7 +34,7 @@ class FBEntity(object):
 
 
 # A placeholder for development of association/annotation export.
-class FBAssociation(FBEntity):
+class FBAssociation(FBExportEntity):
     """An abstract, generic FlyBase association/annotation."""
     def __init__(self):
         """Create a FBAssociation object."""
@@ -42,8 +42,15 @@ class FBAssociation(FBEntity):
 
 
 # Objects below exclude associations/annotations.
-class FBDataEntity(FBEntity):
-    """An abstract, generic FlyBase data entity with all it related data."""
+class FBDataEntity(FBExportEntity):
+    """An abstract, generic FlyBase data export entity for first class entities.
+
+    First class entities refer to object that typically have a FlyBase curie
+    and a dedicated web report: e.g., gene, strain, genotype, gene group. These
+    entities are the subjects of relationships and annotations; they typically
+    have related "_cvterm", "prop", "_pub" tables, etc.
+
+    """
     def __init__(self, chado_obj):
         """Create a FBDataEntity object from the main db entry.
 
@@ -120,9 +127,9 @@ class FBGene(FBFeature):
         self.gene_snapshots = []      # Will be "gene_summary_text" Featureprops.
         self.allele_rels = []         # Direct FBal "alleleof" FBgn FeatureRelationships.
         # Processed FB data.
-        self.gene_type_name = None    # Will be SO term name from "promoted_gene_type" Featureprop.
-        self.gene_type_id = None      # Will be SO term ID from "promoted_gene_type" Featureprop.
-        self.alleles = {}             # Will be allele_id-keyed list of pub curies.
+        self.gene_type_name = 'gene'        # Will be SO term name from "promoted_gene_type" Featureprop, if available.
+        self.gene_type_id = 'SO:0000704'    # Will be SO term ID from "promoted_gene_type" Featureprop, if available.
+        self.alleles = {}                   # Will be allele_id-keyed list of pub curies.
 
 
 class FBConstruct(FBFeature):

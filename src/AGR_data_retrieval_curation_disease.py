@@ -15,7 +15,7 @@ Notes:
     This script exports disease annotations to a JSON file conforming to LinkML
     specs for the curation (i.e., "persistent") database; distinct from DAF
     file specs for the original Neo4j drop-and-reload database.
-    To Do - report non-MOD inferred_gene_curie once supported by Alliance again (v1.7.0?)
+    To Do - report non-MOD inferred_gene_identifier once supported by Alliance again (v1.7.0?)
     To Do - convert multi-allele annotations into AGM annotations.
 
 """
@@ -90,7 +90,6 @@ class DiseaseAnnotation(object):
 
         """
         # FlyBase data
-        self.mod_internal_id = f'FB:{feature_cvterm.feature_cvterm_id}_{provenance_prop.rank}'
         self.feature_cvterm = feature_cvterm                  # The FeatureCvterm object.
         self.provenance = provenance_prop                     # The "provenance" FeatureCvtermprop.
         self.evidence_code = None                             # Will be the "evidence_code" FeatureCvtermprop.
@@ -107,28 +106,31 @@ class DiseaseAnnotation(object):
         self.updated_by_curie = 'FB:FB_curator'               # Use placeholder value since no Person object at FlyBase.
         self.date_created = None                              # Not straightforward as half of relevant annotations are derived in the reporting build.
         self.date_updated = None                              # Not straightforward as half of relevant annotations are derived in the reporting build.
+        # Attributes for the Alliance SingleReferenceAssociationDTO.
+        self.reference_curie = None                           # Will be the of pub curie.
+        # Attributes for the Alliance AnnotationDTO.
+        self.mod_internal_id = f'FB:{feature_cvterm.feature_cvterm_id}_{provenance_prop.rank}'
+        self.mod_entity_id = None                             # N/A to FlyBase data.
+        self.note_dtos = []                                   # N/A to FlyBase data.
+        self.data_provider_dto = None                         # Generate DataProviderDTO object once we have the do_term_curie.
+        self.condition_relation_dtos = []                     # N/A to FlyBase data.
         # Attributes for the Alliance DiseaseAnnotationDTO.
         self.disease_relation_name = 'is_implicated_in'       # "Allele disease relations" CV (slot usage from AlleleDiseaseAnnotation)
         self.do_term_curie = None                             # Provide DOID (slot usage from DiseaseAnnotation).
-        self.mod_entity_id = None                             # N/A to FlyBase data.
         self.negated = False                                  # Change to True for "NOT" annotations.
-        self.reference_curie = None                           # Will be the of pub curie.
         self.evidence_code_curies = []                        # Set as appropriate.
         self.annotation_type_name = 'manually_curated'        # "Annotation types" CV.
-        self.with_gene_curies = []                            # N/A to FlyBase data.
+        self.with_gene_identifiers = []                       # N/A to FlyBase data.
         self.evidence_curies = []                             # N/A to FlyBase data.
         self.disease_qualifier_names = []                     # N/A to FlyBase data. "Disease Qualifiers" CV.
-        self.condition_relation_dtos = []                     # N/A to FlyBase data.
         self.genetic_sex_name = None                          # N/A to FlyBase data. "Genetic sexes" CV.
-        self.note_dtos = []                                   # N/A to FlyBase data.
         self.data_provider_name = 'FB'                        # Retired in v1.6.0.
-        self.data_provider_dto = None                         # Generate DataProviderDTO object once we have the do_term_curie.
         self.secondary_data_provider_dto = None               # N/A to FlyBase data.
-        self.disease_genetic_modifier_curies = None           # Gene, Allele or AGM curie.
+        self.disease_genetic_modifier_identifiers = None           # Gene, Allele or AGM curie.
         self.disease_genetic_modifier_relation_name = None    # "Disease genetic modifier relations" CV.
         # Attributes for the Alliance AlleleDiseaseAnnotationDTO.
-        self.allele_curie = None                              # Provide allele curie.
-        self.inferred_gene_curie = None                       # Gene inferred to be associated with the disease annotation based on curated allele.
+        self.allele_identifier = None                              # Provide allele curie.
+        self.inferred_gene_identifier = None                       # Gene inferred to be associated with the disease annotation based on curated allele.
         # Notes associated with the object.
         self.for_alliance_export = True                       # Change to False if object should be excluded from export.
         self.internal_reasons = []                            # Reasons for marking an object as internal (exported but not displayed at Alliance).
@@ -184,7 +186,7 @@ class DAFMaker(object):
         'CEC': 'ECO:0007014'
     }
     required_fields = [
-        'allele_curie',
+        'allele_identifier',
         'data_provider_dto',
         'disease_relation_name',
         'do_term_curie',
@@ -193,18 +195,18 @@ class DAFMaker(object):
         'reference_curie',
     ]
     output_fields = [
-        'allele_curie',
+        'allele_identifier',
         'annotation_type_name',
         'created_by_curie',
         'data_provider_dto',
         'date_created',
         'date_updated',
-        'disease_genetic_modifier_curies',
+        'disease_genetic_modifier_identifiers',
         'disease_genetic_modifier_relation_name',
         'disease_relation_name',
         'do_term_curie',
         'evidence_code_curies',
-        'inferred_gene_curie',
+        'inferred_gene_identifier',
         'internal',
         'mod_internal_id',
         'negated',
@@ -481,10 +483,10 @@ class DAFMaker(object):
         for dis_anno in self.dis_anno_dict.values():
             log.debug('Evaluating annotation: {}'.format(dis_anno))
             # Get allele, DO term and pub.
-            dis_anno.allele_curie = 'FB:{}'.format(dis_anno.feature_cvterm.feature.uniquename)
+            dis_anno.allele_identifier = 'FB:{}'.format(dis_anno.feature_cvterm.feature.uniquename)
             dis_anno.do_term_curie = 'DOID:{}'.format(dis_anno.feature_cvterm.cvterm.dbxref.accession)
             dis_anno.reference_curie = self.get_pub_xref(session, dis_anno.feature_cvterm.pub.uniquename)
-            dis_anno.inferred_gene_curie = self.get_inferred_gene(session, dis_anno.feature_cvterm.feature.feature_id)
+            dis_anno.inferred_gene_identifier = self.get_inferred_gene(session, dis_anno.feature_cvterm.feature.feature_id)
             this_data_provider_dto = self.generic_data_provider_dto.copy()
             this_data_provider_dto['cross_reference_dto'] = self.generic_cross_reference_dto.copy()
             this_data_provider_dto['cross_reference_dto']['referenced_curie'] = dis_anno.do_term_curie
@@ -513,12 +515,12 @@ class DAFMaker(object):
                     if re.search(allele_regex, dis_anno.evidence_code.value):
                         allele_id = re.search(allele_regex, dis_anno.evidence_code.value).group(0)
                         if self.confirm_current_allele_by_uniquename(session, allele_id):
-                            dis_anno.disease_genetic_modifier_curies = ['FB:{}'.format(allele_id)]
+                            dis_anno.disease_genetic_modifier_identifiers = ['FB:{}'.format(allele_id)]
                         else:
                             # Look up current allele by 2o ID. Use that.
                             curr_allele_id = self.get_current_id_for_allele(session, allele_id)
                             if curr_allele_id:
-                                dis_anno.disease_genetic_modifier_curies = ['FB:{}'.format(curr_allele_id)]
+                                dis_anno.disease_genetic_modifier_identifiers = ['FB:{}'.format(curr_allele_id)]
                                 dis_anno.modifier_id_was_updated = True
                             else:
                                 dis_anno.modifier_problem = True
@@ -551,13 +553,13 @@ class DAFMaker(object):
 
     def derive_agr_uniq_key(self, dis_anno):
         """Derive the AGR unique key based on defining features of FB disease annotations."""
-        dis_anno.agr_uniq_key = f'{dis_anno.allele_curie}||{dis_anno.do_term_curie}||{dis_anno.disease_relation_name}'
+        dis_anno.agr_uniq_key = f'{dis_anno.allele_identifier}||{dis_anno.do_term_curie}||{dis_anno.disease_relation_name}'
         dis_anno.agr_uniq_key += f'||{dis_anno.negated}||{dis_anno.reference_curie}'
         evi_codes = sorted(list(set(dis_anno.evidence_code_curies)))
         evi_code_str = '|'.join(evi_codes)
         dis_anno.agr_uniq_key += f'||{evi_code_str}'
-        if dis_anno.disease_genetic_modifier_curies:
-            dis_anno.agr_uniq_key += f'||{dis_anno.disease_genetic_modifier_curies[0]}'
+        if dis_anno.disease_genetic_modifier_identifiers:
+            dis_anno.agr_uniq_key += f'||{dis_anno.disease_genetic_modifier_identifiers[0]}'
         else:
             dis_anno.agr_uniq_key += f'{None}'
         dis_anno.agr_uniq_key += f'||{dis_anno.disease_genetic_modifier_relation_name}'
