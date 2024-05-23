@@ -25,7 +25,7 @@ class ConstructHandler(FeatureHandler):
         """Create the ConstructHandler object."""
         super().__init__(log, fb_data_type, testing)
         # Additional set for export added to the handler.
-        self.construct_associations = []            # Will be a list of FBEntity objects (relationships), map to ConstructGenomicEntityAssociationDTO.
+        self.construct_associations = []            # Will be a list of FBExportEntity objects (relationships), map to ConstructGenomicEntityAssociationDTO.
         # Lookups needed.
         self.allele_gene_lookup = {}                # Will be allele feature_id-keyed of a single gene feature_id per allele.
         self.seqfeat_gene_lookup = {}               # Will be seqfeat feature_id-keyed of a lists of gene feature_ids.
@@ -485,7 +485,7 @@ class ConstructHandler(FeatureHandler):
                     if self.feature_lookup[feature_id]['is_obsolete'] is True:
                         rel_dict['obsolete'] = True
                         rel_dict['internal'] = True
-                    feat_rel = fb_datatypes.FBEntity()
+                    feat_rel = fb_datatypes.FBExportEntity()
                     feat_rel.rel_dict = rel_dict
                     feat_rel.entity_desc = f'{rel_dict["construct_identifier"]}_{rel_dict["rel_type"]}_{rel_dict["genomic_entity_identifier"]}'
                     self.construct_associations.append(feat_rel)

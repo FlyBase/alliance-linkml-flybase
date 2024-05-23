@@ -23,7 +23,7 @@ class GeneHandler(FeatureHandler):
         """Create the GeneHandler object."""
         super().__init__(log, fb_data_type, testing)
         # Additional set for export added to the handler.
-        self.gene_allele_associations = []    # Will be list of FBEntity objects (relationships).
+        self.gene_allele_associations = []    # Will be list of FBExportEntity objects (relationships).
         # Lookups needed.
         self.pthr_dict = {}    # Will be an 1:1 FBgn_ID-PTHR xref dict.
 
@@ -241,7 +241,7 @@ class GeneHandler(FeatureHandler):
                 if gene.is_obsolete is True or self.feature_lookup[allele_id]['is_obsolete'] is True:
                     rel_dict['obsolete'] = True
                     rel_dict['internal'] = True
-                feat_rel = fb_datatypes.FBEntity()
+                feat_rel = fb_datatypes.FBExportEntity()
                 feat_rel.rel_dict = rel_dict
                 feat_rel.entity_desc = f'{rel_dict["allele_curie"]}_{rel_dict["rel_type"]}_{rel_dict["gene_curie"]}'
                 self.gene_allele_associations.append(feat_rel)
