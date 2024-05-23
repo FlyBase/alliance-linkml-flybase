@@ -122,8 +122,6 @@ class EvidenceAssociationDTO(AuditedObjectDTO):
             evidence_curies (list): A list of FB:FBrf or PMID:### curies.
 
         """
-        # super().__init__()
-        # self.evidence_curies = []
         super().__init__()
         self.evidence_curies = evidence_curies
         self.required_fields.extend([])
@@ -131,14 +129,14 @@ class EvidenceAssociationDTO(AuditedObjectDTO):
 
 class AlleleGenomicEntityAssociationDTO(EvidenceAssociationDTO):
     """AlleleGenomicEntityAssociationDTO class."""
-    def __init__(self):
+    def __init__(self, evidence_curies):
         """Create EvidenceAssociationDTO for FlyBase object.
 
         Args:
             evidence_curies (list): A list of FB:FBrf or PMID:### curies.
 
         """
-        super().__init__()
+        super().__init__(evidence_curies)
         self.allele_identifier = None
         self.relation_name = None
         self.evidence_code_curie = None
@@ -158,7 +156,7 @@ class AlleleGeneAssociationDTO(AlleleGenomicEntityAssociationDTO):
             evidence_curies (list): A list of FB:FBrf or PMID:### curies.
 
         """
-        super().__init__()
+        super().__init__(evidence_curies)
         self.allele_identifier = allele_id
         self.relation_name = rel_type
         self.gene_identifier = gene_id
