@@ -61,18 +61,32 @@ class StrainHandler(PrimaryEntityHandler):
     def get_general_data(self, session):
         """Extend the method for the StrainHandler."""
         super().get_general_data(session)
+        self.build_bibliography(session)
+        self.build_cvterm_lookup(session)
+        self.build_ncbi_taxon_lookup(session)
         return
 
     # Elaborate on get_datatype_data() for the StrainHandler.
     def get_datatype_data(self, session):
         """Extend the method for the StrainHandler."""
         super().get_datatype_data(session)
+        self.get_entities(session)
+        self.get_entity_pubs(session)
+        self.get_entity_synonyms(session)
+        self.get_entity_fb_xrefs(session)
+        self.get_entity_xrefs(session)
+        self.get_entity_timestamps(session)
         return
 
     # Elaborate on synthesize_info() for the StrainHandler.
     def synthesize_info(self):
         """Extend the method for the StrainHandler."""
         super().synthesize_info()
+        self.synthesize_ncbi_taxon_id()
+        self.synthesize_secondary_ids()
+        self.synthesize_synonyms()
+        self.synthesize_props()
+        self.synthesize_pubs()
         return
 
     # Elaborate on map_fb_data_to_alliance() for the StrainHandler.
