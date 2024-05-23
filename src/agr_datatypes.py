@@ -128,7 +128,7 @@ class EvidenceAssociationDTO(AuditedObjectDTO):
 
 
 class AlleleGenomicEntityAssociationDTO(EvidenceAssociationDTO):
-    """EvidenceAssociationDTO class."""
+    """AlleleGenomicEntityAssociationDTO class."""
     def __init__(self):
         """Create EvidenceAssociationDTO for FlyBase object.
 
@@ -147,7 +147,7 @@ class AlleleGenomicEntityAssociationDTO(EvidenceAssociationDTO):
 class AlleleGeneAssociationDTO(AlleleGenomicEntityAssociationDTO):
     """AlleleGeneAssociationDTO class."""
     def __init__(self, allele_id: str, rel_type: str, gene_id: str, evidence_curies: list):
-        """Create ConstructGenomicEntityAssociationDTO for FlyBase object.
+        """Create AlleleGeneAssociationDTO for FlyBase object.
 
         Args:
             allele_id (str): The FB:FBal curie for the allele subject.
@@ -179,9 +179,9 @@ class ConstructGenomicEntityAssociationDTO(EvidenceAssociationDTO):
         super().__init__(evidence_curies)
         self.construct_identifier = construct_id
         self.genomic_entity_relation_name = rel_type
-        self.genomic_entity_curie = genomic_id
+        self.genomic_entity_identifier = genomic_id
         self.note_dtos = []
-        self.required_fields.extend(['construct_identifier', 'genomic_entity_relation_name', 'genomic_entity_curie'])
+        self.required_fields.extend(['construct_identifier', 'genomic_entity_relation_name', 'genomic_entity_identifier'])
 
 
 # Secondary Alliance DTO Classes for FlyBase data.
