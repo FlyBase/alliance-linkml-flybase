@@ -115,15 +115,17 @@ class GeneDTO(GenomicEntityDTO):
 # Primary Alliance DTO Classes for FlyBase relationships/annotations.
 class EvidenceAssociationDTO(AuditedObjectDTO):
     """EvidenceAssociationDTO class."""
-    def __init__(self):
+    def __init__(self, evidence_curies):
         """Create EvidenceAssociationDTO for FlyBase object.
 
         Args:
             evidence_curies (list): A list of FB:FBrf or PMID:### curies.
 
         """
+        # super().__init__()
+        # self.evidence_curies = []
         super().__init__()
-        self.evidence_curies = []
+        self.evidence_curies = evidence_curies
         self.required_fields.extend([])
 
 
@@ -180,6 +182,7 @@ class ConstructGenomicEntityAssociationDTO(EvidenceAssociationDTO):
         self.construct_identifier = construct_id
         self.genomic_entity_relation_name = rel_type
         self.genomic_entity_identifier = genomic_id
+        # self.evidence_curies = evidence_curies
         self.note_dtos = []
         self.required_fields.extend(['construct_identifier', 'genomic_entity_relation_name', 'genomic_entity_identifier'])
 
