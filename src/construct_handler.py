@@ -517,6 +517,7 @@ class ConstructHandler(FeatureHandler):
             agr_construct = agr_datatypes.ConstructDTO()
             agr_construct.obsolete = construct.chado_obj.is_obsolete
             agr_construct.mod_entity_id = f'FB:{construct.uniquename}'
+            agr_construct.mod_internal_id = construct.chado_obj.feature_id
             construct.linkmldto = agr_construct
         return
 
