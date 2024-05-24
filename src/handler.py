@@ -698,16 +698,20 @@ class DataHandler(object):
             export_agr_dict = {}
             # BOB - try to rely on agr_datatypes required_fields
             # for attr in self.output_fields[output_set_name]:
-            self.log.debug(f'BOB: Have this object type: {type(i.linkmldto)}')
-            self.log.debug(f'BOB: Have these attributes: {dir(i.linkmldto)}')
-            self.log.debug(f'BILLY: Have these dict keys: {i.linkmldto.__dict__.keys()}')
+            self.log.debug(f'BOB1: Have this object type: {type(i.linkmldto)}')
+            self.log.debug(f'BOB2: Have these dict keys: {i.linkmldto.__dict__.keys()}')
+            self.log.debug(f'BOB3: Have these required fields: {i.linkmldto.required_fields}')
+            self.log.debug(f'BOB4: Have these internal fields: {i.linkmldto.internal_fields}')
             for attr in i.linkmldto.__dict__.keys():
                 # if attr in self.required_fields[output_set_name]:
                 if attr in i.linkmldto.internal_fields:
+                    self.log.debug(f'Skip this field: {attr}')
                     continue
                 elif attr in i.linkmldto.required_fields:
+                    self.log.debug(f'Export required field: {attr}')
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)
                 elif getattr(i.linkmldto, attr) is not None and getattr(i.linkmldto, attr) != []:
+                    self.log.debug(f'Export optional non-emptyp field: {attr}')
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)
             self.export_data[output_set_name].append(export_agr_dict)
         public_count = self.export_count - self.internal_count
