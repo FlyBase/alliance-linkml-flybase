@@ -711,8 +711,10 @@ class DataHandler(object):
                     self.log.debug(f'Export required field: {attr}')
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)
                 elif getattr(i.linkmldto, attr) is not None and getattr(i.linkmldto, attr) != []:
-                    self.log.debug(f'Export optional non-emptyp field: {attr}')
+                    self.log.debug(f'Export optional non-empty field: {attr}')
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)
+                else:
+                    self.log.debug(f'What happened to this attr: {attr}')
             self.export_data[output_set_name].append(export_agr_dict)
             self.log.debug(f'BOB5: {export_agr_dict}')
         public_count = self.export_count - self.internal_count
