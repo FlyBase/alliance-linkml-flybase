@@ -155,7 +155,7 @@ class DataHandler(object):
     # General utilities.
     def __str__(self):
         """Print out data handler description."""
-        handler_description = f'A data handler that exports FB {self.fb_data_type} to Alliance LinkML: {list(self.output_fields.keys())}.'
+        handler_description = f'A data handler that exports FB {self.fb_data_type} to Alliance LinkML: {type(self.agr_linkmldto_dict[self.fb_data_type])}.'
         return handler_description
 
     def get_primary_key_column(self, chado_table):
