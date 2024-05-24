@@ -703,7 +703,9 @@ class DataHandler(object):
             self.log.debug(f'BILLY: Have these dict keys: {i.linkmldto.__dict__.keys()}')
             for attr in i.linkmldto.__dict__.keys():
                 # if attr in self.required_fields[output_set_name]:
-                if attr in i.linkmldto.required_fields:
+                if attr in i.linkmldto.internal_fields:
+                    continue
+                elif attr in i.linkmldto.required_fields:
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)
                 elif getattr(i.linkmldto, attr) is not None and getattr(i.linkmldto, attr) != []:
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)
