@@ -703,10 +703,10 @@ class DataHandler(object):
             self.log.debug(f'BOB3: Have these required fields: {i.linkmldto.required_fields}')
             self.log.debug(f'BOB4: Have these internal fields: {i.linkmldto.internal_fields}')
             for attr in i.linkmldto.__dict__.keys():
+                self.log.debug(f'Assess this attr: {attr}')
                 # if attr in self.required_fields[output_set_name]:
                 if attr in i.linkmldto.internal_fields:
                     self.log.debug(f'Skip this field: {attr}')
-                    continue
                 elif attr in i.linkmldto.required_fields:
                     self.log.debug(f'Export required field: {attr}')
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)
@@ -715,6 +715,7 @@ class DataHandler(object):
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)
                 else:
                     self.log.debug(f'What happened to this attr: {attr}')
+                self.log.debug(f'Done assessing attr: {attr}')
             self.export_data[output_set_name].append(export_agr_dict)
             self.log.debug(f'BOB5: {export_agr_dict}')
         public_count = self.export_count - self.internal_count
