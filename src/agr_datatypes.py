@@ -9,11 +9,11 @@ Author(s):
 """
 
 
-# Organized hierarchically, then alphabetically.
+# Base class for all Alliance DTO classes.
 class AuditedObjectDTO(object):
-    """Base Alliance class."""
+    """Base Alliance DTO class."""
     def __init__(self):
-        """Create base AuditedObjectDTO for FlyBase objects."""
+        """Create AuditedObjectDTO for FlyBase objects."""
         self.internal = False
         self.obsolete = False
         self.date_created = None
@@ -31,10 +31,11 @@ class AuditedObjectDTO(object):
         return export_dict
 
 
+# Primary Alliance DTO Classes for FlyBase primary entities (having curies, web pages).
 class SubmittedObjectDTO(AuditedObjectDTO):
-    """SubmittedObjectDTO Alliance class."""
+    """SubmittedObjectDTO class."""
     def __init__(self):
-        """Create base AuditedObjectDTO for FlyBase objects."""
+        """Create SubmittedObjectDTO for FlyBase objects."""
         super().__init__()
         self.mod_entity_id = None
         self.mod_internal_id = None
@@ -51,36 +52,13 @@ class BiologicalEntityDTO(SubmittedObjectDTO):
         self.required_fields.extend(['taxon_curie'])
 
 
-class ReagentDTO(AuditedObjectDTO):
-    """ReagentDTO class."""
-    def __init__(self):
-        """Create ReagentDTO for FlyBase object."""
-        super().__init__()
-        self.mod_entity_id = None          # Will be the MOD curie.
-        self.mod_internal_id = None        # Will be the MOD internal db id.
-        self.secondary_identifiers = []    # Will be list of 2o FB IDs (strings).
-        self.required_fields.extend(['mod_entity_id'])
-
-
 class GenomicEntityDTO(BiologicalEntityDTO):
     """GenomicEntityDTO class."""
     def __init__(self):
         """Create GenomicEntityDTO for FlyBase object."""
         super().__init__()
         self.cross_reference_dtos = []
-
-
-class ConstructDTO(ReagentDTO):
-    """ConstructDTO class."""
-    def __init__(self):
-        """Create ConstructDTO for FlyBase object."""
-        super().__init__()
-        self.construct_symbol_dto = None       # One NameSlotAnnotationDTO.
-        self.construct_full_name_dto = None    # One NameSlotAnnotationDTO.
-        self.construct_synonym_dtos = None     # NameSlotAnnotationDTOs.
-        self.construct_component_dtos = []     # ConstructComponentSlotAnnotationDTOs.
-        self.reference_curies = []
-        self.required_fields.extend(['construct_symbol_dto'])
+        self.required_fields.extend([])
 
 
 class AffectedGenomicModelDTO(GenomicEntityDTO):
@@ -112,6 +90,28 @@ class GeneDTO(GenomicEntityDTO):
         self.required_fields.extend(['gene_symbol_dto'])
 
 
+class ReagentDTO(SubmittedObjectDTO):
+    """ReagentDTO class."""
+    def __init__(self):
+        """Create ReagentDTO for FlyBase object."""
+        super().__init__()
+        self.secondary_identifiers = []    # Will be list of 2o FB curies (strings).
+        self.required_fields.extend([])
+
+
+class ConstructDTO(ReagentDTO):
+    """ConstructDTO class."""
+    def __init__(self):
+        """Create ConstructDTO for FlyBase object."""
+        super().__init__()
+        self.construct_symbol_dto = None       # One NameSlotAnnotationDTO.
+        self.construct_full_name_dto = None    # One NameSlotAnnotationDTO.
+        self.construct_synonym_dtos = None     # NameSlotAnnotationDTOs.
+        self.construct_component_dtos = []     # ConstructComponentSlotAnnotationDTOs.
+        self.reference_curies = []
+        self.required_fields.extend(['construct_symbol_dto'])
+
+
 # Primary Alliance DTO Classes for FlyBase relationships/annotations.
 class EvidenceAssociationDTO(AuditedObjectDTO):
     """EvidenceAssociationDTO class."""
@@ -127,10 +127,19 @@ class EvidenceAssociationDTO(AuditedObjectDTO):
         self.required_fields.extend([])
 
 
+class SingleReferenceAssociationDTO(AuditedObjectDTO):
+    """SingleReferenceAssociationDTO class."""
+    def __init__(self):
+        """Create SingleReferenceAssociationDTO for FlyBase object."""
+        super().__init__()
+        self.reference_curie = None
+        self.required_fields.extend([])
+
+
 class AlleleGenomicEntityAssociationDTO(EvidenceAssociationDTO):
     """AlleleGenomicEntityAssociationDTO class."""
     def __init__(self, evidence_curies):
-        """Create EvidenceAssociationDTO for FlyBase object.
+        """Create AlleleGenomicEntityAssociationDTO for FlyBase object.
 
         Args:
             evidence_curies (list): A list of FB:FBrf or PMID:### curies.
@@ -183,6 +192,58 @@ class ConstructGenomicEntityAssociationDTO(EvidenceAssociationDTO):
         # self.evidence_curies = evidence_curies
         self.note_dtos = []
         self.required_fields.extend(['construct_identifier', 'genomic_entity_relation_name', 'genomic_entity_identifier'])
+
+
+class AnnotationDTO(SingleReferenceAssociationDTO):
+    """AnnotationDTO class."""
+    def __init__(self, reference_curie):
+        """Create AnnotationDTO for FlyBase object."""
+        super().__init__()
+        self.reference_curie = reference_curie
+        self.mod_entity_id = None
+        self.mod_internal_id = None
+        self.data_provider_dto = None
+        self.note_dtos = []
+        self.condition_relation_dtos = []
+        self.required_fields.extend(['data_provider_dto', 'reference_curie'])
+
+
+class DiseaseAnnotationDTO(AnnotationDTO):
+    """DiseaseAnnotationDTO class."""
+    def __init__(self, do_term_curie, reference_curie):
+        """Create DiseaseAnnotationDTO for FlyBase object."""
+        super().__init__(reference_curie)
+        self.do_term_curie = do_term_curie
+        self.disease_relation_name = 'is_implicated_in'
+        self.annotation_type_name = 'manually_curated'
+        self.negated = False
+        self.evidence_code_curies = []
+        self.disease_genetic_modifier_identifiers = None
+        self.disease_genetic_modifier_relation_name = None
+        self.required_fields.extend(['disease_relation_name', 'do_term_curie', 'evidence_code_curies'])
+
+
+class AlleleDiseaseAnnotationDTO(DiseaseAnnotationDTO):
+    """AlleleDiseaseAnnotationDTO class."""
+    def __init__(self, allele_identifier, do_term_curie, reference_curie):
+        """Create AlleleDiseaseAnnotationDTO for FlyBase object."""
+        super().__init__(do_term_curie, reference_curie)
+        self.allele_identifier = allele_identifier
+        self.inferred_gene_identifier = None
+        self.required_fields.extend(['allele_identifier'])
+
+
+class AGMDiseaseAnnotationDTO(DiseaseAnnotationDTO):
+    """AGMDiseaseAnnotationDTO class."""
+    def __init__(self, agm_identifier, do_term_curie, reference_curie):
+        """Create AGMDiseaseAnnotationDTO for FlyBase object."""
+        super().__init__(do_term_curie, reference_curie)
+        self.agm_identifier = agm_identifier
+        self.inferred_gene_identifier = None
+        self.asserted_gene_identifiers = []
+        self.inferred_allele_identifier = None
+        self.asserted_allele_identifier = None
+        self.required_fields.extend(['agm_identifier'])
 
 
 # Secondary Alliance DTO Classes for FlyBase data.

@@ -14,7 +14,7 @@ Author(s):
 # Attributes are sorted into "primary chado data" (i.e., query results) and
 # processed data (synthesis of sql results).
 class FBExportEntity(object):
-    """A generic FlyBase data export entity."""
+    """A base, generic FlyBase data export entity."""
     def __init__(self):
         """Create a FBExportEntity object with bins for Alliance mapping."""
         self.db_primary_id = None     # Table primary key (or concatenation).
@@ -22,6 +22,7 @@ class FBExportEntity(object):
         self.org_abbr = None          # Organism.abbreviation, if applicable.
         self.org_genus = None         # Organism.genus, if applicable.
         self.org_species = None       # Organism.species, if applicable.
+        self.timestamps = []          # FB timestamps.
         self.linkmldto = None         # Alliance LinkML object for mapped data.
         self.for_export = True        # Made False to prevent Alliance export.
         self.internal_reasons = []    # Reasons an object was marked internal.
@@ -33,15 +34,7 @@ class FBExportEntity(object):
         return self.entity_desc
 
 
-# A placeholder for development of association/annotation export.
-class FBAssociation(FBExportEntity):
-    """An abstract, generic FlyBase association/annotation."""
-    def __init__(self):
-        """Create a FBAssociation object."""
-        super().__init__()
-
-
-# Objects below exclude associations/annotations.
+# Primary data entities (have curie and usually a FB web page).
 class FBDataEntity(FBExportEntity):
     """An abstract, generic FlyBase data export entity for first class entities.
 
@@ -92,7 +85,6 @@ class FBDataEntity(FBExportEntity):
         self.prop_pubs = []             # entity prop_pubs: e.g., Featureprop_pub.
         self.cvterms = []               # Cvterm associations: e.g., FeatureCvterm.
         self.cvtermprops = []           # Cvtermprop associations: e.g., FeatureCvtermprop.
-        self.timestamps = []            # FB timestamps.
         # Processed FB data - processed from primary FB chado data above.
         self.ncbi_taxon_id = None       # The NCBITaxon dbxref.accession (str).
         self.synonym_dict = {}          # Will be synonym_id-keyed dicts of processed synonym info, similar to NameDTO.
@@ -173,3 +165,42 @@ class FBGenotype(FBDataEntity):
         """Create the FBStrain object."""
         super().__init__(chado_obj)
         self.db_primary_id = chado_obj.genotype_id
+
+
+# Associations/annotations.
+class FBAlleleDiseaseAnnotation(FBExportEntity):
+    """FBAlleleDiseaseAnnotation class."""
+    def __init__(self, feature_cvterm, provenance_prop):
+        """Create a FBAlleleDiseaseAnnotation object.
+
+        Args:
+            feature_cvterm (FeatureCvterm): FeatureCvterm object.
+            provenance_prop (FeatureCvtermprop): FeatureCvtermprop object of type "provenance".
+
+        """
+        super().__init__()
+        # Primary FB chado data.
+        self.feature_cvterm = feature_cvterm
+        self.provenance = provenance_prop
+        self.db_primary_id = f'{feature_cvterm.feature_cvterm_id}_{provenance_prop.rank}'
+        self.evidence_code = None               # Will be the "evidence_code" FeatureCvtermprop.
+        self.qualifier = None                   # Will be the "qualifier" FeatureCvtermprop.
+        # Processed FB data.
+        self.modifier_id_was_updated = False    # Change to true if modifier ID in evidence text was updated.
+        self.modifier_problem = False           # Change to true if there's a problem finding the modifier allele.
+        self.agr_uniq_key = None                # Will be unique key based on Alliance defining features.
+
+    def set_entity_desc(self):
+        """Succinct text string describing the disease annotation."""
+        desc = 'feature_cvterm_id={}\trank={}\tfeature={} ({})\tcvterm={} (DOID:{})\tpub={}\tqual={}\tevidence={}'.\
+            format(self.feature_cvterm.feature_cvterm_id,
+                   self.provenance.rank,
+                   self.feature_cvterm.feature.name,
+                   self.feature_cvterm.feature.uniquename,
+                   self.feature_cvterm.cvterm.name,
+                   self.feature_cvterm.cvterm.dbxref.accession,
+                   self.feature_cvterm.pub.uniquename,
+                   self.qualifier.value,
+                   self.evidence_code.value)
+        self.entity_desc = desc
+        return

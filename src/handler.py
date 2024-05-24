@@ -10,9 +10,11 @@ Author(s):
 
 """
 
+import datetime
 from logging import Logger
 from sqlalchemy import or_
 from sqlalchemy.orm import aliased
+import strict_rfc3339
 from harvdev_utils.char_conversions import sub_sup_sgml_to_html
 from harvdev_utils.production import (
     Cvterm, Db, Dbxref, Feature, FeatureCvterm, FeatureCvtermprop,
@@ -76,7 +78,7 @@ class DataHandler(object):
         'variation': 'TBD',
         'strain': agr_datatypes.AffectedGenomicModelDTO(),
         'genotype': agr_datatypes.AffectedGenomicModelDTO(),
-        'disease': 'TBD'
+        'disease': agr_datatypes.AlleleDiseaseAnnotationDTO(),
     }
     # Correspondence of FB data type to Alliance data transfer ingest set.
     primary_agr_ingest_type_dict = {
@@ -95,7 +97,7 @@ class DataHandler(object):
         'construct': fb_datatypes.FBConstruct,
         # 'variation': fb_datatypes.FBVariant,
         'strain': fb_datatypes.FBStrain,
-        # 'disease': fb_datatypes.FBDiseaseAlleleAnnotation
+        'disease': fb_datatypes.FBAlleleDiseaseAnnotation,
     }
     # Export directions (must be filled out in detail for each specific data handler), keyed by export set name.
     # For a given export set, the list of field names must be present in the datatype object specified in DataHandler.datatype_objects.values().
@@ -243,6 +245,16 @@ class DataHandler(object):
             pmid_counter += 1
         self.log.info(f'Found {pmid_counter} PMID IDs for {pub_counter} current FB publications.')
         return
+
+    def lookup_pub_curie(self, pub_id):
+        """Return a single curie (PMID or FB) given an internal chado pub_id."""
+        try:
+            pub_curie = self.bibliography[pub_id]
+        except KeyError:
+            pub_curie = None
+        if pub_curie == 'FB:unattributed':
+            pub_curie = None
+        return pub_curie
 
     def lookup_pub_curies(self, pub_id_list):
         """Return a list of curies from a list of internal chado pub_ids."""
@@ -596,7 +608,41 @@ class DataHandler(object):
         self.log.info(f'SYNTHESIZE FLYBASE {self.fb_data_type.upper()} DATA FROM CHADO.')
         return
 
-    # The map_fb_data_to_alliance() wrapper; sub-methods are defined and called in more specific DataHandler types.
+    # Sub-methods for the map_fb_data_to_alliance() wrapper.
+    def map_timestamps(self):
+        """Map timestamps to Alliance object."""
+        self.log.info('Map timestamps to Alliance object.')
+        for fb_data_entity in self.fb_data_entities.values():
+            if fb_data_entity.timestamps:
+                fb_data_entity.linkmldto.date_created = strict_rfc3339.\
+                    timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(min(fb_data_entity.timestamps)))
+                fb_data_entity.linkmldto.date_updated_curie = strict_rfc3339.\
+                    timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(max(fb_data_entity.timestamps)))
+        return
+
+    def flag_internal_fb_entities(self, input_list_name: str):
+        """Flag obsolete FB objects in some list as internal.
+
+        Args:
+            input_list_name (str): The name of a handler list/dict with objects with LinkMLDTO objects under the linkmldto attribute.
+
+        """
+        self.log.info(f'Flag obsolete FB objects in {input_list_name}.')
+        input_data = getattr(self, input_list_name)
+        if type(input_data) is dict:
+            input_list = list(input_data.values())
+        elif type(input_data) is list:
+            input_list = input_data
+        for fb_data_entity in input_list:
+            try:
+                if fb_data_entity.linkmldto.obsolete is True:
+                    fb_data_entity.linkmldto.internal = True
+                    fb_data_entity.internal_reasons.append('Obsolete')
+            except AttributeError:
+                self.log.error('LinkMLDTO entity lacks obsolete attribute.')
+        return
+
+    # The map_fb_data_to_alliance() wrapper; sub-methods are called (and usually defined) in more specific DataHandler types.
     def map_fb_data_to_alliance(self):
         """Map FB data to the Alliance LinkML object."""
         self.log.info(f'Map FlyBase "{self.fb_data_type}" data to the Alliance LinkML object for the "{self.primary_export_set}".'.upper())
