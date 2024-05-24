@@ -662,6 +662,8 @@ class DataHandler(object):
         for i in input_list:
             # BOB - try to rely on agr_datatypes required_fields.
             # for attr in self.required_fields[output_set_name]:
+            self.log.debug(f'BOB1: Have this linkml type: {type(i.linkmldto)}')
+            self.log.debug(f'BOB2: Have these required fields: {i.linkmldto.required_fields}')
             for attr in i.linkmldto.required_fields:
                 if attr not in i.linkmldto.__dict__.keys():
                     i.for_export = False
