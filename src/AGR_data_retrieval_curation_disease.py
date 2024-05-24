@@ -186,13 +186,13 @@ class DAFMaker(object):
         'CEC': 'ECO:0007014'
     }
     required_fields = [
-        'allele_identifier',
-        'data_provider_dto',
+    'allele_identifier',
+            'data_provider_dto',
         'disease_relation_name',
         'do_term_curie',
         'evidence_code_curies',
-        'internal',
-        'reference_curie',
+                'internal',
+            'reference_curie',
     ]
     output_fields = [
         'allele_identifier',

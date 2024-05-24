@@ -186,9 +186,11 @@ class FBAlleleDiseaseAnnotation(FBExportEntity):
         self.evidence_code = None               # Will be the "evidence_code" FeatureCvtermprop.
         self.qualifier = None                   # Will be the "qualifier" FeatureCvtermprop.
         # Processed FB data.
+        self.fb_modifier_type = None
+        self.fb_modifier_id = None
         self.modifier_id_was_updated = False    # Change to true if modifier ID in evidence text was updated.
         self.modifier_problem = False           # Change to true if there's a problem finding the modifier allele.
-        self.agr_uniq_key = None                # Will be unique key based on Alliance defining features.
+        self.is_redundant = False
 
     def set_entity_desc(self):
         """Succinct text string describing the disease annotation."""

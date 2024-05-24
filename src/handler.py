@@ -694,6 +694,11 @@ class DataHandler(object):
                 self.internal_count += 1
                 self.log.debug(f'Export {i} but keep internal at the Alliance: {i.internal_reasons}')
             export_agr_dict = {}
+            # BOB - try to rely on agr_datatypes required_fields
+            # for attr in self.output_fields[output_set_name]:
+            self.log.debug(f'BOB: Have this object type: {type(i.linkmldto)}')
+            self.log.debug(f'BOB: Have these attributes: {dir(i.linkmldto)}')
+            self.log.debug(f'BILLY: Have these dict keys: {i.linkmldto.__dict__.keys()}')
             for attr in dir(i.linkmldto):
                 # BOB - try to rely on agr_datatypes required_fields
                 # if attr in self.required_fields[output_set_name]:
