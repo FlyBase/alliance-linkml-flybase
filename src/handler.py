@@ -714,6 +714,7 @@ class DataHandler(object):
                     self.log.debug(f'Export optional non-emptyp field: {attr}')
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)
             self.export_data[output_set_name].append(export_agr_dict)
+            self.log.debug(f'BOB5: {export_agr_dict}')
         public_count = self.export_count - self.internal_count
         self.log.info(f'SUMMARY FOR EXPORT OF {output_set_name}'.upper())
         self.log.info(f'Exported {self.export_count} of {self.input_count} entities.')
