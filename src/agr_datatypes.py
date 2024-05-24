@@ -27,7 +27,7 @@ class AuditedObjectDTO(object):
         """Return a JSON-friendly dict for cases where inlined object needed."""
         export_dict = {}
         for k, v in self.__dict__.items():
-            if k != 'required_fields' and v is not None and v != []:
+            if k not in self.internal_fields and v is not None and v != []:
                 export_dict[k] = v
         return export_dict
 
