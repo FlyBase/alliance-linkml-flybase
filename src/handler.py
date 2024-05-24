@@ -701,8 +701,7 @@ class DataHandler(object):
             self.log.debug(f'BOB: Have this object type: {type(i.linkmldto)}')
             self.log.debug(f'BOB: Have these attributes: {dir(i.linkmldto)}')
             self.log.debug(f'BILLY: Have these dict keys: {i.linkmldto.__dict__.keys()}')
-            for attr in dir(i.linkmldto):
-                # BOB - try to rely on agr_datatypes required_fields
+            for attr in i.linkmldto.__dict__.keys():
                 # if attr in self.required_fields[output_set_name]:
                 if attr in i.linkmldto.required_fields:
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)

@@ -255,6 +255,7 @@ class AffectedGenomicModelComponentDTO(AuditedObjectDTO):
         super().__init__()
         self.allele_curie = component_curie
         self.zygosity_curie = self.zygosity_id[zygosity]
+        self.required_fields.extend(['mod_entity_id'])
     # Zygosity mapping.
     zygosity_id = {
         'hemizygous': 'GENO:0000134',
