@@ -42,7 +42,7 @@ def get_handler(log: Logger, fb_data_type: str, testing: bool):
         # 'variation': VariationHandler,
         'strain': StrainHandler,
         # 'genotype': GenotypeHandler,
-        'disease': DiseaseHandler,
+        'disease': AlleleDiseaseHandler,
     }
     try:
         data_handler = handler_dict[fb_data_type](log, fb_data_type, testing)

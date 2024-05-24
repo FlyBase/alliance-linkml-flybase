@@ -29,39 +29,39 @@ class AlleleDiseaseHandler(DataHandler):
         self.uniq_dis_dict = {}    # A dict of unique disease annotation attributes to list of disease annotations.
 
     # Elaborate on export filters for AlleleDiseaseHandler.
-    required_fields = {
-        'disease_allele_ingest_set': [
-            'allele_identifier',
-            'data_provider_dto',
-            'disease_relation_name',
-            'do_term_curie',
-            'evidence_code_curies',
-            'internal',
-            'reference_curie',
-        ]
-    }
-    output_fields = {
-        'disease_allele_ingest_set': [
-            'allele_identifier',
-            'annotation_type_name',
-            'created_by_curie',
-            'data_provider_dto',
-            'date_created',
-            'date_updated',
-            'disease_genetic_modifier_identifiers',
-            'disease_genetic_modifier_relation_name',
-            'disease_relation_name',
-            'do_term_curie',
-            'evidence_code_curies',
-            'inferred_gene_identifier',
-            'internal',
-            'mod_internal_id',
-            'negated',
-            'obsolete',
-            'reference_curie',
-            'updated_by_curie',
-        ]
-    }
+    # required_fields = {
+    #     'disease_allele_ingest_set': [
+    #         'allele_identifier',
+    #         'data_provider_dto',
+    #         'disease_relation_name',
+    #         'do_term_curie',
+    #         'evidence_code_curies',
+    #         'internal',
+    #         'reference_curie',
+    #     ]
+    # }
+    # output_fields = {
+    #     'disease_allele_ingest_set': [
+    #         'allele_identifier',
+    #         'annotation_type_name',
+    #         'created_by_curie',
+    #         'data_provider_dto',
+    #         'date_created',
+    #         'date_updated',
+    #         'disease_genetic_modifier_identifiers',
+    #         'disease_genetic_modifier_relation_name',
+    #         'disease_relation_name',
+    #         'do_term_curie',
+    #         'evidence_code_curies',
+    #         'inferred_gene_identifier',
+    #         'internal',
+    #         'mod_internal_id',
+    #         'negated',
+    #         'obsolete',
+    #         'reference_curie',
+    #         'updated_by_curie',
+    #     ]
+    # }
 
     # Key disease annotation term sets and look ups.
     relevant_qualifiers = [
