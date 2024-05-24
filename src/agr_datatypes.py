@@ -21,7 +21,7 @@ class AuditedObjectDTO(object):
         self.created_by_curie = 'FB:FB_curator'
         self.updated_by_curie = 'FB:FB_curator'
         self.required_fields = ['internal']
-        self.internal_fields = ['required_fields']
+        self.internal_fields = ['internal_fields', 'required_fields']
 
     def dict_export(self):
         """Return a JSON-friendly dict for cases where inlined object needed."""
