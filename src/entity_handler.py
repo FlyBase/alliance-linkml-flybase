@@ -552,8 +552,8 @@ class PrimaryEntityHandler(DataHandler):
             'synonym_bin': '_synonym_dtos'
         }
         map_synonyms_required = False
-        test_linkmldto = self.agr_linkmldto_dict[self.fb_data_type]
-        for dto_key in test_linkmldto.__dict__.keys():
+        linkml_dto_attributes = dir(self.agr_linkmldto_dict[self.fb_data_type])
+        for dto_key in linkml_dto_attributes:
             for bin_type, bin_suffix in linkml_synonym_slots.items():
                 if dto_key.endswith(bin_suffix):
                     linkml_synonym_slots[bin_type] = dto_key

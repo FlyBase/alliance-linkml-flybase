@@ -72,13 +72,13 @@ class DataHandler(object):
     test_set = {}
     # Correspondence of FB data type to primary Alliance LinkML object.
     agr_linkmldto_dict = {
-        'gene': agr_datatypes.GeneDTO(),
+        'gene': agr_datatypes.GeneDTO,
         'allele': 'TBD',
-        'construct': agr_datatypes.ConstructDTO(),
+        'construct': agr_datatypes.ConstructDTO,
         'variation': 'TBD',
-        'strain': agr_datatypes.AffectedGenomicModelDTO(),
-        'genotype': agr_datatypes.AffectedGenomicModelDTO(),
-        'disease': agr_datatypes.AlleleDiseaseAnnotationDTO(),
+        'strain': agr_datatypes.AffectedGenomicModelDTO,
+        'genotype': agr_datatypes.AffectedGenomicModelDTO,
+        'disease': agr_datatypes.AlleleDiseaseAnnotationDTO,
     }
     # Correspondence of FB data type to Alliance data transfer ingest set.
     primary_agr_ingest_type_dict = {
