@@ -101,8 +101,9 @@ class DataHandler(object):
     }
     # Export directions (must be filled out in detail for each specific data handler), keyed by export set name.
     # For a given export set, the list of field names must be present in the datatype object specified in DataHandler.datatype_objects.values().
-    required_fields = {}
-    output_fields = {}
+    # BOB - try to rely on agr_datatypes attributes instead.
+    # required_fields = {}
+    # output_fields = {}
     # A filter for non-FB xrefs to export, with dict keys as FB db.names and dict values as Alliance db names.
     # Alliance db names should correspond to the contents of this file:
     # https://github.com/alliance-genome/agr_schemas/blob/master/resourceDescriptors.yaml
@@ -659,7 +660,9 @@ class DataHandler(object):
         """
         self.log.info(f'Flag FlyBase data lacking information for a required field in the {output_set_name}.'.upper())
         for i in input_list:
-            for attr in self.required_fields[output_set_name]:
+            # BOB - try to rely on agr_datatypes required_fields.
+            # for attr in self.required_fields[output_set_name]:
+            for attr in i.linkmldto.required_fields:
                 if attr not in i.linkmldto.__dict__.keys():
                     i.for_export = False
                     i.export_warnings.append(f'Missing "{attr}" attribute.')
@@ -692,7 +695,9 @@ class DataHandler(object):
                 self.log.debug(f'Export {i} but keep internal at the Alliance: {i.internal_reasons}')
             export_agr_dict = {}
             for attr in self.output_fields[output_set_name]:
-                if attr in self.required_fields[output_set_name]:
+                # BOB - try to rely on agr_datatypes required_fields
+                # if attr in self.required_fields[output_set_name]:
+                if attr in i.linkmldto.required_fields:
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)
                 elif getattr(i.linkmldto, attr) is not None and getattr(i.linkmldto, attr) != []:
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)

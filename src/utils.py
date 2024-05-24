@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from handler import DataHandler
 from agm_handlers import StrainHandler
 from construct_handler import ConstructHandler
-from disease_handler import DiseaseHandler
+from disease_handlers import DiseaseHandler
 from gene_handler import GeneHandler
 
 
