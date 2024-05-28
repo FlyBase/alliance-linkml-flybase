@@ -10,9 +10,7 @@ Author(s):
 
 """
 
-import datetime
 import re
-import strict_rfc3339
 from logging import Logger
 from sqlalchemy.orm import aliased
 from harvdev_utils.char_conversions import sub_sup_sgml_to_html
@@ -554,8 +552,8 @@ class PrimaryEntityHandler(DataHandler):
             'synonym_bin': '_synonym_dtos'
         }
         map_synonyms_required = False
-        test_linkmldto = self.agr_linkmldto_dict[self.fb_data_type]
-        for dto_key in test_linkmldto.__dict__.keys():
+        linkml_dto_attributes = self.agr_linkmldto_dict[self.fb_data_type].__dict__.keys()
+        for dto_key in linkml_dto_attributes:
             for bin_type, bin_suffix in linkml_synonym_slots.items():
                 if dto_key.endswith(bin_suffix):
                     linkml_synonym_slots[bin_type] = dto_key
@@ -619,37 +617,4 @@ class PrimaryEntityHandler(DataHandler):
                 self.log.warning(f'Found many current systematic_names for {fb_data_entity}: {multi_symbols}')
             # 4. Synonyms.
             setattr(fb_data_entity.linkmldto, linkml_synonym_slots['synonym_bin'], linkml_synonym_bins['synonym_bin'])
-        return
-
-    def map_timestamps(self):
-        """Map timestamps to Alliance object."""
-        self.log.info('Map timestamps to Alliance object.')
-        for fb_data_entity in self.fb_data_entities.values():
-            if fb_data_entity.timestamps:
-                fb_data_entity.linkmldto.date_created = strict_rfc3339.\
-                    timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(min(fb_data_entity.timestamps)))
-                fb_data_entity.linkmldto.date_updated_curie = strict_rfc3339.\
-                    timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(max(fb_data_entity.timestamps)))
-        return
-
-    def flag_internal_fb_entities(self, input_list_name: str):
-        """Flag obsolete FB objects in some list as internal.
-
-        Args:
-            input_list_name (str): The name of a handler list/dict with objects with LinkMLDTO objects under the linkmldto attribute.
-
-        """
-        self.log.info(f'Flag obsolete FB objects in {input_list_name}.')
-        input_data = getattr(self, input_list_name)
-        if type(input_data) is dict:
-            input_list = list(input_data.values())
-        elif type(input_data) is list:
-            input_list = input_data
-        for fb_data_entity in input_list:
-            try:
-                if fb_data_entity.linkmldto.obsolete is True:
-                    fb_data_entity.linkmldto.internal = True
-                    fb_data_entity.internal_reasons.append('Obsolete')
-            except AttributeError:
-                self.log.error('LinkMLDTO entity lacks obsolete attribute.')
         return

@@ -29,34 +29,34 @@ class StrainHandler(PrimaryEntityHandler):
         'FBsn0000284': 'DGRP_Flyland',
     }
     # Elaborate on export filters for StrainHandler.
-    required_fields = {
-        'agm_ingest_set': [
-            'data_provider_dto',
-            'internal',
-            'mod_entity_id',
-            'subtype_name',
-            'taxon_curie',
-        ],
-    }
-    output_fields = {
-        'agm_ingest_set': [
-            'agm_secondary_id_dtos',
-            'created_by_curie',
-            'cross_reference_dtos',
-            'data_provider_dto',
-            'date_created',
-            'date_updated',
-            'internal',
-            'mod_entity_id',
-            'mod_internal_id',
-            'updated_by_curie',
-            'name',
-            'obsolete',
-            'reference_curies',
-            'subtype_name',
-            'taxon_curie'
-        ],
-    }
+    # required_fields = {
+    #     'agm_ingest_set': [
+    #         'data_provider_dto',
+    #         'internal',
+    #         'mod_entity_id',
+    #         'subtype_name',
+    #         'taxon_curie',
+    #     ],
+    # }
+    # output_fields = {
+    #     'agm_ingest_set': [
+    #         'agm_secondary_id_dtos',
+    #         'created_by_curie',
+    #         'cross_reference_dtos',
+    #         'data_provider_dto',
+    #         'date_created',
+    #         'date_updated',
+    #         'internal',
+    #         'mod_entity_id',
+    #         'mod_internal_id',
+    #         'updated_by_curie',
+    #         'name',
+    #         'obsolete',
+    #         'reference_curies',
+    #         'subtype_name',
+    #         'taxon_curie'
+    #     ],
+    # }
 
     # Elaborate on get_general_data() for the StrainHandler.
     def get_general_data(self, session):

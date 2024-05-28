@@ -50,52 +50,52 @@ class ConstructHandler(FeatureHandler):
         'FBtp0080088': 'P{UAS-Brainbow}',                         # Expresses EBFP2, EGFP, mKO2, has_reg_region UAS; tagged_with HA, MYC, V5; carries lox.
         'FBtp0083738': 'P{GR}',                                   # Is regulated_by FBgn Act5C.
     }
-    # Elaborate on export filters for ConstructHandler.
-    required_fields = {
-        'construct_ingest_set': [
-            'construct_symbol_dto',
-            'data_provider_dto',
-            'internal',
-            'mod_entity_id',
-        ],
-        'construct_genomic_entity_association_ingest_set': [
-            'construct_identifier',
-            'genomic_entity_identifier',
-            'genomic_entity_relation_name',
-            'internal',
-        ],
-    }
-    output_fields = {
-        'construct_ingest_set': [
-            'construct_component_dtos',
-            'construct_full_name_dto',
-            'construct_symbol_dto',
-            'construct_synonym_dtos',
-            'created_by_curie',
-            'data_provider_dto',
-            'date_created',
-            'date_updated',
-            'internal',
-            'mod_entity_id',
-            'mod_internal_id',
-            'obsolete',
-            'reference_curies',
-            'secondary_identifiers',
-            'updated_by_curie',
-        ],
-        'construct_genomic_entity_association_ingest_set': [
-            'construct_identifier',
-            'created_by_curie',
-            'date_created',
-            'date_updated',
-            'evidence_curies',
-            'genomic_entity_identifier',
-            'genomic_entity_relation_name',
-            'internal',
-            'obsolete',
-            'updated_by_curie',
-        ],
-    }
+    # # Elaborate on export filters for ConstructHandler.
+    # required_fields = {
+    #     'construct_ingest_set': [
+    #         'construct_symbol_dto',
+    #         'data_provider_dto',
+    #         'internal',
+    #         'mod_entity_id',
+    #     ],
+    #     'construct_genomic_entity_association_ingest_set': [
+    #         'construct_identifier',
+    #         'genomic_entity_identifier',
+    #         'genomic_entity_relation_name',
+    #         'internal',
+    #     ],
+    # }
+    # output_fields = {
+    #     'construct_ingest_set': [
+    #         'construct_component_dtos',
+    #         'construct_full_name_dto',
+    #         'construct_symbol_dto',
+    #         'construct_synonym_dtos',
+    #         'created_by_curie',
+    #         'data_provider_dto',
+    #         'date_created',
+    #         'date_updated',
+    #         'internal',
+    #         'mod_entity_id',
+    #         'mod_internal_id',
+    #         'obsolete',
+    #         'reference_curies',
+    #         'secondary_identifiers',
+    #         'updated_by_curie',
+    #     ],
+    #     'construct_genomic_entity_association_ingest_set': [
+    #         'construct_identifier',
+    #         'created_by_curie',
+    #         'date_created',
+    #         'date_updated',
+    #         'evidence_curies',
+    #         'genomic_entity_identifier',
+    #         'genomic_entity_relation_name',
+    #         'internal',
+    #         'obsolete',
+    #         'updated_by_curie',
+    #     ],
+    # }
 
     # Elaborate on get_general_data() for the ConstructHandler.
     def get_general_data(self, session):
@@ -470,24 +470,9 @@ class ConstructHandler(FeatureHandler):
                 for feature_id, pub_ids in component_slot.items():
                     if self.feature_lookup[feature_id]['type'] != 'gene' or not self.feature_lookup[feature_id]['uniquename'].startswith('FBgn'):
                         continue
-                    rel_dict = {
-                        'construct_identifier': f'FB:{construct.uniquename}',
-                        'rel_type': rel_type,
-                        'genomic_entity_identifier': f'FB:{self.feature_lookup[feature_id]["uniquename"]}',
-                        'pub_curies': self.lookup_pub_curies(pub_ids),
-                        'obsolete': False,
-                        'internal': False,
-                    }
-                    # If either component in the relationship is obsolete, set the relationship to obsolete.
-                    if construct.chado_obj.is_obsolete is True:
-                        rel_dict['obsolete'] = True
-                        rel_dict['internal'] = True
-                    if self.feature_lookup[feature_id]['is_obsolete'] is True:
-                        rel_dict['obsolete'] = True
-                        rel_dict['internal'] = True
-                    feat_rel = fb_datatypes.FBExportEntity()
-                    feat_rel.rel_dict = rel_dict
-                    feat_rel.entity_desc = f'{rel_dict["construct_identifier"]}_{rel_dict["rel_type"]}_{rel_dict["genomic_entity_identifier"]}'
+                    feat_rel = fb_datatypes.FBRelationship('feature_relationship', construct.db_primary_id, feature_id, rel_type)
+                    feat_rel.pub_ids = pub_ids
+                    feat_rel.entity_desc = f'{construct.uniquename} {rel_type} {self.feature_lookup[feature_id]["uniquename"]}'
                     self.construct_associations.append(feat_rel)
                     counter += 1
             self.log.info(f'Synthesized {counter} construct-gene associations.')
@@ -557,10 +542,13 @@ class ConstructHandler(FeatureHandler):
         self.log.info('Map current construct relations to the Alliance LinkML object.')
         counter = 0
         for cons_asso in self.construct_associations:
-            rel_dto = agr_datatypes.ConstructGenomicEntityAssociationDTO(cons_asso.rel_dict['construct_identifier'], cons_asso.rel_dict['rel_type'],
-                                                                         cons_asso.rel_dict['genomic_entity_identifier'], cons_asso.rel_dict['pub_curies'])
-            rel_dto.obsolete = cons_asso.rel_dict['obsolete']
-            rel_dto.internal = cons_asso.rel_dict['internal']
+            cons_curie = f'FB:{self.feature_lookup[cons_asso.subject_id]["uniquename"]}'
+            obj_curie = f'FB:{self.feature_lookup[cons_asso.object_id]["uniquename"]}'
+            pub_curies = self.lookup_pub_curies(cons_asso.pub_ids)
+            rel_dto = agr_datatypes.ConstructGenomicEntityAssociationDTO(cons_curie, cons_asso.rel_type, obj_curie, pub_curies)
+            if self.feature_lookup[cons_asso.subject_id]['is_obsolete'] is True or self.feature_lookup[cons_asso.object_id]['is_obsolete'] is True:
+                rel_dto.obsolete = True
+                rel_dto.internal = True
             cons_asso.linkmldto = rel_dto
             counter += 1
         self.log.info(f'Mapped construct_relationships to {counter} ConstructGenomicEntityAssociationDTOs.')
