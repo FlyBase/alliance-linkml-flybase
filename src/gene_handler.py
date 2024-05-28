@@ -115,7 +115,6 @@ class GeneHandler(FeatureHandler):
         self.build_cvterm_lookup(session)
         self.build_ncbi_taxon_lookup(session)
         self.get_chr_info(session)
-        self.build_feature_lookup(session)
         self.build_feature_relationship_evidence_lookup(session)
         return
 
@@ -219,34 +218,6 @@ class GeneHandler(FeatureHandler):
                 continue
             gene_counter += 1
             # Find all pubs for a given gene-allele relationship.
-            # BOB: OLD BKP CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-            # for rel in gene.allele_rels:
-            #     allele_id = rel.subject_id
-            #     pub_ids = self.lookup_feat_rel_pubs_ids(rel.feature_relationship_id)
-            #     pub_curies = self.lookup_pub_curies(pub_ids)
-            #     try:
-            #         gene.alleles[allele_id].extend(pub_curies)
-            #     except KeyError:
-            #         gene.alleles[allele_id] = pub_curies
-            # # Create an intermediate object to represent this info.
-            # for allele_id, pub_curie_list in gene.alleles.items():
-            #     pub_curie_list = list(set(pub_curie_list))
-            #     rel_dict = {
-            #         'allele_curie': f'FB:{self.feature_lookup[allele_id]["uniquename"]}',
-            #         'gene_curie': f'FB:{gene.uniquename}',
-            #         'rel_type': 'is_allele_of',
-            #         'pub_curies': pub_curie_list,
-            #         'obsolete': False,
-            #         'internal': False,
-            #     }
-            #     if gene.is_obsolete is True or self.feature_lookup[allele_id]['is_obsolete'] is True:
-            #         rel_dict['obsolete'] = True
-            #         rel_dict['internal'] = True
-            #     feat_rel = fb_datatypes.FBExportEntity()
-            #     feat_rel.rel_dict = rel_dict
-            #     feat_rel.entity_desc = f'{rel_dict["allele_curie"]}_{rel_dict["rel_type"]}_{rel_dict["gene_curie"]}'
-            #     self.gene_allele_associations.append(feat_rel)
-            # BOB: OLD BKP CODE <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             for rel in gene.allele_rels:
                 try:
                     gene.alleles[rel.subject_id].extend(self.lookup_feat_rel_pubs_ids(rel.feature_relationship_id))

@@ -381,7 +381,7 @@ class AlleleDiseaseHandler(DataHandler):
         for dis_anno in self.fb_data_entities.values():
             if dis_anno.for_export is False:
                 continue
-            allele_curie = f'FB:{self.feature_lookup[dis_anno.feature_cvterm.feature_id]["uniquename"]}'
+            allele_curie = f'FB:{dis_anno.feature_cvterm.feature.uniquename}'
             do_curie = f'DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}'
             pub_curie = self.lookup_pub_curie(dis_anno.feature_cvterm.pub_id)
             agr_dis_anno = agr_datatypes.AlleleDiseaseAnnotationDTO(allele_curie, do_curie, pub_curie)
