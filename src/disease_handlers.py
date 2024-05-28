@@ -196,17 +196,6 @@ class AlleleDiseaseHandler(DataHandler):
         self.log.info(f'Obtained {counter} timestamps for annotations directly from the audit_chado table.')
         return
 
-    # Elaborate on get_datatype_data() for the AlleleDiseaseHandler.
-    def get_datatype_data(self, session):
-        """Extend the method for the AlleleDiseaseHandler."""
-        super().get_datatype_data(session)
-        self.get_allele_disease_annotations(session)
-        self.get_disease_qualifiers(session)
-        self.get_disease_evidence_codes(session)
-        self.get_disease_timestamps(session)
-        return
-
-    # Add methods to be run by synthesize_info() below.
     def confirm_current_allele_by_uniquename(self, session, uniquename):
         """Confirm that a given uniquename corresponds to a current allele.
 
@@ -292,24 +281,6 @@ class AlleleDiseaseHandler(DataHandler):
         self.log.info(f'Found {counter} allele modifiers for disease annotations.')
         return
 
-    def flag_unexportable_annotations(self):
-        """Flag internal annotations."""
-        self.log.info('Flag internal annotations.')
-        for dis_anno in self.fb_data_entities.values():
-            export_checks = {
-                dis_anno.qualifier.value not in self.relevant_qualifiers:
-                    'Only "model of|DOES NOT model" is exportable',
-                ' with FLYBASE' in dis_anno.evidence_code.value:
-                    'Only disease annotations modeled by a single allele are exportable',
-                dis_anno.modifier_problem is True: 'Cannot find current feature for disease modifier.',
-                dis_anno.modifier_id_was_updated is True: 'Modifier referenced by non-current allele ID.',
-            }
-            for check, msg in export_checks.items():
-                if check:
-                    dis_anno.for_export = False
-                    dis_anno.export_warnings.append(msg)
-        return
-
     def get_preferred_inferred_gene_curie(self, session):
         """Get preferred curie for the allele's parental gene for each annotation."""
         self.log.info('Get preferred curie for the allele\'s parental gene for each annotation.')
@@ -365,12 +336,41 @@ class AlleleDiseaseHandler(DataHandler):
         dis_anno.preferred_gene_curie = gene_curie
         return
 
-    # Elaborate on synthesize_info() for the AlleleDiseaseHandler.
-    def synthesize_info(self, session):
+    # Elaborate on get_datatype_data() for the AlleleDiseaseHandler.
+    def get_datatype_data(self, session):
         """Extend the method for the AlleleDiseaseHandler."""
-        super().synthesize_info()
+        super().get_datatype_data(session)
+        self.get_allele_disease_annotations(session)
+        self.get_disease_qualifiers(session)
+        self.get_disease_evidence_codes(session)
+        self.get_disease_timestamps(session)
         self.extract_modifiers(session)
         self.get_preferred_inferred_gene_curie(session)
+        return
+
+    # Add methods to be run by synthesize_info() below.
+    def flag_unexportable_annotations(self):
+        """Flag internal annotations."""
+        self.log.info('Flag internal annotations.')
+        for dis_anno in self.fb_data_entities.values():
+            export_checks = {
+                dis_anno.qualifier.value not in self.relevant_qualifiers:
+                    'Only "model of|DOES NOT model" is exportable',
+                ' with FLYBASE' in dis_anno.evidence_code.value:
+                    'Only disease annotations modeled by a single allele are exportable',
+                dis_anno.modifier_problem is True: 'Cannot find current feature for disease modifier.',
+                dis_anno.modifier_id_was_updated is True: 'Modifier referenced by non-current allele ID.',
+            }
+            for check, msg in export_checks.items():
+                if check:
+                    dis_anno.for_export = False
+                    dis_anno.export_warnings.append(msg)
+        return
+
+    # Elaborate on synthesize_info() for the AlleleDiseaseHandler.
+    def synthesize_info(self):
+        """Extend the method for the AlleleDiseaseHandler."""
+        super().synthesize_info()
         self.flag_unexportable_annotations()
         return
 
@@ -458,7 +458,6 @@ class AlleleDiseaseHandler(DataHandler):
         """Extend the method for the AlleleDiseaseHandler."""
         super().map_fb_data_to_alliance()
         self.map_allele_disease_annotation_basic()
-        self.map_inferred_gene()
         self.map_data_provider_dto()
         self.map_timestamps()
         self.derive_uniq_key()
