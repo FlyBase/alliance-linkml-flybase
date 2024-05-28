@@ -310,40 +310,9 @@ class AlleleDiseaseHandler(DataHandler):
                     dis_anno.export_warnings.append(msg)
         return
 
-    # Elaborate on synthesize_info() for the AlleleDiseaseHandler.
-    def synthesize_info(self, session):
-        """Extend the method for the AlleleDiseaseHandler."""
-        super().synthesize_info()
-        self.extract_modifiers(session)
-        self.flag_unexportable_annotations()
-        return
-
-    # Add methods to be run by map_fb_data_to_alliance() below.
-    def map_allele_disease_annotation_basic(self):
-        """Map basic FlyBase allele disease annotation to the Alliance LinkML object."""
-        self.log.info('Map basic FlyBase allele disease annotation to the Alliance LinkML object.')
-        for dis_anno in self.fb_data_entities.values():
-            if dis_anno.for_export is False:
-                continue
-            allele_curie = f'FB:{self.feature_lookup[dis_anno.feature_cvterm.feature_id]["uniquename"]}'
-            do_curie = f'DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}'
-            pub_curie = self.lookup_pub_curie(dis_anno.feature_cvterm.pub_id)
-            agr_dis_anno = agr_datatypes.AlleleDiseaseAnnotationDTO(allele_curie, do_curie, pub_curie)
-            if dis_anno.qualifier.value == 'DOES NOT model':
-                agr_dis_anno.negated = True
-            if dis_anno.evidence_code.value.startswith('CEC'):
-                agr_dis_anno.evidence_code_curies.append(self.evidence_code_xrefs['CEC'])
-            else:
-                agr_dis_anno.evidence_code_curies.append(self.evidence_code_xrefs['CEA'])
-            if dis_anno.fb_modifier_type in self.disease_genetic_modifier_terms.keys():
-                agr_dis_anno.disease_genetic_modifier_relation_name = self.disease_genetic_modifier_terms[dis_anno.fb_modifier_type]
-            if dis_anno.fb_modifier_id:
-                agr_dis_anno.disease_genetic_modifier_identifiers = [f'FB:{dis_anno.fb_modifier_id}']
-            dis_anno.linkmldto = agr_dis_anno
-        return
-
-    def map_inferred_gene(self, session):
-        """Map inferred gene for each annotation."""
+    def get_preferred_inferred_gene_curie(self, session):
+        """Get preferred curie for the allele's parental gene for each annotation."""
+        self.log.info('Get preferred curie for the allele\'s parental gene for each annotation.')
         for dis_anno in self.fb_data_entities.values():
             filters = (
                 FeatureRelationship.subject_id == dis_anno.feature_cvterm.feature_id,
@@ -393,7 +362,41 @@ class AlleleDiseaseHandler(DataHandler):
                     gene_curie = gene_curie.replace('WormBase', 'WB')
                     gene_curie = gene_curie.replace('MGI:MGI:', 'MGI:')
                     gene_curie = gene_curie.replace('GENEPAGE', 'GENE')
-        dis_anno.inferred_gene_identifier = gene_curie
+        dis_anno.preferred_gene_curie = gene_curie
+        return
+
+    # Elaborate on synthesize_info() for the AlleleDiseaseHandler.
+    def synthesize_info(self, session):
+        """Extend the method for the AlleleDiseaseHandler."""
+        super().synthesize_info()
+        self.extract_modifiers(session)
+        self.get_preferred_inferred_gene_curie(session)
+        self.flag_unexportable_annotations()
+        return
+
+    # Add methods to be run by map_fb_data_to_alliance() below.
+    def map_allele_disease_annotation_basic(self):
+        """Map basic FlyBase allele disease annotation to the Alliance LinkML object."""
+        self.log.info('Map basic FlyBase allele disease annotation to the Alliance LinkML object.')
+        for dis_anno in self.fb_data_entities.values():
+            if dis_anno.for_export is False:
+                continue
+            allele_curie = f'FB:{self.feature_lookup[dis_anno.feature_cvterm.feature_id]["uniquename"]}'
+            do_curie = f'DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}'
+            pub_curie = self.lookup_pub_curie(dis_anno.feature_cvterm.pub_id)
+            agr_dis_anno = agr_datatypes.AlleleDiseaseAnnotationDTO(allele_curie, do_curie, pub_curie)
+            if dis_anno.qualifier.value == 'DOES NOT model':
+                agr_dis_anno.negated = True
+            if dis_anno.evidence_code.value.startswith('CEC'):
+                agr_dis_anno.evidence_code_curies.append(self.evidence_code_xrefs['CEC'])
+            else:
+                agr_dis_anno.evidence_code_curies.append(self.evidence_code_xrefs['CEA'])
+            if dis_anno.fb_modifier_type in self.disease_genetic_modifier_terms.keys():
+                agr_dis_anno.disease_genetic_modifier_relation_name = self.disease_genetic_modifier_terms[dis_anno.fb_modifier_type]
+            if dis_anno.fb_modifier_id:
+                agr_dis_anno.disease_genetic_modifier_identifiers = [f'FB:{dis_anno.fb_modifier_id}']
+            agr_dis_anno.inferred_gene_identifier = dis_anno.preferred_gene_curie
+            dis_anno.linkmldto = agr_dis_anno
         return
 
     def map_data_provider_dto(self):

@@ -331,7 +331,7 @@ class GeneHandler(FeatureHandler):
         for feat_rel in self.gene_allele_associations:
             allele_curie = f'FB:{self.feature_lookup[feat_rel.subject_id]["uniquename"]}'
             gene_curie = f'FB:{self.feature_lookup[feat_rel.object_id]["uniquename"]}'
-            pub_curies = self.lookup_pub_curies(feat_rel.pub_ids) 
+            pub_curies = self.lookup_pub_curies(feat_rel.pub_ids)
             rel_dto = agr_datatypes.AlleleGeneAssociationDTO(allele_curie, 'is_allele_of', gene_curie, pub_curies)
             if self.feature_lookup[feat_rel.subject_id]['is_obsolete'] is True or self.feature_lookup[feat_rel.object_id]['is_obsolete'] is True:
                 rel_dto.obsolete = True
