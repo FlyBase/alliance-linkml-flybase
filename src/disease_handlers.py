@@ -423,7 +423,7 @@ class AlleleDiseaseHandler(DataHandler):
             evi_codes = sorted(list(set(dis_anno.linkmldto.evidence_code_curies)))
             evi_code_str = '|'.join(evi_codes)
             dis_anno.uniq_key += f'||{evi_code_str}'
-            if dis_anno.disease_genetic_modifier_identifiers:
+            if dis_anno.linkmldto.disease_genetic_modifier_identifiers:
                 dis_anno.uniq_key += f'||{dis_anno.linkmldto.disease_genetic_modifier_identifiers[0]}'
             else:
                 dis_anno.uniq_key += f'{None}'
