@@ -121,7 +121,7 @@ class FBGene(FBFeature):
         # Processed FB data.
         self.gene_type_name = 'gene'        # Will be SO term name from "promoted_gene_type" Featureprop, if available.
         self.gene_type_id = 'SO:0000704'    # Will be SO term ID from "promoted_gene_type" Featureprop, if available.
-        self.alleles = {}                   # Will be allele_id-keyed list of pub curies.
+        self.alleles = {}                   # Will be allele_id-keyed list of pub_ids.
 
 
 class FBConstruct(FBFeature):
