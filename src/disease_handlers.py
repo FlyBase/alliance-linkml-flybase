@@ -417,17 +417,17 @@ class AlleleDiseaseHandler(DataHandler):
                 continue
             dis_anno.uniq_key = f'{dis_anno.linkmldto.allele_identifier}'
             dis_anno.uniq_key += f'||{dis_anno.linkmldto.do_term_curie}'
-            dis_anno.uniq_key += f'||{dis_anno.disease_relation_name}'
-            dis_anno.uniq_key += f'||{dis_anno.negated}'
-            dis_anno.uniq_key += f'||{dis_anno.reference_curie}'
-            evi_codes = sorted(list(set(dis_anno.evidence_code_curies)))
+            dis_anno.uniq_key += f'||{dis_anno.linkmldto.disease_relation_name}'
+            dis_anno.uniq_key += f'||{dis_anno.linkmldto.negated}'
+            dis_anno.uniq_key += f'||{dis_anno.linkmldto.reference_curie}'
+            evi_codes = sorted(list(set(dis_anno.linkmldto.evidence_code_curies)))
             evi_code_str = '|'.join(evi_codes)
             dis_anno.uniq_key += f'||{evi_code_str}'
             if dis_anno.disease_genetic_modifier_identifiers:
-                dis_anno.uniq_key += f'||{dis_anno.disease_genetic_modifier_identifiers[0]}'
+                dis_anno.uniq_key += f'||{dis_anno.linkmldto.disease_genetic_modifier_identifiers[0]}'
             else:
                 dis_anno.uniq_key += f'{None}'
-            dis_anno.uniq_key += f'||{dis_anno.disease_genetic_modifier_relation_name}'
+            dis_anno.uniq_key += f'||{dis_anno.linkmldto.disease_genetic_modifier_relation_name}'
         return
 
     def group_dis_annos(self):
