@@ -168,6 +168,27 @@ class FBGenotype(FBDataEntity):
 
 
 # Associations/annotations.
+class FBRelationship(FBExportEntity):
+    """FBRelationship class."""
+    def __init__(self, chado_table, subject_id, object_id, rel_type):
+        """Create a FBRelationship object.
+
+        Args:
+            chado_table (str): Name of chado table holding relationship: e.g., feature_relationship, strain_feature.
+            subject_id (int): Internal primary_key id for subject (e.g., strain_id for strain_feature table).
+            object_id (int): Internal primary_key id for object (e.g., feature_id for strain_feature table).
+            rel_type (str): CV term name for the relationship type.
+
+        """
+        super().__init__()
+        # Primary FB chado data.
+        self.chado_table_name = chado_table
+        self.subject_id = subject_id
+        self.object_id = object_id
+        self.rel_type = rel_type
+        self.pub_ids = []                      # Will be list of pub_ids supporting the relationship.
+
+
 class FBAlleleDiseaseAnnotation(FBExportEntity):
     """FBAlleleDiseaseAnnotation class."""
     def __init__(self, feature_cvterm, provenance_prop):
