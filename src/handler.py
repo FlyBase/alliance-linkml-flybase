@@ -353,12 +353,13 @@ class DataHandler(object):
             self.log.info(f'Looking up {feat_type} features.')
             filters = (
                 Feature.uniquename.op('~')(self.regex[feat_type]),
-                or_(FeatureSynonym.is_current.is_(True), FeatureSynonym.is_current.is_(None)),
-                or_(Cvterm.name == 'symbol', Cvterm.name.is_(None)),
+                # or_(FeatureSynonym.is_current.is_(True), FeatureSynonym.is_current.is_(None)),
+                # or_(Cvterm.name == 'symbol', Cvterm.name.is_(None)),
             )
             results = session.query(Feature.feature_id, Feature.uniquename, Feature.is_obsolete,
                                     Feature.type_id, Organism.organism_id, Organism.genus,
-                                    Organism.species, Feature.name, Synonym.synonym_sgml).\
+                                    Organism.species, Feature.name, Synonym.synonym_sgml,
+                                    FeatureSynonym.is_current, Cvterm.name).\
                 select_from(Feature).\
                 join(Organism, (Organism.organism_id == Feature.organism_id)).\
                 outerjoin(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
@@ -375,8 +376,12 @@ class DataHandler(object):
             SPECIES = 6
             NAME = 7
             SYMBOL = 8
+            CURR_SYNO = 9
+            SYMB_TYPE = 10
             counter = 0
             for result in results:
+                if result[CURR_SYNO] is False or result[SYMB_TYPE] != 'symbol':
+                    continue
                 feat_dict = {
                     'uniquename': result[UNIQUENAME],
                     'is_obsolete': result[OBSOLETE],
