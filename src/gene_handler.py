@@ -45,52 +45,52 @@ class GeneHandler(FeatureHandler):
         'FBgn0087003': 'tal',               # Current unannotated oddball.
         'FBgn0015267': 'Mmus\\Abl1',        # Current mouse gene with MGI xref.
     }
-    # Elaborate on export filters for GeneHandler.
-    required_fields = {
-        'gene_ingest_set': [
-            'data_provider_dto',
-            'gene_symbol_dto',
-            'gene_type_curie',
-            'internal',
-            'mod_entity_id',
-            'taxon_curie',
-        ],
-        'allele_gene_association_ingest_set': [
-            'allele_identifier',
-            'gene_identifier',
-            'internal',
-            'relation_name',
-        ]
-    }
-    output_fields = {
-        'gene_ingest_set': [
-            'created_by_curie',
-            'cross_reference_dtos',
-            'data_provider_dto',
-            'date_created',
-            'date_updated',
-            'gene_full_name_dto',
-            'gene_symbol_dto',
-            'gene_synonym_dtos',
-            'gene_systematic_name_dto',
-            'gene_secondary_id_dtos',
-            'gene_type_curie',
-            'internal',
-            'mod_entity_id',
-            'mod_internal_id',
-            'obsolete',
-            # 'related_notes',    # Not present in GeneDTO.
-            'taxon_curie',
-            'updated_by_curie',
-        ],
-        'allele_gene_association_ingest_set': [
-            'allele_identifier',
-            'evidence_curies',
-            'gene_identifier',
-            'internal',
-            'relation_name',
-        ]
-    }
+    # # Elaborate on export filters for GeneHandler.
+    # required_fields = {
+    #     'gene_ingest_set': [
+    #         'data_provider_dto',
+    #         'gene_symbol_dto',
+    #         'gene_type_curie',
+    #         'internal',
+    #         'mod_entity_id',
+    #         'taxon_curie',
+    #     ],
+    #     'allele_gene_association_ingest_set': [
+    #         'allele_identifier',
+    #         'gene_identifier',
+    #         'internal',
+    #         'relation_name',
+    #     ]
+    # }
+    # output_fields = {
+    #     'gene_ingest_set': [
+    #         'created_by_curie',
+    #         'cross_reference_dtos',
+    #         'data_provider_dto',
+    #         'date_created',
+    #         'date_updated',
+    #         'gene_full_name_dto',
+    #         'gene_symbol_dto',
+    #         'gene_synonym_dtos',
+    #         'gene_systematic_name_dto',
+    #         'gene_secondary_id_dtos',
+    #         'gene_type_curie',
+    #         'internal',
+    #         'mod_entity_id',
+    #         'mod_internal_id',
+    #         'obsolete',
+    #         # 'related_notes',    # Not present in GeneDTO.
+    #         'taxon_curie',
+    #         'updated_by_curie',
+    #     ],
+    #     'allele_gene_association_ingest_set': [
+    #         'allele_identifier',
+    #         'evidence_curies',
+    #         'gene_identifier',
+    #         'internal',
+    #         'relation_name',
+    #     ]
+    # }
     # Reference dicts.
     internal_gene_types = [
         'engineered_fusion_gene',
