@@ -403,6 +403,8 @@ class AlleleDiseaseHandler(DataHandler):
         """Return the DataProviderDTO for the annotation."""
         self.log.info('Map data provider.')
         for dis_anno in self.fb_data_entities.values():
+            if dis_anno.for_export is False:
+                continue
             dp_xref = agr_datatypes.CrossReferenceDTO('DOID', dis_anno.linkmldto.do_term_curie, 'fb/disease', None).dict_export()
             dis_anno.linkmldto.data_provider_dto = agr_datatypes.DataProviderDTO(dp_xref).dict_export()
         return
@@ -411,6 +413,8 @@ class AlleleDiseaseHandler(DataHandler):
         """Derive the unique key based on defining aspects of Alliance disease annotation."""
         self.log.info('Derive the unique key based on defining aspects of Alliance disease annotation.')
         for dis_anno in self.fb_data_entities.values():
+            if dis_anno.for_export is False:
+                continue
             dis_anno.uniq_key = f'{dis_anno.linkmldto.allele_identifier}'
             dis_anno.uniq_key += f'||{dis_anno.linkmldto.do_term_curie}'
             dis_anno.uniq_key += f'||{dis_anno.disease_relation_name}'
