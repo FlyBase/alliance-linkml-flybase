@@ -661,6 +661,7 @@ class DataHandler(object):
             if i.linkmldto is None:
                 i.for_export = False
                 i.export_warnings.append('Not mappable to LinkML at all.')
+                continue
             for attr in i.linkmldto.required_fields:
                 if attr not in i.linkmldto.__dict__.keys():
                     i.for_export = False
