@@ -51,52 +51,6 @@ class ConstructHandler(FeatureHandler):
         'FBtp0083738': 'P{GR}',                                   # Is regulated_by FBgn Act5C.
         'FBtp0017594': 'P{UAS(-FRT)ptc.Deltaloop2}'               # Obsolete, has only a non-current symbol synonym - for testing feature lookup.
     }
-    # # Elaborate on export filters for ConstructHandler.
-    # required_fields = {
-    #     'construct_ingest_set': [
-    #         'construct_symbol_dto',
-    #         'data_provider_dto',
-    #         'internal',
-    #         'mod_entity_id',
-    #     ],
-    #     'construct_genomic_entity_association_ingest_set': [
-    #         'construct_identifier',
-    #         'genomic_entity_identifier',
-    #         'genomic_entity_relation_name',
-    #         'internal',
-    #     ],
-    # }
-    # output_fields = {
-    #     'construct_ingest_set': [
-    #         'construct_component_dtos',
-    #         'construct_full_name_dto',
-    #         'construct_symbol_dto',
-    #         'construct_synonym_dtos',
-    #         'created_by_curie',
-    #         'data_provider_dto',
-    #         'date_created',
-    #         'date_updated',
-    #         'internal',
-    #         'mod_entity_id',
-    #         'mod_internal_id',
-    #         'obsolete',
-    #         'reference_curies',
-    #         'secondary_identifiers',
-    #         'updated_by_curie',
-    #     ],
-    #     'construct_genomic_entity_association_ingest_set': [
-    #         'construct_identifier',
-    #         'created_by_curie',
-    #         'date_created',
-    #         'date_updated',
-    #         'evidence_curies',
-    #         'genomic_entity_identifier',
-    #         'genomic_entity_relation_name',
-    #         'internal',
-    #         'obsolete',
-    #         'updated_by_curie',
-    #     ],
-    # }
 
     # Elaborate on get_general_data() for the ConstructHandler.
     def get_general_data(self, session):

@@ -560,7 +560,7 @@ class PrimaryEntityHandler(DataHandler):
                     self.log.debug(f'Map {bin_type} to LinkML DTO slot {dto_key} because it has suffix "{bin_suffix}".')
                     map_synonyms_required = True
         if map_synonyms_required is False:
-            self.log.warning(f'The map_synonyms() method has been incorrectly called for {self.fb_data_type} objects.')
+            self.log.error(f'The map_synonyms() method has been incorrectly called for {self.fb_data_type} objects.')
             return
         else:
             self.log.info(f'Have these linkml name dto slots to fill in: {linkml_synonym_slots.values()}')
