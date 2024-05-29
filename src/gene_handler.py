@@ -69,6 +69,7 @@ class GeneHandler(FeatureHandler):
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
         self.build_ncbi_taxon_lookup(session)
+        self.build_feature_lookup(session)
         self.get_chr_info(session)
         self.build_feature_relationship_evidence_lookup(session)
         return
