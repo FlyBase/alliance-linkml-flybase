@@ -705,6 +705,9 @@ class DataHandler(object):
         self.log.info(f'Generate LinkML export dict from FB data for {output_set_name}.'.upper())
         # Create the export_data_list, keyed by the agr_ingest_set name.
         self.export_data[output_set_name] = []
+        self.input_count = 0
+        self.export_count = 0
+        self.internal_count = 0
         for i in input_list:
             self.input_count += 1
             if i.for_export is False:
