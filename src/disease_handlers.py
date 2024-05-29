@@ -82,7 +82,9 @@ class AlleleDiseaseHandler(DataHandler):
             distinct()
         counter = 0
         for result in results:
-            dis_anno = fb_datatypes.FBAlleleDiseaseAnnotation(result.FeatureCvterm, result.FeatureCvtermprop)
+            # BOB
+            # dis_anno = fb_datatypes.FBAlleleDiseaseAnnotation(result.FeatureCvterm, result.FeatureCvtermprop)
+            dis_anno = self.datatype_objects[self.fb_data_type](result.FeatureCvterm, result.FeatureCvtermprop)
             self.fb_data_entities[dis_anno.db_primary_id] = dis_anno
             counter += 1
         self.log.info(f'Found {counter} allele-based disease annotations from chado.')
