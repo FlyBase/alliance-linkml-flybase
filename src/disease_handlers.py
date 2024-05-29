@@ -369,7 +369,6 @@ class AlleleDiseaseHandler(DataHandler):
         for dis_anno in self.fb_data_entities.values():
             if dis_anno.for_export is False:
                 continue
-            dp_xref = agr_datatypes.CrossReferenceDTO('DOID', dis_anno.linkmldto.do_term_curie, 'fb/disease', dis_anno.linkmldto.do_term_curie).dict_export()
             dis_anno.linkmldto.data_provider_dto = agr_datatypes.DataProviderDTO(dp_xref).dict_export()
         return
 
