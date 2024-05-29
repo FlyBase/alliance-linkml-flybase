@@ -552,7 +552,6 @@ class PrimaryEntityHandler(DataHandler):
             'synonym_bin': '_synonym_dtos'
         }
         map_synonyms_required = False
-        # BOB - test simple fix.
         linkml_dto_attributes = self.agr_linkmldto_dict[self.fb_data_type]().__dict__.keys()
         for dto_key in linkml_dto_attributes:
             for bin_type, bin_suffix in linkml_synonym_slots.items():
