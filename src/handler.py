@@ -452,7 +452,7 @@ class DataHandler(object):
         self.log.info(f'Found {counter} pubs supporting {fr_counter} feature_relationships.')
         return
 
-    def lookup_feat_rel_pubs_ids(self, feature_relationship_id):
+    def lookup_feat_rel_pub_ids(self, feature_relationship_id):
         """Return a list of pub_ids supporting a given feature_relationship."""
         try:
             pub_ids = self.feat_rel_pub_lookup[feature_relationship_id]

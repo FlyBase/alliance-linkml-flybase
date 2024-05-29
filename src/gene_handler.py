@@ -176,12 +176,12 @@ class GeneHandler(FeatureHandler):
             # Find all pubs for a given gene-allele relationship.
             for rel in gene.allele_rels:
                 try:
-                    gene.alleles[rel.subject_id].extend(self.lookup_feat_rel_pubs_ids(rel.feature_relationship_id))
+                    gene.alleles[rel.subject_id].extend(self.lookup_feat_rel_pub_ids(rel.feature_relationship_id))
                 except KeyError:
-                    gene.alleles[rel.subject_id] = self.lookup_feat_rel_pubs_ids(rel.feature_relationship_id)
+                    gene.alleles[rel.subject_id] = self.lookup_feat_rel_pub_ids(rel.feature_relationship_id)
             for allele_id, pub_id_list in gene.alleles.items():
                 feat_rel = fb_datatypes.FBRelationship('feature_relationship', allele_id, gene.db_primary_id, 'alleleof')
-                feat_rel.pubs_ids = pub_id_list
+                feat_rel.pub_ids = pub_id_list
                 feat_rel.entity_desc = f'{self.feature_lookup[allele_id]["uniquename"]} alleleof {gene.name} ({gene.uniquename})'
                 self.gene_allele_associations.append(feat_rel)
             allele_counter += len(gene.alleles.keys())
