@@ -728,7 +728,8 @@ class DataHandler(object):
                     # self.log.debug(f'Export optional non-empty field: {attr}')
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)
                 else:
-                    self.log.debug(f'Empty value for this attr: {attr}')
+                    # self.log.debug(f'Empty value for this attr: {attr}')
+                    pass
             self.export_data[output_set_name].append(export_agr_dict)
         public_count = self.export_count - self.internal_count
         self.log.info(f'SUMMARY FOR EXPORT OF {output_set_name}'.upper())
