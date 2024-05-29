@@ -16,7 +16,6 @@ from harvdev_utils.production import (
     FeatureDbxref, FeatureRelationship, Pub
 )
 import agr_datatypes
-import fb_datatypes
 from handler import DataHandler
 
 
