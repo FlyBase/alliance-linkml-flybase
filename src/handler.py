@@ -106,7 +106,6 @@ class DataHandler(object):
     fb_agr_db_dict = {
         'EntrezGene': 'NCBI_Gene',
         'RNAcentral': 'RNAcentral',
-        # 'UniProt/GCRP': 'UniProt/GCRP',
         'UniProt/Swiss-Prot': 'UniProtKB',
         'UniProt/TrEMBL': 'UniProtKB',
         'SGD': 'SGD',
@@ -715,23 +714,21 @@ class DataHandler(object):
             self.export_count += 1
             if i.linkmldto.internal is True:
                 self.internal_count += 1
-                self.log.debug(f'Export {i} but keep internal at the Alliance: {i.internal_reasons}')
+                self.log.debug(f'Export {i} but keep INTERNAL at the Alliance: {i.internal_reasons}')
             export_agr_dict = {}
-            # for attr in self.output_fields[output_set_name]:
             for attr in i.linkmldto.__dict__.keys():
-                self.log.debug(f'Assess this attr: {attr}')
-                # if attr in self.required_fields[output_set_name]:
+                # self.log.debug(f'Assess this attr: {attr}')
                 if attr in i.linkmldto.internal_fields:
-                    self.log.debug(f'Skip this field: {attr}')
+                    # self.log.debug(f'Skip this field: {attr}')
+                    continue
                 elif attr in i.linkmldto.required_fields:
-                    self.log.debug(f'Export required field: {attr}')
+                    # self.log.debug(f'Export required field: {attr}')
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)
                 elif getattr(i.linkmldto, attr) is not None and getattr(i.linkmldto, attr) != []:
-                    self.log.debug(f'Export optional non-empty field: {attr}')
+                    # self.log.debug(f'Export optional non-empty field: {attr}')
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)
                 else:
-                    self.log.debug(f'What happened to this attr: {attr}')
-                self.log.debug(f'Done assessing attr: {attr}')
+                    self.log.debug(f'Empty value for this attr: {attr}')
             self.export_data[output_set_name].append(export_agr_dict)
         public_count = self.export_count - self.internal_count
         self.log.info(f'SUMMARY FOR EXPORT OF {output_set_name}'.upper())
