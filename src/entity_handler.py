@@ -531,7 +531,7 @@ class PrimaryEntityHandler(DataHandler):
                 redundant_prefix = f'{prefix}:'
                 if xref.dbxref.accession.startswith(redundant_prefix):
                     cleaned_accession = xref.dbxref.accession.replace(redundant_prefix, '', 1)
-                    self.log.debug(f'Removed "{redundant_prefix}" from "{xref.dbxref.accession}" to give "{cleaned_accession}"')
+                    # self.log.debug(f'Removed "{redundant_prefix}" from "{xref.dbxref.accession}" to give "{cleaned_accession}"')
                 else:
                     cleaned_accession = xref.dbxref.accession
                 curie = f'{prefix}:{cleaned_accession}'
