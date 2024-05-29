@@ -86,7 +86,7 @@ class GeneDTO(GenomicEntityDTO):
         self.gene_synonym_dtos = []             # Many NameSlotAnnotationDTO objects.
         self.gene_type_curie = None             # SO term ID for gene's promoted_gene_type.
         self.gene_secondary_id_dtos = []        # Annotation IDs and 2o FlyBase IDs.
-        self.reference_curies = []              # Not yet part of LinkML, so not exported - should be added to LinkML model?
+        # self.reference_curies = []              # Not yet part of LinkML, so not exported - should be added to LinkML model?
         self.related_notes = []                 # Will be NoteDTO objects.
         self.required_fields.extend(['gene_symbol_dto'])
 

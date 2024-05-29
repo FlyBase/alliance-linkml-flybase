@@ -275,7 +275,7 @@ class GeneHandler(FeatureHandler):
         self.map_gene_basic()
         self.map_synonyms()
         self.map_data_provider_dto()
-        self.map_pubs()
+        # self.map_pubs()    # Suppress until LinkML Gene gets reference_curies slot.
         self.map_xrefs()
         self.map_timestamps()
         self.map_secondary_ids('gene_secondary_id_dtos')
