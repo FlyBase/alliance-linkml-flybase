@@ -49,6 +49,7 @@ class ConstructHandler(FeatureHandler):
         'FBtp0051705': 'M{MtnBcDNA-MtnDcDNA.EGFP}',               # has_reg_region MtnB.
         'FBtp0080088': 'P{UAS-Brainbow}',                         # Expresses EBFP2, EGFP, mKO2, has_reg_region UAS; tagged_with HA, MYC, V5; carries lox.
         'FBtp0083738': 'P{GR}',                                   # Is regulated_by FBgn Act5C.
+        'FBtp0017594': 'P{UAS(-FRT)ptc.Deltaloop2}'               # Obsolete, has only a non-current symbol synonym - for testing feature lookup.
     }
     # # Elaborate on export filters for ConstructHandler.
     # required_fields = {
