@@ -248,7 +248,22 @@ class AlleleDiseaseHandler(DataHandler):
     def get_preferred_inferred_gene_curie(self, session):
         """Get preferred curie for the allele's parental gene for each annotation."""
         self.log.info('Get preferred curie for the allele\'s parental gene for each annotation.')
+        # MOD for each organism.
+        mod_organisms = {
+            'Scer': 'SGD',
+            'Cele': 'WormBase',
+            'Drer': 'ZFIN',
+            'Mmus': 'MGI',
+            'Rnor': 'RGD',
+            'Hsap': 'HGNC',
+            'Xlae': 'Xenbase',
+            'Xtro': 'Xenbase',
+        }
+        input_counter = 0
+        gene_counter = 0
+        all_mod_curie_counter = 0
         for dis_anno in self.fb_data_entities.values():
+            input_counter += 1
             filters = (
                 FeatureRelationship.subject_id == dis_anno.feature_cvterm.feature_id,
                 Cvterm.name == 'alleleof',
@@ -262,20 +277,10 @@ class AlleleDiseaseHandler(DataHandler):
                 filter(*filters).\
                 one()
             gene_curie = None
-            # Report the MOD-appropriate curie.
-            mod_organisms = {
-                'Scer': 'SGD',
-                'Cele': 'WormBase',
-                'Drer': 'ZFIN',
-                'Mmus': 'MGI',
-                'Rnor': 'RGD',
-                'Hsap': 'HGNC',
-                'Xlae': 'Xenbase',
-                'Xtro': 'Xenbase',
-            }
             # By default, use FB gene curie.
             if parent_gene:
                 gene_curie = f'FB:{parent_gene.uniquename}'
+                gene_counter += 1
             # Look for a MOD curie and use it instead, if available and unambiguous.
             if parent_gene and parent_gene.organism.abbreviation in mod_organisms.keys():
                 filters = (
@@ -289,15 +294,18 @@ class AlleleDiseaseHandler(DataHandler):
                     join(Db, (Db.db_id == Dbxref.db_id)).\
                     filter(*filters).\
                     distinct()
-                counter = 0
+                mod_xref_counter = 0
                 for mod_curie in mod_curies:
-                    counter += 1
-                if counter == 1:
+                    mod_xref_counter += 1
+                if mod_xref_counter == 1:
                     gene_curie = f'{mod_organisms[parent_gene.organism.abbreviation]}:{mod_curie.accession}'
                     gene_curie = gene_curie.replace('WormBase', 'WB')
                     gene_curie = gene_curie.replace('MGI:MGI:', 'MGI:')
                     gene_curie = gene_curie.replace('GENEPAGE', 'GENE')
-        dis_anno.preferred_gene_curie = gene_curie
+                    all_mod_curie_counter += 1
+            dis_anno.preferred_gene_curie = gene_curie
+        self.log.info(f'Found {gene_counter} parental genes for {input_counter} disease annotations.')
+        self.log.info(f'Found {all_mod_curie_counter} MOD curies preferred to FB curies.')
         return
 
     # Elaborate on get_datatype_data() for the AlleleDiseaseHandler.
@@ -369,6 +377,7 @@ class AlleleDiseaseHandler(DataHandler):
         for dis_anno in self.fb_data_entities.values():
             if dis_anno.for_export is False:
                 continue
+            dp_xref = agr_datatypes.CrossReferenceDTO('DOID', dis_anno.linkmldto.do_term_curie, 'disease/fb', dis_anno.linkmldto.do_term_curie).dict_export()
             dis_anno.linkmldto.data_provider_dto = agr_datatypes.DataProviderDTO(dp_xref).dict_export()
         return
 
