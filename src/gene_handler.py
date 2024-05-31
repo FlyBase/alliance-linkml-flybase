@@ -45,52 +45,7 @@ class GeneHandler(FeatureHandler):
         'FBgn0087003': 'tal',               # Current unannotated oddball.
         'FBgn0015267': 'Mmus\\Abl1',        # Current mouse gene with MGI xref.
     }
-    # # Elaborate on export filters for GeneHandler.
-    # required_fields = {
-    #     'gene_ingest_set': [
-    #         'data_provider_dto',
-    #         'gene_symbol_dto',
-    #         'gene_type_curie',
-    #         'internal',
-    #         'mod_entity_id',
-    #         'taxon_curie',
-    #     ],
-    #     'allele_gene_association_ingest_set': [
-    #         'allele_identifier',
-    #         'gene_identifier',
-    #         'internal',
-    #         'relation_name',
-    #     ]
-    # }
-    # output_fields = {
-    #     'gene_ingest_set': [
-    #         'created_by_curie',
-    #         'cross_reference_dtos',
-    #         'data_provider_dto',
-    #         'date_created',
-    #         'date_updated',
-    #         'gene_full_name_dto',
-    #         'gene_symbol_dto',
-    #         'gene_synonym_dtos',
-    #         'gene_systematic_name_dto',
-    #         'gene_secondary_id_dtos',
-    #         'gene_type_curie',
-    #         'internal',
-    #         'mod_entity_id',
-    #         'mod_internal_id',
-    #         'obsolete',
-    #         # 'related_notes',    # Not present in GeneDTO.
-    #         'taxon_curie',
-    #         'updated_by_curie',
-    #     ],
-    #     'allele_gene_association_ingest_set': [
-    #         'allele_identifier',
-    #         'evidence_curies',
-    #         'gene_identifier',
-    #         'internal',
-    #         'relation_name',
-    #     ]
-    # }
+
     # Reference dicts.
     internal_gene_types = [
         'engineered_fusion_gene',
@@ -114,6 +69,7 @@ class GeneHandler(FeatureHandler):
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
         self.build_ncbi_taxon_lookup(session)
+        self.build_feature_lookup(session)
         self.get_chr_info(session)
         self.build_feature_relationship_evidence_lookup(session)
         return
@@ -220,12 +176,12 @@ class GeneHandler(FeatureHandler):
             # Find all pubs for a given gene-allele relationship.
             for rel in gene.allele_rels:
                 try:
-                    gene.alleles[rel.subject_id].extend(self.lookup_feat_rel_pubs_ids(rel.feature_relationship_id))
+                    gene.alleles[rel.subject_id].extend(self.lookup_feat_rel_pub_ids(rel.feature_relationship_id))
                 except KeyError:
-                    gene.alleles[rel.subject_id] = self.lookup_feat_rel_pubs_ids(rel.feature_relationship_id)
+                    gene.alleles[rel.subject_id] = self.lookup_feat_rel_pub_ids(rel.feature_relationship_id)
             for allele_id, pub_id_list in gene.alleles.items():
                 feat_rel = fb_datatypes.FBRelationship('feature_relationship', allele_id, gene.db_primary_id, 'alleleof')
-                feat_rel.pubs_ids = pub_id_list
+                feat_rel.pub_ids = pub_id_list
                 feat_rel.entity_desc = f'{self.feature_lookup[allele_id]["uniquename"]} alleleof {gene.name} ({gene.uniquename})'
                 self.gene_allele_associations.append(feat_rel)
             allele_counter += len(gene.alleles.keys())
@@ -319,11 +275,11 @@ class GeneHandler(FeatureHandler):
         self.map_gene_basic()
         self.map_synonyms()
         self.map_data_provider_dto()
-        self.map_pubs()
+        # self.map_pubs()    # Suppress until LinkML Gene gets reference_curies slot.
         self.map_xrefs()
         self.map_timestamps()
         self.map_secondary_ids('gene_secondary_id_dtos')
-        self.map_gene_snapshot()
+        # self.map_gene_snapshot()
         self.map_gene_type()
         self.map_gene_panther_xrefs()
         self.map_anno_ids_to_secondary_ids('gene_secondary_id_dtos')

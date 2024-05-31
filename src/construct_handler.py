@@ -49,53 +49,8 @@ class ConstructHandler(FeatureHandler):
         'FBtp0051705': 'M{MtnBcDNA-MtnDcDNA.EGFP}',               # has_reg_region MtnB.
         'FBtp0080088': 'P{UAS-Brainbow}',                         # Expresses EBFP2, EGFP, mKO2, has_reg_region UAS; tagged_with HA, MYC, V5; carries lox.
         'FBtp0083738': 'P{GR}',                                   # Is regulated_by FBgn Act5C.
+        'FBtp0017594': 'P{UAS(-FRT)ptc.Deltaloop2}'               # Obsolete, has only a non-current symbol synonym - for testing feature lookup.
     }
-    # # Elaborate on export filters for ConstructHandler.
-    # required_fields = {
-    #     'construct_ingest_set': [
-    #         'construct_symbol_dto',
-    #         'data_provider_dto',
-    #         'internal',
-    #         'mod_entity_id',
-    #     ],
-    #     'construct_genomic_entity_association_ingest_set': [
-    #         'construct_identifier',
-    #         'genomic_entity_identifier',
-    #         'genomic_entity_relation_name',
-    #         'internal',
-    #     ],
-    # }
-    # output_fields = {
-    #     'construct_ingest_set': [
-    #         'construct_component_dtos',
-    #         'construct_full_name_dto',
-    #         'construct_symbol_dto',
-    #         'construct_synonym_dtos',
-    #         'created_by_curie',
-    #         'data_provider_dto',
-    #         'date_created',
-    #         'date_updated',
-    #         'internal',
-    #         'mod_entity_id',
-    #         'mod_internal_id',
-    #         'obsolete',
-    #         'reference_curies',
-    #         'secondary_identifiers',
-    #         'updated_by_curie',
-    #     ],
-    #     'construct_genomic_entity_association_ingest_set': [
-    #         'construct_identifier',
-    #         'created_by_curie',
-    #         'date_created',
-    #         'date_updated',
-    #         'evidence_curies',
-    #         'genomic_entity_identifier',
-    #         'genomic_entity_relation_name',
-    #         'internal',
-    #         'obsolete',
-    #         'updated_by_curie',
-    #     ],
-    # }
 
     # Elaborate on get_general_data() for the ConstructHandler.
     def get_general_data(self, session):
@@ -293,7 +248,7 @@ class ConstructHandler(FeatureHandler):
             # Direct encodes_tool relationships.
             for rel in construct.encodes_tool_rels:
                 component_id = rel.object_id
-                pub_ids = self.lookup_feat_rel_pubs_ids(rel.feature_relationship_id)
+                pub_ids = self.lookup_feat_rel_pub_ids(rel.feature_relationship_id)
                 try:
                     construct.expressed_features[component_id].extend(pub_ids)
                 except KeyError:
@@ -304,7 +259,7 @@ class ConstructHandler(FeatureHandler):
             for rel in construct.al_encodes_tool_rels:
                 allele_id = rel.subject_id
                 component_id = rel.object_id
-                pub_ids = self.lookup_feat_rel_pubs_ids(rel.feature_relationship_id)
+                pub_ids = self.lookup_feat_rel_pub_ids(rel.feature_relationship_id)
                 try:
                     construct.expressed_features[component_id].extend(pub_ids)
                 except KeyError:
@@ -312,7 +267,7 @@ class ConstructHandler(FeatureHandler):
                 # Fold in pubs supporting the construct-allele relationship.
                 for al_con_rel in construct.parent_allele_rels:
                     if al_con_rel.subject_id == allele_id:
-                        al_con_pub_ids = self.lookup_feat_rel_pubs_ids(al_con_rel.feature_relationship_id)
+                        al_con_pub_ids = self.lookup_feat_rel_pub_ids(al_con_rel.feature_relationship_id)
                         construct.expressed_features[component_id].extend(al_con_pub_ids)
             # indirect_count = len(construct.expressed_features.keys()) - direct_count
             # self.log.debug(f'For {construct}, found {indirect_count} encoded tools via indirect allele relationships.')
@@ -332,7 +287,7 @@ class ConstructHandler(FeatureHandler):
             for rel in construct.al_genes:
                 allele_id = rel.subject_id
                 gene_id = rel.object_id
-                pub_ids = self.lookup_feat_rel_pubs_ids(rel.feature_relationship_id)
+                pub_ids = self.lookup_feat_rel_pub_ids(rel.feature_relationship_id)
                 # Slot for gene_id depends on the allele class.
                 try:
                     if set(self.transgenic_allele_class_lookup[allele_id]).intersection({'RNAi_reagent', 'sgRNA', 'antisense'}):
@@ -351,7 +306,7 @@ class ConstructHandler(FeatureHandler):
                 # Fold in pubs supporting the construct-allele relationship.
                 for al_con_rel in construct.parent_allele_rels:
                     if al_con_rel.subject_id == allele_id:
-                        al_con_pub_ids = self.lookup_feat_rel_pubs_ids(al_con_rel.feature_relationship_id)
+                        al_con_pub_ids = self.lookup_feat_rel_pub_ids(al_con_rel.feature_relationship_id)
                         gene_slot[gene_id].extend(al_con_pub_ids)
             # self.log.debug(f'For {construct}, found {this_expressed_gene_counter} expressed genes and {this_targeted_gene_counter} targeted genes.')
             all_expressed_gene_counter += this_expressed_gene_counter
@@ -368,7 +323,7 @@ class ConstructHandler(FeatureHandler):
             # Direct has_reg_region relationships.
             for rel in construct.reg_region_rels:
                 component_id = rel.object_id
-                pub_ids = self.lookup_feat_rel_pubs_ids(rel.feature_relationship_id)
+                pub_ids = self.lookup_feat_rel_pub_ids(rel.feature_relationship_id)
                 try:
                     construct.regulating_features[component_id].extend(pub_ids)
                 except KeyError:
@@ -378,7 +333,7 @@ class ConstructHandler(FeatureHandler):
             # Direct seqfeat relationships, old_style.
             for rel in construct.seqfeat_rels:
                 component_id = rel.subject_id
-                pub_ids = self.lookup_feat_rel_pubs_ids(rel.feature_relationship_id)
+                pub_ids = self.lookup_feat_rel_pub_ids(rel.feature_relationship_id)
                 try:
                     construct.regulating_features[component_id].extend(pub_ids)
                 except KeyError:
@@ -389,7 +344,7 @@ class ConstructHandler(FeatureHandler):
             for rel in construct.al_reg_region_rels:
                 allele_id = rel.subject_id
                 component_id = rel.object_id
-                pub_ids = self.lookup_feat_rel_pubs_ids(rel.feature_relationship_id)
+                pub_ids = self.lookup_feat_rel_pub_ids(rel.feature_relationship_id)
                 try:
                     construct.regulating_features[component_id].extend(pub_ids)
                 except KeyError:
@@ -397,13 +352,13 @@ class ConstructHandler(FeatureHandler):
                 # Fold in pubs supporting the construct-allele relationship.
                 for al_con_rel in construct.parent_allele_rels:
                     if al_con_rel.subject_id == allele_id:
-                        al_con_pub_ids = self.lookup_feat_rel_pubs_ids(al_con_rel.feature_relationship_id)
+                        al_con_pub_ids = self.lookup_feat_rel_pub_ids(al_con_rel.feature_relationship_id)
                         construct.regulating_features[component_id].extend(al_con_pub_ids)
             # indirect_count = len(construct.regulating_features.keys()) - direct_count - direct_count_old
             # self.log.debug(f'For {construct}, found {indirect_count} reg_regions tools via indirect allele relationships.')
             # Indirect relationships to genes via seqfeats.
             for component_id in list(construct.regulating_features.keys()):
-                pubs_ids = construct.regulating_features[component_id]
+                pub_ids = construct.regulating_features[component_id]
                 uniquename = self.feature_lookup[component_id]['uniquename']
                 feat_type = self.feature_lookup[component_id]['type']
                 if uniquename.startswith('FBsf') and feat_type in ['region', 'regulatory_region']:
@@ -415,7 +370,7 @@ class ConstructHandler(FeatureHandler):
                         try:
                             construct.regulating_features[gene_id].extend(pub_ids)
                         except KeyError:
-                            construct.regulating_features[gene_id] = pubs_ids
+                            construct.regulating_features[gene_id] = pub_ids
             # genes_via_seqfeat_count = len(construct.regulating_features.keys()) - direct_count - direct_count_old - indirect_count
             # self.log.debug(f'For {construct}, found an additional {genes_via_seqfeat_count} genes related to seqfeat reg_regions.')
             counter += len(construct.regulating_features.keys())

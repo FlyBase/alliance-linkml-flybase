@@ -531,7 +531,7 @@ class PrimaryEntityHandler(DataHandler):
                 redundant_prefix = f'{prefix}:'
                 if xref.dbxref.accession.startswith(redundant_prefix):
                     cleaned_accession = xref.dbxref.accession.replace(redundant_prefix, '', 1)
-                    self.log.debug(f'Removed "{redundant_prefix}" from "{xref.dbxref.accession}" to give "{cleaned_accession}"')
+                    # self.log.debug(f'Removed "{redundant_prefix}" from "{xref.dbxref.accession}" to give "{cleaned_accession}"')
                 else:
                     cleaned_accession = xref.dbxref.accession
                 curie = f'{prefix}:{cleaned_accession}'
@@ -552,7 +552,7 @@ class PrimaryEntityHandler(DataHandler):
             'synonym_bin': '_synonym_dtos'
         }
         map_synonyms_required = False
-        linkml_dto_attributes = self.agr_linkmldto_dict[self.fb_data_type].__dict__.keys()
+        linkml_dto_attributes = self.agr_linkmldto_dict[self.fb_data_type]().__dict__.keys()
         for dto_key in linkml_dto_attributes:
             for bin_type, bin_suffix in linkml_synonym_slots.items():
                 if dto_key.endswith(bin_suffix):
@@ -560,7 +560,7 @@ class PrimaryEntityHandler(DataHandler):
                     self.log.debug(f'Map {bin_type} to LinkML DTO slot {dto_key} because it has suffix "{bin_suffix}".')
                     map_synonyms_required = True
         if map_synonyms_required is False:
-            self.log.warning(f'The map_synonyms() method has been incorrectly called for {self.fb_data_type} objects.')
+            self.log.error(f'The map_synonyms() method has been incorrectly called for {self.fb_data_type} objects.')
             return
         else:
             self.log.info(f'Have these linkml name dto slots to fill in: {linkml_synonym_slots.values()}')

@@ -12,7 +12,6 @@ Author(s):
 
 import datetime
 from logging import Logger
-from sqlalchemy import or_
 from sqlalchemy.orm import aliased
 import strict_rfc3339
 from harvdev_utils.char_conversions import sub_sup_sgml_to_html
@@ -107,7 +106,6 @@ class DataHandler(object):
     fb_agr_db_dict = {
         'EntrezGene': 'NCBI_Gene',
         'RNAcentral': 'RNAcentral',
-        # 'UniProt/GCRP': 'UniProt/GCRP',
         'UniProt/Swiss-Prot': 'UniProtKB',
         'UniProt/TrEMBL': 'UniProtKB',
         'SGD': 'SGD',
@@ -337,7 +335,6 @@ class DataHandler(object):
         """Build a simple feature lookup."""
         # Note - depends on prior construction of self.ncbi_taxon_lookup and self.cvterm_lookup.
         self.log.info('Build a simple feature lookup.')
-        # Feature types to add to the feature_lookup.
         feat_type_export = {
             'allele': True,
             'construct': True,
@@ -349,22 +346,18 @@ class DataHandler(object):
             'seqfeat': False,
             'tool': False,
         }
+        # First get features.
         for feat_type, is_exported in feat_type_export.items():
             self.log.info(f'Looking up {feat_type} features.')
-            filters = (
+            feat_filters = (
                 Feature.uniquename.op('~')(self.regex[feat_type]),
-                or_(FeatureSynonym.is_current.is_(True), FeatureSynonym.is_current.is_(None)),
-                or_(Cvterm.name == 'symbol', Cvterm.name.is_(None)),
             )
-            results = session.query(Feature.feature_id, Feature.uniquename, Feature.is_obsolete,
-                                    Feature.type_id, Organism.organism_id, Organism.genus,
-                                    Organism.species, Feature.name, Synonym.synonym_sgml).\
+            feat_results = session.query(Feature.feature_id, Feature.uniquename, Feature.is_obsolete,
+                                         Feature.type_id, Organism.organism_id, Organism.genus,
+                                         Organism.species, Feature.name).\
                 select_from(Feature).\
                 join(Organism, (Organism.organism_id == Feature.organism_id)).\
-                outerjoin(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
-                outerjoin(Synonym, (Synonym.synonym_id == FeatureSynonym.synonym_id)).\
-                outerjoin(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
-                filter(*filters).\
+                filter(*feat_filters).\
                 distinct()
             FEATURE_ID = 0
             UNIQUENAME = 1
@@ -374,30 +367,47 @@ class DataHandler(object):
             GENUS = 5
             SPECIES = 6
             NAME = 7
-            SYMBOL = 8
-            counter = 0
-            for result in results:
+            feat_counter = 0
+            for result in feat_results:
                 feat_dict = {
                     'uniquename': result[UNIQUENAME],
                     'is_obsolete': result[OBSOLETE],
                     'type': self.cvterm_lookup[result[TYPE_ID]].name,
                     'species': f'{result[GENUS]} {result[SPECIES]}',
                     'name': result[NAME],
+                    'symbol': result[NAME],
                     'exported': is_exported,
                 }
-                if result[SYMBOL] is not None:
-                    feat_dict['symbol'] = sub_sup_sgml_to_html(result[SYMBOL])
-                else:
-                    feat_dict['symbol'] = result[NAME]
                 try:
                     feat_dict['taxon_id'] = self.ncbi_taxon_lookup[result[ORG_ID]]
                 except KeyError:
                     feat_dict['taxon_id'] = 'NCBITaxon:32644'    # Unspecified taxon.
-                if feat_dict['symbol'] is None:
-                    feat_dict['symbol'] = feat_dict['name']      # Some old obsolete features have no symbol synonym.
                 self.feature_lookup[result[FEATURE_ID]] = feat_dict
-                counter += 1
-            self.log.info(f'Added {counter} {feat_type} features to the feature_lookup.')
+                feat_counter += 1
+            self.log.info(f'Added {feat_counter} {feat_type} features to the feature_lookup.')
+            # Second, get current symbol synonym for each feature, if it exists.
+            syno_filters = (
+                Feature.uniquename.op('~')(self.regex[feat_type]),
+                FeatureSynonym.is_current.is_(True),
+                Cvterm.name == 'symbol',
+            )
+            syno_results = session.query(Feature.feature_id, Synonym.name).\
+                select_from(Feature).\
+                join(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
+                join(Synonym, (Synonym.synonym_id == FeatureSynonym.synonym_id)).\
+                join(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
+                filter(*syno_filters).\
+                distinct()
+            FEATURE_ID = 0
+            SYMBOL = 1
+            syno_counter = 0
+            for result in syno_results:
+                try:
+                    self.feature_lookup[result[FEATURE_ID]]['symbol'] = sub_sup_sgml_to_html(result[SYMBOL])
+                    syno_counter += 1
+                except KeyError:
+                    pass
+            self.log.info(f'Found {syno_counter} symbol synonyms for {feat_counter} {feat_type} features.')
         return
 
     def get_chr_info(self, session):
@@ -442,7 +452,7 @@ class DataHandler(object):
         self.log.info(f'Found {counter} pubs supporting {fr_counter} feature_relationships.')
         return
 
-    def lookup_feat_rel_pubs_ids(self, feature_relationship_id):
+    def lookup_feat_rel_pub_ids(self, feature_relationship_id):
         """Return a list of pub_ids supporting a given feature_relationship."""
         try:
             pub_ids = self.feat_rel_pub_lookup[feature_relationship_id]
@@ -656,11 +666,16 @@ class DataHandler(object):
 
         """
         self.log.info(f'Flag FlyBase data lacking information for a required field in the {output_set_name}.'.upper())
+        input_counter = 0
+        no_linkml_mapping_counter = 0
+        missing_required_info_counter = 0
         for i in input_list:
+            input_counter += 1
             # for attr in self.required_fields[output_set_name]:
             if i.linkmldto is None:
                 i.for_export = False
                 i.export_warnings.append('Not mappable to LinkML at all.')
+                no_linkml_mapping_counter += 1
                 continue
             for attr in i.linkmldto.required_fields:
                 if attr not in i.linkmldto.__dict__.keys():
@@ -671,6 +686,10 @@ class DataHandler(object):
                     i.export_warnings.append(f'Missing value "{attr}" attribute.')
             if i.for_export is False:
                 self.log.debug(f'DO NOT EXPORT {i}: {i.export_warnings}')
+                missing_required_info_counter += 1
+        self.log.info(f'Assessed {input_counter} objects for exportability.')
+        self.log.info(f'Found {no_linkml_mapping_counter} objects with no LinkML mapping at all.')
+        self.log.info(f'Found {missing_required_info_counter} objects missing required LinkML info.')
         return
 
     # The generate_export_dict() general method.
@@ -685,6 +704,9 @@ class DataHandler(object):
         self.log.info(f'Generate LinkML export dict from FB data for {output_set_name}.'.upper())
         # Create the export_data_list, keyed by the agr_ingest_set name.
         self.export_data[output_set_name] = []
+        self.input_count = 0
+        self.export_count = 0
+        self.internal_count = 0
         for i in input_list:
             self.input_count += 1
             if i.for_export is False:
@@ -692,23 +714,22 @@ class DataHandler(object):
             self.export_count += 1
             if i.linkmldto.internal is True:
                 self.internal_count += 1
-                self.log.debug(f'Export {i} but keep internal at the Alliance: {i.internal_reasons}')
+                self.log.debug(f'Export {i} but keep INTERNAL at the Alliance: {i.internal_reasons}')
             export_agr_dict = {}
-            # for attr in self.output_fields[output_set_name]:
             for attr in i.linkmldto.__dict__.keys():
-                self.log.debug(f'Assess this attr: {attr}')
-                # if attr in self.required_fields[output_set_name]:
+                # self.log.debug(f'Assess this attr: {attr}')
                 if attr in i.linkmldto.internal_fields:
-                    self.log.debug(f'Skip this field: {attr}')
+                    # self.log.debug(f'Skip this field: {attr}')
+                    continue
                 elif attr in i.linkmldto.required_fields:
-                    self.log.debug(f'Export required field: {attr}')
+                    # self.log.debug(f'Export required field: {attr}')
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)
                 elif getattr(i.linkmldto, attr) is not None and getattr(i.linkmldto, attr) != []:
-                    self.log.debug(f'Export optional non-empty field: {attr}')
+                    # self.log.debug(f'Export optional non-empty field: {attr}')
                     export_agr_dict[attr] = getattr(i.linkmldto, attr)
                 else:
-                    self.log.debug(f'What happened to this attr: {attr}')
-                self.log.debug(f'Done assessing attr: {attr}')
+                    # self.log.debug(f'Empty value for this attr: {attr}')
+                    pass
             self.export_data[output_set_name].append(export_agr_dict)
         public_count = self.export_count - self.internal_count
         self.log.info(f'SUMMARY FOR EXPORT OF {output_set_name}'.upper())
