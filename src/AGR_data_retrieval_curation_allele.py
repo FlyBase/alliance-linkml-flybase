@@ -232,7 +232,7 @@ class AlleleHandler(object):
         'internal',
         'is_extinct',
         'obsolete',
-        'reference_curies',
+        # 'reference_curies',    # TEMPORARY until AGR load is faster
         'taxon_curie',
         # 'transgene_chromosome_location_curie',
         'updated_by_curie',
