@@ -1260,9 +1260,9 @@ class AlleleHandler(object):
             allele.internal = True
             allele.internal_reasons.append('Obsolete')
             allele.allele_database_status_dto['database_status_name'] = 'deleted'
-        if allele.organism_abbr != 'Dmel':
-            allele.internal = True
-            allele.internal_reasons.append('Non-Dmel')
+        # if allele.organism_abbr != 'Dmel':
+        #     allele.internal = True
+        #     allele.internal_reasons.append('Non-Dmel')
         if allele.allele_of_internal_gene is True:
             allele.internal = True
             allele.internal_reasons.append('Allele of internal Dmel gene type.')
