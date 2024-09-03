@@ -123,7 +123,7 @@ class AllianceAllele(object):
         self.date_created = None                               # Earliest timestamp.
         self.date_updated = None                               # Latest timestamp.
         # Attributes for the Alliance SubmittedObjectDTO.
-        self.mod_entity_id = 'FB:{}'.format(feature.uniquename)
+        self.primary_external_id = 'FB:{}'.format(feature.uniquename)
         self.mod_internal_id = str(self.feature.feature_id)
         self.data_provider_dto = None                          # Will be DataProviderDTO object.
         # Attributes for the Alliance BiologicalEntityDTO.
@@ -206,7 +206,7 @@ class AlleleHandler(object):
     # Export fields.
     required_fields = [
         'allele_symbol_dto',
-        'mod_entity_id',
+        'primary_external_id',
         'data_provider_dto',
         'internal',
         'taxon_curie',
@@ -223,7 +223,7 @@ class AlleleHandler(object):
         'allele_synonym_dtos',
         'created_by_curie',
         'cross_reference_dtos',
-        'mod_entity_id',
+        'primary_external_id',
         'mod_internal_id',
         'data_provider_dto',
         'date_created',
@@ -586,7 +586,7 @@ class AlleleHandler(object):
                 is_non_dmel_classical = True
             if is_non_dmel_classical is True:
                 allele.adj_organism_abbr = allele.organism_abbr
-                log.debug(f'Non-Dmel allele: id={allele.mod_entity_id}, name={allele.feature.name}, org_abbr={allele.organism_abbr}')
+                log.debug(f'Non-Dmel allele: id={allele.primary_external_id}, name={allele.feature.name}, org_abbr={allele.organism_abbr}')
                 counter += 1
         log.info('Adjusted organism to be "non-Dmel" for {} alleles.'.format(counter))
         return
@@ -1104,7 +1104,7 @@ class AlleleHandler(object):
             collection_names = list(set(collection_names))
             allele.in_collection_name = collection_names[0].name
             if len(collection_names) > 1:
-                log.warning(f'\tFound {len(collection_names)} collection(s) for {allele.mod_entity_id}: {allele.in_collection_name}')
+                log.warning(f'\tFound {len(collection_names)} collection(s) for {allele.primary_external_id}: {allele.in_collection_name}')
         return
 
     def synthesize_synonyms(self, feature):
@@ -1283,7 +1283,7 @@ class AlleleHandler(object):
                 allele.for_alliance_export = False
                 allele.export_warnings.append('Missing value for "{}" attribute'.format(attr))
         if allele.for_alliance_export is True:
-            log.debug('EXPORT {}'.format(allele.mod_entity_id))
+            log.debug('EXPORT {}'.format(allele.primary_external_id))
         return
 
     def synthesize_info(self, session):
