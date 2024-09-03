@@ -209,7 +209,7 @@ class GeneHandler(FeatureHandler):
         for gene in self.fb_data_entities.values():
             agr_gene = agr_datatypes.GeneDTO()
             agr_gene.obsolete = gene.chado_obj.is_obsolete
-            agr_gene.primary_external_id = f'FB:{gene.uniquename}'
+            agr_gene.mod_entity_id = f'FB:{gene.uniquename}'
             agr_gene.mod_internal_id = str(gene.chado_obj.feature_id)
             agr_gene.taxon_curie = gene.ncbi_taxon_id
             gene.linkmldto = agr_gene
