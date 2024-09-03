@@ -232,7 +232,7 @@ class AlleleHandler(object):
         'internal',
         'is_extinct',
         'obsolete',
-        'reference_curies',
+        # 'reference_curies',    # TEMPORARY until AGR load is faster
         'taxon_curie',
         # 'transgene_chromosome_location_curie',
         'updated_by_curie',
@@ -1085,7 +1085,7 @@ class AlleleHandler(object):
             allele_inheritance_mode_slot_annotation_dto['inheritance_mode_name'] = pheno_key[INHERITANCE_MODE_NAME]
             # allele_inheritance_mode_slot_annotation_dto['phenotype_term_curie'] = pheno_key[PHENOTYPE_CURIE_NAME]    # TEMPORARY: Suppress until AGR has FBcv
             allele_inheritance_mode_slot_annotation_dto['phenotype_statement'] = pheno_key[PHENOTYPE_STATEMENT]
-            allele_inheritance_mode_slot_annotation_dto['evidence_curies'] = list(set(pub_curie_list))
+            # allele_inheritance_mode_slot_annotation_dto['evidence_curies'] = list(set(pub_curie_list))    # TEMPORARY: Suppress until AGR loads are faster
             allele.allele_inheritance_mode_dtos.append(allele_inheritance_mode_slot_annotation_dto)
         return
 
@@ -1167,7 +1167,7 @@ class AlleleHandler(object):
             output_synonym_dto['format_text'] = sub_sup_sgml_to_html(syno_name[FORMAT_TEXT])
             output_synonym_dto['display_text'] = sub_sup_sgml_to_html(syno_name[DISPLAY_TEXT])
             output_synonym_dto['synonym_scope_name'] = 'exact'
-            output_synonym_dto['evidence_curies'] = [self.all_pubs_dict[i] for i in pub_id_list if self.all_pubs_dict[i] != 'FB:unattributed']
+            # output_synonym_dto['evidence_curies'] = [self.all_pubs_dict[i] for i in pub_id_list if self.all_pubs_dict[i] != 'FB:unattributed']    # TEMP
             output_synonym_dto['internal'] = syno_internal
             name_dto_list.append(output_synonym_dto)
         # Sift through name DTOs for symbol, fullname, systematic_name, etc.
@@ -1190,7 +1190,7 @@ class AlleleHandler(object):
             placeholder_symbol_dto['name_type_name'] = 'nomenclature_symbol'
             placeholder_symbol_dto['format_text'] = feature.feature.name
             placeholder_symbol_dto['display_text'] = feature.feature.name
-            placeholder_symbol_dto['evidence_curies'] = []
+            # placeholder_symbol_dto['evidence_curies'] = []
             feature.allele_symbol_dto = placeholder_symbol_dto
         return
 
@@ -1239,7 +1239,7 @@ class AlleleHandler(object):
                     full_pub_curie_list.remove('FB:unattributed')
             mutant_type_annotation = self.generic_audited_object.copy()
             mutant_type_annotation['mutation_type_curies'] = [mutation_type]
-            mutant_type_annotation['evidence_curies'] = list(set(full_pub_curie_list))
+            # mutant_type_annotation['evidence_curies'] = list(set(full_pub_curie_list))    # TEMPORARY until AGR loads are faster
             allele.allele_mutation_type_dtos.append(mutant_type_annotation)
         return
 
