@@ -38,7 +38,7 @@ class SubmittedObjectDTO(AuditedObjectDTO):
     def __init__(self):
         """Create SubmittedObjectDTO for FlyBase objects."""
         super().__init__()
-        self.mod_entity_id = None
+        self.primary_external_id = None
         self.mod_internal_id = None
         self.data_provider_dto = None
         self.required_fields.extend(['data_provider_dto'])
@@ -201,7 +201,7 @@ class AnnotationDTO(SingleReferenceAssociationDTO):
         """Create AnnotationDTO for FlyBase object."""
         super().__init__()
         self.reference_curie = reference_curie
-        self.mod_entity_id = None
+        self.primary_external_id = None
         self.mod_internal_id = None
         self.data_provider_dto = None
         self.note_dtos = []
@@ -256,7 +256,7 @@ class AffectedGenomicModelComponentDTO(AuditedObjectDTO):
         super().__init__()
         self.allele_curie = component_curie
         self.zygosity_curie = self.zygosity_id[zygosity]
-        self.required_fields.extend(['mod_entity_id'])
+        self.required_fields.extend(['primary_external_id'])
     # Zygosity mapping.
     zygosity_id = {
         'hemizygous': 'GENO:0000134',
