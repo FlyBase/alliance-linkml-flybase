@@ -172,6 +172,7 @@ class AlleleGeneAssociationDTO(AlleleGenomicEntityAssociationDTO):
         self.gene_identifier = gene_id
         self.evidence_curies = evidence_curies
         self.required_fields.extend(['gene_identifier'])
+        self.internal_fields.extend(['evidence_curies'])    # TEMPORARY UNTIL LOAD SPEED IMPROVES
 
 
 class ConstructGenomicEntityAssociationDTO(EvidenceAssociationDTO):
