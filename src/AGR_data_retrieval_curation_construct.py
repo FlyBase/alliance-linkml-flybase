@@ -66,7 +66,6 @@ def main():
     """Run the steps for exporting LinkML-compliant FlyBase AGM."""
     log.info(f'Running script "{__file__}"')
     log.info('Started main function.')
-    log.info('JIM BOB RAY: TRACER FOR THE CORRECT BRANCH.')
     log.info(f'Exporting data from FlyBase release: {database_release}')
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
