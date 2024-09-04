@@ -347,7 +347,7 @@ class NameSlotAnnotationDTO(SlotAnnotationDTO):
         self.display_text = display_text
         self.synonym_scope_name = 'exact'
         self.required_fields.extend(['name_type_name', 'format_text', 'display_text', 'synonym_scope'])
-        self.internal_fields.append('evidence_curies')    # TEMPORARY UNTIL LOAD SPEED IMPROVES
+        self.internal_fields.extend(['evidence_curies'])    # TEMPORARY UNTIL LOAD SPEED IMPROVES
 
 
 class ConstructComponentSlotAnnotationDTO(SlotAnnotationDTO):
@@ -370,6 +370,7 @@ class ConstructComponentSlotAnnotationDTO(SlotAnnotationDTO):
         self.taxon_text = taxon_text
         self.note_dtos = []
         self.required_fields.extend([])
+        self.internal_fields.extend(['evidence_curies'])    # TEMPORARY UNTIL LOAD SPEED IMPROVES
 
 
 class SecondaryIdSlotAnnotationDTO(SlotAnnotationDTO):
