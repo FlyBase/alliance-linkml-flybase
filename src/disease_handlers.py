@@ -337,21 +337,19 @@ class AlleleDiseaseHandler(DataHandler):
         multi_allele_counter = 0
         problematic_modifier_id_counter = 0
         updated_modifier_id_counter = 0
-        MSG = 0
-        COUNTER = 1
         no_export_counter = 0
         for dis_anno in self.fb_data_entities.values():
             export_checks = {
-                dis_anno.qualifier.value not in self.relevant_qualifiers: ('Only "model of|DOES NOT model" is exportable', wrong_qualifier_counter),
-                ' with FLYBASE' in dis_anno.evidence_code.value: ('Only disease annotations modeled by a single allele are exportable', multi_allele_counter),
-                dis_anno.modifier_problem is True: ('Cannot find current feature for disease modifier.', problematic_modifier_id_counter),
-                dis_anno.modifier_id_was_updated is True: ('Modifier referenced by non-current allele ID.', updated_modifier_id_counter),
+                dis_anno.qualifier.value not in self.relevant_qualifiers: {'msg': 'Only "model of|DOES NOT model" allowed', 'counter': wrong_qualifier_counter},
+                ' with FLYBASE' in dis_anno.evidence_code.value: {'msg': 'Only single-allele annotations allowed', 'counter': multi_allele_counter},
+                dis_anno.modifier_problem is True: {'msg': 'Cannot find current feature for disease modifier.', 'counter': problematic_modifier_id_counter},
+                dis_anno.modifier_id_was_updated is True: {'msg': 'Modifier referenced by non-current allele ID.', 'counter': updated_modifier_id_counter},
             }
             for check, action in export_checks.items():
                 if check:
                     dis_anno.for_export = False
-                    dis_anno.export_warnings.append(action[MSG])
-                    action[COUNTER] += 1
+                    dis_anno.export_warnings.append(action['msg'])
+                    action['counter'] += 1
             if dis_anno.for_export is False:
                 no_export_counter += 1
         self.log.info(f'{no_export_counter} annotations flagged as unexportable in early checking.')
