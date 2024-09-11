@@ -357,6 +357,8 @@ class AlleleDiseaseHandler(DataHandler):
         self.log.info(f'{multi_allele_counter} annotations: multi-allele model.')
         self.log.info(f'{problematic_modifier_id_counter} annotations: modifier allele ID could not be updated.')
         self.log.info(f'{updated_modifier_id_counter} annotations: modifier allele ID used was non-current.')
+        for action in export_checks.values():
+            self.log.info(f'BILLY BOB: {action["counter"]}: {action["msg"]}')
         return
 
     # Elaborate on synthesize_info() for the AlleleDiseaseHandler.
