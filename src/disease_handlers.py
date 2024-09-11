@@ -84,7 +84,7 @@ class AlleleDiseaseHandler(DataHandler):
             dis_anno = self.datatype_objects[self.fb_data_type](result.FeatureCvterm, result.FeatureCvtermprop)
             self.fb_data_entities[dis_anno.db_primary_id] = dis_anno
             counter += 1
-        self.log.info(f'Found {counter} allele-based disease annotations from chado.')
+        self.log.info(f'Found {counter} allele-based disease annotations from chado (excludes annotations to obsolete alleles).')
         return
 
     def get_disease_qualifiers(self, session):
@@ -223,7 +223,10 @@ class AlleleDiseaseHandler(DataHandler):
         """Extract modifiers from annotation text."""
         self.log.info('Extract modifiers from annotation text.')
         allele_regex = r'FBal[0-9]{7}'
-        counter = 0
+        current_modifier_id_counter = 0
+        updated_modifier_id_counter = 0
+        cannot_update_modifier_id_counter = 0
+        modifier_prob_counter = 0
         for dis_anno in self.fb_data_entities.values():
             for fb_term in self.disease_genetic_modifier_terms.keys():
                 if fb_term in dis_anno.evidence_code.value:
@@ -232,17 +235,23 @@ class AlleleDiseaseHandler(DataHandler):
                         allele_id = re.search(allele_regex, dis_anno.evidence_code.value).group(0)
                     if self.confirm_current_allele_by_uniquename(session, allele_id):
                         dis_anno.fb_modifier_id = allele_id
-                        counter += 1
+                        current_modifier_id_counter += 1
                     else:
                         # Look up current allele by 2o ID. Use that.
                         curr_allele_id = self.get_current_id_for_allele(session, allele_id)
                         if curr_allele_id:
                             dis_anno.fb_modifier_id = ['FB:{}'.format(curr_allele_id)]
                             dis_anno.modifier_id_was_updated = True
-                            counter += 1
+                            updated_modifier_id_counter += 1
                         else:
                             dis_anno.modifier_problem = True
-        self.log.info(f'Found {counter} allele modifiers for disease annotations.')
+                            cannot_update_modifier_id_counter += 1
+            if dis_anno.modifier_problem is True:
+                modifier_prob_counter += 1
+        self.log.info(f'{current_modifier_id_counter} allele modifiers mentioned use a current allele ID.')
+        self.log.info(f'{updated_modifier_id_counter} allele modifiers mentioned use a non-current allele ID mapped to a current allele.')
+        self.log.info(f'{cannot_update_modifier_id_counter} allele modifiers mentioned use a non-current allele ID not mappable to a current allele.')
+        self.log.info(f'{modifier_prob_counter} disease annotations have one or more problematic allele modifiers.')
         return
 
     def get_preferred_inferred_gene_curie(self, session):
@@ -324,19 +333,32 @@ class AlleleDiseaseHandler(DataHandler):
     def flag_unexportable_annotations(self):
         """Flag internal annotations."""
         self.log.info('Flag internal annotations.')
+        wrong_qualifier_counter = 0
+        multi_allele_counter = 0
+        problematic_modifier_id_counter = 0
+        updated_modifier_id_counter = 0
+        MSG = 0
+        COUNTER = 1
+        no_export_counter = 0
         for dis_anno in self.fb_data_entities.values():
             export_checks = {
-                dis_anno.qualifier.value not in self.relevant_qualifiers:
-                    'Only "model of|DOES NOT model" is exportable',
-                ' with FLYBASE' in dis_anno.evidence_code.value:
-                    'Only disease annotations modeled by a single allele are exportable',
-                dis_anno.modifier_problem is True: 'Cannot find current feature for disease modifier.',
-                dis_anno.modifier_id_was_updated is True: 'Modifier referenced by non-current allele ID.',
+                dis_anno.qualifier.value not in self.relevant_qualifiers: ('Only "model of|DOES NOT model" is exportable', wrong_qualifier_counter),
+                ' with FLYBASE' in dis_anno.evidence_code.value: ('Only disease annotations modeled by a single allele are exportable', multi_allele_counter),
+                dis_anno.modifier_problem is True: ('Cannot find current feature for disease modifier.', problematic_modifier_id_counter),
+                dis_anno.modifier_id_was_updated is True: ('Modifier referenced by non-current allele ID.', updated_modifier_id_counter),
             }
-            for check, msg in export_checks.items():
+            for check, action in export_checks.items():
                 if check:
                     dis_anno.for_export = False
-                    dis_anno.export_warnings.append(msg)
+                    dis_anno.export_warnings.append(action[MSG])
+                    action[COUNTER] += 1
+            if dis_anno.for_export is False:
+                no_export_counter += 1
+        self.log.info(f'{no_export_counter} annotations flagged as unexportable in early checking.')
+        self.log.info(f'{wrong_qualifier_counter} annotations: not a model-type annotation.')
+        self.log.info(f'{multi_allele_counter} annotations: multi-allele model.')
+        self.log.info(f'{problematic_modifier_id_counter} annotations: modifier allele ID could not be updated.')
+        self.log.info(f'{updated_modifier_id_counter} annotations: modifier allele ID used was non-current.')
         return
 
     # Elaborate on synthesize_info() for the AlleleDiseaseHandler.
@@ -406,6 +428,7 @@ class AlleleDiseaseHandler(DataHandler):
         """Group redundant disease annotations."""
         self.log.info('Group redundant disease annotations.')
         input_counter = 0
+        redundant_counter = 0
         for dis_anno in self.fb_data_entities.values():
             if dis_anno.for_export is False:
                 continue
@@ -427,6 +450,8 @@ class AlleleDiseaseHandler(DataHandler):
                         self.fb_data_entities[db_primary_id].is_redundant = True
                         self.fb_data_entities[db_primary_id].for_export = False
                         self.fb_data_entities[db_primary_id].export_warnings.append('Annotation is redundant.')
+                        redundant_counter += 1
+        self.log.info(f'A further {redundant_counter} redundant annotations blocked from export.')
         return
 
     # Elaborate on map_fb_data_to_alliance() for the AlleleDiseaseHandler.
