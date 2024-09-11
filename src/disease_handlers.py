@@ -333,32 +333,29 @@ class AlleleDiseaseHandler(DataHandler):
     def flag_unexportable_annotations(self):
         """Flag internal annotations."""
         self.log.info('Flag internal annotations.')
-        wrong_qualifier_counter = 0
-        multi_allele_counter = 0
-        problematic_modifier_id_counter = 0
-        updated_modifier_id_counter = 0
+        problem_counter = {
+            'Not model annotation': 0,
+            'Multi-allele model': 0,
+            'Obsolete modifier ID': 0,
+        }
         no_export_counter = 0
         for dis_anno in self.fb_data_entities.values():
             export_checks = {
-                dis_anno.qualifier.value not in self.relevant_qualifiers: {'msg': 'Only "model of|DOES NOT model" allowed', 'counter': wrong_qualifier_counter},
-                ' with FLYBASE' in dis_anno.evidence_code.value: {'msg': 'Only single-allele annotations allowed', 'counter': multi_allele_counter},
-                dis_anno.modifier_problem is True: {'msg': 'Cannot find current feature for disease modifier.', 'counter': problematic_modifier_id_counter},
-                dis_anno.modifier_id_was_updated is True: {'msg': 'Modifier referenced by non-current allele ID.', 'counter': updated_modifier_id_counter},
+                dis_anno.qualifier.value not in self.relevant_qualifiers: 'Not model annotation',
+                ' with FLYBASE' in dis_anno.evidence_code.value: 'Multi-allele model',
+                dis_anno.modifier_problem is True: 'Obsolete modifier ID',
+                dis_anno.modifier_id_was_updated is True: 'Obsolete modifier ID',
             }
-            for check, action in export_checks.items():
+            for check, msg in export_checks.items():
                 if check:
                     dis_anno.for_export = False
-                    dis_anno.export_warnings.append(action['msg'])
-                    action['counter'] += 1
+                    dis_anno.export_warnings.append(msg)
+                    problem_counter[msg] += 1
             if dis_anno.for_export is False:
                 no_export_counter += 1
         self.log.info(f'{no_export_counter} annotations flagged as unexportable in early checking.')
-        self.log.info(f'{wrong_qualifier_counter} annotations: not a model-type annotation.')
-        self.log.info(f'{multi_allele_counter} annotations: multi-allele model.')
-        self.log.info(f'{problematic_modifier_id_counter} annotations: modifier allele ID could not be updated.')
-        self.log.info(f'{updated_modifier_id_counter} annotations: modifier allele ID used was non-current.')
-        for action in export_checks.values():
-            self.log.info(f'BILLY BOB: {action["counter"]}: {action["msg"]}')
+        for problem, problem_count in problem_counter.items():
+            self.log.info(f'Problem: "{problem}", count={problem_count}')
         return
 
     # Elaborate on synthesize_info() for the AlleleDiseaseHandler.
