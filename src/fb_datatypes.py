@@ -1,4 +1,4 @@
-"""Module:: datatypes.
+"""Module:: FlyBase datatypes.
 
 Synopsis:
     Ojects representing FlyBase chado data types, for export to the Alliance in
@@ -17,11 +17,19 @@ class FBExportEntity(object):
     """A base, generic FlyBase data export entity."""
     def __init__(self):
         """Create a FBExportEntity object with bins for Alliance mapping."""
-        self.db_primary_id = None     # Table primary key (or concatenation).
+        self.db_primary_id = None     # Table primary key (or concatenation of keys).
         self.uniq_key = None          # Uniquely identifying string.
+        self.uniquename = None        # FB uniquename, if applicable.
+        self.name = None              # FB name, if applicable.
+        self.type_id = None           # FB type_id, if applicable.
+        self.is_obsolete = None       # FB is_obsolete, if applicable.
+        self.is_analysis = None       # FB is_analysis, if applicable.
+        self.organism_id = None       # FB organism_id, if applicable.
         self.org_abbr = None          # Organism.abbreviation, if applicable.
         self.org_genus = None         # Organism.genus, if applicable.
         self.org_species = None       # Organism.species, if applicable.
+        self.timeaccessioned = None   # FB timeaccessioned, if applicable.
+        self.timelastmodified = None  # FB timelastmodified, if applicable.
         self.timestamps = []          # FB timestamps.
         self.linkmldto = None         # Alliance LinkML object for mapped data.
         self.for_export = True        # Made False to prevent Alliance export.
@@ -63,7 +71,8 @@ class FBDataEntity(FBExportEntity):
             'is_obsolete',
             'is_analysis',
             'timeaccessioned',
-            'timelastmodified']
+            'timelastmodified'
+        ]
         for column_name in table_columns:
             try:
                 setattr(self, column_name, getattr(chado_obj, column_name))
@@ -76,10 +85,11 @@ class FBDataEntity(FBExportEntity):
         except AttributeError:
             pass
         self.entity_desc = f'{self.name} ({self.uniquename})'
-        # Primary FB chado data - direct db query results, no processing.
+        # Primary FB chado data from direct db query results, no processing.
+        # These attributes apply to various FlyBase entities: e.g., gene, strain, genotype, gene group, etc.
         self.pubs = []                  # Pub associations: e.g., FeaturePub, StrainPub.
         self.synonyms = []              # Synonym associations: e.g., FeatureSynonym.
-        self.fb_sec_dbxrefs = []        # Dbxref non-current associations for "FlyBase" db: e.g., FeatureDbxref.
+        self.fb_sec_dbxrefs = []        # Secondary (non-current) FlyBase cross-references: e.g., FeatureDbxref.
         self.dbxrefs = []               # Dbxref associations: e.g., FeatureDbxref.
         self.props = []                 # entity props: e.g., Featureprop.
         self.prop_pubs = []             # entity prop_pubs: e.g., Featureprop_pub.
@@ -87,8 +97,9 @@ class FBDataEntity(FBExportEntity):
         self.cvtermprops = []           # Cvtermprop associations: e.g., FeatureCvtermprop.
         # Processed FB data - processed from primary FB chado data above.
         self.ncbi_taxon_id = None       # The NCBITaxon dbxref.accession (str).
-        self.synonym_dict = {}          # Will be synonym_id-keyed dicts of processed synonym info, similar to NameDTO.
+        self.synonym_dict = {}          # Will be synonym_id-keyed dicts of processed synonym info.
         self.curr_fb_symbol = None      # The current symbol for the entity (UTF-8).
+        self.curr_fb_fullname = None    # The current fullname for the entity (UTF-8).
         self.alt_fb_ids = []            # Secondary FB IDs (including the "FB:" prefix).
         self.all_pub_ids = []           # Pub.pub_ids for pubs associated in any way with the entity.
         self.prop_dict = {}             # cvterm name-keyed lists of prop objects: e.g., Featureprop.
@@ -105,8 +116,8 @@ class FBFeature(FBDataEntity):
         self.chr_flocs = []          # Will be chromosomal Featureloc objects for the entity.
         self.fb_anno_dbxrefs = []    # Will be "FlyBase Annotation IDs" FeatureDbxref objects.
         # Processed FB data.
-        self.curr_anno_id = None     # Will be current annotation ID for the gene (str).
-        self.alt_anno_ids = []       # Will be list of non-current annotation IDs for the gene (str).
+        self.curr_anno_id = None     # Will be current annotation ID for the gene, transcript or protein (str).
+        self.alt_anno_ids = []       # Will be list of non-current annotation IDs for the gene, transcript or protein (str).
 
 
 class FBGene(FBFeature):
@@ -115,13 +126,35 @@ class FBGene(FBFeature):
         """Create the FBGene object."""
         super().__init__(chado_obj)
         # Primary FB chado data.
-        self.gene_type_names = []     # Will be "promoted_gene_type" Featureprops.
-        self.gene_snapshots = []      # Will be "gene_summary_text" Featureprops.
-        self.allele_rels = []         # Direct FBal "alleleof" FBgn FeatureRelationships.
+        self.gene_type_names = []           # Will be "promoted_gene_type" Featureprops.
+        self.gene_snapshots = []            # Will be "gene_summary_text" Featureprops.
+        self.allele_rels = []               # Direct FBal "alleleof" FBgn FeatureRelationships.
         # Processed FB data.
-        self.gene_type_name = 'gene'        # Will be SO term name from "promoted_gene_type" Featureprop, if available.
-        self.gene_type_id = 'SO:0000704'    # Will be SO term ID from "promoted_gene_type" Featureprop, if available.
-        self.alleles = {}                   # Will be allele_id-keyed list of pub_ids.
+        self.gene_type_name = 'gene'        # Update default gene to SO term name from "promoted_gene_type" Featureprop, if available.
+        self.gene_type_id = 'SO:0000704'    # Update default gene ID to SO term ID from "promoted_gene_type" Featureprop, if available.
+        self.alleles = {}                   # Will be allele_id-keyed list of pub_ids that support the allele-gene relationship.
+
+
+class FBAllele(FBFeature):
+    """A FlyBase Allele entity with all its related data."""
+    def __init__(self, chado_obj):
+        """Create the FBAllele object."""
+        super().__init__(chado_obj)
+        # Primary FB chado data.
+        self.parent_gene_rels = []              # Direct FBal "alleleof" FBgn FeatureRelationships.
+        self.constructs = []                    # List of FBtp IDs for associated constructs.
+        self.dmel_insertions = []               # List of FBti IDs for associated Dmel insertions.
+        self.non_dmel_insertions = []           # List of FBti IDs for associated non-Dmel insertions.
+        self.args = []                          # List of associated ARG (variation) features.
+        self.direct_colls = []                  # List of collecionts (Library objects) directly associated with the allele.
+        self.ins_colls = []                     # List of collections (Library objects) indirectly associated with the allele via an FBti insertion.
+        self.cons_colls = []                    # List of collections (Library objects) indirectly associated with the allele via an FBtp construct.
+        self.sf_colls = []                      # List of collections (Library objects) indirectly associated with the allele via an FBsf feature.
+        # Processed FB data.
+        self.parent_gene_id = None              # The FBgn ID fo the allele's parent gene.
+        self.adj_obr_abbr = 'Dmel'              # Assume allele is Dmel (classical/transgenic) unless it can be shown to be a non-Dmel classical allele.
+        self.in_vitro = False                   # Change to True if the allele is associated with an "in vitro%" term.
+        self.allele_of_internal_gene = False    # Change to True if the allele is related to an internal-type gene (e.g., origin of replication).
 
 
 class FBConstruct(FBFeature):
@@ -162,7 +195,7 @@ class FBStrain(FBDataEntity):
 class FBGenotype(FBDataEntity):
     """A FlyBase Genotype entity with all its related data."""
     def __init__(self, chado_obj):
-        """Create the FBStrain object."""
+        """Create the FBGenotype object."""
         super().__init__(chado_obj)
         self.db_primary_id = chado_obj.genotype_id
 
@@ -177,7 +210,7 @@ class FBRelationship(FBExportEntity):
             chado_table (str): Name of chado table holding relationship: e.g., feature_relationship, strain_feature.
             subject_id (int): Internal primary_key id for subject (e.g., strain_id for strain_feature table).
             object_id (int): Internal primary_key id for object (e.g., feature_id for strain_feature table).
-            rel_type (str): CV term name for the relationship type.
+            rel_type (str): CV term name for the relationship type. Use "unspecified" if not available.
 
         """
         super().__init__()

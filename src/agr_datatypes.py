@@ -1,4 +1,4 @@
-"""Module:: datatypes.
+"""Module:: Alliance datatypes.
 
 Synopsis:
     Objects representing Alliance LinkML objects, tailored to FlyBase.
@@ -9,7 +9,7 @@ Author(s):
 """
 
 
-# Base class for all Alliance DTO classes.
+# Base class for all Alliance DTO (data transfer object) classes.
 class AuditedObjectDTO(object):
     """Base Alliance DTO class."""
     def __init__(self):
@@ -73,6 +73,34 @@ class AffectedGenomicModelDTO(GenomicEntityDTO):
         self.reference_curies = []         # Publication curies (PMID or FBrf).
         self.component_dtos = []           # AffectedGenomicModelComponentDTOs.
         self.required_fields.extend(['subtype_name'])
+
+
+class AlleleDTO(GenomicEntityDTO):
+    """AlleleDTO class."""
+    def __init__(self):
+        """Create AlleleDTO for FlyBase object."""
+        super().__init__()
+        self.allele_symbol_dto = None                          # One NameSlotAnnotationDTO.
+        self.allele_full_name_dto = None                       # One NameSlotAnnotationDTO.
+        self.allele_synonym_dtos = []                          # Many NameSlotAnnotationDTO objects.
+        self.in_collection_name = None                         # Will be the name of a FlyBase library/collection.
+        self.is_extinct = None                                 # Make True if extinction reported; make False is stock exists; leave as None otherwise.
+        self.allele_mutation_type_dtos = []                    # AlleleMutationTypeSlotAnnotationDTOs.
+        self.allele_inheritance_mode_dtos = []                 # AlleleInheritanceModeSlotAnnotationDTOs.
+        self.allele_database_status_dto = None                 # AlleleDatabaseStatusSlotAnnotationDTOs.
+        self.allele_secondary_id_dtos = []                     # SecondaryIdSlotAnnotationDTO (for 2o FB IDs).
+        self.reference_curies = []                             # Will be a list of reference curies (directly or indirectly related).
+        # Additional fields that may be used in the future.
+        self.allele_functional_impact_dtos = []                # ToDo - Waiting on "Functional Impact" CV. Get feature_cvterm, child of "allele class" term.
+        self.transgene_chromosome_location_curie = None        # ToDo - get chr via FBtp from FBti floc, derived_chromosome_location featureprop, or dock site.
+        self.note_dtos = []                                    # ToDo - Waiting on "Allele Note Type" CV. Get from featureprop.
+        # Additional unused fields.
+        self.allele_germline_transmission_status_dto = None    # N/A (MGI).
+        self.allele_nomenclature_event_dtos = []               # N/A.
+        self.is_extrachromosomal = None                        # N/A (WB).
+        self.is_integrated = None                              # N/A (WB).
+        self.laboratory_of_origin_curie = None                 # N/A (WB).
+        self.required_fields.extend(['allele_symbol_dto', 'mod_entity_id'])
 
 
 class GeneDTO(GenomicEntityDTO):
@@ -172,7 +200,7 @@ class AlleleGeneAssociationDTO(AlleleGenomicEntityAssociationDTO):
         self.gene_identifier = gene_id
         self.evidence_curies = evidence_curies
         self.required_fields.extend(['gene_identifier'])
-        self.internal_fields.extend(['evidence_curies'])    # TEMPORARY UNTIL LOAD SPEED IMPROVES
+        self.internal_fields.extend(['evidence_curies'])    # TEMPORARILY SUPPRESS UNTIL LOAD SPEED IMPROVES
 
 
 class ConstructGenomicEntityAssociationDTO(EvidenceAssociationDTO):
@@ -248,7 +276,7 @@ class AGMDiseaseAnnotationDTO(DiseaseAnnotationDTO):
         self.required_fields.extend(['agm_identifier'])
 
 
-# Secondary Alliance DTO Classes for FlyBase data.
+# Secondary Alliance DTO Classes for data associated with first class objects.
 # Use the export() method to get a dict for these (easier to print out).
 class AffectedGenomicModelComponentDTO(AuditedObjectDTO):
     """AffectedGenomicModelComponentDTO class."""
@@ -328,27 +356,57 @@ class SlotAnnotationDTO(AuditedObjectDTO):
         """
         super().__init__()
         self.evidence_curies = evidence_curies
+        self.internal_fields.extend(['evidence_curies'])    # TEMPORARILY SUPPRESS UNTIL LOAD SPEED IMPROVES
 
 
-class NameSlotAnnotationDTO(SlotAnnotationDTO):
-    """NameSlotAnnotationDTO class."""
-    def __init__(self, name_type_name: str, format_text: str, display_text: str, evidence_curies: list):
-        """Create a NameSlotAnnotationDTO for a FlyBase name.
+class AlleleDatabaseStatusSlotAnnotationDTO(SlotAnnotationDTO):
+    """AlleleDatabaseStatusSlotAnnotationDTO class."""
+    def __init__(self, database_status_name: str, evidence_curies: list):
+        """Create an AlleleDatabaseStatusSlotAnnotationDTO for FlyBase allele.
 
         Args:
-            name_type_name (str): The type of name.
-            format_text (str): The ASCII-only version of the name.
-            display_text (str): The UTF-8 version of the name (using HTML superscript/subscript tags).
-            evidence_curies (list): A list of FB:FBrf or PMID:### curies.
+            database_status_name (str): The name of the database status term.
+            evidence_curies (list): A list of FB:FBrf or PMID curies, or, an empty list.
 
         """
         super().__init__(evidence_curies)
-        self.name_type_name = name_type_name
-        self.format_text = format_text
-        self.display_text = display_text
-        self.synonym_scope_name = 'exact'
-        self.required_fields.extend(['name_type_name', 'format_text', 'display_text', 'synonym_scope'])
-        self.internal_fields.extend(['evidence_curies'])    # TEMPORARY UNTIL LOAD SPEED IMPROVES
+        self.database_status_name = database_status_name
+        self.required_fields.extend(['database_status_name'])
+
+
+class AlleleInheritanceModeSlotAnnotationDTO(SlotAnnotationDTO):
+    """AlleleInheritanceModeSlotAnnotationDTO class."""
+    def __init__(self, inheritance_mode_name: str, phenotype_term_curie: str, phenotype_statement: str, evidence_curies: list):
+        """Create an AlleleInheritanceModeSlotAnnotationDTO for FlyBase allele.
+
+        Args:
+            inheritance_mode_name (str): The name of the inheritance mode term.
+            phenotype_term_curie (str): The curie of the FB term representing the phenotype.
+            phenotype_statement (str): The phenotype context for the inheritance mode.
+            evidence_curies (list): A list of FB:FBrf or PMID curies, or, an empty list.
+
+        """
+        super().__init__(evidence_curies)
+        self.inheritance_mode_name = inheritance_mode_name
+        self.phenotype_term_curie = phenotype_term_curie    # Cannot be used until FB terms are in the persistent store.
+        self.phenotype_statement = phenotype_statement
+        self.required_fields.extend(['inheritance_mode_name'])
+        self.internal_fields.extend(['phenotype_term_curie'])
+
+
+class AlleleMutationTypeSlotAnnotationDTO(SlotAnnotationDTO):
+    """AlleleMutationTypeSlotAnnotationDTO class."""
+    def __init__(self, mutation_type_curie: str, evidence_curies: list):
+        """Create an AlleleMutationTypeSlotAnnotationDTO for FlyBase allele.
+
+        Args:
+            mutation_type_curie (str): The curie of the SO term representing the mutation type.
+            evidence_curies (list): A list of FB:FBrf or PMID curies, or, an empty list.
+
+        """
+        super().__init__(evidence_curies)
+        self.mutation_type_curies = [mutation_type_curie]
+        self.required_fields.extend(['mutation_type_curies'])
 
 
 class ConstructComponentSlotAnnotationDTO(SlotAnnotationDTO):
@@ -371,7 +429,26 @@ class ConstructComponentSlotAnnotationDTO(SlotAnnotationDTO):
         self.taxon_text = taxon_text
         self.note_dtos = []
         self.required_fields.extend([])
-        self.internal_fields.extend(['evidence_curies'])    # TEMPORARY UNTIL LOAD SPEED IMPROVES
+
+
+class NameSlotAnnotationDTO(SlotAnnotationDTO):
+    """NameSlotAnnotationDTO class."""
+    def __init__(self, name_type_name: str, format_text: str, display_text: str, evidence_curies: list):
+        """Create a NameSlotAnnotationDTO for a FlyBase name.
+
+        Args:
+            name_type_name (str): The type of name.
+            format_text (str): The ASCII-only version of the name.
+            display_text (str): The UTF-8 version of the name (using HTML superscript/subscript tags).
+            evidence_curies (list): A list of FB:FBrf or PMID:### curies.
+
+        """
+        super().__init__(evidence_curies)
+        self.name_type_name = name_type_name
+        self.format_text = format_text
+        self.display_text = display_text
+        self.synonym_scope_name = 'exact'
+        self.required_fields.extend(['name_type_name', 'format_text', 'display_text', 'synonym_scope'])
 
 
 class SecondaryIdSlotAnnotationDTO(SlotAnnotationDTO):
