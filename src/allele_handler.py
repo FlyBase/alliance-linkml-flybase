@@ -113,8 +113,8 @@ class AlleleHandler(FeatureHandler):
         self.flag_internal_fb_entities('fb_data_entities')
         return
 
-    # Elaborate on query_chado() for the GeneHandler.
-    def query_chado(self, session):
-        """Elaborate on query_chado method for the GeneHandler."""
-        super().query_chado(session)
+    # Elaborate on query_chado_and_export() for the GeneHandler.
+    def query_chado_and_export(self, session):
+        """Elaborate on query_chado_and_export method for the GeneHandler."""
+        super().query_chado_and_export(session)
         return

@@ -288,10 +288,10 @@ class GeneHandler(FeatureHandler):
         self.flag_internal_fb_entities('gene_allele_associations')
         return
 
-    # Elaborate on query_chado() for the GeneHandler.
-    def query_chado(self, session):
-        """Elaborate on query_chado method for the GeneHandler."""
-        super().query_chado(session)
+    # Elaborate on query_chado_and_export() for the GeneHandler.
+    def query_chado_and_export(self, session):
+        """Elaborate on query_chado_and_export method for the GeneHandler."""
+        super().query_chado_and_export(session)
         self.flag_unexportable_entities(self.gene_allele_associations, 'allele_gene_association_ingest_set')
         self.generate_export_dict(self.gene_allele_associations, 'allele_gene_association_ingest_set')
         return

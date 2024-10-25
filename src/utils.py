@@ -55,19 +55,19 @@ def get_handler(log: Logger, fb_data_type: str, testing: bool):
 
 
 def db_query_transaction(session: Session, log: Logger, object_to_execute: DataHandler):
-    """Query the chado database given an object that has a "query_chado()" method.
+    """Query the chado database given an object that has a "query_chado_and_export()" method.
 
     Args:
         session (Session): SQLAlchemy session for db queries.
         log (Logger): The global Logger object in the script using the DataHandler.
-        object_to_execute (DataHandler): An object having a query_chado() method.
+        object_to_execute (DataHandler): An object having a query_chado_and_export() method.
 
     Raises:
         Raises a RuntimeError if there are problems with executing the query.
 
     """
     try:
-        object_to_execute.query_chado(session)
+        object_to_execute.query_chado_and_export(session)
         session.flush()
     except RuntimeError:
         session.rollback()
