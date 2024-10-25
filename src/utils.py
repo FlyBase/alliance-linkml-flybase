@@ -14,6 +14,7 @@ from logging import Logger
 from sqlalchemy.orm import Session
 from handler import DataHandler
 from agm_handlers import StrainHandler
+from allele_handler import AlleleHandler
 from construct_handler import ConstructHandler
 from disease_handlers import AlleleDiseaseHandler
 from gene_handler import GeneHandler
@@ -37,7 +38,7 @@ def get_handler(log: Logger, fb_data_type: str, testing: bool):
     log.info(f'Get handler for {fb_data_type}.')
     handler_dict = {
         'gene': GeneHandler,
-        # 'allele': AlleleHandler,
+        'allele': AlleleHandler,
         'construct': ConstructHandler,
         # 'variation': VariationHandler,
         'strain': StrainHandler,
@@ -48,7 +49,7 @@ def get_handler(log: Logger, fb_data_type: str, testing: bool):
         data_handler = handler_dict[fb_data_type](log, fb_data_type, testing)
         log.info(f'Returning: {data_handler}')
     except KeyError:
-        log.error.append(f'Unrecognized FB data type and/or Alliance ingest set: {fb_data_type}.')
+        log.error(f'Unrecognized FB data type and/or Alliance ingest set: {fb_data_type}.')
         raise
     return data_handler
 
