@@ -72,7 +72,7 @@ class DataHandler(object):
     # Correspondence of FB data type to primary Alliance LinkML object.
     agr_linkmldto_dict = {
         'gene': agr_datatypes.GeneDTO,
-        'allele': 'TBD',
+        'allele': agr_datatypes.AlleleDTO,
         'construct': agr_datatypes.ConstructDTO,
         'variation': 'TBD',
         'strain': agr_datatypes.AffectedGenomicModelDTO,
@@ -92,7 +92,7 @@ class DataHandler(object):
     # Mappings of fb_data_type to a datatype Class that will be used to represent each FB entity.
     datatype_objects = {
         'gene': fb_datatypes.FBGene,
-        # 'allele': fb_datatypes.FBAllele,
+        'allele': fb_datatypes.FBAllele,
         'construct': fb_datatypes.FBConstruct,
         # 'variation': fb_datatypes.FBVariant,
         'strain': fb_datatypes.FBStrain,
