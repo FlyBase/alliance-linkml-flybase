@@ -19,7 +19,7 @@ class AlleleHandler(FeatureHandler):
     def __init__(self, log: Logger, fb_data_type: str, testing: bool):
         """Create the AlleleHandler object."""
         super().__init__(log, fb_data_type, testing)
-
+        self.fb_data_type = 'billybob'
     test_set = {
         'FBal0137236': 'gukh[142]',    # P{hsneo}Xrp1142 insertion allele.
     }
