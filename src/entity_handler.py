@@ -45,6 +45,7 @@ class PrimaryEntityHandler(DataHandler):
         'strain': 'strain',
         'variation': 'feature',
     }
+
     # Mappings of main data types to chado tables with associated data.
     chado_tables = {
         'primary_key': {'feature': 'feature_id', 'strain': 'strain_id'},
@@ -57,6 +58,7 @@ class PrimaryEntityHandler(DataHandler):
         'cvterms': {'feature': FeatureCvterm, 'strain': StrainCvterm},
         'cvtermprops': {'feature': FeatureCvtermprop, 'strain': StrainCvtermprop}
     }
+
     # CVterms used to define a fb_data_type within a larger chado table.
     subtypes = {
         'allele': ['allele'],
@@ -225,35 +227,6 @@ class PrimaryEntityHandler(DataHandler):
 
     def get_entity_cvterms(self, session):
         """Placeholder."""
-        return
-
-    def get_entity_associated_data(self, session):
-        """Get data associated with primary FlyBase data entities."""
-    #     associated_data_types = ['pubs', 'synonyms', 'dbxrefs', 'props', 'cvterms']
-    #     chado_type = self.main_chado_entity_types[self.fb_data_type]
-    #     self.log.info(f'Get associated data for {self.fb_data_type} data entities from {chado_type}-related chado tables.')
-    #     main_pkey_name = self.chado_tables['primary_key'][chado_type]
-    #     for i in associated_data_types:
-    #         asso_chado_table = self.chado_tables[i][chado_type]
-    #         self.log.info(f'Get {i} for {self.fb_data_type} from {asso_chado_table}')
-    #         fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
-    #         filters = (
-    #             fkey_col.in_((self.fb_data_entities.keys())),
-    #         )
-    #         results = session.query(asso_chado_table).\
-    #             filter(*filters).\
-    #             distinct()
-    #         counter = 0
-    #         pass_counter = 0
-    #         for result in results:
-    #             entity_pkey_id = getattr(result, main_pkey_name)
-    #             try:
-    #                 self.fb_data_entities[entity_pkey_id].__dict__[i].append(result)
-    #                 counter += 1
-    #             except KeyError:
-    #                 pass_counter += 1
-    #         self.log.info(f'Found {counter} {i} for {self.fb_data_type} entities.')
-    #         self.log.info(f'Ignored {pass_counter} {i} for irrelevant {self.fb_data_type} entities.')
         return
 
     def get_entity_prop_pubs(self, session):

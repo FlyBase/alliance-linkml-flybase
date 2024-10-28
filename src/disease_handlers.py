@@ -25,19 +25,21 @@ class AlleleDiseaseHandler(DataHandler):
         """Create the AlleleDiseaseHandler object."""
         super().__init__(log, fb_data_type, testing)
 
-        self.uniq_dis_dict = {}    # A dict of unique disease annotation attributes to list of disease annotations.
+    uniq_dis_dict = {}    # A dict of unique disease annotation attributes to list of disease annotations.
 
     # Key disease annotation term sets and look ups.
     relevant_qualifiers = [
         'model of',
         'DOES NOT model'
     ]
+
     disease_genetic_modifier_terms = {
         'is ameliorated by': 'ameliorated_by',
         'is NOT ameliorated by': 'not_ameliorated_by',
         'is exacerbated by': 'exacerbated_by',
         'is NOT exacerbated by': 'not_exacerbated_by'
     }
+
     evidence_code_xrefs = {
         'CEA': 'ECO:0007013',
         'CEC': 'ECO:0007014'

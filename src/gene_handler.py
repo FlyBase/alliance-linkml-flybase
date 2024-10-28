@@ -22,10 +22,11 @@ class GeneHandler(FeatureHandler):
     def __init__(self, log: Logger, fb_data_type: str, testing: bool):
         """Create the GeneHandler object."""
         super().__init__(log, fb_data_type, testing)
-        # Additional set for export added to the handler.
-        self.gene_allele_associations = []    # Will be list of FBExportEntity objects (relationships).
-        # Lookups needed.
-        self.pthr_dict = {}    # Will be an 1:1 FBgn_ID-PTHR xref dict.
+
+    # Additional set for export added to the handler.
+    gene_allele_associations = []    # Will be list of FBExportEntity objects (relationships).
+    # Lookups needed.
+    pthr_dict = {}    # Will be an 1:1 FBgn_ID-PTHR xref dict.
 
     test_set = {
         'FBgn0284084': 'wg',                # Current annotated nuclear protein_coding gene.

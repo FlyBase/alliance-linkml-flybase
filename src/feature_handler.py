@@ -1,7 +1,7 @@
 """Module:: feature_handler.
 
 Synopsis:
-    Core data handler objects that run basic processes common to the mapping of
+    A generic data handler that runs basic processes common to the mapping of
     all FlyBase features in chado to Alliance LinkML objects. Built upon these
     core handlers are more specific handlers to specific features (see other
     handler files in this repo).

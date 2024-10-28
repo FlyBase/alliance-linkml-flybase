@@ -24,13 +24,14 @@ class ConstructHandler(FeatureHandler):
     def __init__(self, log: Logger, fb_data_type: str, testing: bool):
         """Create the ConstructHandler object."""
         super().__init__(log, fb_data_type, testing)
-        # Additional set for export added to the handler.
-        self.construct_associations = []            # Will be a list of FBExportEntity objects (relationships), map to ConstructGenomicEntityAssociationDTO.
-        # Lookups needed.
-        self.allele_gene_lookup = {}                # Will be allele feature_id-keyed of a single gene feature_id per allele.
-        self.seqfeat_gene_lookup = {}               # Will be seqfeat feature_id-keyed of a lists of gene feature_ids.
-        self.transgenic_allele_class_lookup = {}    # Will be an allele feature_id-keyed list of "transgenic product class" CV terms.
-        self.gene_tool_lookup = {}                  # Will be gene feature_id-keyed lists of related FBto tools.
+
+    # Additional set for export added to the handler.
+    construct_associations = []            # Will be a list of FBExportEntity objects (relationships), map to ConstructGenomicEntityAssociationDTO.
+    # Lookups needed.
+    allele_gene_lookup = {}                # Will be allele feature_id-keyed of a single gene feature_id per allele.
+    seqfeat_gene_lookup = {}               # Will be seqfeat feature_id-keyed of a lists of gene feature_ids.
+    transgenic_allele_class_lookup = {}    # Will be an allele feature_id-keyed list of "transgenic product class" CV terms.
+    gene_tool_lookup = {}                  # Will be gene feature_id-keyed lists of related FBto tools.
 
     test_set = {
         'FBtp0008631': 'P{UAS-wg.H.T:HA1}',                       # Expresses FBgn wg, regulated by FBto UASt.

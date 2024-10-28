@@ -69,16 +69,17 @@ class DataHandler(object):
 
     # Sample set for faster testing: use uniquename-keyed names of objects, tailored for each handler.
     test_set = {}
+
     # Correspondence of FB data type to primary Alliance LinkML object.
     agr_linkmldto_dict = {
         'gene': agr_datatypes.GeneDTO,
         'allele': agr_datatypes.AlleleDTO,
         'construct': agr_datatypes.ConstructDTO,
-        'variation': 'TBD',
         'strain': agr_datatypes.AffectedGenomicModelDTO,
         'genotype': agr_datatypes.AffectedGenomicModelDTO,
         'disease': agr_datatypes.AlleleDiseaseAnnotationDTO,
     }
+
     # Correspondence of FB data type to Alliance data transfer ingest set.
     primary_agr_ingest_type_dict = {
         'gene': 'gene_ingest_set',
@@ -89,18 +90,16 @@ class DataHandler(object):
         'genotype': 'agm_ingest_set',
         'disease': 'disease_allele_ingest_set'
     }
+
     # Mappings of fb_data_type to a datatype Class that will be used to represent each FB entity.
     datatype_objects = {
         'gene': fb_datatypes.FBGene,
         'allele': fb_datatypes.FBAllele,
         'construct': fb_datatypes.FBConstruct,
-        # 'variation': fb_datatypes.FBVariant,
         'strain': fb_datatypes.FBStrain,
         'disease': fb_datatypes.FBAlleleDiseaseAnnotation,
     }
-    # Export directions (must be filled out in detail for each specific data handler), keyed by export set name.
-    # For a given export set, the list of field names must be present in the datatype object specified in DataHandler.datatype_objects.values().
-    # A filter for non-FB xrefs to export, with dict keys as FB db.names and dict values as Alliance db names.
+
     # Alliance db names should correspond to the contents of this file:
     # https://github.com/alliance-genome/agr_schemas/blob/master/resourceDescriptors.yaml
     fb_agr_db_dict = {
@@ -177,36 +176,6 @@ class DataHandler(object):
 
     # Sub-methods for the get_general_data() wrapper.
     # Some of these sub-methods may only be called in more specific handlers, as appropriate.
-    def sqlalchemy_test(self, session):
-        """Test SQLAlchemy behavior."""
-        self.log.info('Test SQLAlchemy behavior.')
-        lbe_types = {'gene': 'gene'}
-        table_dict = {'main': Feature}
-        main_table = table_dict['main']
-        pkey_col = self.get_primary_key_column(main_table)
-        fkey_col = self.get_foreign_key_column(main_table, 'type_id')
-        feat_ids = [3167743]
-        filters = (
-            main_table.uniquename == 'FBgn0011278',
-            pkey_col.in_((feat_ids)),
-            fkey_col == 219
-        )
-        filters += (
-            Cvterm.name.in_((lbe_types.keys())),
-        )
-        results = session.query(main_table).\
-            select_from(main_table).\
-            join(Cvterm, (Cvterm.cvterm_id == main_table.type_id)).\
-            filter(*filters).\
-            distinct()
-        counter = 0
-        for i in results:
-            self.log.info(f'Found this feature: {i.name} ({i.uniquename})')
-            self.log.info(f'Found this feature_id: {getattr(i, pkey_col.name)}')
-            counter += 1
-        self.log.info(f'Found {counter} test results using natural join.')
-        return
-
     def build_bibliography(self, session):
         """Build FlyBase bibliography."""
         self.log.info('Build FlyBase bibliography.')
