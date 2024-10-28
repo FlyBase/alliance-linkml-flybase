@@ -27,7 +27,7 @@ class AlleleHandler(FeatureHandler):
     # Elaborate on get_general_data() for the AlleleHandler.
     def get_general_data(self, session):
         """Extend the method for the AlleleHandler."""
-        super().get_general_data(session)
+        self.get_general_data(session)
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
         self.build_ncbi_taxon_lookup(session)
@@ -43,7 +43,7 @@ class AlleleHandler(FeatureHandler):
 
     def get_datatype_data(self, session):
         """Extend the method for the GeneHandler."""
-        super().get_datatype_data(session)
+        self.get_datatype_data(session)
         self.get_entities(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
@@ -77,7 +77,7 @@ class AlleleHandler(FeatureHandler):
     # Elaborate on synthesize_info() for the GeneHandler.
     def synthesize_info(self):
         """Extend the method for the GeneHandler."""
-        super().synthesize_info()
+        self.synthesize_info()
         self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
@@ -102,7 +102,7 @@ class AlleleHandler(FeatureHandler):
     # Elaborate on map_fb_data_to_alliance() for the GeneHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the GeneHandler."""
-        super().map_fb_data_to_alliance()
+        self.map_fb_data_to_alliance()
         self.map_allele_basic()
         self.map_synonyms()
         self.map_data_provider_dto()
@@ -116,5 +116,5 @@ class AlleleHandler(FeatureHandler):
     # Elaborate on query_chado_and_export() for the GeneHandler.
     def query_chado_and_export(self, session):
         """Elaborate on query_chado_and_export method for the GeneHandler."""
-        super().query_chado_and_export(session)
+        self.query_chado_and_export(session)
         return
