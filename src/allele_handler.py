@@ -76,7 +76,7 @@ class AlleleHandler(FeatureHandler):
             'point_mutation',
             'sequence_alteration',
             'sequence_variant',
-            'rescue_region'
+            # 'rescue_region',    # This type of ARG is not relevant to determining allele type (better ways).
         ]
         self.get_entity_obj_feat_rel_by_type(session, 'args', rel_type='partof', sbj_type=arg_types)
         return
