@@ -23,8 +23,8 @@ Notes:
 import argparse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-# from sqlalchemy.orm.exc import NoResultFound
 from harvdev_utils.psycopg_functions import set_up_db_reading
+from allele_handler import AlleleHandler
 from utils import db_query_transaction, generate_export_file
 
 # Data types handled by this script.
