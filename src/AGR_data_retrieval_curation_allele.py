@@ -28,7 +28,6 @@ from harvdev_utils.psycopg_functions import set_up_db_reading
 from utils import get_handler, db_query_transaction, generate_export_file
 
 # Data types handled by this script.
-FB_DATA_TYPE = 'allele'
 REPORT_LABEL = 'allele_curation'
 
 # Now proceed with generic setup.
@@ -70,7 +69,7 @@ def main():
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Get the data and process it.
-    allele_handler = get_handler(log, FB_DATA_TYPE, testing)
+    allele_handler = get_handler(log, testing)
     db_query_transaction(session, log, allele_handler)
 
     # Export the data.

@@ -37,29 +37,29 @@ class DataHandler(object):
     GenotypeHandler to generate a single "agm_ingest_set".
 
     """
-    def __init__(self, log: Logger, fb_data_type: str, testing: bool):
+    def __init__(self, log: Logger, testing: bool):
         """Create the generic DataHandler object.
 
         Args:
             log (Logger): The global Logger object in the script using the DataHandler.
-            fb_data_type (str): The FlyBase data class being handled.
             testing (bool): Whether handler is being run in testing mode or not.
 
         """
         self.log = log
-        self.fb_data_type = fb_data_type
-        self.primary_export_set = self.primary_agr_ingest_type_dict[fb_data_type]
+        self.datatype = None                   # A single word describing the datatype: e.g., 'gene'. Define for more specific handlers.
+        self.fb_export_type = None             # Will be the relevant FBExportEntity object: e.g., FBGene. Define for more specific handlers.
+        self.agr_export_type = None            # Will be the LinkML object to export to: e.g., GeneDTO. Define for more specific handlers.
+        self.primary_agr_ingest_type = None    # Will be name of the Alliance ingest set: e.g., 'gene_ingest_set'.
         self.testing = testing
         # Datatype bins.
         self.fb_data_entities = {}       # db_primary_id-keyed dict of chado objects to export.
         self.export_data = {}            # agr_ingest_set_name-keyed lists of data objects for export.
         # General data bins.
-        self.bibliography = {}           # A pub_id-keyed dict of pub curies (PMID or FBrf).
-        self.cvterm_lookup = {}          # A cvterm_id-keyed dict of Cvterm objects.
+        self.bibliography = {}           # A pub_id-keyed dict of pub curies (PMID, or, FBrf if no PMID).
+        self.cvterm_lookup = {}          # A cvterm_id-keyed dict of dicts with these keys: 'name', 'cv_name', 'db_name', 'curie'.
         self.ncbi_taxon_lookup = {}      # An organism_id-keyed dict of f'NCBITaxon:{Dbxref.accession}' strings.
         self.chr_dict = {}               # Will be a feature_id-keyed dict of chr scaffold uniquenames.
         self.feature_lookup = {}         # feature_id-keyed lookup of basic feature info: uniquename, is_obsolete, name, symbol, exported, taxon_id and species.
-        self.feat_rel_pub_lookup = {}    # Will be feature_relationship_id-keyed lists of supporting pub_ids.
         # Trackers.
         self.input_count = 0             # Count of entities found in FlyBase chado database.
         self.export_count = 0            # Count of exported Alliance entities.
@@ -70,35 +70,38 @@ class DataHandler(object):
     # Sample set for faster testing: use uniquename-keyed names of objects, tailored for each handler.
     test_set = {}
 
+    # DETRITUS
     # Correspondence of FB data type to primary Alliance LinkML object.
-    agr_linkmldto_dict = {
-        'gene': agr_datatypes.GeneDTO,
-        'allele': agr_datatypes.AlleleDTO,
-        'construct': agr_datatypes.ConstructDTO,
-        'strain': agr_datatypes.AffectedGenomicModelDTO,
-        'genotype': agr_datatypes.AffectedGenomicModelDTO,
-        'disease': agr_datatypes.AlleleDiseaseAnnotationDTO,
-    }
+    # agr_linkmldto_dict = {
+    #     'gene': agr_datatypes.GeneDTO,
+    #     'allele': agr_datatypes.AlleleDTO,
+    #     'construct': agr_datatypes.ConstructDTO,
+    #     'strain': agr_datatypes.AffectedGenomicModelDTO,
+    #     'genotype': agr_datatypes.AffectedGenomicModelDTO,
+    #     'disease': agr_datatypes.AlleleDiseaseAnnotationDTO,
+    # }
 
+    # DETRITUS
     # Correspondence of FB data type to Alliance data transfer ingest set.
-    primary_agr_ingest_type_dict = {
-        'gene': 'gene_ingest_set',
-        'allele': 'allele_ingest_set',
-        'construct': 'construct_ingest_set',
-        'variation': 'variation_ingest_set',
-        'strain': 'agm_ingest_set',
-        'genotype': 'agm_ingest_set',
-        'disease': 'disease_allele_ingest_set'
-    }
+    # primary_agr_ingest_type_dict = {
+    #     'gene': 'gene_ingest_set',
+    #     'allele': 'allele_ingest_set',
+    #     'construct': 'construct_ingest_set',
+    #     'variation': 'variation_ingest_set',
+    #     'strain': 'agm_ingest_set',
+    #     'genotype': 'agm_ingest_set',
+    #     'disease': 'disease_allele_ingest_set'
+    # }
 
+    # DETRITUS
     # Mappings of fb_data_type to a datatype Class that will be used to represent each FB entity.
-    datatype_objects = {
-        'gene': fb_datatypes.FBGene,
-        'allele': fb_datatypes.FBAllele,
-        'construct': fb_datatypes.FBConstruct,
-        'strain': fb_datatypes.FBStrain,
-        'disease': fb_datatypes.FBAlleleDiseaseAnnotation,
-    }
+    # datatype_objects = {
+    #     'gene': fb_datatypes.FBGene,
+    #     'allele': fb_datatypes.FBAllele,
+    #     'construct': fb_datatypes.FBConstruct,
+    #     'strain': fb_datatypes.FBStrain,
+    #     'disease': fb_datatypes.FBAlleleDiseaseAnnotation,
+    # }
 
     # Alliance db names should correspond to the contents of this file:
     # https://github.com/alliance-genome/agr_schemas/blob/master/resourceDescriptors.yaml
@@ -149,7 +152,7 @@ class DataHandler(object):
     # General utilities.
     def __str__(self):
         """Print out data handler description."""
-        handler_description = f'A data handler that exports FB {self.fb_data_type} to Alliance LinkML: {type(self.agr_linkmldto_dict[self.fb_data_type])}.'
+        handler_description = f'A data handler that exports FB {self.datatype} to Alliance LinkML: {type(self.agr_export_type)}.'
         return handler_description
 
     def get_primary_key_column(self, chado_table):
@@ -247,39 +250,17 @@ class DataHandler(object):
         results = session.query(Cvterm).filter(*filters).distinct()
         cvterm_counter = 0
         for result in results:
-            self.cvterm_lookup[result.cvterm_id] = result
+            cvterm_dict = {
+                'name': result.name,
+                'cv_name': result.cv.name,
+                'db_name': result.dbxref.db.name,
+                'curie': f'{result.dbxref.db.name}:{result.dbxref.accession}'
+            }
+            self.cvterm_lookup[result.cvterm_id] = cvterm_dict
+            self.log.debug(f'BILLYBOB: Have this CV term dict: {cvterm_dict}')
             cvterm_counter += 1
         self.log.info(f'Found {cvterm_counter} current CV terms in chado.')
         return
-
-    def lookup_cvterm_name(self, cvterm_id):
-        """Return the name for a given chado cvterm.cvterm_id."""
-        try:
-            name = self.cvterm_lookup[cvterm_id].name
-        except KeyError:
-            self.log.error(f'The cvterm_id given is not recognized: {cvterm_id}')
-            name = None
-        return name
-
-    def lookup_cvterm_cv_name(self, cvterm_id):
-        """Return the CV name for a given chado cvterm.cvterm_id."""
-        try:
-            cv_name = self.cvterm_lookup[cvterm_id].cv.name
-        except KeyError:
-            self.log.error(f'The cvterm_id given is not recognized: {cvterm_id}')
-            cv_name = None
-        return cv_name
-
-    def lookup_cvterm_curie(self, cvterm_id):
-        """Return the curie for a given chado cvterm.cvterm_id."""
-        try:
-            db_name = self.cvterm_lookup[cvterm_id].dbxref.db.name
-            accession = self.cvterm_lookup[cvterm_id].dbxref.accession
-            curie = f'{db_name}:{accession}'
-        except KeyError:
-            self.log.error(f'The cvterm_id given is not recognized: {cvterm_id}')
-            curie = None
-        return curie
 
     def build_ncbi_taxon_lookup(self, session):
         """Get FlyBase Organism-NCBITaxon ID correspondence."""
@@ -574,15 +555,15 @@ class DataHandler(object):
         return
 
     # The get_datatype_data() wrapper; sub-methods are defined and called in more specific DataHandler types.
-    def get_datatype_data(self, session):
+    def get_datatype_data(self, session, datatype, fb_export_type, agr_export_type):
         """Get datatype-specific FlyBase data from chado."""
-        self.log.info(f'GET FLYBASE {self.fb_data_type.upper()} DATA FROM CHADO.')
+        self.log.info(f'GET FLYBASE {datatype} DATA FROM CHADO.')
         return
 
     # The synthesize_info() wrapper; sub-methods are defined and called in more specific DataHandler types.
-    def synthesize_info(self):
+    def synthesize_info(self, datatype, fb_export_type, agr_export_type):
         """Synthesize FB info for each data object."""
-        self.log.info(f'SYNTHESIZE FLYBASE {self.fb_data_type.upper()} DATA FROM CHADO.')
+        self.log.info(f'SYNTHESIZE FLYBASE {datatype.upper()} DATA FROM CHADO.')
         return
 
     # Sub-methods for the map_fb_data_to_alliance() wrapper.
@@ -620,12 +601,11 @@ class DataHandler(object):
         return
 
     # The map_fb_data_to_alliance() wrapper; sub-methods are called (and usually defined) in more specific DataHandler types.
-    def map_fb_data_to_alliance(self):
+    def map_fb_data_to_alliance(self, datatype, fb_export_type, agr_export_type):
         """Map FB data to the Alliance LinkML object."""
-        self.log.info(f'Map FlyBase "{self.fb_data_type}" data to the Alliance LinkML object for the "{self.primary_export_set}".'.upper())
+        self.log.info(f'Map FlyBase "{datatype}" data to the Alliance LinkML object for the "{self.primary_export_set}".'.upper())
         return
 
-    # The flag_unexportable_entities() general method.
     def flag_unexportable_entities(self, input_list: list, output_set_name: str):
         """Flag entities lacking information for a required field.
 
@@ -661,7 +641,6 @@ class DataHandler(object):
         self.log.info(f'Found {missing_required_info_counter} objects missing required LinkML info.')
         return
 
-    # The generate_export_dict() general method.
     def generate_export_dict(self, input_list: list, output_set_name: str):
         """Generate LinkML export dict from FB data.
 
@@ -708,13 +687,13 @@ class DataHandler(object):
         return
 
     # The query_chado_and_export() wrapper that runs sub-methods - same order of steps for every DataHandler type.
-    def query_chado_and_export(self, session):
+    def query_chado_and_export(self, session, datatype, fb_export_type, agr_export_type):
         """Wrapper that runs all methods within an SQLAlchemy session."""
         self.log.info('Run main query_chado_and_export() handler method.'.upper())
         self.get_general_data(session)
-        self.get_datatype_data(session)
-        self.synthesize_info()
-        self.map_fb_data_to_alliance()
+        self.get_datatype_data(session, self.datatype, self.fb_export_type, self.agr_export_type)
+        self.synthesize_info(datatype, fb_export_type, agr_export_type)
+        self.map_fb_data_to_alliance(datatype, fb_export_type, agr_export_type)
         self.flag_unexportable_entities(self.fb_data_entities.values(), self.primary_export_set)
         self.generate_export_dict(self.fb_data_entities.values(), self.primary_export_set)
         return

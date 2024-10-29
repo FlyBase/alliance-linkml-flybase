@@ -20,38 +20,39 @@ from disease_handlers import AlleleDiseaseHandler
 from gene_handler import GeneHandler
 
 
-def get_handler(log: Logger, fb_data_type: str, testing: bool):
-    """Return the appropriate type of data handler.
+# DETRITUS
+# def get_handler(log: Logger, fb_data_type: str, testing: bool):
+#     """Return the appropriate type of data handler.
 
-    Args:
-        log (Logger): The global Logger object in the script using the DataHandler.
-        fb_data_type (str): The FB data type to export: e.g., strain, genotype.
-        testing (bool): Whether the handler is being run in test mode or not.
+#     Args:
+#         log (Logger): The global Logger object in the script using the DataHandler.
+#         fb_data_type (str): The FB data type to export: e.g., strain, genotype.
+#         testing (bool): Whether the handler is being run in test mode or not.
 
-    Returns:
-        A data handler of the appropriate type for the FB data type.
+#     Returns:
+#         A data handler of the appropriate type for the FB data type.
 
-    Raises:
-        Raises a KeyError if the FB data type is not recognized.
+#     Raises:
+#         Raises a KeyError if the FB data type is not recognized.
 
-    """
-    log.info(f'Get handler for {fb_data_type}.')
-    handler_dict = {
-        'gene': GeneHandler,
-        'allele': AlleleHandler,
-        'construct': ConstructHandler,
-        # 'variation': VariationHandler,
-        'strain': StrainHandler,
-        # 'genotype': GenotypeHandler,
-        'disease': AlleleDiseaseHandler,
-    }
-    try:
-        data_handler = handler_dict[fb_data_type](log, fb_data_type, testing)
-        log.info(f'Returning: {data_handler}')
-    except KeyError:
-        log.error(f'Unrecognized FB data type and/or Alliance ingest set: {fb_data_type}.')
-        raise
-    return data_handler
+#     """
+#     log.info(f'Get handler for {fb_data_type}.')
+#     handler_dict = {
+#         'gene': GeneHandler,
+#         'allele': AlleleHandler,
+#         'construct': ConstructHandler,
+#         # 'variation': VariationHandler,
+#         'strain': StrainHandler,
+#         # 'genotype': GenotypeHandler,
+#         'disease': AlleleDiseaseHandler,
+#     }
+#     try:
+#         data_handler = handler_dict[fb_data_type](log, fb_data_type, testing)
+#         log.info(f'Returning: {data_handler}')
+#     except KeyError:
+#         log.error(f'Unrecognized FB data type and/or Alliance ingest set: {fb_data_type}.')
+#         raise
+#     return data_handler
 
 
 def db_query_transaction(session: Session, log: Logger, object_to_execute: DataHandler):
@@ -67,7 +68,7 @@ def db_query_transaction(session: Session, log: Logger, object_to_execute: DataH
 
     """
     try:
-        object_to_execute.query_chado_and_export(session)
+        object_to_execute.query_chado_and_export(session, object_to_execute.datatype, object_to_execute.fb_export_type, object_to_execute.agr_export_type)
         session.flush()
     except RuntimeError:
         session.rollback()

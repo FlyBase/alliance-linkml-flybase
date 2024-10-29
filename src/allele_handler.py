@@ -10,16 +10,22 @@ Author(s):
 """
 
 from logging import Logger
-import agr_datatypes
+from agr_datatypes import AlleleDTO
+from fb_datatypes import FBAllele
 from feature_handler import FeatureHandler
 
 
 class AlleleHandler(FeatureHandler):
     """This object gets, synthesizes and filters allele data for export."""
-    def __init__(self, log: Logger, fb_data_type: str, testing: bool):
+    def __init__(self, log: Logger, testing: bool):
         """Create the AlleleHandler object."""
-        super().__init__(log, fb_data_type, testing)
-        self.fb_data_type = 'billybob'
+        super().__init__(log, testing)
+
+    datatype = 'allele'
+    fb_export_type = FBAllele
+    agr_export_type = AlleleDTO
+    primary_agr_ingest_type = 'allele_ingest_set'
+
     test_set = {
         'FBal0137236': 'gukh[142]',    # P{hsneo}Xrp1142 insertion allele.
     }
@@ -41,15 +47,15 @@ class AlleleHandler(FeatureHandler):
         self.get_entity_sbj_feat_rel_by_type(session, 'allele_rels', rel_type='alleleof', obj_type='gene', obj_regex=self.regex['gene'])
         return
 
-    def get_datatype_data(self, session):
+    def get_datatype_data(self, session, datatype, fb_export_type):
         """Extend the method for the GeneHandler."""
         super().get_datatype_data(session)
-        self.get_entities(session)
-        self.get_entity_pubs(session)
-        self.get_entity_synonyms(session)
-        self.get_entity_fb_xrefs(session)
-        self.get_entity_xrefs(session)
-        self.get_entity_timestamps(session)
+        self.get_entities(session, self.datatype, self.fb_export_type)
+        self.get_entity_pubs(session, self.datatype)
+        self.get_entity_synonyms(session, self.datatype)
+        self.get_entity_fb_xrefs(session, self.datatype)
+        self.get_entity_xrefs(session, self.datatype)
+        self.get_entity_timestamps(session, self.datatype)
         self.get_parent_genes(session)
         return
 
@@ -75,9 +81,9 @@ class AlleleHandler(FeatureHandler):
         return
 
     # Elaborate on synthesize_info() for the GeneHandler.
-    def synthesize_info(self):
+    def synthesize_info(self, datatype, fb_export_type, agr_export_type):
         """Extend the method for the GeneHandler."""
-        super().synthesize_info()
+        super().synthesize_info(datatype, fb_export_type, agr_export_type)
         self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
@@ -87,11 +93,11 @@ class AlleleHandler(FeatureHandler):
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
-    def map_allele_basic(self):
+    def map_allele_basic(self, agr_export_type):
         """Map basic FlyBase allele data to the Alliance LinkML object."""
         self.log.info('Map basic allele info to Alliance object.')
         for allele in self.fb_data_entities.values():
-            agr_allele = agr_datatypes.AlleleDTO()
+            agr_allele = agr_export_type()
             agr_allele.obsolete = allele.chado_obj.is_obsolete
             agr_allele.mod_entity_id = f'FB:{allele.uniquename}'
             agr_allele.mod_internal_id = str(allele.chado_obj.feature_id)
@@ -100,10 +106,10 @@ class AlleleHandler(FeatureHandler):
         return
 
     # Elaborate on map_fb_data_to_alliance() for the GeneHandler.
-    def map_fb_data_to_alliance(self):
+    def map_fb_data_to_alliance(self, datatype, fb_export_type, agr_export_type):
         """Extend the method for the GeneHandler."""
-        super().map_fb_data_to_alliance()
-        self.map_allele_basic()
+        super().map_fb_data_to_alliance(datatype, fb_export_type, agr_export_type)
+        self.map_allele_basic(agr_export_type)
         self.map_synonyms()
         self.map_data_provider_dto()
         # self.map_pubs()    # TEMPORARILY SUPPRESS UNTIL LOAD SPEED IMPROVES
@@ -114,7 +120,7 @@ class AlleleHandler(FeatureHandler):
         return
 
     # Elaborate on query_chado_and_export() for the GeneHandler.
-    def query_chado_and_export(self, session):
+    def query_chado_and_export(self, session, datatype, fb_export_type, agr_export_type):
         """Elaborate on query_chado_and_export method for the GeneHandler."""
-        super().query_chado_and_export(session)
+        super().query_chado_and_export(session, datatype, fb_export_type, agr_export_type)
         return

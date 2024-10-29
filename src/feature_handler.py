@@ -23,9 +23,9 @@ from entity_handler import PrimaryEntityHandler
 
 class FeatureHandler(PrimaryEntityHandler):
     """A generic, abstract handler for that gets data for FlyBase features and maps it to the Alliance LinkML model."""
-    def __init__(self, log: Logger, fb_data_type: str, testing: bool):
+    def __init__(self, log: Logger, testing: bool):
         """Create the FeatureHandler object."""
-        super().__init__(log, fb_data_type, testing)
+        super().__init__(log, testing)
 
     # Add methods to be run by get_general_data() below.
 
