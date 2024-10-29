@@ -20,7 +20,6 @@ class AlleleHandler(FeatureHandler):
     def __init__(self, log: Logger, testing: bool):
         """Create the AlleleHandler object."""
         super().__init__(log, testing)
-
         self.datatype = 'allele'
         self.fb_export_type = FBAllele
         self.agr_export_type = AlleleDTO
@@ -110,10 +109,10 @@ class AlleleHandler(FeatureHandler):
         """Extend the method for the GeneHandler."""
         super().map_fb_data_to_alliance(datatype, fb_export_type, agr_export_type)
         self.map_allele_basic(agr_export_type)
-        self.map_synonyms()
-        self.map_data_provider_dto()
+        self.map_synonyms(datatype, agr_export_type)
+        self.map_data_provider_dto(datatype)
         # self.map_pubs()    # TEMPORARILY SUPPRESS UNTIL LOAD SPEED IMPROVES
-        self.map_xrefs()
+        self.map_xrefs(datatype)
         self.map_timestamps()
         self.map_secondary_ids('allele_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')

@@ -75,7 +75,6 @@ class PrimaryEntityHandler(DataHandler):
         chado_type = self.main_chado_entity_types[datatype]
         self.log.info(f'Get {datatype} data entities from {chado_type} table.')
         chado_table = self.chado_tables['main_table'][chado_type]
-        fb_export_type = self.fb_export_types[fb_export_type]
         filters = ()
         if datatype in self.regex.keys():
             self.log.info(f'Use this regex: {self.regex[datatype]}')
@@ -330,7 +329,7 @@ class PrimaryEntityHandler(DataHandler):
                     fb_data_entity.curr_fb_symbol = syno_dict['display_text']
         return
 
-    def synthesize_props(self):
+    def synthesize_props(self, datatype):
         """Process props and pubs for FlyBase data entities."""
         chado_type = self.main_chado_entity_types[datatype]
         prop_chado_table = self.chado_tables['props'][chado_type]
@@ -373,7 +372,7 @@ class PrimaryEntityHandler(DataHandler):
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
-    def map_data_provider_dto(self):
+    def map_data_provider_dto(self, datatype):
         """Return the DataProviderDTO for the FB data entity."""
         # Note - this method is depends on previous determination of fb_data_entity.curr_fb_symbol by map_synonyms(), if applicable.
         self.log.info('Map data provider to Alliance object.')
@@ -413,7 +412,7 @@ class PrimaryEntityHandler(DataHandler):
                 pass
         return
 
-    def map_xrefs(self):
+    def map_xrefs(self, datatype):
         """Add a list of Alliance CrossReferenceDTO dicts to a FlyBase entity."""
         self.log.info('Map xrefs to Alliance object.')
         for fb_data_entity in self.fb_data_entities.values():
@@ -440,7 +439,7 @@ class PrimaryEntityHandler(DataHandler):
             fb_data_entity.linkmldto.cross_reference_dtos = cross_reference_dtos
         return
 
-    def map_synonyms(self, agr_export_type):
+    def map_synonyms(self, datatype, agr_export_type):
         """Generate name/synonym DTOs for an entity."""
         self.log.info('Map synonyms to Alliance object.')
         # First determine synonym slots available, if any.
