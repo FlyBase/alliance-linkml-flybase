@@ -702,7 +702,7 @@ class DataHandler(object):
     # The get_datatype_data() wrapper; sub-methods are defined and called in more specific DataHandler types.
     def get_datatype_data(self, session, datatype, fb_export_type, agr_export_type):
         """Get datatype-specific FlyBase data from chado."""
-        self.log.info(f'GET FLYBASE {datatype} DATA FROM CHADO.')
+        self.log.info(f'GET FLYBASE {datatype.upper()} DATA FROM CHADO.')
         return
 
     # The synthesize_info() wrapper; sub-methods are defined and called in more specific DataHandler types.

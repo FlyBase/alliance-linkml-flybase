@@ -78,8 +78,7 @@ class AlleleHandler(FeatureHandler):
             'sequence_variant',
             'rescue_region'
         ]
-        for arg_type in arg_types:
-            self.get_entity_obj_feat_rel_by_type(session, 'args', rel_type='partof', sbj_type=arg_type)
+        self.get_entity_obj_feat_rel_by_type(session, 'args', rel_type='partof', sbj_type=arg_types)
         return
 
     def get_associated_insertions(self, session):

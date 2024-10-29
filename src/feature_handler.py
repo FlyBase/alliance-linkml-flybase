@@ -186,25 +186,23 @@ class FeatureHandler(PrimaryEntityHandler):
 
         Keyword Args:
             rel_type (str): The CV term name for the feature_relationship of interest. If none given, any rel_type allowed.
-            sbj_type (str): The CV term for the subject feature types. If none given, any subject feature type allowed.
+            sbj_type (list): The CV terms for the subject feature types. If none given, any subject feature type allowed.
             sbj_regex (str): The regex for the subject feature uniquename. If none given, any subject uniquename allowed.
 
         """
         self.log.info(f'Add feature_relationships to "{slot_name}" with these criteria: {kwargs}')
         subject = aliased(Feature, name='subject')
-        # object = aliased(Feature, name='object')
         rel_type = aliased(Cvterm, name='rel_type')
         sbj_type = aliased(Cvterm, name='sbj_type')
-        # filters = (
-        #     object.feature_id.in_(self.fb_data_entities.keys()),
-        # )
+        if kwargs['sbj_type'] and type(kwargs['sbj_type']) is str:
+            kwargs['sbj_type'] = [kwargs['sbj_type']]
         filters = ()
         try:
             filters += (rel_type.name == kwargs['rel_type'], )
         except KeyError:
             pass
         try:
-            filters += (sbj_type.name == kwargs['sbj_type'], )
+            filters += (sbj_type.name.in_((kwargs['sbj_type'])), )
         except KeyError:
             pass
         try:
