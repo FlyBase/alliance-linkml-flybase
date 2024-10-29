@@ -603,7 +603,7 @@ class DataHandler(object):
     # The map_fb_data_to_alliance() wrapper; sub-methods are called (and usually defined) in more specific DataHandler types.
     def map_fb_data_to_alliance(self, datatype, fb_export_type, agr_export_type):
         """Map FB data to the Alliance LinkML object."""
-        self.log.info(f'Map FlyBase "{datatype}" data to the Alliance LinkML object for the "{self.primary_export_set}".'.upper())
+        self.log.info(f'Map FlyBase "{datatype}" data from {fb_export_type} to {agr_export_type}.'.upper())
         return
 
     def flag_unexportable_entities(self, input_list: list, output_set_name: str):

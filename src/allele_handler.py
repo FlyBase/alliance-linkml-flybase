@@ -23,7 +23,7 @@ class AlleleHandler(FeatureHandler):
         self.datatype = 'allele'
         self.fb_export_type = FBAllele
         self.agr_export_type = AlleleDTO
-        self.primary_agr_ingest_type = 'allele_ingest_set'
+        self.primary_export_set = 'allele_ingest_set'
 
     test_set = {
         'FBal0137236': 'gukh[142]',    # P{hsneo}Xrp1142 insertion allele.
