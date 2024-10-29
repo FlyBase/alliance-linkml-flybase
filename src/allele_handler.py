@@ -33,11 +33,11 @@ class AlleleHandler(FeatureHandler):
     def get_general_data(self, session):
         """Extend the method for the AlleleHandler."""
         super().get_general_data(session)
-        # self.build_bibliography(session)
-        # self.build_cvterm_lookup(session)
-        # self.build_ncbi_taxon_lookup(session)
-        # self.build_feature_lookup(session)
-        # self.build_feature_relationship_evidence_lookup(session)
+        self.build_bibliography(session)
+        self.build_cvterm_lookup(session)
+        self.build_ncbi_taxon_lookup(session)
+        self.build_feature_lookup(session)
+        self.build_feature_relationship_evidence_lookup(session)
         return
 
     def get_parent_genes(self, session):
