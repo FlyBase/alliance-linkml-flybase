@@ -60,6 +60,7 @@ class DataHandler(object):
         self.ncbi_taxon_lookup = {}      # An organism_id-keyed dict of f'NCBITaxon:{Dbxref.accession}' strings.
         self.chr_dict = {}               # Will be a feature_id-keyed dict of chr scaffold uniquenames.
         self.feature_lookup = {}         # feature_id-keyed lookup of basic feature info: uniquename, is_obsolete, name, symbol, exported, taxon_id and species.
+        self.feat_rel_pub_lookup = {}    # Will be feature_relationship_id-keyed lists of supporting pub_ids.
         # Trackers.
         self.input_count = 0             # Count of entities found in FlyBase chado database.
         self.export_count = 0            # Count of exported Alliance entities.
