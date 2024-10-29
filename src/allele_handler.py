@@ -65,8 +65,8 @@ class AlleleHandler(FeatureHandler):
         allele_counter = 0
         for allele in self.fb_data_entities.values():
             parent_gene_ids = []
-            for gene_feature_id in allele.parent_gene_rels:
-                parent_gene = self.feature_lookup[gene_feature_id]
+            for feat_rel in allele.parent_gene_rels:
+                parent_gene = self.feature_lookup[feat_rel.object_id]
                 if parent_gene['is_obsolete'] is False:
                     parent_gene_ids.append(parent_gene['uniquename'])
             if len(parent_gene_ids) == 1:
