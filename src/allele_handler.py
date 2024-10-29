@@ -31,6 +31,7 @@ class AlleleHandler(FeatureHandler):
 
     test_set = {
         'FBal0137236': 'gukh[142]',    # P{hsneo}Xrp1142 insertion allele.
+        'FBal0018482': 'wg[1]',        # X-ray mutation.
     }
 
     # Additional reference info.
