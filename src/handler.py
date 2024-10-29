@@ -257,7 +257,6 @@ class DataHandler(object):
                 'curie': f'{result.dbxref.db.name}:{result.dbxref.accession}'
             }
             self.cvterm_lookup[result.cvterm_id] = cvterm_dict
-            self.log.debug(f'BILLYBOB: Have this CV term dict: {cvterm_dict}')
             cvterm_counter += 1
         self.log.info(f'Found {cvterm_counter} current CV terms in chado.')
         return
@@ -322,7 +321,7 @@ class DataHandler(object):
                 feat_dict = {
                     'uniquename': result[UNIQUENAME],
                     'is_obsolete': result[OBSOLETE],
-                    'type': self.cvterm_lookup[result[TYPE_ID]].name,
+                    'type': self.cvterm_lookup[result[TYPE_ID]]['name'],
                     'species': f'{result[GENUS]} {result[SPECIES]}',
                     'name': result[NAME],
                     'symbol': result[NAME],
