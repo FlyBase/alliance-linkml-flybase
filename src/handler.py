@@ -468,7 +468,7 @@ class DataHandler(object):
             'transposable_element_gene'
         ]
         filters = (
-            Feature.uniquename.op('~')(self.gene_regex),
+            Feature.uniquename.op('~')(self.regex['gene']),
             Cvterm.name == 'promoted_gene_type'
         )
         gene_type_results = session.query(Feature).\
