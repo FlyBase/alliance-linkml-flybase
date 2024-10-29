@@ -691,7 +691,7 @@ class DataHandler(object):
         """Wrapper that runs all methods within an SQLAlchemy session."""
         self.log.info('Run main query_chado_and_export() handler method.'.upper())
         self.get_general_data(session)
-        self.get_datatype_data(session, self.datatype, self.fb_export_type, self.agr_export_type)
+        self.get_datatype_data(session, datatype, fb_export_type, agr_export_type)
         self.synthesize_info(datatype, fb_export_type, agr_export_type)
         self.map_fb_data_to_alliance(datatype, fb_export_type, agr_export_type)
         self.flag_unexportable_entities(self.fb_data_entities.values(), self.primary_export_set)
