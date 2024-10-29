@@ -480,7 +480,7 @@ class DataHandler(object):
         for result in gene_type_results:
             gene_type_name = result.value[11:-1]
             if gene_type_name in internal_gene_types:
-                gene_counter += 1
+                counter += 1
                 self.internal_gene_ids.append(result.feature_id)
         self.log.info(f'Found {counter} internal type genes.')
         return
