@@ -86,7 +86,7 @@ class AlleleHandler(FeatureHandler):
         self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
-        self.synthesize_props()
+        self.synthesize_props(datatype)
         self.synthesize_pubs()
         self.synthesize_parent_genes()
         return
