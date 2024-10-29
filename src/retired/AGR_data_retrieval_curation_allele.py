@@ -17,6 +17,7 @@ Notes:
     original Neo4j drop-and-reload database. As the "audit_chado" table may be
     required for proper determination of "date_updated" values, use a reporting
     database with full audit_chado table present.
+    RETIRED RETIRED RETIRED
 
 """
 
