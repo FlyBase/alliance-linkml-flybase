@@ -47,9 +47,9 @@ class AlleleHandler(FeatureHandler):
         self.get_entity_sbj_feat_rel_by_type(session, 'allele_rels', rel_type='alleleof', obj_type='gene', obj_regex=self.regex['gene'])
         return
 
-    def get_datatype_data(self, session, datatype, fb_export_type):
+    def get_datatype_data(self, session, datatype, fb_export_type, agr_export_type):
         """Extend the method for the GeneHandler."""
-        super().get_datatype_data(session)
+        super().get_datatype_data(session, datatype, fb_export_type, agr_export_type)
         self.get_entities(session, self.datatype, self.fb_export_type)
         self.get_entity_pubs(session, self.datatype)
         self.get_entity_synonyms(session, self.datatype)
