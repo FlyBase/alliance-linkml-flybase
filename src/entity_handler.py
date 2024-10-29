@@ -387,11 +387,22 @@ class PrimaryEntityHandler(DataHandler):
                 rank = prop.rank
                 text = prop.value
                 processed_prop = fb_datatypes.FBProp(table_name, record_pkey, subject_id, type_id, rank, text)
+# BILLY BOB - CONTINUE HERE - PUB LOOKUP IS FAILING.
                 processed_prop.pub_ids = pub_lookup[record_pkey]
                 try:
                     fb_data_entity.prop_dict[type_name].append(processed_prop)
                 except KeyError:
                     fb_data_entity.prop_dict[type_name] = [processed_prop]
+        prop_tally = {}
+        for fb_data_entity in self.fb_data_entities.values():
+            for k, v in fb_data_entity.prop_dict.items():
+                try:
+                    prop_tally[k] += len(v)
+                except KeyError:
+                    prop_tally[k] = len(v)
+
+        for k, v in prop_tally.items:
+            self.log.info(f'prop_type={k}, count={v}')
         return
 
     def synthesize_pubs(self):
