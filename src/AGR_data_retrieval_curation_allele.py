@@ -69,7 +69,7 @@ def main():
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Get the data and process it.
-    allele_handler = get_handler(log, testing)
+    allele_handler = AlleleHandler(log, testing)
     db_query_transaction(session, log, allele_handler)
 
     # Export the data.

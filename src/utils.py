@@ -62,9 +62,6 @@ def db_query_transaction(session: Session, log: Logger, object_to_execute: DataH
         session (Session): SQLAlchemy session for db queries.
         log (Logger): The global Logger object in the script using the DataHandler.
         object_to_execute (DataHandler): An object having a query_chado_and_export() method.
-        datatype (str): A string describing the datatype: e.g., 'gene', 'allele'.
-        fb_export_type: The FBExportEntity object to which FB data is initially mapped: e.g., FBGene.
-        agr_export_type: The Alliance LinkML objectto which FB data is ultimately mapped: e.g., GeneDTO.
 
     Raises:
         Raises a RuntimeError if there are problems with executing the query.
