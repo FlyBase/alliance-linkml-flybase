@@ -471,7 +471,8 @@ class DataHandler(object):
             Feature.uniquename.op('~')(self.regex['gene']),
             Cvterm.name == 'promoted_gene_type'
         )
-        gene_type_results = session.query(Feature).\
+        gene_type_results = session.query(Featureprop).\
+            select_from(Feature).\
             join(Featureprop, (Feature.feature_id == Featureprop.feature_id)).\
             join(Cvterm, (Cvterm.cvterm_id == Featureprop.type_id)).\
             filter(*filters).\
