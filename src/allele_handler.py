@@ -43,7 +43,7 @@ class AlleleHandler(FeatureHandler):
     def get_parent_genes(self, session):
         """Get parent genes for alleles."""
         self.log.info('Get parent genes for alleles.')
-        self.get_entity_sbj_feat_rel_by_type(session, 'allele_rels', rel_type='alleleof', obj_type='gene', obj_regex=self.regex['gene'])
+        self.get_entity_sbj_feat_rel_by_type(session, 'parent_gene_rels', rel_type='alleleof', obj_type='gene', obj_regex=self.regex['gene'])
         return
 
     def get_datatype_data(self, session, datatype, fb_export_type, agr_export_type):

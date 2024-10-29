@@ -136,7 +136,7 @@ class FeatureHandler(PrimaryEntityHandler):
 
         Keyword Args:
             rel_type (str): The CV term name for the feature_relationship of interest. If none given, any rel_type allowed.
-            obj_type (list): A list of CV terms for the object feature types. If none given, any object feature type allowed.
+            obj_type (str): A list of CV terms for the object feature types. If none given, any object feature type allowed.
             obj_regex (str): The regex for the object feature uniquename. If none given, any object uniquename allowed.
 
         """
