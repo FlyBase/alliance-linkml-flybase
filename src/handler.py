@@ -11,17 +11,17 @@ Author(s):
 """
 
 import datetime
+import strict_rfc3339
 from logging import Logger
 from sqlalchemy.orm import aliased
-import strict_rfc3339
+from sqlalchemy.orm.exc import NoResultFound
 from harvdev_utils.char_conversions import sub_sup_sgml_to_html
 from harvdev_utils.production import (
-    Cvterm, Db, Dbxref, Feature, FeatureCvterm, FeatureCvtermprop,
-    FeatureRelationship, FeatureRelationshipPub, FeatureSynonym, Organism,
-    OrganismDbxref, Pub, PubDbxref, Synonym
+    Cv, Cvterm, CvtermRelationship, Db, Dbxref, Feature, FeatureCvterm,
+    FeatureCvtermprop, FeatureRelationship, FeatureRelationshipPub,
+    FeatureSynonym, Featureprop, FeaturepropPub, Organism, OrganismDbxref,
+    Organismprop, Pub, PubDbxref, Synonym
 )
-import fb_datatypes
-import agr_datatypes
 
 
 class DataHandler(object):
@@ -52,21 +52,24 @@ class DataHandler(object):
         self.primary_agr_ingest_type = None    # Will be name of the Alliance ingest set: e.g., 'gene_ingest_set'.
         self.testing = testing
         # Datatype bins.
-        self.fb_data_entities = {}       # db_primary_id-keyed dict of chado objects to export.
-        self.export_data = {}            # agr_ingest_set_name-keyed lists of data objects for export.
+        self.fb_data_entities = {}          # db_primary_id-keyed dict of chado objects to export.
+        self.export_data = {}               # agr_ingest_set_name-keyed lists of data objects for export.
         # General data bins.
-        self.bibliography = {}           # A pub_id-keyed dict of pub curies (PMID, or, FBrf if no PMID).
-        self.cvterm_lookup = {}          # A cvterm_id-keyed dict of dicts with these keys: 'name', 'cv_name', 'db_name', 'curie'.
-        self.ncbi_taxon_lookup = {}      # An organism_id-keyed dict of f'NCBITaxon:{Dbxref.accession}' strings.
-        self.chr_dict = {}               # Will be a feature_id-keyed dict of chr scaffold uniquenames.
-        self.feature_lookup = {}         # feature_id-keyed lookup of basic feature info: uniquename, is_obsolete, name, symbol, exported, taxon_id and species.
-        self.feat_rel_pub_lookup = {}    # Will be feature_relationship_id-keyed lists of supporting pub_ids.
+        self.bibliography = {}              # A pub_id-keyed dict of pub curies (PMID, or, FBrf if no PMID).
+        self.cvterm_lookup = {}             # A cvterm_id-keyed dict of dicts with these keys: 'name', 'cv_name', 'db_name', 'curie'.
+        self.ncbi_taxon_lookup = {}         # An organism_id-keyed dict of f'NCBITaxon:{Dbxref.accession}' strings.
+        self.drosophilid_list = []          # A list of organism_ids for Drosophilid species.
+        self.chr_dict = {}                  # Will be a feature_id-keyed dict of chr scaffold uniquenames.
+        self.feature_lookup = {}            # feature_id-keyed dicts with these keys: uniquename, is_obsolete, name, symbol, exported, taxon_id, species.
+        self.internal_gene_ids = []         # A list of feature_ids for FlyBase genes that should be internal at the Alliance: e.g., 'engineered_fusion_gene'.
+        self.featureprop_pub_lookup = {}    # Will be featureprop_id-keyed lists of supporting pub_ids.
+        self.feat_rel_pub_lookup = {}       # Will be feature_relationship_id-keyed lists of supporting pub_ids.
         # Trackers.
-        self.input_count = 0             # Count of entities found in FlyBase chado database.
-        self.export_count = 0            # Count of exported Alliance entities.
-        self.internal_count = 0          # Count of exported entities marked as internal.
-        self.warnings = []               # Handler issues of note.
-        self.errors = []                 # Handler issues that break things.
+        self.input_count = 0                # Count of entities found in FlyBase chado database.
+        self.export_count = 0               # Count of exported Alliance entities.
+        self.internal_count = 0             # Count of exported entities marked as internal.
+        self.warnings = []                  # Handler issues of note.
+        self.errors = []                    # Handler issues that break things.
 
     # Sample set for faster testing: use uniquename-keyed names of objects, tailored for each handler.
     test_set = {}
@@ -262,6 +265,74 @@ class DataHandler(object):
         self.log.info(f'Found {cvterm_counter} current CV terms in chado.')
         return
 
+    def get_child_cvterms(self, session, starting_cvterm_name, starting_cvterm_cv_name):
+        """Get all cvterm_ids for some branch of an ontology defined by the parent term.
+
+        Args:
+            session (SQLAlchemy session): The object that queries the database.
+            starting_cvterm_name (str): The name of the parent CV term.
+            starting_cvterm_cv_name (str): The name of the parent CV term's CV.
+
+        Returns:
+            List of cvterm.cvterm_ids, including that of the starting parent CV term.
+
+        Raises:
+            Raise NoResultFound if starting CV term cannot be found in chado.
+
+        """
+        self.log.info(f'Get all child terms of "{starting_cvterm_name}" from the "{starting_cvterm_cv_name}" CV.')
+        # 1. Get the parent CV term.
+        filters = (
+            Cvterm.name == starting_cvterm_name,
+            Cv.name == starting_cvterm_cv_name
+        )
+        try:
+            starting_cvterm = session.query(Cvterm).\
+                join(Cv, (Cv.cv_id == Cvterm.cv_id)).\
+                filter(*filters).\
+                one()
+            self.log.debug(f'Found chado CV term for "{starting_cvterm_name}" from the "{starting_cvterm_cv_name}" CV.')
+        except NoResultFound:
+            self.log.error(f'No chado CV term found for "{starting_cvterm_name}" ("{starting_cvterm_cv_name}")')
+            raise NoResultFound
+        # 2. Define the start of the recursive query for child terms of the starting term.
+        # Recursive query built up using the sorta helpful instructions here:
+        # https://docs.sqlalchemy.org/en/13/orm/query.html
+        # https://sanjayasubedi.com.np/python/sqlalchemy/recursive-query-in-postgresql-with-sqlalchemy/
+        cvterm_subject1, cvterm_subject2, cvterm_object = aliased(Cvterm), aliased(Cvterm), aliased(Cvterm)
+        cvterm_relationship1, cvterm_relationship2 = aliased(CvtermRelationship), aliased(CvtermRelationship)
+        cv1, cv2 = aliased(Cv), aliased(Cv)
+        # 2a. Define the starting point of the query (output of which to be used recursively to get more results).
+        # Basically, looking for all child terms (subject) of the initial CV term (object) in cvterm_relationship.
+        # The "recursive_query_start" below is not actually results, but a 'sqlalchemy.sql.base.ImmutableColumnCollection' class.
+        filters = (cvterm_object.cvterm_id == starting_cvterm.cvterm_id,
+                   cv1.name == starting_cvterm_cv_name)
+        recursive_query_start = session.query(cvterm_subject1).\
+            join(cvterm_relationship1, (cvterm_relationship1.subject_id == cvterm_subject1.cvterm_id)).\
+            join(cvterm_object, (cvterm_object.cvterm_id == cvterm_relationship1.object_id)).\
+            join(cv1, (cv1.cv_id == cvterm_subject1.cv_id)).\
+            filter(*filters).\
+            cte(recursive=True)    # Important bit here.
+        # 3. Define the second part of the recursive query.
+        # Essentially, we want child terms of child terms in the starting query, recursively.
+        # So, subject_ids in "recursive_query_start" results will be the objects in our query of cvterm_relationship.
+        # Importantly, the columns of the initial "recursive_query_start" query are accessed by the ".c" attribute.
+        filters2 = (cv2.name == starting_cvterm_cv_name,)
+        recursive_query_repeat = session.query(cvterm_subject2).\
+            join(cvterm_relationship2, (cvterm_relationship2.subject_id == cvterm_subject2.cvterm_id)).\
+            join(recursive_query_start, (recursive_query_start.c.cvterm_id == cvterm_relationship2.object_id)).\
+            join(cv2, (cv2.cv_id == cvterm_subject2.cv_id)).\
+            filter(*filters2)
+        # 4. Define a query that takes the union of the starting and recursive queries.
+        recursive_query_total = recursive_query_start.union(recursive_query_repeat)
+        # 5. And finally, get the result for the start and recursive query parts). Piece of cake ;)
+        recursive_query_total_results = session.query(recursive_query_total)
+        # Build the list from the results.
+        cvterm_id_list = [i[0] for i in recursive_query_total_results]
+        self.log.info(f'Found {len(cvterm_id_list)} terms under "{starting_cvterm_name}" from the "{starting_cvterm_cv_name}" CV.')
+        cvterm_id_list.append(starting_cvterm.cvterm_id)
+        return cvterm_id_list
+
     def build_ncbi_taxon_lookup(self, session):
         """Get FlyBase Organism-NCBITaxon ID correspondence."""
         self.log.info('Get FlyBase Organism-NCBITaxon ID correspondence.')
@@ -279,6 +350,25 @@ class DataHandler(object):
             self.ncbi_taxon_lookup[result.OrganismDbxref.organism_id] = f'NCBITaxon:{result.Dbxref.accession}'
             counter += 1
         self.log.info(f'Found {counter} NCBITaxon IDs for FlyBase organisms.')
+        return
+
+    def get_drosophilid_organisms(self, session):
+        """Find Drosophilid species."""
+        self.log.info('Find Drosophilid species.')
+        filters = (
+            Cvterm.name == 'taxgroup',
+            Organismprop.value == 'drosophilid'
+        )
+        drosophilid_results = session.query(Organism).\
+            join(Organismprop, (Organismprop.organism_id == Organism.organism_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == Organismprop.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for drosophilid in drosophilid_results:
+            self.drosophilid_list.append(drosophilid.organism_id)
+            counter += 1
+        self.log.info(f'Found {counter} Drosophilid organisms in chado.')
         return
 
     def build_feature_lookup(self, session):
@@ -360,6 +450,41 @@ class DataHandler(object):
             self.log.info(f'Found {syno_counter} symbol synonyms for {feat_counter} {feat_type} features.')
         return
 
+    def find_internal_genes(self, session):
+        """Find FlyBase genes that should be internal at the Alliance due to their type."""
+        self.log.info('Find FlyBase genes that should be internal at the Alliance due to their type.')
+        internal_gene_types = [
+            'engineered_fusion_gene',
+            'engineered_region',
+            'gene_group',
+            'gene_with_polycistronic_transcript',
+            'insulator',
+            'mitochondrial_sequence',
+            'origin_of_replication',
+            'region',
+            'regulatory_region',
+            'repeat_region',
+            'satellite_DNA',
+            'transposable_element_gene'
+        ]
+        filters = (
+            Feature.uniquename.op('~')(self.gene_regex),
+            Cvterm.name == 'promoted_gene_type'
+        )
+        gene_type_results = session.query(Feature).\
+            join(Featureprop, (Feature.feature_id == Featureprop.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == Featureprop.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in gene_type_results:
+            gene_type_name = result.value[11:-1]
+            if gene_type_name in internal_gene_types:
+                gene_counter += 1
+                self.internal_gene_ids.append(result.feature_id)
+        self.log.info(f'Found {counter} internal type genes.')
+        return
+
     def get_chr_info(self, session):
         """Build chr dict."""
         self.log.info('Build chr dict.')
@@ -380,6 +505,25 @@ class DataHandler(object):
             self.chr_dict[result.feature_id] = result.uniquename
             counter += 1
         self.log.info(f'Got basic info for {counter} current Dmel chr scaffolds.')
+        return
+
+    def build_featureprop_evidence_lookup(self, session):
+        """Build evidence lookup for featureprops."""
+        self.log.info('Build evidence lookup for featureprops.')
+        FPROP_ID = 0
+        PUB_ID = 1
+        counter = 0
+        fp_counter = 0
+        results = session.query(FeaturepropPub.featureprop_id, FeaturepropPub.pub_id).distinct()
+        for result in results:
+            try:
+                self.featureprop_pub_lookup[result[FPROP_ID]].append(result[PUB_ID])
+                counter += 1
+            except KeyError:
+                self.featureprop_pub_lookup[result[FPROP_ID]] = [result[PUB_ID]]
+                fp_counter += 1
+                counter += 1
+        self.log.info(f'Found {counter} pubs supporting {fp_counter} featureprops.')
         return
 
     def build_feature_relationship_evidence_lookup(self, session):

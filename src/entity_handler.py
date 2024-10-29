@@ -12,7 +12,6 @@ Author(s):
 
 import re
 from logging import Logger
-from sqlalchemy.orm import aliased
 from harvdev_utils.char_conversions import sub_sup_sgml_to_html
 from harvdev_utils.production import (
     Cvterm, Db, Dbxref, Feature, FeatureCvterm, FeatureCvtermprop,
@@ -21,6 +20,7 @@ from harvdev_utils.production import (
     StrainpropPub, StrainPub, StrainSynonym
 )
 import agr_datatypes
+import fb_datatypes
 from handler import DataHandler
 
 
@@ -106,6 +106,49 @@ class PrimaryEntityHandler(DataHandler):
             self.fb_data_entities[pkey_id] = fb_export_type(result)
             counter += 1
         self.log.info(f'Found {counter} FlyBase {datatype} entities in chado.')
+        return
+
+    def get_entityprops(self, session, datatype):
+        """Get primary FlyBase data entity props."""
+        self.log.info('Get primary FlyBase data entity props.')
+        chado_type = self.main_chado_entity_types[datatype]
+        self.log.info(f'Get {datatype} props from {chado_type}prop table.')
+        chado_table = self.chado_tables['main_table'][chado_type]
+        chado_prop_table = self.chado_tables['props'][chado_type]
+        filters = ()
+        if datatype in self.regex.keys():
+            self.log.info(f'Use this regex: {self.regex[datatype]}')
+            filters += (chado_table.uniquename.op('~')(self.regex[datatype]), )
+        if datatype in self.subtypes.keys():
+            self.log.info(f'Filter main table by these subtypes: {self.subtypes[datatype]}')
+            filters += (Cvterm.name.in_((self.subtypes[datatype])), )
+        if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            filters += (chado_table.uniquename.in_((self.test_set.keys())), )
+        if filters == ():
+            self.log.warning('Have no filters for the main FlyBase entity driver query.')
+            raise
+        if datatype in self.subtypes.keys():
+            results = session.query(chado_prop_table).\
+                select_from(chado_table).\
+                join(chado_prop_table).\
+                join(Cvterm, (Cvterm.cvterm_id == chado_table.type_id)).\
+                filter(*filters).\
+                distinct()
+        else:
+            results = session.query(chado_prop_table).\
+                select_from(chado_table).\
+                join(chado_prop_table).\
+                filter(*filters).\
+                distinct()
+        pkey_name = self.chado_tables['primary_key'][chado_type]
+        self.log.info(f'Have this primary_key name: {pkey_name}')
+        counter = 0
+        for result in results:
+            pkey_id = getattr(result, pkey_name)
+            self.fb_data_entities[pkey_id].props.append(result)
+            counter += 1
+        self.log.info(f'Found {counter} {chado_type}props for FlyBase {datatype} entities in chado.')
         return
 
     def get_entity_pubs(self, session, datatype):
@@ -332,33 +375,23 @@ class PrimaryEntityHandler(DataHandler):
     def synthesize_props(self, datatype):
         """Process props and pubs for FlyBase data entities."""
         chado_type = self.main_chado_entity_types[datatype]
-        prop_chado_table = self.chado_tables['props'][chado_type]
-        prop_pkey_col = self.get_primary_key_column(prop_chado_table)
-        self.log.info(f'Synthesize {prop_chado_table} data.')
-        prop_types = []
-        # Build prop dict.
+        self.log.info(f'Synthesize {chado_type}prop data for {datatype}s.')
+        pub_lookup = getattr(self, f'{chado_type}prop_pub_lookup')
         for fb_data_entity in self.fb_data_entities.values():
-            # Build prop_type-keyed lists of props.
             for prop in fb_data_entity.props:
-                prop_type = prop.type.name
-                prop_types.append(prop_type)
+                table_name = f'{chado_type}prop'
+                record_pkey = getattr(prop, f'{chado_type}prop_id')
+                subject_id = getattr(prop, f'{chado_type}_id')
+                type_id = prop.type_id
+                type_name = self.cvterm_lookup[type_id]['name']
+                rank = prop.rank
+                text = prop.value
+                processed_prop = fb_datatypes.FBProp(table_name, record_pkey, subject_id, type_id, rank, text)
+                processed_prop.pub_ids = pub_lookup[record_pkey]
                 try:
-                    fb_data_entity.prop_dict[prop_type].append(prop)
+                    fb_data_entity.prop_dict[type_name].append(processed_prop)
                 except KeyError:
-                    fb_data_entity.prop_dict[prop_type] = [prop]
-            # Build prop_id-keyed lists of pub_ids.
-            for prop_pub in fb_data_entity.prop_pubs:
-                prop_id = getattr(prop_pub, prop_pkey_col.name)
-                try:
-                    fb_data_entity.prop_pub_dict[prop_id].append(prop_pub.pub_id)
-                except KeyError:
-                    fb_data_entity.prop_pub_dict[prop_id] = [prop_pub.pub_id]
-        # Review prop synthesis.
-        self.log.info(f'Found these types of {chado_type}props: {set(prop_types)}')
-        # Optional debug.
-        # for i in self.fb_data_entities.values():
-        #     for k, v in i.prop_pub_dict.items():
-        #         self.log.debug(f'{chado_type}_id={i.db_primary_id}, {chado_type}prop_id={k}, pub_ids={v}')
+                    fb_data_entity.prop_dict[type_name] = [processed_prop]
         return
 
     def synthesize_pubs(self):

@@ -102,8 +102,7 @@ class FBDataEntity(FBExportEntity):
         self.curr_fb_fullname = None    # The current fullname for the entity (UTF-8).
         self.alt_fb_ids = []            # Secondary FB IDs (including the "FB:" prefix).
         self.all_pub_ids = []           # Pub.pub_ids for pubs associated in any way with the entity.
-        self.prop_dict = {}             # cvterm name-keyed lists of prop objects: e.g., Featureprop.
-        self.prop_pub_dict = {}         # prop_id-keyed lists of pub_ids.
+        self.prop_dict = {}             # cvterm name-keyed lists of FBProp objects.
 
 
 class FBFeature(FBDataEntity):
@@ -142,10 +141,10 @@ class FBAllele(FBFeature):
         super().__init__(chado_obj)
         # Primary FB chado data.
         self.parent_gene_rels = []              # Direct FBal "alleleof" FBgn FeatureRelationships.
-        self.constructs = []                    # List of FBtp IDs for associated constructs.
-        self.dmel_insertions = []               # List of FBti IDs for associated Dmel insertions.
-        self.non_dmel_insertions = []           # List of FBti IDs for associated non-Dmel insertions.
-        self.args = []                          # List of associated ARG (variation) features.
+        self.constructs = []                    # List of FeatureRelationships to associated constructs (FBtp).
+        self.dmel_insertions = []               # List of FeatureRelationships to associated Dmel insertions (FBti).
+        self.non_dmel_insertions = []           # List of FeatureRelationships to associated non-Dmel insertions (FBti).
+        self.args = []                          # List of FeatureRelationships to associated ARG (variation) features.
         self.direct_colls = []                  # List of collecionts (Library objects) directly associated with the allele.
         self.ins_colls = []                     # List of collections (Library objects) indirectly associated with the allele via an FBti insertion.
         self.cons_colls = []                    # List of collections (Library objects) indirectly associated with the allele via an FBtp construct.
@@ -200,7 +199,7 @@ class FBGenotype(FBDataEntity):
         self.db_primary_id = chado_obj.genotype_id
 
 
-# Associations/annotations.
+# First class associations and annotations.
 class FBRelationship(FBExportEntity):
     """FBRelationship class."""
     def __init__(self, chado_table, subject_id, object_id, rel_type):
@@ -261,3 +260,24 @@ class FBAlleleDiseaseAnnotation(FBExportEntity):
                    self.evidence_code.value)
         self.entity_desc = desc
         return
+
+
+# Second class annotations (submitted as part of other objects).
+class FBProp(object):
+    """A base, generic FlyBase property annotation."""
+    def __init__(self, table_name, record_pkey, subject_id, type_id, rank, text):
+        """Create a FBProp object from the main db entry.
+
+        Args:
+            chado_obj (SQLAlchemy object): The object representing the prop table entry.
+
+        Returns:
+            A FBProp object.
+        """
+        self.table_name = table_name      # The name of the prop table.
+        self.record_pkey = record_pkey    # The primary key for the prop table entry.
+        self.subject_id = subject_id      # The primary key for the subject of the prop.
+        self.type_id = type_id            # The prop type_id (cvterm_id).
+        self.rank = rank                  # The prop rank.
+        self.text = text                  # The text of the prop.
+        self.pubs = []                    # Will be a list of pub_ids.
