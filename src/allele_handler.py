@@ -92,6 +92,9 @@ class AlleleHandler(FeatureHandler):
             insertion.uniquename.op('~')(self.regex['insertion']),
             Cvterm.name == 'associated_with'
         )
+        if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            filters += (allele.uniquename.in_((self.test_set.keys())), )
         insertion_results = session.query(Organism, allele, insertion).\
             select_from(insertion).\
             join(Organism, (Organism.organism_id == insertion.organism_id)).\
@@ -120,6 +123,9 @@ class AlleleHandler(FeatureHandler):
             Feature.uniquename.op('~')(self.regex['allele']),
             Cvterm.name.op('~')(cvterm_name_regex)
         )
+        if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            filters += (Feature.uniquename.in_((self.test_set.keys())), )
         ivt_alleles = session.query(Feature).\
             select_from(Feature).\
             join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
