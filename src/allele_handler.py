@@ -387,9 +387,9 @@ class AlleleHandler(FeatureHandler):
             collections = []
             if allele.direct_colls:
                 collections.extend(allele.direct_colls)
-            elif allele.ins_cols:
+            elif allele.ins_colls:
                 collections.extend(allele.ins_colls)
-            elif allele.cons_cols:
+            elif allele.cons_colls:
                 collections.extend(allele.cons_colls)
             elif allele.sf_colls:
                 collections.extend(allele.sf_colls)
