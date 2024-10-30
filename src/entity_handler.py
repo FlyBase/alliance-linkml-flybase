@@ -153,7 +153,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Found {prop_counter} {chado_type}props for {datatype}s.')
         # Phase 2. Get pubs supporting props.
         if datatype in self.subtypes.keys():
-            prop_pub_results = session.query(chado_prop_table).\
+            prop_pub_results = session.query(chado_prop_pub_table).\
                 select_from(chado_table).\
                 join(chado_prop_table).\
                 join(Cvterm, (Cvterm.cvterm_id == chado_table.type_id)).\

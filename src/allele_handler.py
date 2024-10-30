@@ -52,13 +52,13 @@ class AlleleHandler(FeatureHandler):
         """Extend the method for the AlleleHandler."""
         super().get_general_data(session)
         self.build_bibliography(session)
-        self.build_cvterm_lookup(session)
-        self.get_key_cvterm_sets(session)
-        self.build_ncbi_taxon_lookup(session)
-        self.get_drosophilid_organisms(session)
-        self.build_feature_lookup(session)
-        self.find_internal_genes(session)
-        self.build_feature_relationship_evidence_lookup(session)
+        # self.build_cvterm_lookup(session)
+        # self.get_key_cvterm_sets(session)
+        # self.build_ncbi_taxon_lookup(session)
+        # self.get_drosophilid_organisms(session)
+        # self.build_feature_lookup(session)
+        # self.find_internal_genes(session)
+        # self.build_feature_relationship_evidence_lookup(session)
         return
 
     def get_related_features(self, session):
