@@ -32,8 +32,8 @@ class AlleleHandler(FeatureHandler):
     test_set = {
         'FBal0137236': 'gukh[142]',            # P{hsneo}Xrp1142 insertion allele.
         'FBal0018482': 'wg[1]',                # X-ray mutation.
-        'FBal0043981': 'Ecol\lacZ[en-14]',     # Has an allele full name.
-        'FBal0279489': 'Scer\GAL4[how-24B]'    # Has a 2o ID.
+        'FBal0043981': 'Ecol_lacZ[en-14]',     # Has an allele full name.
+        'FBal0279489': 'Scer_GAL4[how-24B]'    # Has a 2o ID.
     }
 
     # Additional reference info.
