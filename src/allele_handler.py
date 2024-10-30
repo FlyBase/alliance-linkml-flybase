@@ -207,7 +207,6 @@ class AlleleHandler(FeatureHandler):
     def synthesize_info(self, datatype, fb_export_type, agr_export_type):
         """Extend the method for the GeneHandler."""
         super().synthesize_info(datatype, fb_export_type, agr_export_type)
-        self.synthesize_props(datatype)
         self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
