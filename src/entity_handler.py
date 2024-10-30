@@ -428,11 +428,11 @@ class PrimaryEntityHandler(DataHandler):
         pub_sources = ['pubs', 'synonyms']
         for fb_data_entity in self.fb_data_entities.values():
             for pub_source in pub_sources:
-                fb_data_entity.all_pub_ids.extend([i.pub_id for i in getattr(fb_data_entity, pub_source)])
+                fb_data_entity.all_pubs.extend([i.pub_id for i in getattr(fb_data_entity, pub_source)])
             for prop_list in fb_data_entity.props.values():
                 for prop in prop_list:
                     fb_data_entity.all_pubs.extend(prop.pub_ids)
-            fb_data_entity.all_pub_ids = list(set(fb_data_entity.all_pub_ids))
+            fb_data_entity.all_pubs = list(set(fb_data_entity.all_pubs))
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
@@ -465,7 +465,7 @@ class PrimaryEntityHandler(DataHandler):
         """Add pub curies to a FlyBase entity."""
         self.log.info('Map pubs to Alliance object.')
         for fb_data_entity in self.fb_data_entities.values():
-            for pub_id in fb_data_entity.all_pub_ids:
+            for pub_id in fb_data_entity.all_pubs:
                 try:
                     fb_data_entity.linkmldto.reference_curies.append(self.bibliography[pub_id])
                 except KeyError:

@@ -236,6 +236,8 @@ class AlleleHandler(FeatureHandler):
                     agr_allele.is_extinct = True
             for prop_type in allele.props.keys():
                 if prop_type.startswith('derived_stock'):
+                    if agr_allele.is_extinct is True:
+                        self.log.warning(f'{allele} is stated to be lost but has stocks.')
                     agr_allele.is_extinct = False
             allele.linkmldto = agr_allele
         return
@@ -255,21 +257,21 @@ class AlleleHandler(FeatureHandler):
             relevant_feat_rels.extend(allele.dmel_insertions)
             relevant_feat_rels.extend(allele.non_dmel_insertions)
             for feat_rel in relevant_feat_rels:
-                type_curie = None
+                mutation_type_curie = None
                 fb_feat_type_id = feat_rel.object.type_id
                 fb_feat_type_name = self.cvterm_lookup[fb_feat_type_id]['name']
                 if fb_feat_type_name in insertion_conversion.keys():
-                    type_curie = insertion_conversion[fb_feat_type_name]
+                    mutation_type_curie = insertion_conversion[fb_feat_type_name]
                 elif fb_feat_type_id in self.allele_mutant_type_terms:
-                    type_curie = self.cvterm_lookup[fb_feat_type_id]['curie']
-                if type_curie is None:
+                    mutation_type_curie = self.cvterm_lookup[fb_feat_type_id]['curie']
+                if mutation_type_curie is None:
                     continue
                 pub_ids = self.feat_rel_pub_lookup[feat_rel.feature_relationship_id]
                 pub_curies = self.lookup_pub_curies(pub_ids)
                 try:
-                    mutation_types[type_curie].extend(pub_curies)
+                    mutation_types[mutation_type_curie].extend(pub_curies)
                 except KeyError:
-                    mutation_types[type_curie] = pub_curies
+                    mutation_types[mutation_type_curie] = pub_curies
             for mutation_type_curie, full_pub_curie_list in mutation_types.items():
                 for pub_curie in full_pub_curie_list:
                     if pub_curie == 'FB:unattributed':
