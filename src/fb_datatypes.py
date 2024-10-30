@@ -98,7 +98,7 @@ class FBDataEntity(FBExportEntity):
         self.curr_fb_symbol = None      # The current symbol for the entity (UTF-8).
         self.curr_fb_fullname = None    # The current fullname for the entity (UTF-8).
         self.alt_fb_ids = []            # Secondary FB IDs (including the "FB:" prefix).
-        self.all_pub_ids = []           # Pub.pub_ids for pubs associated in any way with the entity.
+        self.all_pubs = []           # Pub.pub_ids for pubs associated in any way with the entity.
         self.prop_dict = {}             # cvterm name-keyed lists of FBProp objects.
 
 
