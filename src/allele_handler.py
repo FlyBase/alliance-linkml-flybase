@@ -251,12 +251,13 @@ class AlleleHandler(FeatureHandler):
 
     def map_allele_database_status(self):
         """Map allele database status."""
+        evidence_curies = []
         for allele in self.fb_data_entities.values():
             if allele.is_obsolete is False:
                 db_status = 'approved'
             else:
                 db_status = 'deleted'
-            db_status_annotation = agr_datatypes.AlleleDatabaseStatusSlotAnnotationDTO(db_status)
+            db_status_annotation = agr_datatypes.AlleleDatabaseStatusSlotAnnotationDTO(db_status, evidence_curies)
             allele.linkmldto.allele_database_status_dto = db_status_annotation
         return
 
