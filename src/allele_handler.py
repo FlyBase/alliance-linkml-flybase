@@ -189,7 +189,7 @@ class AlleleHandler(FeatureHandler):
         counter = 0
         for allele in self.fb_data_entities.values():
             # Skip alleles that unambiguously occur in Dmel.
-            if allele.organism_abbr == 'Dmel':
+            if allele.org_abbr == 'Dmel':
                 continue
             if allele.dmel_insertions:
                 continue
