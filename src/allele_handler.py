@@ -52,13 +52,13 @@ class AlleleHandler(FeatureHandler):
         """Extend the method for the AlleleHandler."""
         super().get_general_data(session)
         self.build_bibliography(session)
-        # self.build_cvterm_lookup(session)
-        # self.get_key_cvterm_sets(session)
-        # self.build_ncbi_taxon_lookup(session)
-        # self.get_drosophilid_organisms(session)
-        # self.build_feature_lookup(session)
-        # self.find_internal_genes(session)
-        # self.build_feature_relationship_evidence_lookup(session)
+        self.build_cvterm_lookup(session)
+        self.get_key_cvterm_sets(session)
+        self.build_ncbi_taxon_lookup(session)
+        self.get_drosophilid_organisms(session)
+        self.build_feature_lookup(session)
+        self.find_internal_genes(session)
+        # self.build_feature_relationship_evidence_lookup(session)    # BOB - TMP DEV
         return
 
     def get_related_features(self, session):
@@ -227,9 +227,17 @@ class AlleleHandler(FeatureHandler):
             agr_allele.mod_entity_id = f'FB:{allele.uniquename}'
             agr_allele.mod_internal_id = str(allele.chado_obj.feature_id)
             agr_allele.taxon_curie = allele.ncbi_taxon_id
+            # Set internal.
             if allele.allele_of_internal_gene is True:
                 agr_allele.internal = True
                 allele.internal_reasons.append('Allele of internal type FB gene.')
+            # Set is_extinct (presence of stock trumps curated comment).
+            for prop in allele.props['availability']:
+                if prop.chado_obj.value == 'Stated to be lost.':
+                    agr_allele.is_extinct = True
+            for prop_type in allele.props.keys():
+                if prop_type.startswith('derived_stock'):
+                    agr_allele.is_extinct = False
             allele.linkmldto = agr_allele
         return
 
