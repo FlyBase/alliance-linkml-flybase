@@ -31,7 +31,7 @@ class AlleleHandler(FeatureHandler):
         self.primary_export_set = 'allele_ingest_set'
 
     test_set = {
-        'FBal0137236': 'gukh[142]',            # P{hsneo}Xrp1142 insertion allele.
+        'FBal0137236': 'gukh[142]',            # Insertion allele, part of TI_set_P{hsneo}.BDGP collection.
         'FBal0018482': 'wg[1]',                # X-ray mutation.
         'FBal0043981': 'Ecol_lacZ[en-14]',     # Has an allele full name.
         'FBal0279489': 'Scer_GAL4[how-24B]'    # Has a 2o ID.
@@ -243,8 +243,7 @@ class AlleleHandler(FeatureHandler):
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             filters += (Feature.uniquename.in_((self.test_set.keys())), )
-
-        sf_libraries = session.query(allele, Library).\
+        sf_collections = session.query(allele, Library).\
             join(allele_construct, (allele_construct.subject_id == allele.feature_id)).\
             join(construct, (construct.feature_id == allele_construct.object_id)).\
             join(featreltype, (featreltype.cvterm_id == allele_construct.type_id)).\
@@ -258,8 +257,9 @@ class AlleleHandler(FeatureHandler):
             filter(*filters).\
             distinct()
         counter = 0
-        for result in sf_libraries:
-            self.allele_dict[result.allele.uniquename].sf_libraries.append(result.Library)
+        for result in sf_collections:
+            self.log.debug(f'BILLYBOB: {result.allele.uniquename} associated with {result.Library.uniquename}')
+            self.fb_data_entities[result.allele.feature_id].sf_colls.append(result.Library)
             counter += 1
         self.log.info(f'Found {counter} sequence feature-mediated allele-library associations.')
         return
