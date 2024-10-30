@@ -15,7 +15,8 @@ import agr_datatypes
 from fb_datatypes import FBAllele
 from feature_handler import FeatureHandler
 from harvdev_utils.production import (
-    Cvterm, Feature, FeatureCvterm, FeatureRelationship, Organism
+    Cvterm, Feature, FeatureCvterm, FeatureRelationship, Library,
+    LibraryFeature, LibraryFeatureprop, Organism
 )
 
 
@@ -141,6 +142,131 @@ class AlleleHandler(FeatureHandler):
         self.log.info(f'Flagged {counter} alleles as "in vitro"')
         return
 
+    def get_direct_collections(self, session):
+        """Find collections directly related to alleles."""
+        self.log.info('Find collections directly related to alleles.')
+        libtype = aliased(Cvterm, name='libtype')
+        libfeattype = aliased(Cvterm, name='libfeattype')
+        filters = (
+            Feature.uniquename.op('~')(self.regex['allele']),
+            Library.is_obsolete.is_(False),
+            Library.uniquename.op('~')(self.regex['library']),
+            libtype.name == 'reagent collection',
+            libfeattype.name == 'member_of_reagent_collection'
+        )
+        if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            filters += (Feature.uniquename.in_((self.test_set.keys())), )
+        collections = session.query(Feature, Library).\
+            join(LibraryFeature, (LibraryFeature.feature_id == Feature.feature_id)).\
+            join(Library, (Library.library_id == LibraryFeature.library_id)).\
+            join(LibraryFeatureprop, (LibraryFeatureprop.library_feature_id == LibraryFeature.library_feature_id)).\
+            join(libtype, (libtype.cvterm_id == Library.type_id)).\
+            join(libfeattype, (libfeattype.cvterm_id == LibraryFeatureprop.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in collections:
+            self.fb_data_entities[result.Feature.feature_id].direct_colls.append(result.Library)
+            counter += 1
+        self.log.info(f'Found {counter} direct allele-collection associations.')
+        return
+
+    def get_indirect_collections(self, session):
+        """Find collections indirectly related to alleles via insertions or constructs."""
+        self.log.info('Find collections indirectly related to alleles via insertions or constructs.')
+        allele = aliased(Feature, name='allele')
+        feature = aliased(Feature, name='feature')
+        libtype = aliased(Cvterm, name='libtype')
+        libfeattype = aliased(Cvterm, name='libfeattype')
+        featreltype = aliased(Cvterm, name='featreltype')
+        filters = (
+            allele.uniquename.op('~')(self.regex['allele']),
+            feature.uniquename.op('~')(self.regex['consins']),
+            feature.is_obsolete.is_(False),
+            Library.is_obsolete.is_(False),
+            Library.uniquename.op('~')(self.regex['library']),
+            libtype.name == 'reagent collection',
+            libfeattype.name == 'member_of_reagent_collection',
+            featreltype.name == 'associated_with'
+        )
+        if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            filters += (allele.uniquename.in_((self.test_set.keys())), )
+        indirect_collections = session.query(allele, feature, Library).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
+            join(featreltype, (featreltype.cvterm_id == FeatureRelationship.type_id)).\
+            join(feature, (feature.feature_id == FeatureRelationship.object_id)).\
+            join(LibraryFeature, (LibraryFeature.feature_id == feature.feature_id)).\
+            join(Library, (Library.library_id == LibraryFeature.library_id)).\
+            join(LibraryFeatureprop, (LibraryFeatureprop.library_feature_id == LibraryFeature.library_feature_id)).\
+            join(libtype, (libtype.cvterm_id == Library.type_id)).\
+            join(libfeattype, (libfeattype.cvterm_id == LibraryFeatureprop.type_id)).\
+            filter(*filters).\
+            distinct()
+        fbti_counter = 0
+        fbtp_counter = 0
+        for result in indirect_collections:
+            if result.feature.uniquename.startswith('FBti'):
+                self.fb_data_entities[result.allele.feature_id].ins_colls.append(result.Library)
+                fbti_counter += 1
+            elif result.feature.uniquename.startswith('FBtp'):
+                self.fb_data_entities[result.allele.feature_id].cons_colls.append(result.Library)
+                fbtp_counter += 1
+        self.log.info(f'Found {fbti_counter} insertion-mediated allele-collection associations.')
+        self.log.info(f'Found {fbtp_counter} construct-mediated allele-collection associations.')
+        return
+
+    def get_sf_collections(self, session):
+        """Find collections indirectly related to alleles via sequence features."""
+        log.info('Find collections indirectly related to alleles via sequence features.')
+        allele = aliased(Feature, name='allele')
+        construct = aliased(Feature, name='construct')
+        seqfeat = aliased(Feature, name='seqfeat')
+        libtype = aliased(Cvterm, name='libtype')
+        libfeattype = aliased(Cvterm, name='libfeattype')
+        featreltype = aliased(Cvterm, name='featreltype')
+        allele_construct = aliased(FeatureRelationship, name='allele_construct')
+        seqfeat_construct = aliased(FeatureRelationship, name='seqfeat_construct')
+        filters = (
+            allele.uniquename.op('~')(self.allele_regex),
+            construct.uniquename.op('~')(self.construct_regex),
+            seqfeat.uniquename.op('~')(self.seqfeat_regex),
+            construct.is_obsolete.is_(False),
+            seqfeat.is_obsolete.is_(False),
+            Library.is_obsolete.is_(False),
+            Library.uniquename.op('~')(self.lib_regex),
+            libtype.name == 'reagent collection',
+            libfeattype.name == 'member_of_reagent_collection',
+            featreltype.name == 'associated_with'
+        )
+        if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            filters += (Feature.uniquename.in_((self.test_set.keys())), )
+
+        sf_libraries = session.query(allele, Library).\
+            join(allele_construct, (allele_construct.subject_id == allele.feature_id)).\
+            join(construct, (construct.feature_id == allele_construct.object_id)).\
+            join(featreltype, (featreltype.cvterm_id == allele_construct.type_id)).\
+            join(seqfeat_construct, (seqfeat_construct.object_id == construct.feature_id)).\
+            join(seqfeat, (seqfeat.feature_id == seqfeat_construct.subject_id)).\
+            join(LibraryFeature, (LibraryFeature.feature_id == seqfeat.feature_id)).\
+            join(Library, (Library.library_id == LibraryFeature.library_id)).\
+            join(LibraryFeatureprop, (LibraryFeatureprop.library_feature_id == LibraryFeature.library_feature_id)).\
+            join(libtype, (libtype.cvterm_id == Library.type_id)).\
+            join(libfeattype, (libfeattype.cvterm_id == LibraryFeatureprop.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in sf_libraries:
+            self.allele_dict[result.allele.uniquename].sf_libraries.append(result.Library)
+            counter += 1
+        log.info(f'Found {counter} sequence feature-mediated allele-library associations.')
+        return
+
+
+### BOB
+
     def get_datatype_data(self, session, datatype, fb_export_type, agr_export_type):
         """Extend the method for the GeneHandler."""
         super().get_datatype_data(session, datatype, fb_export_type, agr_export_type)
@@ -154,6 +280,9 @@ class AlleleHandler(FeatureHandler):
         self.get_related_features(session)
         self.get_associated_insertions(session)
         self.find_in_vitro_alleles(session)
+        self.get_direct_collections(session)
+        self.get_indirect_collections(session)
+        self.get_sf_collections(session)
         return
 
     # Add sub-methods to be run by synthesize_info() below.
@@ -201,7 +330,7 @@ class AlleleHandler(FeatureHandler):
             is_non_dmel_classical = False
             if allele.non_dmel_insertions:
                 is_non_dmel_classical = True
-            elif allele.feature.organism_id in self.drosophilid_list and allele.in_vitro is False:
+            elif allele.organism_id in self.drosophilid_list and allele.in_vitro is False:
                 is_non_dmel_classical = True
             # Make the adjustment.
             if is_non_dmel_classical is True:
