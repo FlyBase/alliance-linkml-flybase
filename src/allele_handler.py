@@ -219,7 +219,7 @@ class AlleleHandler(FeatureHandler):
 
     def get_sf_collections(self, session):
         """Find collections indirectly related to alleles via sequence features."""
-        log.info('Find collections indirectly related to alleles via sequence features.')
+        self.log.info('Find collections indirectly related to alleles via sequence features.')
         allele = aliased(Feature, name='allele')
         construct = aliased(Feature, name='construct')
         seqfeat = aliased(Feature, name='seqfeat')
@@ -261,11 +261,8 @@ class AlleleHandler(FeatureHandler):
         for result in sf_libraries:
             self.allele_dict[result.allele.uniquename].sf_libraries.append(result.Library)
             counter += 1
-        log.info(f'Found {counter} sequence feature-mediated allele-library associations.')
+        self.log.info(f'Found {counter} sequence feature-mediated allele-library associations.')
         return
-
-
-### BOB
 
     def get_datatype_data(self, session, datatype, fb_export_type, agr_export_type):
         """Extend the method for the GeneHandler."""
