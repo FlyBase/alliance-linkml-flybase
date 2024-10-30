@@ -277,7 +277,10 @@ class AGMDiseaseAnnotationDTO(DiseaseAnnotationDTO):
 
 
 # Secondary Alliance DTO Classes for data associated with first class objects.
-# Use the export() method to get a dict for these (easier to print out).
+# Note - when attaching these annotations to first class entities above, make
+#        sure to first convert them to dict objects using the built-in
+#        dict_export() method. Otherwise, upon attempting to print out the JSON
+#        file, there will be a TypeError: Object ... is not JSON serializable.
 class AffectedGenomicModelComponentDTO(AuditedObjectDTO):
     """AffectedGenomicModelComponentDTO class."""
     def __init__(self, component_curie, zygosity):
