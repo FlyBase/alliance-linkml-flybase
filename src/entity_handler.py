@@ -425,7 +425,7 @@ class PrimaryEntityHandler(DataHandler):
     def synthesize_pubs(self):
         """Collect pub_ids associated directly or indirectly with the entity."""
         self.log.info('Collect pub_ids associated directly or indirectly with the entity.')
-        pub_sources = ['pubs', 'synonyms', 'cvterms']
+        pub_sources = ['pubs', 'synonyms']
         for fb_data_entity in self.fb_data_entities.values():
             for pub_source in pub_sources:
                 fb_data_entity.all_pub_ids.extend([i.pub_id for i in getattr(fb_data_entity, pub_source)])
