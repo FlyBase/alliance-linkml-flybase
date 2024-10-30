@@ -196,8 +196,9 @@ class PrimaryEntityHandler(DataHandler):
                 prop_type_tally[prop_type_name] = 1
         self.log.info(f'Assigned {assignment_counter} {chado_type}props to {datatype}s.')
         self.log.info(f'Found these types of {chado_type}props:')
-        for prop_type, count in prop_type_tally.items():
-            self.log.info(f'table={chado_type}, prop_type={prop_type}, count={count}.')
+        ordered_prop_types = sorted(list(prop_type_tally.keys()))
+        for prop_type in ordered_prop_types:
+            self.log.info(f'table={chado_type}, prop_type={prop_type}, count={prop_type_tally[prop_type]}.')
         return
 
     def get_entity_pubs(self, session, datatype):
@@ -421,46 +422,16 @@ class PrimaryEntityHandler(DataHandler):
                     fb_data_entity.curr_fb_symbol = syno_dict['display_text']
         return
 
-    def synthesize_props(self, datatype):
-        """Process props and pubs for FlyBase data entities."""
-        chado_type = self.main_chado_entity_types[datatype]
-        self.log.info(f'Synthesize {chado_type}prop data for {datatype}s.')
-        pub_lookup = getattr(self, f'{chado_type}prop_pub_lookup')
-        for fb_data_entity in self.fb_data_entities.values():
-            for prop in fb_data_entity.props:
-                table_name = f'{chado_type}prop'
-                record_pkey = getattr(prop, f'{chado_type}prop_id')
-                subject_id = getattr(prop, f'{chado_type}_id')
-                type_id = prop.type_id
-                type_name = self.cvterm_lookup[type_id]['name']
-                rank = prop.rank
-                text = prop.value
-                processed_prop = fb_datatypes.FBProp(table_name, record_pkey, subject_id, type_id, rank, text)
-# BILLY BOB - CONTINUE HERE - PUB LOOKUP IS FAILING.
-                processed_prop.pub_ids = pub_lookup[record_pkey]
-                try:
-                    fb_data_entity.prop_dict[type_name].append(processed_prop)
-                except KeyError:
-                    fb_data_entity.prop_dict[type_name] = [processed_prop]
-        prop_tally = {}
-        for fb_data_entity in self.fb_data_entities.values():
-            for k, v in fb_data_entity.prop_dict.items():
-                try:
-                    prop_tally[k] += len(v)
-                except KeyError:
-                    prop_tally[k] = len(v)
-
-        for k, v in prop_tally.items:
-            self.log.info(f'prop_type={k}, count={v}')
-        return
-
     def synthesize_pubs(self):
         """Collect pub_ids associated directly or indirectly with the entity."""
         self.log.info('Collect pub_ids associated directly or indirectly with the entity.')
-        pub_sources = ['pubs', 'synonyms', 'cvterms', 'prop_pubs']
+        pub_sources = ['pubs', 'synonyms', 'cvterms']
         for fb_data_entity in self.fb_data_entities.values():
             for pub_source in pub_sources:
                 fb_data_entity.all_pub_ids.extend([i.pub_id for i in getattr(fb_data_entity, pub_source)])
+            for prop_list in fb_data_entity.props.values():
+                for prop in prop_list:
+                    fb_data_entity.all_pubs.extend(prop.pub_ids)
             fb_data_entity.all_pub_ids = list(set(fb_data_entity.all_pub_ids))
         return
 
