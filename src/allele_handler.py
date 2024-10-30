@@ -380,6 +380,26 @@ class AlleleHandler(FeatureHandler):
             allele.linkmldto = agr_allele
         return
 
+    def map_collections(self):
+        """Map allele collections."""
+        self.log.info('Map allele collections.')
+        for allele in self.fb_data_entities.values():
+            collections = []
+            if allele.direct_colls:
+                collections.extend(allele.direct_colls)
+            elif allele.ins_cols:
+                collections.extend(allele.ins_colls)
+            elif allele.cons_cols:
+                collections.extend(allele.cons_colls)
+            elif allele.sf_colls:
+                collections.extend(allele.sf_colls)
+            if collections:
+                collections = list(set(collections))
+                allele.linkmldto.in_collection_name = collections[0].name
+                if len(collections) > 1:
+                    self.log.warning(f'{allele} has many relevant collections: {[i.name for i in collections]}')
+        return
+
     def map_allele_database_status(self):
         """Map allele database status."""
         self.log.info('Map allele database status.')
@@ -436,13 +456,14 @@ class AlleleHandler(FeatureHandler):
         """Extend the method for the GeneHandler."""
         super().map_fb_data_to_alliance(datatype, fb_export_type, agr_export_type)
         self.map_allele_basic(agr_export_type)
+        self.map_collections()
+        self.map_allele_database_status()
+        self.map_mutation_types()
         self.map_synonyms(datatype, agr_export_type)
         self.map_data_provider_dto(datatype)
         # self.map_pubs()    # TEMPORARILY SUPPRESS UNTIL LOAD SPEED IMPROVES
         self.map_xrefs(datatype)
         self.map_timestamps()
-        self.map_allele_database_status()
-        self.map_mutation_types()
         self.map_secondary_ids('allele_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
         return
