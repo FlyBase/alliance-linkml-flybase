@@ -85,16 +85,13 @@ class FBDataEntity(FBExportEntity):
         except AttributeError:
             pass
         self.entity_desc = f'{self.name} ({self.uniquename})'
-        # Primary FB chado data from direct db query results, no processing.
+        # Primary FB chado data from direct db query results, no or minimal processing.
         # These attributes apply to various FlyBase entities: e.g., gene, strain, genotype, gene group, etc.
         self.pubs = []                  # Pub associations: e.g., FeaturePub, StrainPub.
         self.synonyms = []              # Synonym associations: e.g., FeatureSynonym.
-        self.fb_sec_dbxrefs = []        # Secondary (non-current) FlyBase cross-references: e.g., FeatureDbxref.
-        self.dbxrefs = []               # Dbxref associations: e.g., FeatureDbxref.
-        self.props = []                 # entity props: e.g., Featureprop.
-        self.prop_pubs = []             # entity prop_pubs: e.g., Featureprop_pub.
-        self.cvterms = []               # Cvterm associations: e.g., FeatureCvterm.
-        self.cvtermprops = []           # Cvtermprop associations: e.g., FeatureCvtermprop.
+        self.fb_sec_dbxrefs = []        # 2o/non-current FlyBase xref objects: e.g., FeatureDbxref.
+        self.dbxrefs = []               # Current xref objects: e.g., FeatureDbxref.
+        self.props = {}                 # Lists of FBProp objects keyed by prop type name.
         # Processed FB data - processed from primary FB chado data above.
         self.ncbi_taxon_id = None       # The NCBITaxon dbxref.accession (str).
         self.synonym_dict = {}          # Will be synonym_id-keyed dicts of processed synonym info.
@@ -264,8 +261,8 @@ class FBAlleleDiseaseAnnotation(FBExportEntity):
 
 # Second class annotations (submitted as part of other objects).
 class FBProp(object):
-    """A base, generic FlyBase property annotation."""
-    def __init__(self, table_name, record_pkey, subject_id, type_id, rank, text):
+    """A generic FlyBase property annotation for a first class entity."""
+    def __init__(self, chado_obj):
         """Create a FBProp object from the main db entry.
 
         Args:
@@ -274,10 +271,5 @@ class FBProp(object):
         Returns:
             A FBProp object.
         """
-        self.table_name = table_name      # The name of the prop table.
-        self.record_pkey = record_pkey    # The primary key for the prop table entry.
-        self.subject_id = subject_id      # The primary key for the subject of the prop.
-        self.type_id = type_id            # The prop type_id (cvterm_id).
-        self.rank = rank                  # The prop rank.
-        self.text = text                  # The text of the prop.
-        self.pubs = []                    # Will be a list of pub_ids.
+        self.chado_obj = chado_obj    # The prop object: e.g., Featureprop, Strainprop, etc.
+        self.pubs = []                # Will be a list of pub_ids.

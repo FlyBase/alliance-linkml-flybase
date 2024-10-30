@@ -114,7 +114,10 @@ class PrimaryEntityHandler(DataHandler):
         chado_type = self.main_chado_entity_types[datatype]
         self.log.info(f'Get {datatype} props from {chado_type}prop table.')
         chado_table = self.chado_tables['main_table'][chado_type]
+        subject_key_name = self.chado_tables['primary_key'][chado_type]
         chado_prop_table = self.chado_tables['props'][chado_type]
+        chado_prop_pub_table = self.chado_tables['prop_pubs'][chado_type]
+        # Phase 1: Get all props.
         filters = ()
         if datatype in self.regex.keys():
             self.log.info(f'Use this regex: {self.regex[datatype]}')
@@ -129,26 +132,72 @@ class PrimaryEntityHandler(DataHandler):
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
         if datatype in self.subtypes.keys():
-            results = session.query(chado_prop_table).\
+            prop_results = session.query(chado_prop_table).\
                 select_from(chado_table).\
                 join(chado_prop_table).\
                 join(Cvterm, (Cvterm.cvterm_id == chado_table.type_id)).\
                 filter(*filters).\
                 distinct()
         else:
-            results = session.query(chado_prop_table).\
+            prop_results = session.query(chado_prop_table).\
                 select_from(chado_table).\
                 join(chado_prop_table).\
                 filter(*filters).\
                 distinct()
-        pkey_name = self.chado_tables['primary_key'][chado_type]
-        self.log.info(f'Have this primary_key name: {pkey_name}')
-        counter = 0
-        for result in results:
-            pkey_id = getattr(result, pkey_name)
-            self.fb_data_entities[pkey_id].props.append(result)
-            counter += 1
-        self.log.info(f'Found {counter} {chado_type}props for FlyBase {datatype} entities in chado.')
+        prop_dict = {}    # A temporary prop_id-keyed dict of prop objects.
+        prop_counter = 0
+        for prop_result in prop_results:
+            prop_id = getattr(prop_result, f'{chado_type}prop_id')
+            prop_dict[prop_id] = fb_datatypes.FBProp(prop_result)
+            prop_counter += 1
+        self.log.info(f'Found {prop_counter} {chado_type}props for {datatype}s.')
+        # Phase 2. Get pubs supporting props.
+        if datatype in self.subtypes.keys():
+            prop_pub_results = session.query(chado_prop_table).\
+                select_from(chado_table).\
+                join(chado_prop_table).\
+                join(Cvterm, (Cvterm.cvterm_id == chado_table.type_id)).\
+                join(chado_prop_pub_table).\
+                filter(*filters).\
+                distinct()
+        else:
+            prop_pub_results = session.query(chado_prop_pub_table).\
+                select_from(chado_table).\
+                join(chado_prop_table).\
+                join(chado_prop_pub_table).\
+                filter(*filters).\
+                distinct()
+        prop_pub_counter = 0
+        for prop_pub_result in prop_pub_results:
+            prop_id = getattr(prop_result, f'{chado_type}prop_id')
+            try:
+                prop_dict[prop_id].pubs.append(prop_pub_result.pub_id)
+                prop_pub_counter += 1
+            except KeyError:
+                pass
+        self.log.info(f'Found {prop_pub_counter} {chado_type}prop_pubs for {datatype}s.')
+        # Phase 3. Add prop info to entities.
+        assignment_counter = 0
+        prop_type_tally = {}
+        for prop in prop_dict.values():
+            # Assign the prop to the appropriate entity.
+            subject_id = getattr(prop.chado_obj, subject_key_name)
+            prop_type_name = prop.chado_obj.type.name
+            try:
+                self.fb_data_entities[subject_id].props[prop_type_name].append(prop)
+                assignment_counter += 1
+            except KeyError:
+                self.fb_data_entities[subject_id].props[prop_type_name] = [prop]
+                assignment_counter += 1
+            # Tally
+            try:
+                prop_type_tally[prop_type_name] += 1
+            except KeyError:
+                prop_type_tally = 1
+        self.log.info(f'Assigned {assignment_counter} {chado_type}props to {datatype}s.')
+        self.log.info(f'Found these types of {chado_type}props:')
+        for prop_type, count in prop_type_tally.items():
+            self.log.info(f'table={chado_type}, prop_type={prop_type}, count={count}.')
         return
 
     def get_entity_pubs(self, session, datatype):

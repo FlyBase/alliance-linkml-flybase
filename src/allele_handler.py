@@ -58,7 +58,6 @@ class AlleleHandler(FeatureHandler):
         self.get_drosophilid_organisms(session)
         self.build_feature_lookup(session)
         self.find_internal_genes(session)
-        self.build_featureprop_evidence_lookup(session)
         self.build_feature_relationship_evidence_lookup(session)
         return
 
@@ -67,7 +66,7 @@ class AlleleHandler(FeatureHandler):
         self.log.info('Get allele-associated features.')
         self.get_entity_sbj_feat_rel_by_type(session, 'parent_gene_rels', rel_type='alleleof', obj_type='gene', obj_regex=self.regex['gene'])
         self.get_entity_sbj_feat_rel_by_type(session, 'constructs', rel_type='derived_tp_assoc_alleles', obj_regex=self.regex['construct'])
-        arg_types = [
+        classical_allele_arg_types = [
             'MNV',
             'complex_substitution',
             'deletion',
@@ -76,9 +75,8 @@ class AlleleHandler(FeatureHandler):
             'point_mutation',
             'sequence_alteration',
             'sequence_variant',
-            # 'rescue_region',    # This type of ARG is not relevant to determining allele type (better ways).
         ]
-        self.get_entity_obj_feat_rel_by_type(session, 'args', rel_type='partof', sbj_type=arg_types)
+        self.get_entity_obj_feat_rel_by_type(session, 'args', rel_type='partof', sbj_type=classical_allele_arg_types)
         return
 
     def get_associated_insertions(self, session):
