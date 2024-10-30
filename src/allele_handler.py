@@ -158,6 +158,7 @@ class AlleleHandler(FeatureHandler):
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             filters += (Feature.uniquename.in_((self.test_set.keys())), )
         collections = session.query(Feature, Library).\
+            select_from(Feature).\
             join(LibraryFeature, (LibraryFeature.feature_id == Feature.feature_id)).\
             join(Library, (Library.library_id == LibraryFeature.library_id)).\
             join(LibraryFeatureprop, (LibraryFeatureprop.library_feature_id == LibraryFeature.library_feature_id)).\
@@ -194,6 +195,7 @@ class AlleleHandler(FeatureHandler):
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             filters += (allele.uniquename.in_((self.test_set.keys())), )
         indirect_collections = session.query(allele, feature, Library).\
+            select_from(allele).\
             join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
             join(featreltype, (featreltype.cvterm_id == FeatureRelationship.type_id)).\
             join(feature, (feature.feature_id == FeatureRelationship.object_id)).\
@@ -242,8 +244,9 @@ class AlleleHandler(FeatureHandler):
         )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
-            filters += (Feature.uniquename.in_((self.test_set.keys())), )
+            filters += (allele.uniquename.in_((self.test_set.keys())), )
         sf_collections = session.query(allele, Library).\
+            select_from(allele).\
             join(allele_construct, (allele_construct.subject_id == allele.feature_id)).\
             join(construct, (construct.feature_id == allele_construct.object_id)).\
             join(featreltype, (featreltype.cvterm_id == allele_construct.type_id)).\
