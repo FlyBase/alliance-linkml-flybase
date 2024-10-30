@@ -95,7 +95,7 @@ class AlleleHandler(FeatureHandler):
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             filters += (allele.uniquename.in_((self.test_set.keys())), )
-        insertion_results = session.query(Organism, allele, insertion).\
+        insertion_results = session.query(Organism, FeatureRelationship).\
             select_from(insertion).\
             join(Organism, (Organism.organism_id == insertion.organism_id)).\
             join(FeatureRelationship, (FeatureRelationship.object_id == insertion.feature_id)).\
@@ -107,10 +107,10 @@ class AlleleHandler(FeatureHandler):
         non_dmel_counter = 0
         for result in insertion_results:
             if result.Organism.abbreviation == 'Dmel':
-                self.fb_data_entities[result.allele.feature_id].dmel_insertions.append(result.insertion)
+                self.fb_data_entities[result.FeatureRelationship.subject_id].dmel_insertions.append(result.FeatureRelationship)
                 dmel_counter += 1
             else:
-                self.fb_data_entities[result.allele.feature_id].non_dmel_insertions.append(result.insertion)
+                self.fb_data_entities[result.FeatureRelationship.subject_id].non_dmel_insertions.append(result.FeatureRelationship)
                 non_dmel_counter += 1
         self.log.info(f'Found {dmel_counter} Dmel and {non_dmel_counter} non-Dmel insertions related to alleles.')
         return
