@@ -417,9 +417,13 @@ class PrimaryEntityHandler(DataHandler):
                     syno_dict['is_internal'] = True
                 # Convert pub_ids into pub_curies.
                 syno_dict['pub_curies'] = self.lookup_pub_curies(syno_dict['pub_ids'])
-                # Finally, pick out current symbol for the entity.
+                # Pick out current symbol for the entity.
                 if syno_dict['is_current'] is True and syno_dict['name_type_name'] in ['systematic_name', 'nomenclature_symbol']:
                     fb_data_entity.curr_fb_symbol = syno_dict['display_text']
+                # Pick out current full name for the entity.
+                if syno_dict['is_current'] is True and syno_dict['name_type_name'] == 'full_name':
+                    fb_data_entity.curr_fb_fullname = syno_dict['display_text']
+
         return
 
     def synthesize_pubs(self):
@@ -438,7 +442,7 @@ class PrimaryEntityHandler(DataHandler):
     # Add methods to be run by map_fb_data_to_alliance() below.
     def map_data_provider_dto(self, datatype):
         """Return the DataProviderDTO for the FB data entity."""
-        # Note - this method is depends on previous determination of fb_data_entity.curr_fb_symbol by map_synonyms(), if applicable.
+        # Note - this method is depends on previous determination of fb_data_entity.curr_fb_symbol by synthesize_synonyms(), if applicable.
         self.log.info('Map data provider to Alliance object.')
         for fb_data_entity in self.fb_data_entities.values():
             if fb_data_entity.curr_fb_symbol:
@@ -549,7 +553,7 @@ class PrimaryEntityHandler(DataHandler):
                 name_dto['internal'] = syno_dict['is_internal']
                 if syno_dict['is_current'] is True and syno_dict['name_type_name'] in ['nomenclature_symbol', 'systematic_name']:
                     linkml_synonym_bins['symbol_bin'].append(name_dto)
-                elif syno_dict['is_current'] is True and syno_dict['name_type_name'] == 'fullname':
+                elif syno_dict['is_current'] is True and syno_dict['name_type_name'] == 'full_name':
                     linkml_synonym_bins['full_name_bin'].append(name_dto)
                 else:
                     linkml_synonym_bins['synonym_bin'].append(name_dto)
