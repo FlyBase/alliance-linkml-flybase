@@ -193,7 +193,7 @@ class PrimaryEntityHandler(DataHandler):
             try:
                 prop_type_tally[prop_type_name] += 1
             except KeyError:
-                prop_type_tally = 1
+                prop_type_tally[prop_type_name] = 1
         self.log.info(f'Assigned {assignment_counter} {chado_type}props to {datatype}s.')
         self.log.info(f'Found these types of {chado_type}props:')
         for prop_type, count in prop_type_tally.items():
