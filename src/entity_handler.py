@@ -431,7 +431,7 @@ class PrimaryEntityHandler(DataHandler):
                 fb_data_entity.all_pubs.extend([i.pub_id for i in getattr(fb_data_entity, pub_source)])
             for prop_list in fb_data_entity.props.values():
                 for prop in prop_list:
-                    fb_data_entity.all_pubs.extend(prop.pub_ids)
+                    fb_data_entity.all_pubs.extend(prop.pubs)
             fb_data_entity.all_pubs = list(set(fb_data_entity.all_pubs))
         return
 
