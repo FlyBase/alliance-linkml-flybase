@@ -11,7 +11,7 @@ Author(s):
 
 from logging import Logger
 from sqlalchemy.orm import aliased
-from agr_datatypes import AlleleDTO, AlleleMutationTypeSlotAnnotationDTO
+import agr_datatypes
 from fb_datatypes import FBAllele
 from feature_handler import FeatureHandler
 from harvdev_utils.production import (
@@ -26,7 +26,7 @@ class AlleleHandler(FeatureHandler):
         super().__init__(log, testing)
         self.datatype = 'allele'
         self.fb_export_type = FBAllele
-        self.agr_export_type = AlleleDTO
+        self.agr_export_type = agr_datatypes.AlleleDTO
         self.primary_export_set = 'allele_ingest_set'
 
     test_set = {
@@ -249,6 +249,17 @@ class AlleleHandler(FeatureHandler):
             allele.linkmldto = agr_allele
         return
 
+    def map_allele_database_status(self):
+        """Map allele database status."""
+        for allele in self.fb_data_entities.values():
+            if allele.is_obsolete is False:
+                db_status = 'approved'
+            else:
+                db_status = 'deleted'
+            db_status_annotation = agr_datatypes.AlleleDatabaseStatusSlotAnnotationDTO(db_status)
+            allele.linkmldto.allele_database_status_dto = db_status_annotation
+        return
+
     def map_mutation_types(self):
         """Map mutation types."""
         self.log.info('Map mutation types.')
@@ -283,8 +294,8 @@ class AlleleHandler(FeatureHandler):
                 for pub_curie in full_pub_curie_list:
                     if pub_curie == 'FB:unattributed':
                         full_pub_curie_list.remove('FB:unattributed')
-                mutant_type_annotation = AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, full_pub_curie_list)
-                allele.allele_mutation_type_dtos.append(mutant_type_annotation)
+                mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, full_pub_curie_list)
+                allele.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation)
         return
 
     # Elaborate on map_fb_data_to_alliance() for the GeneHandler.
@@ -297,6 +308,7 @@ class AlleleHandler(FeatureHandler):
         # self.map_pubs()    # TEMPORARILY SUPPRESS UNTIL LOAD SPEED IMPROVES
         self.map_xrefs(datatype)
         self.map_timestamps()
+        self.map_allele_database_status()
         self.map_mutation_types()
         self.map_secondary_ids('allele_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
