@@ -251,6 +251,7 @@ class AlleleHandler(FeatureHandler):
 
     def map_allele_database_status(self):
         """Map allele database status."""
+        self.log.info('Map allele database status.')
         evidence_curies = []
         for allele in self.fb_data_entities.values():
             if allele.is_obsolete is False:
@@ -258,7 +259,7 @@ class AlleleHandler(FeatureHandler):
             else:
                 db_status = 'deleted'
             db_status_annotation = agr_datatypes.AlleleDatabaseStatusSlotAnnotationDTO(db_status, evidence_curies)
-            allele.linkmldto.allele_database_status_dto = db_status_annotation
+            allele.linkmldto.allele_database_status_dto = db_status_annotation.dict_export()
         return
 
     def map_mutation_types(self):
@@ -296,7 +297,7 @@ class AlleleHandler(FeatureHandler):
                     if pub_curie == 'FB:unattributed':
                         full_pub_curie_list.remove('FB:unattributed')
                 mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, full_pub_curie_list)
-                allele.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation)
+                allele.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
         return
 
     # Elaborate on map_fb_data_to_alliance() for the GeneHandler.
