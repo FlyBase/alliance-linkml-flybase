@@ -481,6 +481,14 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info('Map xrefs to Alliance object.')
         for fb_data_entity in self.fb_data_entities.values():
             cross_reference_dtos = []
+            # First, add FB xref (since FB xrefs in chado are not complete, just use the uniquename).
+            if fb_data_entity.uniquename:
+                curie = f'FB:{fb_data_entity.uniquename}'
+                display_name = curie
+                page_area = datatype
+                fb_xref_dto = agr_datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
+                cross_reference_dtos.append(fb_xref_dto)
+            # Second, add external xrefs.
             for xref in fb_data_entity.dbxrefs:
                 # Build Alliance xref DTO
                 prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
