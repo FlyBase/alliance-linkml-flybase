@@ -229,13 +229,13 @@ class AlleleHandler(FeatureHandler):
         allele_construct = aliased(FeatureRelationship, name='allele_construct')
         seqfeat_construct = aliased(FeatureRelationship, name='seqfeat_construct')
         filters = (
-            allele.uniquename.op('~')(self.allele_regex),
-            construct.uniquename.op('~')(self.construct_regex),
-            seqfeat.uniquename.op('~')(self.seqfeat_regex),
+            allele.uniquename.op('~')(self.regex['allele']),
+            construct.uniquename.op('~')(self.regex['construct']),
+            seqfeat.uniquename.op('~')(self.regex['seqfeat']),
             construct.is_obsolete.is_(False),
             seqfeat.is_obsolete.is_(False),
             Library.is_obsolete.is_(False),
-            Library.uniquename.op('~')(self.lib_regex),
+            Library.uniquename.op('~')(self.regex['library']),
             libtype.name == 'reagent collection',
             libfeattype.name == 'member_of_reagent_collection',
             featreltype.name == 'associated_with'
