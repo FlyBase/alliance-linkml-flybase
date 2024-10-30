@@ -232,14 +232,15 @@ class AlleleHandler(FeatureHandler):
             agr_allele.mod_entity_id = f'FB:{allele.uniquename}'
             agr_allele.mod_internal_id = str(allele.chado_obj.feature_id)
             agr_allele.taxon_curie = allele.ncbi_taxon_id
-            # Set internal.
+            # Set internal if allele is related to an internal gene. More general internal changes in later step.
             if allele.allele_of_internal_gene is True:
                 agr_allele.internal = True
                 allele.internal_reasons.append('Allele of internal type FB gene.')
             # Set is_extinct (presence of stock trumps curated comment).
-            for prop in allele.props['availability']:
-                if prop.chado_obj.value == 'Stated to be lost.':
-                    agr_allele.is_extinct = True
+            if 'availability' in allele.props.keys():
+                for prop in allele.props['availability']:
+                    if prop.chado_obj.value == 'Stated to be lost.':
+                        agr_allele.is_extinct = True
             for prop_type in allele.props.keys():
                 if prop_type.startswith('derived_stock'):
                     if agr_allele.is_extinct is True:
