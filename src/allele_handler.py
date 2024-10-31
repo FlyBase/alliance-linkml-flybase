@@ -33,7 +33,8 @@ class AlleleHandler(FeatureHandler):
     test_set = {
         'FBal0137236': 'gukh[142]',            # Insertion allele, part of TI_set_P{hsneo}.BDGP collection.
         'FBal0018482': 'wg[1]',                # X-ray mutation.
-        'FBal0043981': 'Ecol_lacZ[en-14]',     # Has an allele full name.
+        'FBal0015148': 'Sb[Spi]',              # point mutation.
+        'FBal0043981': 'Ecol_lacZ[en-14]',     # Has an allele full name. Relationship to ARG has no pub support.
         'FBal0279489': 'Scer_GAL4[how-24B]'    # Has a 2o ID.
     }
 
@@ -437,8 +438,11 @@ class AlleleHandler(FeatureHandler):
                     mutation_type_curie = self.cvterm_lookup[fb_feat_type_id]['curie']
                 if mutation_type_curie is None:
                     continue
-                pub_ids = self.feat_rel_pub_lookup[feat_rel.feature_relationship_id]
-                pub_curies = self.lookup_pub_curies(pub_ids)
+                try:
+                    pub_ids = self.feat_rel_pub_lookup[feat_rel.feature_relationship_id]
+                    pub_curies = self.lookup_pub_curies(pub_ids)
+                except KeyError:
+                    pub_curies = []
                 try:
                     mutation_types[mutation_type_curie].extend(pub_curies)
                 except KeyError:
