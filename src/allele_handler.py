@@ -15,8 +15,9 @@ import agr_datatypes
 from fb_datatypes import FBAllele
 from feature_handler import FeatureHandler
 from harvdev_utils.production import (
-    Cvterm, Feature, FeatureCvterm, FeatureRelationship, Library,
-    LibraryFeature, LibraryFeatureprop, Organism
+    Cvterm, Feature, FeatureCvterm, FeatureGenotype, FeatureRelationship,
+    Genotype, Library, LibraryFeature, LibraryFeatureprop, Organism, Phenotype,
+    PhenotypeCvterm, Phenstatement, Pub
 )
 
 
@@ -31,16 +32,27 @@ class AlleleHandler(FeatureHandler):
         self.primary_export_set = 'allele_ingest_set'
 
     test_set = {
-        'FBal0137236': 'gukh[142]',            # Insertion allele, part of TI_set_P{hsneo}.BDGP collection.
-        'FBal0018482': 'wg[1]',                # X-ray mutation.
-        'FBal0015148': 'Sb[Spi]',              # point mutation.
-        'FBal0043981': 'Ecol_lacZ[en-14]',     # Has an allele full name. Relationship to ARG has no pub support.
-        'FBal0279489': 'Scer_GAL4[how-24B]'    # Has a 2o ID.
+        'FBal0137236': 'gukh[142]',             # Insertion allele, part of TI_set_P{hsneo}.BDGP collection.
+        'FBal0018482': 'wg[1]',                 # X-ray mutation.
+        'FBal0015148': 'Sb[Spi]',               # point mutation.
+        'FBal0043981': 'Ecol_lacZ[en-14]',      # Has an allele full name. Relationship to ARG has no pub support.
+        'FBal0279489': 'Scer_GAL4[how-24B]',    # Has a 2o ID.
+        'FBal0000010': 'alphaTub67C[3]',        # Has semidominant annotation from single locus homozygous genotype.
+        'FBal0403680': 'Atg8a[3-31]',           # Has recessive annotation from single locus homozygous genotype.
+        'FBal0011189': 'sti[1]',                # Has recessive annotation from single locus hemizygous genotype over a deficiency.
+        'FBal0007942': '18w[00053]',            # Has recessive annotation from single locus unspecified zygosity genotype.
+        'FBal0015410': 'sei[2]',                # Has codominant annotation from single locus unspecified zygosity genotype.
     }
 
     # Additional reference info.
     allele_class_terms = []          # A list of cvterm_ids for child terms of "allele_class" (FBcv:0000286).
     allele_mutant_type_terms = []    # A list of cvterm_ids for child terms of chromosome_structure_variation or sequence_alteration.
+    inheritance_mode_terms = {
+        'recessive': 'recessive',
+        'dominant': 'dominant',
+        'semidominant': 'semi-dominant',
+        'codominant': 'codominant'
+    }
 
     # Additional sub-methods for get_general_data().
     def get_key_cvterm_sets(self, session):
@@ -268,10 +280,42 @@ class AlleleHandler(FeatureHandler):
         self.log.info(f'Found {counter} sequence feature-mediated allele-library associations.')
         return
 
+    def get_phenotypes(self, session):
+        """Get phenotypes from single locus genotypes related to alleles."""
+        self.log.info('Get phenotypes from single locus genotypes related to alleles.')
+        filters = (
+            Feature.uniquename.op('~')(self.regex['allele']),
+            Genotype.is_obsolete.is_(False),
+            Genotype.description.op('!~')('_'),
+            Cvterm.name.in_((self.inheritance_mode_terms.keys())),
+            Pub.is_obsolete.is_(False),
+            Pub.uniquename.op('~')(self.pub_regex),
+        )
+        if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            filters += (Feature.uniquename.in_((self.test_set.keys())), )
+        results = session.query(Feature, Genotype, Phenotype, Cvterm, Pub).\
+            join(FeatureGenotype, (FeatureGenotype.feature_id == Feature.feature_id)).\
+            join(Genotype, (Genotype.genotype_id == FeatureGenotype.genotype_id)).\
+            join(Phenstatement, (Phenstatement.genotype_id == Genotype.genotype_id)).\
+            join(Phenotype, (Phenotype.phenotype_id == Phenstatement.phenotype_id)).\
+            join(PhenotypeCvterm, (PhenotypeCvterm.phenotype_id == Phenotype.phenotype_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == PhenotypeCvterm.cvterm_id)).\
+            join(Pub, (Pub.pub_id == Phenstatement.pub_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            self.fb_data_entities[result.Feature.feature_id].phenstatements.append(result)
+            counter += 1
+        self.log.info(f'Found {counter} allele phenotypes from single locus genotypes.')
+        return
+
     def get_datatype_data(self, session, datatype, fb_export_type, agr_export_type):
         """Extend the method for the GeneHandler."""
         super().get_datatype_data(session, datatype, fb_export_type, agr_export_type)
         self.get_entities(session, self.datatype, self.fb_export_type)
+        self.get_phenotypes(session)
         self.get_entityprops(session, self.datatype)
         self.get_entity_pubs(session, self.datatype)
         self.get_entity_synonyms(session, self.datatype)
@@ -381,6 +425,66 @@ class AlleleHandler(FeatureHandler):
             allele.linkmldto = agr_allele
         return
 
+    def map_inheritance_modes(self):
+        """Map allele inheritance modes."""
+        self.log.info('Map allele inheritance modes.')
+        INHERITANCE_MODE_NAME = 0
+        PHENOTYPE_TERM_CURIE = 1
+        PHENOTYPE_STATEMENT = 2
+        for allele in self.fb_data_entities.values():
+            # For each allele, gather phenotype data relevant to inheritance mode as a dict.
+            # Keys will be tuple of (inheritance_mode, phenotype_term_curie, phenotype_statement)
+            # Value for each key will be a list of pub_ids in support of the annotation.
+            inheritance_data = {}
+            for phenstmt in allele.phenstatements:
+                genotype_uniquename = phenstmt.Genotype.uniquename
+                genotype_description = phenstmt.Genotype.description
+                fb_inheritance_mode_name = phenstmt.Cvterm.name
+                inheritance_mode_name = self.inheritance_mode_terms[fb_inheritance_mode_name]
+                phenotype_term_curie = self.cvterm_lookup[phenstmt.Phenotype.cvalue_id]['curie']
+                phenotype_statement = phenstmt.Phenotype.description
+                pheno_key = (inheritance_mode_name, phenotype_term_curie, phenotype_statement)
+                anno_desc = f'genotype={genotype_uniquename} ({genotype_description}); '
+                anno_desc += f'inheritance={inheritance_mode_name}; '
+                anno_desc += f'pheno_curie={phenotype_term_curie}; '
+                anno_desc += f'pheno_stmt={phenotype_statement}.'
+                self.log.debug(f'Assess this phenotype annotation: {anno_desc}')
+                # Filter out single locus genotypes having many distinct alleles.
+                single_allele_genotype = False
+                if '|' not in genotype_description:
+                    self.log.debug('GENOTYPE HAS ONLY ONE ALLELE LISTED, UNSPECIFIED ZYGOSITY.')
+                    single_allele_genotype = True
+                elif genotype_description.startswith('FBab'):
+                    self.log.debug('GENOTYPE IS HEMIZYGOUS: ALLELE/DEFICIENCY.')
+                    single_allele_genotype = True
+                else:
+                    features = genotype_description.split('|')
+                    if features[0] == features[1]:
+                        self.log.debug('GENOTYPE IS HOMOZYGOUS.')
+                        single_allele_genotype = True
+                    else:
+                        for feature in features:
+                            if feature == '+':
+                                single_allele_genotype = True
+                            elif feature.endswith('[+]'):
+                                single_allele_genotype = True
+                        if single_allele_genotype is True:
+                            self.log.debug('GENOTYPE IS HOMOZYGOUS.')
+                if single_allele_genotype is False:
+                    self.log.debug('GENOTYPE IS HETEROZYGOUS FOR TWO NON-WT ALLELES - SKIP IT.')
+                    continue
+                try:
+                    inheritance_data[pheno_key].append(phenstmt.Pub.pub_id)
+                except KeyError:
+                    inheritance_data[pheno_key] = [phenstmt.Pub.pub_id]
+            # Convert data into Alliance slot annotations.
+            for pheno_key, pub_ids in inheritance_data.items():
+                pub_curies = self.lookup_pub_curies(pub_ids)
+                agr_anno_dto = agr_datatypes.AlleleInheritanceModeSlotAnnotationDTO(pheno_key[INHERITANCE_MODE_NAME], pheno_key[PHENOTYPE_TERM_CURIE],
+                                                                                    pheno_key[PHENOTYPE_STATEMENT], pub_curies)
+                allele.linkmldto.allele_inheritance_mode_dtos.append(agr_anno_dto.export_dict())
+        return
+
     def map_collections(self):
         """Map allele collections."""
         self.log.info('Map allele collections.')
@@ -460,6 +564,7 @@ class AlleleHandler(FeatureHandler):
         """Extend the method for the GeneHandler."""
         super().map_fb_data_to_alliance(datatype, fb_export_type, agr_export_type)
         self.map_allele_basic(agr_export_type)
+        self.map_inheritance_modes()
         self.map_collections()
         self.map_allele_database_status()
         self.map_mutation_types()

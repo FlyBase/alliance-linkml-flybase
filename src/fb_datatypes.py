@@ -146,6 +146,7 @@ class FBAllele(FBFeature):
         self.ins_colls = []                     # List of collections (Library objects) indirectly associated with the allele via an FBti insertion.
         self.cons_colls = []                    # List of collections (Library objects) indirectly associated with the allele via an FBtp construct.
         self.sf_colls = []                      # List of collections (Library objects) indirectly associated with the allele via an FBsf feature.
+        self.phenstatements = []                # List of SQLAlchemy (Feature, Genotype, Phenotype, Cvterm, Pub) results from Phenstatements.
         # Processed FB data.
         self.parent_gene_id = None              # The FBgn ID fo the allele's parent gene.
         self.adj_obr_abbr = 'Dmel'              # Assume allele is Dmel (classical/transgenic) unless it can be shown to be a non-Dmel classical allele.
