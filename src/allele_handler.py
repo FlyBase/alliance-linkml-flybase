@@ -274,7 +274,6 @@ class AlleleHandler(FeatureHandler):
             distinct()
         counter = 0
         for result in sf_collections:
-            self.log.debug(f'BILLYBOB: {result.allele.uniquename} associated with {result.Library.uniquename}')
             self.fb_data_entities[result.allele.feature_id].sf_colls.append(result.Library)
             counter += 1
         self.log.info(f'Found {counter} sequence feature-mediated allele-library associations.')
@@ -344,8 +343,8 @@ class AlleleHandler(FeatureHandler):
             if len(parent_gene_ids) == 1:
                 allele.parent_gene_id = parent_gene_ids[0]
                 allele_counter += 1
-            elif len(parent_gene_ids) == 0:
-                self.log.warning(f'{allele} has no parent gene!')
+            elif len(parent_gene_ids) == 0 and allele.is_obsolete is False:
+                self.log.warning(f'Current allele {allele} has no parent gene!')
             else:
                 self.log.warning(f'{allele} has many parent genes!')
         self.log.info(f'Found parental gene for {allele_counter} alleles.')
