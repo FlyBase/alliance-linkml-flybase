@@ -407,21 +407,60 @@ class AlleleHandler(FeatureHandler):
             agr_allele.mod_entity_id = f'FB:{allele.uniquename}'
             agr_allele.mod_internal_id = str(allele.chado_obj.feature_id)
             agr_allele.taxon_curie = allele.ncbi_taxon_id
-            # Set internal if allele is related to an internal gene. More general internal changes in later step.
-            if allele.allele_of_internal_gene is True:
-                agr_allele.internal = True
-                allele.internal_reasons.append('Allele of internal type FB gene.')
-            # Set is_extinct (presence of stock trumps curated comment).
+            allele.linkmldto = agr_allele
+        return
+
+    def map_allele_database_status(self):
+        """Map allele database status."""
+        self.log.info('Map allele database status.')
+        evidence_curies = []
+        for allele in self.fb_data_entities.values():
+            if allele.is_obsolete is False:
+                db_status = 'approved'
+            else:
+                db_status = 'deleted'
+            db_status_annotation = agr_datatypes.AlleleDatabaseStatusSlotAnnotationDTO(db_status, evidence_curies)
+            allele.linkmldto.allele_database_status_dto = db_status_annotation.dict_export()
+        return
+
+    def map_collections(self):
+        """Map allele collections."""
+        self.log.info('Map allele collections.')
+        for allele in self.fb_data_entities.values():
+            collections = []
+            if allele.direct_colls:
+                collections.extend(allele.direct_colls)
+            elif allele.ins_colls:
+                collections.extend(allele.ins_colls)
+            elif allele.cons_colls:
+                collections.extend(allele.cons_colls)
+            elif allele.sf_colls:
+                collections.extend(allele.sf_colls)
+            if collections:
+                collections = list(set(collections))
+                allele.linkmldto.in_collection_name = collections[0].name
+                if len(collections) > 1:
+                    self.log.warning(f'{allele} has many relevant collections: {[i.name for i in collections]}')
+        return
+
+    def map_extinction_info(self):
+        """Map extinction info."""
+        self.log.info('Map extinction info.')
+        counter = 0
+        for allele in self.fb_data_entities.values():
             if 'availability' in allele.props.keys():
                 for prop in allele.props['availability']:
                     if prop.chado_obj.value == 'Stated to be lost.':
-                        agr_allele.is_extinct = True
+                        allele.linkmldto.is_extinct = True
             for prop_type in allele.props.keys():
                 if prop_type.startswith('derived_stock'):
-                    if agr_allele.is_extinct is True:
+                    # Stock availability trumps curated extinction comment.
+                    if allele.linkmldto.is_extinct is True:
                         self.log.warning(f'{allele} is stated to be lost but has stocks.')
-                    agr_allele.is_extinct = False
-            allele.linkmldto = agr_allele
+                    allele.linkmldto.is_extinct = False
+            if allele.linkmldto.is_extinct is True:
+                counter += 1
+        self.log.info(f'Flagged {counter} alleles as extinct.')
         return
 
     def map_inheritance_modes(self):
@@ -481,40 +520,25 @@ class AlleleHandler(FeatureHandler):
                 pub_curies = self.lookup_pub_curies(pub_ids)
                 agr_anno_dto = agr_datatypes.AlleleInheritanceModeSlotAnnotationDTO(pheno_key[INHERITANCE_MODE_NAME], pheno_key[PHENOTYPE_TERM_CURIE],
                                                                                     pheno_key[PHENOTYPE_STATEMENT], pub_curies)
-                allele.linkmldto.allele_inheritance_mode_dtos.append(agr_anno_dto.export_dict())
+                allele.linkmldto.allele_inheritance_mode_dtos.append(agr_anno_dto.dict_export())
         return
 
-    def map_collections(self):
-        """Map allele collections."""
-        self.log.info('Map allele collections.')
+    def map_internal_allele_status(self):
+        """Flag internal alleles using allele-specific criteria."""
+        self.log.info('Flag internal alleles using allele-specific criteria.')
+        internal_gene_counter = 0
+        non_dmel_drosophilid_counter = 0
         for allele in self.fb_data_entities.values():
-            collections = []
-            if allele.direct_colls:
-                collections.extend(allele.direct_colls)
-            elif allele.ins_colls:
-                collections.extend(allele.ins_colls)
-            elif allele.cons_colls:
-                collections.extend(allele.cons_colls)
-            elif allele.sf_colls:
-                collections.extend(allele.sf_colls)
-            if collections:
-                collections = list(set(collections))
-                allele.linkmldto.in_collection_name = collections[0].name
-                if len(collections) > 1:
-                    self.log.warning(f'{allele} has many relevant collections: {[i.name for i in collections]}')
-        return
-
-    def map_allele_database_status(self):
-        """Map allele database status."""
-        self.log.info('Map allele database status.')
-        evidence_curies = []
-        for allele in self.fb_data_entities.values():
-            if allele.is_obsolete is False:
-                db_status = 'approved'
-            else:
-                db_status = 'deleted'
-            db_status_annotation = agr_datatypes.AlleleDatabaseStatusSlotAnnotationDTO(db_status, evidence_curies)
-            allele.linkmldto.allele_database_status_dto = db_status_annotation.dict_export()
+            if allele.allele_of_internal_gene is True:
+                allele.linkmldto.internal = True
+                allele.internal_reasons.append('Allele of internal type FB gene.')
+                internal_gene_counter += 1
+            if allele.adj_org_abbr != 'Dmel':
+                allele.linkmldto.internal = True
+                allele.internal_reasons.append('Allele of non-Dmel Drosophilid.')
+                non_dmel_drosophilid_counter += 1
+        self.log.info(f'Flagged {internal_gene_counter} alleles of internal-type genes as internal.')
+        self.log.info(f'Flagged {non_dmel_drosophilid_counter} non-Dmel Drosophilid alleles as internal.')
         return
 
     def map_mutation_types(self):
@@ -563,6 +587,8 @@ class AlleleHandler(FeatureHandler):
         """Extend the method for the GeneHandler."""
         super().map_fb_data_to_alliance(datatype, fb_export_type, agr_export_type)
         self.map_allele_basic(agr_export_type)
+        self.map_internal_allele_status()
+        self.map_extinction_info()
         self.map_inheritance_modes()
         self.map_collections()
         self.map_allele_database_status()
