@@ -345,7 +345,7 @@ class AlleleHandler(FeatureHandler):
                 allele_counter += 1
             elif len(parent_gene_ids) == 0 and allele.is_obsolete is False:
                 self.log.warning(f'Current allele {allele} has no parent gene!')
-            else:
+            elif len(parent_gene_ids) > 1 and allele.is_obsolete is False:
                 self.log.warning(f'{allele} has many parent genes!')
         self.log.info(f'Found parental gene for {allele_counter} alleles.')
         return
