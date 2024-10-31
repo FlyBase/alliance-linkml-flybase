@@ -149,7 +149,7 @@ class FBAllele(FBFeature):
         self.phenstatements = []                # List of SQLAlchemy (Feature, Genotype, Phenotype, Cvterm, Pub) results from Phenstatements.
         # Processed FB data.
         self.parent_gene_id = None              # The FBgn ID fo the allele's parent gene.
-        self.adj_obr_abbr = 'Dmel'              # Assume allele is Dmel (classical/transgenic) unless it can be shown to be a non-Dmel classical allele.
+        self.adj_org_abbr = 'Dmel'              # Assume allele is Dmel (classical/transgenic) unless it can be shown to be a non-Dmel classical allele.
         self.in_vitro = False                   # Change to True if the allele is associated with an "in vitro%" term.
         self.allele_of_internal_gene = False    # Change to True if the allele is related to an internal-type gene (e.g., origin of replication).
 
