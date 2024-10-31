@@ -498,7 +498,7 @@ class AlleleHandler(FeatureHandler):
                 else:
                     features = genotype_description.split('|')
                     if features[0] == features[1]:
-                        self.log.debug('GENOTYPE IS HOMOZYGOUS.')
+                        # self.log.debug('GENOTYPE IS HOMOZYGOUS.')
                         single_allele_genotype = True
                     else:
                         for feature in features:
@@ -506,10 +506,10 @@ class AlleleHandler(FeatureHandler):
                                 single_allele_genotype = True
                             elif feature.endswith('[+]'):
                                 single_allele_genotype = True
-                        if single_allele_genotype is True:
-                            self.log.debug('GENOTYPE IS HOMOZYGOUS.')
+                        # if single_allele_genotype is True:
+                            # self.log.debug('GENOTYPE IS HOMOZYGOUS.')
                 if single_allele_genotype is False:
-                    self.log.debug('GENOTYPE IS HETEROZYGOUS FOR TWO NON-WT ALLELES - SKIP IT.')
+                    # self.log.debug('GENOTYPE IS HETEROZYGOUS FOR TWO NON-WT ALLELES - SKIP IT.')
                     continue
                 try:
                     inheritance_data[pheno_key].append(phenstmt.Pub.pub_id)
