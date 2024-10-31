@@ -480,7 +480,7 @@ class AlleleHandler(FeatureHandler):
                 fb_inheritance_mode_name = phenstmt.Cvterm.name
                 inheritance_mode_name = self.inheritance_mode_terms[fb_inheritance_mode_name]
                 phenotype_term_curie = self.cvterm_lookup[phenstmt.Phenotype.cvalue_id]['curie']
-                phenotype_statement = phenstmt.Phenotype.description
+                phenotype_statement = phenstmt.Phenotype.uniquename
                 pheno_key = (inheritance_mode_name, phenotype_term_curie, phenotype_statement)
                 anno_desc = f'genotype={genotype_uniquename} ({genotype_description}); '
                 anno_desc += f'inheritance={inheritance_mode_name}; '
