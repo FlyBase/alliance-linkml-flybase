@@ -486,14 +486,14 @@ class AlleleHandler(FeatureHandler):
                 anno_desc += f'inheritance={inheritance_mode_name}; '
                 anno_desc += f'pheno_curie={phenotype_term_curie}; '
                 anno_desc += f'pheno_stmt={phenotype_statement}.'
-                self.log.debug(f'Assess this phenotype annotation: {anno_desc}')
+                # self.log.debug(f'Assess this phenotype annotation: {anno_desc}')
                 # Filter out single locus genotypes having many distinct alleles.
                 single_allele_genotype = False
                 if '|' not in genotype_description:
-                    self.log.debug('GENOTYPE HAS ONLY ONE ALLELE LISTED, UNSPECIFIED ZYGOSITY.')
+                    # self.log.debug('GENOTYPE HAS ONLY ONE ALLELE LISTED, UNSPECIFIED ZYGOSITY.')
                     single_allele_genotype = True
                 elif genotype_description.startswith('FBab'):
-                    self.log.debug('GENOTYPE IS HEMIZYGOUS: ALLELE/DEFICIENCY.')
+                    # self.log.debug('GENOTYPE IS HEMIZYGOUS: ALLELE/DEFICIENCY.')
                     single_allele_genotype = True
                 else:
                     features = genotype_description.split('|')
