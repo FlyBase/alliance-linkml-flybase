@@ -288,7 +288,7 @@ class AlleleHandler(FeatureHandler):
             Genotype.description.op('!~')('_'),
             Cvterm.name.in_((self.inheritance_mode_terms.keys())),
             Pub.is_obsolete.is_(False),
-            Pub.uniquename.op('~')(self.pub_regex),
+            Pub.uniquename.op('~')(self.regex['pub']),
         )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
