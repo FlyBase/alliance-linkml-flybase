@@ -96,8 +96,8 @@ class GeneHandler(FeatureHandler):
                 counter += 1
             except KeyError:
                 pass_counter += 1
-        self.log.info(f'Found {counter} gene snapshots for {self.fb_data_type} entities.')
-        self.log.info(f'Ignored {pass_counter} gene snapshots for {self.fb_data_type} entities.')
+        self.log.info(f'Found {counter} gene snapshots for {self.datatype} entities.')
+        self.log.info(f'Ignored {pass_counter} gene snapshots for {self.datatype} entities.')
         return
 
     def get_gene_types(self, session):
@@ -113,8 +113,8 @@ class GeneHandler(FeatureHandler):
                 counter += 1
             except KeyError:
                 pass_counter += 1
-        self.log.info(f'Found {counter} promoted_gene_types for {self.fb_data_type} entities.')
-        self.log.info(f'Ignored {pass_counter} promoted_gene_types for {self.fb_data_type} entities.')
+        self.log.info(f'Found {counter} promoted_gene_types for {self.datatype} entities.')
+        self.log.info(f'Ignored {pass_counter} promoted_gene_types for {self.datatype} entities.')
         return
 
     def get_gene_alleles(self, session):
