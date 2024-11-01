@@ -556,7 +556,8 @@ class AlleleHandler(FeatureHandler):
             relevant_feat_rels.extend(allele.args)
             relevant_feat_rels.extend(allele.dmel_insertions)
             relevant_feat_rels.extend(allele.non_dmel_insertions)
-            self.log.debug(f'BILLYBOB2: For {allele}, have {len(relevant_feat_rels)} feat_rels to process.')
+            if relevant_feat_rels:
+                self.log.debug(f'BILLYBOB2: For {allele}, have {len(relevant_feat_rels)} feat_rels to process.')
             counter = 0
             for feat_rel in relevant_feat_rels:
                 counter += 1
