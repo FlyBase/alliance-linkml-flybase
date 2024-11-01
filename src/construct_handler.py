@@ -522,7 +522,7 @@ class ConstructHandler(FeatureHandler):
         self.map_construct_basic(agr_export_type)
         self.map_synonyms(datatype, agr_export_type)
         self.map_data_provider_dto(datatype)
-        self.map_xrefs(datatype)
+        # self.map_xrefs(datatype)    # ConstructDTO lacks cross_reference_dtos attribute.
         self.map_pubs()
         self.map_timestamps()
         # Note - We do not use self.map_secondary_ids('construct_secondary_id_dtos') here.
