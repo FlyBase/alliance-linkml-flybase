@@ -21,17 +21,13 @@ from feature_handler import FeatureHandler
 
 class ConstructHandler(FeatureHandler):
     """This object gets, synthesizes and filters construct data for export."""
-    def __init__(self, log: Logger, fb_data_type: str, testing: bool):
+    def __init__(self, log: Logger, testing: bool):
         """Create the ConstructHandler object."""
-        super().__init__(log, fb_data_type, testing)
-
-    # Additional set for export added to the handler.
-    construct_associations = []            # Will be a list of FBExportEntity objects (relationships), map to ConstructGenomicEntityAssociationDTO.
-    # Lookups needed.
-    allele_gene_lookup = {}                # Will be allele feature_id-keyed of a single gene feature_id per allele.
-    seqfeat_gene_lookup = {}               # Will be seqfeat feature_id-keyed of a lists of gene feature_ids.
-    transgenic_allele_class_lookup = {}    # Will be an allele feature_id-keyed list of "transgenic product class" CV terms.
-    gene_tool_lookup = {}                  # Will be gene feature_id-keyed lists of related FBto tools.
+        super().__init__(log, testing)
+        self.datatype = 'construct'
+        self.fb_export_type = fb_datatypes.FBConstruct
+        self.agr_export_type = agr_datatypes.ConstructDTO
+        self.primary_export_set = 'construct_ingest_set'
 
     test_set = {
         'FBtp0008631': 'P{UAS-wg.H.T:HA1}',                       # Expresses FBgn wg, regulated by FBto UASt.
@@ -52,6 +48,15 @@ class ConstructHandler(FeatureHandler):
         'FBtp0083738': 'P{GR}',                                   # Is regulated_by FBgn Act5C.
         'FBtp0017594': 'P{UAS(-FRT)ptc.Deltaloop2}'               # Obsolete, has only a non-current symbol synonym - for testing feature lookup.
     }
+
+    # Additional set for export added to the handler.
+    construct_associations = []            # Will be a list of FBExportEntity objects (relationships), map to ConstructGenomicEntityAssociationDTO.
+
+    # Lookups needed.
+    allele_gene_lookup = {}                # Will be allele feature_id-keyed of a single gene feature_id per allele.
+    seqfeat_gene_lookup = {}               # Will be seqfeat feature_id-keyed of a lists of gene feature_ids.
+    transgenic_allele_class_lookup = {}    # Will be an allele feature_id-keyed list of "transgenic product class" CV terms.
+    gene_tool_lookup = {}                  # Will be gene feature_id-keyed lists of related FBto tools.
 
     # Elaborate on get_general_data() for the ConstructHandler.
     def get_general_data(self, session):
@@ -221,15 +226,16 @@ class ConstructHandler(FeatureHandler):
         self.log.info(f'Propagated {counter} allele-to-gene "alleleof" relationships to related constructs.')
         return
 
-    def get_datatype_data(self, session):
+    def get_datatype_data(self, session, datatype, fb_export_type, agr_export_type):
         """Extend the method for the ConstructHandler."""
-        super().get_datatype_data(session)
-        self.get_entities(session)
-        self.get_entity_pubs(session)
-        self.get_entity_synonyms(session)
-        self.get_entity_fb_xrefs(session)
-        self.get_entity_xrefs(session)
-        self.get_entity_timestamps(session)
+        super().get_datatype_data(session, datatype, fb_export_type, agr_export_type)
+        self.get_entities(session, self.datatype, self.fb_export_type)
+        self.get_entityprops(session, self.datatype)
+        self.get_entity_pubs(session, self.datatype)
+        self.get_entity_synonyms(session, self.datatype)
+        self.get_entity_fb_xrefs(session, self.datatype)
+        self.get_entity_xrefs(session, self.datatype)
+        self.get_entity_timestamps(session, self.datatype)
         self.get_construct_alleles(session)
         self.get_construct_encoded_tools(session)
         self.get_construct_reg_regions(session)
@@ -435,9 +441,9 @@ class ConstructHandler(FeatureHandler):
         return
 
     # Elaborate on synthesize_info() for the ConstructHandler.
-    def synthesize_info(self):
+    def synthesize_info(self, datatype, fb_export_type, agr_export_type):
         """Extend the method for the ConstructHandler."""
-        super().synthesize_info()
+        super().synthesize_info(datatype, fb_export_type, agr_export_type)
         self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
@@ -510,15 +516,17 @@ class ConstructHandler(FeatureHandler):
         return
 
     # Elaborate on map_fb_data_to_alliance() for the ConstructHandler.
-    def map_fb_data_to_alliance(self):
+    def map_fb_data_to_alliance(self, datatype, fb_export_type, agr_export_type):
         """Extend the method for the ConstructHandler."""
-        super().map_fb_data_to_alliance()
-        self.map_construct_basic()
-        self.map_synonyms()
-        self.map_data_provider_dto()
+        super().map_fb_data_to_alliance(datatype, fb_export_type, agr_export_type)
+        self.map_construct_basic(agr_export_type)
+        self.map_synonyms(datatype, agr_export_type)
+        self.map_data_provider_dto(datatype)
+        self.map_xrefs(datatype)
         self.map_pubs()
         self.map_timestamps()
-        # Not use self.map_secondary_ids() here because for reagents, we report only strings, not SecondaryIdSlotAnnotationDTOs.
+        # Note - We do not use self.map_secondary_ids('construct_secondary_id_dtos') here.
+        #        This is because for reagents, we report only strings, not SecondaryIdSlotAnnotationDTOs.
         for construct in self.fb_data_entities.values():
             construct.linkmldto.secondary_identifiers = construct.alt_fb_ids
         self.map_construct_components()
