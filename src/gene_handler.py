@@ -264,8 +264,8 @@ class GeneHandler(FeatureHandler):
         self.map_gene_basic(agr_export_type)
         self.map_synonyms(datatype, agr_export_type)
         self.map_data_provider_dto(datatype)
-        # self.map_pubs()    # Suppress until LinkML Gene gets reference_curies slot.
         self.map_xrefs(datatype)
+        # self.map_pubs()    # Suppress until LinkML Gene gets reference_curies slot.
         self.map_timestamps()
         self.map_secondary_ids('gene_secondary_id_dtos')
         # self.map_gene_snapshot()
