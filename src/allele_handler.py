@@ -515,7 +515,6 @@ class AlleleHandler(FeatureHandler):
                     inheritance_data[pheno_key].append(phenstmt.Pub.pub_id)
                 except KeyError:
                     inheritance_data[pheno_key] = [phenstmt.Pub.pub_id]
-            self.log.info('BILLYBOB - done going through phenstatements, now convert to LinkML.')
             # Convert data into Alliance slot annotations.
             for pheno_key, pub_ids in inheritance_data.items():
                 pub_curies = self.lookup_pub_curies(pub_ids)
@@ -552,45 +551,45 @@ class AlleleHandler(FeatureHandler):
         }
         mutation_types = {}    # Will be a dict of mutation type curies and supporting pub curies.
         for allele in self.fb_data_entities.values():
-            self.log.info(f'BILLYBOB1: {allele} mutation types')
+            # self.log.debug(f'BILLYBOB1: {allele} mutation types')
             relevant_feat_rels = []
             relevant_feat_rels.extend(allele.args)
             relevant_feat_rels.extend(allele.dmel_insertions)
             relevant_feat_rels.extend(allele.non_dmel_insertions)
-            self.log.info(f'BILLYBOB2: Have {len(relevant_feat_rels)} feat_rels to process.')
+            self.log.debug(f'BILLYBOB2: For {allele}, have {len(relevant_feat_rels)} feat_rels to process.')
             counter = 0
             for feat_rel in relevant_feat_rels:
                 counter += 1
-                self.log.info(f'BILLYBOB3a: Process feat_rel #{counter}')
+                # self.log.debug(f'BILLYBOB3a: Process feat_rel #{counter}')
                 mutation_type_curie = None
                 fb_feat_type_id = feat_rel.object.type_id
                 fb_feat_type_name = self.cvterm_lookup[fb_feat_type_id]['name']
-                self.log.info(f'BILLYBOB3b: Have fb_feat_type_name = {fb_feat_type_name}')
+                # self.log.debug(f'BILLYBOB3b: Have fb_feat_type_name = {fb_feat_type_name}')
                 if fb_feat_type_name in insertion_conversion.keys():
                     mutation_type_curie = insertion_conversion[fb_feat_type_name]
                 elif fb_feat_type_id in self.allele_mutant_type_terms:
                     mutation_type_curie = self.cvterm_lookup[fb_feat_type_id]['curie']
                 else:
                     continue
-                self.log.info(f'BILLYBOB3c: Have mutation_type_curie = {mutation_type_curie}')
+                # self.log.debug(f'BILLYBOB3c: Have mutation_type_curie = {mutation_type_curie}')
                 if feat_rel.feature_relationship_id in self.feat_rel_pub_lookup.keys():
                     pub_ids = self.feat_rel_pub_lookup[feat_rel.feature_relationship_id]
                     pub_curies = self.lookup_pub_curies(pub_ids)
-                    self.log.info(f'BILLYBOB3d1: pub_curies = {pub_curies}')
+                    # self.log.debug(f'BILLYBOB3d1: pub_curies = {pub_curies}')
                 else:
                     pub_curies = []
-                    self.log.info('BILLYBOB3d2: No pubs.')
+                    # self.log.debug('BILLYBOB3d2: No pubs.')
                 if mutation_type_curie in mutation_types.keys():
                     mutation_types[mutation_type_curie].extend(pub_curies)
-                    self.log.info('BILLYBOB3e1: Added feat_rel info to allele dict of mutation types.')
+                    # self.log.debug('BILLYBOB3e1: Added feat_rel info to allele dict of mutation types.')
                 else:
                     mutation_types[mutation_type_curie] = pub_curies
-                    self.log.info('BILLYBOB3e2: New feat_rel info to allele dict of mutation types.')
-            self.log.info('BILLYBOB4: About to make allele LinkML export objects.')
+                    # self.log.info('BILLYBOB3e2: New feat_rel info to allele dict of mutation types.')
+            # self.log.debug('BILLYBOB4: About to make allele LinkML export objects.')
             for mutation_type_curie, full_pub_curie_list in mutation_types.items():
                 mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, full_pub_curie_list)
                 allele.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
-            self.log.info('BILLYBOB5: Done making allele make LinkML export objects.')
+            # self.log.debug('BILLYBOB5: Done making allele make LinkML export objects.')
         return
 
     # Elaborate on map_fb_data_to_alliance() for the GeneHandler.
