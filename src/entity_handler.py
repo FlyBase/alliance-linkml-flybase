@@ -321,11 +321,12 @@ class PrimaryEntityHandler(DataHandler):
         audit_chado_counter = 0
         # Get distinct timestamps for each entity (do not distinguish by action, etc).
         for i in self.fb_data_entities.values():
-            try:
+            if i.timeaccessioned is not None:
                 i.timestamps.append(i.timeaccessioned)
+            if i.timelastmodified is not None:
                 i.timestamps.append(i.timelastmodified)
                 entity_table_counter += 1
-            except AttributeError:
+            if not i.timestamps:
                 audit_query = f"""
                 SELECT DISTINCT record_pkey, transaction_timestamp
                 FROM audit_chado
