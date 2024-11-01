@@ -34,13 +34,13 @@ class FeatureHandler(PrimaryEntityHandler):
         """Get annotation IDs (current and non-current)."""
         self.log.info('Get annotation IDs (current and non-current).')
         filters = (
-            Feature.uniquename.op('~')(self.regex[self.fb_data_type]),
+            Feature.uniquename.op('~')(self.regex[self.datatype]),
             Feature.is_analysis.is_(False),
             Db.name == 'FlyBase Annotation IDs'
         )
-        if self.fb_data_type in self.subtypes.keys():
-            self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.fb_data_type]}')
-            filters += (Cvterm.name.in_((self.subtypes[self.fb_data_type])), )
+        if self.datatype in self.subtypes.keys():
+            self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.datatype]}')
+            filters += (Cvterm.name.in_((self.subtypes[self.datatype])), )
         if self.testing:
             filters += (Feature.uniquename.in_((self.test_set.keys())), )
         results = session.query(FeatureDbxref).\
@@ -60,8 +60,8 @@ class FeatureHandler(PrimaryEntityHandler):
                 counter += 1
             except KeyError:
                 pass_counter += 1
-        self.log.info(f'Found {counter} annotation IDs for {self.fb_data_type} entities.')
-        self.log.info(f'Ignored {pass_counter} annotation IDs for {self.fb_data_type} entities.')
+        self.log.info(f'Found {counter} annotation IDs for {self.datatype} entities.')
+        self.log.info(f'Ignored {pass_counter} annotation IDs for {self.datatype} entities.')
         return
 
     def get_chr_featurelocs(self, session):
@@ -71,12 +71,12 @@ class FeatureHandler(PrimaryEntityHandler):
             Feature.is_analysis.is_(False),
             Featureloc.srcfeature_id.in_((self.chr_dict.keys()))
         )
-        if self.fb_data_type in self.regex.keys():
-            self.log.info(f'Use this regex: {self.regex[self.fb_data_type]}')
-            filters += (Feature.uniquename.op('~')(self.regex[self.fb_data_type]), )
-        if self.fb_data_type in self.subtypes.keys():
-            self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.fb_data_type]}')
-            filters += (Cvterm.name.in_((self.subtypes[self.fb_data_type])), )
+        if self.datatype in self.regex.keys():
+            self.log.info(f'Use this regex: {self.regex[self.datatype]}')
+            filters += (Feature.uniquename.op('~')(self.regex[self.datatype]), )
+        if self.datatype in self.subtypes.keys():
+            self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.datatype]}')
+            filters += (Cvterm.name.in_((self.subtypes[self.datatype])), )
         if self.testing:
             filters += (Feature.uniquename.in_((self.test_set.keys())), )
         results = session.query(Featureloc).\
@@ -94,25 +94,25 @@ class FeatureHandler(PrimaryEntityHandler):
                 counter += 1
             except KeyError:
                 pass_counter += 1
-        self.log.info(f'Found {counter} chromosomal featurelocs for {self.fb_data_type} entities.')
-        self.log.info(f'Ignored {pass_counter} chromosomal featurelocs for {self.fb_data_type} entities.')
+        self.log.info(f'Found {counter} chromosomal featurelocs for {self.datatype} entities.')
+        self.log.info(f'Ignored {pass_counter} chromosomal featurelocs for {self.datatype} entities.')
         return
 
     def get_featureprops_by_type(self, session, fprop_type):
         """Return a list of featureprops of a given type."""
-        self.log.info(f'Get featureprops of type {fprop_type} for {self.fb_data_type} entities.')
+        self.log.info(f'Get featureprops of type {fprop_type} for {self.datatype} entities.')
         feat_type = aliased(Cvterm, name='feat_type')
         prop_type = aliased(Cvterm, name='prop_type')
         filters = (
             Feature.is_analysis.is_(False),
             prop_type.name == fprop_type
         )
-        if self.fb_data_type in self.regex.keys():
-            self.log.info(f'Use this regex: {self.regex[self.fb_data_type]}')
-            filters += (Feature.uniquename.op('~')(self.regex[self.fb_data_type]), )
-        if self.fb_data_type in self.subtypes.keys():
-            self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.fb_data_type]}')
-            filters += (feat_type.name.in_((self.subtypes[self.fb_data_type])), )
+        if self.datatype in self.regex.keys():
+            self.log.info(f'Use this regex: {self.regex[self.datatype]}')
+            filters += (Feature.uniquename.op('~')(self.regex[self.datatype]), )
+        if self.datatype in self.subtypes.keys():
+            self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.datatype]}')
+            filters += (feat_type.name.in_((self.subtypes[self.datatype])), )
         if self.testing:
             filters += (Feature.uniquename.in_((self.test_set.keys())), )
         results = session.query(Featureprop).\
