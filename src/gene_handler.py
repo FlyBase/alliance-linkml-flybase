@@ -12,21 +12,20 @@ Author(s):
 import csv
 import re
 from logging import Logger
-import fb_datatypes
 import agr_datatypes
+import fb_datatypes
 from feature_handler import FeatureHandler
 
 
 class GeneHandler(FeatureHandler):
     """This object gets, synthesizes and filters gene data for export."""
-    def __init__(self, log: Logger, fb_data_type: str, testing: bool):
+    def __init__(self, log: Logger, testing: bool):
         """Create the GeneHandler object."""
-        super().__init__(log, fb_data_type, testing)
-
-    # Additional set for export added to the handler.
-    gene_allele_associations = []    # Will be list of FBExportEntity objects (relationships).
-    # Lookups needed.
-    pthr_dict = {}    # Will be an 1:1 FBgn_ID-PTHR xref dict.
+        super().__init__(log, testing)
+        self.datatype = 'gene'
+        self.fb_export_type = fb_datatypes.FBGene
+        self.agr_export_type = agr_datatypes.GeneDTO
+        self.primary_export_set = 'gene_ingest_set'
 
     test_set = {
         'FBgn0284084': 'wg',                # Current annotated nuclear protein_coding gene.
@@ -47,21 +46,9 @@ class GeneHandler(FeatureHandler):
         'FBgn0015267': 'Mmus\\Abl1',        # Current mouse gene with MGI xref.
     }
 
-    # Reference dicts.
-    internal_gene_types = [
-        'engineered_fusion_gene',
-        'engineered_region',
-        'gene_group',
-        'gene_with_polycistronic_transcript',
-        'insulator',
-        'mitochondrial_sequence',
-        'origin_of_replication',
-        'region',
-        'regulatory_region',
-        'repeat_region',
-        'satellite_DNA',
-        'transposable_element_gene'
-    ]
+    # Additional reference info.
+    gene_allele_associations = []    # Will be list of FBExportEntity objects (relationships).
+    pthr_dict = {}    # Will be an 1:1 FBgn_ID-PTHR xref dict.
 
     # Elaborate on get_general_data() for the GeneHandler.
     def get_general_data(self, session):
@@ -71,8 +58,9 @@ class GeneHandler(FeatureHandler):
         self.build_cvterm_lookup(session)
         self.build_ncbi_taxon_lookup(session)
         self.build_feature_lookup(session)
-        self.get_chr_info(session)
+        self.find_internal_genes(session)
         self.build_feature_relationship_evidence_lookup(session)
+        self.get_chr_info(session)
         return
 
     # Elaborate on get_datatype_data() for the GeneHandler.
@@ -135,15 +123,16 @@ class GeneHandler(FeatureHandler):
         self.get_entity_obj_feat_rel_by_type(session, 'allele_rels', rel_type='alleleof', sbj_type='allele', sbj_regex=self.regex['allele'])
         return
 
-    def get_datatype_data(self, session):
+    def get_datatype_data(self, session, datatype, fb_export_type, agr_export_type):
         """Extend the method for the GeneHandler."""
-        super().get_datatype_data(session)
-        self.get_entities(session)
-        self.get_entity_pubs(session)
-        self.get_entity_synonyms(session)
-        self.get_entity_fb_xrefs(session)
-        self.get_entity_xrefs(session)
-        self.get_entity_timestamps(session)
+        super().get_datatype_data(session, datatype, fb_export_type, agr_export_type)
+        self.get_entities(session, self.datatype, self.fb_export_type)
+        self.get_entityprops(session, self.datatype)
+        self.get_entity_pubs(session, self.datatype)
+        self.get_entity_synonyms(session, self.datatype)
+        self.get_entity_fb_xrefs(session, self.datatype)
+        self.get_entity_xrefs(session, self.datatype)
+        self.get_entity_timestamps(session, self.datatype)
         self.get_panther_info()
         self.get_annotation_ids(session)
         self.get_chr_featurelocs(session)
@@ -190,9 +179,9 @@ class GeneHandler(FeatureHandler):
         return
 
     # Elaborate on synthesize_info() for the GeneHandler.
-    def synthesize_info(self):
+    def synthesize_info(self, datatype, fb_export_type, agr_export_type):
         """Extend the method for the GeneHandler."""
-        super().synthesize_info()
+        super().synthesize_info(datatype, fb_export_type, agr_export_type)
         self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
@@ -204,7 +193,7 @@ class GeneHandler(FeatureHandler):
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
-    def map_gene_basic(self):
+    def map_gene_basic(self, agr_export_type):
         """Map basic FlyBase gene data to the Alliance LinkML object."""
         self.log.info('Map basic gene info to Alliance object.')
         for gene in self.fb_data_entities.values():
@@ -270,14 +259,14 @@ class GeneHandler(FeatureHandler):
         return
 
     # Elaborate on map_fb_data_to_alliance() for the GeneHandler.
-    def map_fb_data_to_alliance(self):
+    def map_fb_data_to_alliance(self, datatype, fb_export_type, agr_export_type):
         """Extend the method for the GeneHandler."""
-        super().map_fb_data_to_alliance()
-        self.map_gene_basic()
-        self.map_synonyms()
-        self.map_data_provider_dto()
+        super().map_fb_data_to_alliance(datatype, fb_export_type, agr_export_type)
+        self.map_gene_basic(agr_export_type)
+        self.map_synonyms(datatype, agr_export_type)
+        self.map_data_provider_dto(datatype)
         # self.map_pubs()    # Suppress until LinkML Gene gets reference_curies slot.
-        self.map_xrefs()
+        self.map_xrefs(datatype)
         self.map_timestamps()
         self.map_secondary_ids('gene_secondary_id_dtos')
         # self.map_gene_snapshot()
@@ -290,9 +279,9 @@ class GeneHandler(FeatureHandler):
         return
 
     # Elaborate on query_chado_and_export() for the GeneHandler.
-    def query_chado_and_export(self, session):
+    def query_chado_and_export(self, session, datatype, fb_export_type, agr_export_type):
         """Elaborate on query_chado_and_export method for the GeneHandler."""
-        super().query_chado_and_export(session)
+        super().query_chado_and_export(session, datatype, fb_export_type, agr_export_type)
         self.flag_unexportable_entities(self.gene_allele_associations, 'allele_gene_association_ingest_set')
         self.generate_export_dict(self.gene_allele_associations, 'allele_gene_association_ingest_set')
         return
