@@ -57,7 +57,6 @@ class StrainHandler(PrimaryEntityHandler):
         self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
-        self.synthesize_props()
         self.synthesize_pubs()
         return
 

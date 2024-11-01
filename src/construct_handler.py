@@ -441,7 +441,6 @@ class ConstructHandler(FeatureHandler):
         self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
-        self.synthesize_props()
         self.synthesize_pubs()
         self.synthesize_encoded_tools()
         self.synthesize_component_genes()
