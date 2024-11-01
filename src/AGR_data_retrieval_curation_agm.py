@@ -23,13 +23,11 @@ Notes:
 import argparse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-# from sqlalchemy.orm.exc import NoResultFound
 from harvdev_utils.psycopg_functions import set_up_db_reading
-from utils import get_handler, db_query_transaction, generate_export_file
+from agm_handler import StrainHandler
+from utils import db_query_transaction, generate_export_file
 
 # Data types handled by this script.
-FB_STRAIN_DATA_TYPE = 'strain'
-FB_GENOTYPE_DATA_TYPE = 'genotype'
 REPORT_LABEL = 'agm_curation'
 
 # Now proceed with generic setup.
@@ -71,7 +69,7 @@ def main():
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Get the data and process it.
-    strain_handler = get_handler(log, FB_STRAIN_DATA_TYPE, testing)
+    strain_handler = StrainHandler(log, testing)
     db_query_transaction(session, log, strain_handler)
 
     # Export the data.
