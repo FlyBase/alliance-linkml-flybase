@@ -196,7 +196,7 @@ class GeneHandler(FeatureHandler):
         """Map basic FlyBase gene data to the Alliance LinkML object."""
         self.log.info('Map basic gene info to Alliance object.')
         for gene in self.fb_data_entities.values():
-            agr_gene = agr_datatypes.GeneDTO()
+            agr_gene = agr_export_type()
             agr_gene.obsolete = gene.chado_obj.is_obsolete
             agr_gene.mod_entity_id = f'FB:{gene.uniquename}'
             agr_gene.mod_internal_id = str(gene.chado_obj.feature_id)

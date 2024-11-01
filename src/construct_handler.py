@@ -456,11 +456,11 @@ class ConstructHandler(FeatureHandler):
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
-    def map_construct_basic(self):
+    def map_construct_basic(self, agr_export_type):
         """Map basic FlyBase construct data to the Alliance LinkML object."""
         self.log.info('Map basic construct info to Alliance object.')
         for construct in self.fb_data_entities.values():
-            agr_construct = agr_datatypes.ConstructDTO()
+            agr_construct = agr_export_type()
             agr_construct.obsolete = construct.chado_obj.is_obsolete
             agr_construct.mod_entity_id = f'FB:{construct.uniquename}'
             agr_construct.mod_internal_id = str(construct.chado_obj.feature_id)
