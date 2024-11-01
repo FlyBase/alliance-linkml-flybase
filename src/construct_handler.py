@@ -536,9 +536,9 @@ class ConstructHandler(FeatureHandler):
         return
 
     # Elaborate on query_chado_and_export() for the ConstructHandler.
-    def query_chado_and_export(self, session):
+    def query_chado_and_export(self, session, datatype, fb_export_type, agr_export_type):
         """Elaborate on query_chado_and_export method for the ConstructHandler."""
-        super().query_chado_and_export(session)
+        super().query_chado_and_export(session, datatype, fb_export_type, agr_export_type)
         self.flag_unexportable_entities(self.construct_associations, 'construct_genomic_entity_association_ingest_set')
         self.generate_export_dict(self.construct_associations, 'construct_genomic_entity_association_ingest_set')
         return
