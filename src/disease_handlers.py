@@ -1,7 +1,7 @@
 """Module:: disease_handlers.
 
 Synopsis:
-    A data handlers for FlyBase disease annotations.
+    Data handlers for FlyBase disease annotations.
 
 Author(s):
     Gil dos Santos dossantos@morgan.harvard.edu
@@ -16,16 +16,22 @@ from harvdev_utils.production import (
     FeatureDbxref, FeatureRelationship, Pub
 )
 import agr_datatypes
+import fb_datatypes
 from handler import DataHandler
 
 
 class AlleleDiseaseHandler(DataHandler):
     """A data handler for allele-based disease annotations."""
-    def __init__(self, log: Logger, fb_data_type: str, testing: bool):
+    def __init__(self, log: Logger, testing: bool):
         """Create the AlleleDiseaseHandler object."""
-        super().__init__(log, fb_data_type, testing)
+        super().__init__(log, testing)
+        self.datatype = 'disease'
+        self.fb_export_type = fb_datatypes.FBAlleleDiseaseAnnotation
+        self.agr_export_type = agr_datatypes.AlleleDiseaseAnnotationDTO
 
-    uniq_dis_dict = {}    # A dict of unique disease annotation attributes to list of disease annotations.
+    # A dict of unique disease annotation attributes.
+    # This will be used after initial data pull to filter out redundant disease annotations.
+    uniq_dis_dict = {}
 
     # Key disease annotation term sets and look ups.
     relevant_qualifiers = [
@@ -83,7 +89,7 @@ class AlleleDiseaseHandler(DataHandler):
             distinct()
         counter = 0
         for result in results:
-            dis_anno = self.datatype_objects[self.fb_data_type](result.FeatureCvterm, result.FeatureCvtermprop)
+            dis_anno = self.fb_export_type(result.FeatureCvterm, result.FeatureCvtermprop)
             self.fb_data_entities[dis_anno.db_primary_id] = dis_anno
             counter += 1
         self.log.info(f'Found {counter} allele-based disease annotations from chado (excludes annotations to obsolete alleles).')
@@ -377,7 +383,7 @@ class AlleleDiseaseHandler(DataHandler):
             allele_curie = f'FB:{dis_anno.feature_cvterm.feature.uniquename}'
             do_curie = f'DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}'
             pub_curie = self.lookup_pub_curie(dis_anno.feature_cvterm.pub_id)
-            agr_dis_anno = agr_datatypes.AlleleDiseaseAnnotationDTO(allele_curie, do_curie, pub_curie)
+            agr_dis_anno = self.agr_export_type(allele_curie, do_curie, pub_curie)
             if dis_anno.qualifier.value == 'DOES NOT model':
                 agr_dis_anno.negated = True
             if dis_anno.evidence_code.value.startswith('CEC'):
