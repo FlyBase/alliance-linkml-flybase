@@ -70,10 +70,10 @@ class StrainHandler(PrimaryEntityHandler):
     def map_strain_basic(self, agr_export_type):
         """Map basic FlyBase strain data to the Alliance object."""
         self.log.info('Map basic strain info.')
+        self.log.info('BOB: Using v0.')
+        # self.log.info('BOB: Using v1.').
         for strain in self.fb_data_entities.values():
-            self.log.info('BOB: Using v0.')
             agr_strain = agr_export_type()
-            # self.log.info('BOB: Using v1.').
             # agr_strain = self.agr_export_type()
             agr_strain.obsolete = strain.chado_obj.is_obsolete
             agr_strain.mod_entity_id = f'FB:{strain.uniquename}'
