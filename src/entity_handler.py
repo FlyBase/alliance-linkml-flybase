@@ -450,7 +450,7 @@ class PrimaryEntityHandler(DataHandler):
                 display_name = fb_data_entity.curr_fb_symbol
             else:
                 display_name = fb_data_entity.name
-            dp_xref = agr_datatypes.CrossReferenceDTO('FB', f'FB:{fb_data_entity.uniquename}', datatype, display_name).dict_export()
+            dp_xref = agr_datatypes.CrossReferenceDTO('FB', f'FB:{fb_data_entity.uniquename}', self.datatype, display_name).dict_export()
             fb_data_entity.linkmldto.data_provider_dto = agr_datatypes.DataProviderDTO(dp_xref).dict_export()
         return
 
@@ -490,7 +490,7 @@ class PrimaryEntityHandler(DataHandler):
             if fb_data_entity.uniquename:
                 curie = f'FB:{fb_data_entity.uniquename}'
                 display_name = curie
-                page_area = datatype
+                page_area = self.datatype
                 fb_xref_dto = agr_datatypes.CrossReferenceDTO('FB', curie, page_area, display_name).dict_export()
                 cross_reference_dtos.append(fb_xref_dto)
             # Second, add external xrefs.
@@ -501,7 +501,7 @@ class PrimaryEntityHandler(DataHandler):
                 try:
                     page_area = self.agr_page_area_dict[prefix]
                 except KeyError:
-                    page_area = datatype
+                    page_area = self.datatype
                 # Clean up cases where the db prefix is redundantly included at the start of the dbxref.accession.
                 redundant_prefix = f'{prefix}:'
                 if xref.dbxref.accession.startswith(redundant_prefix):
