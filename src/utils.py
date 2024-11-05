@@ -28,7 +28,7 @@ def db_query_transaction(session: Session, log: Logger, object_to_execute: DataH
 
     """
     try:
-        object_to_execute.query_chado_and_export(session, object_to_execute.datatype, object_to_execute.fb_export_type, object_to_execute.agr_export_type)
+        object_to_execute.query_chado_and_export(session, object_to_execute.datatype)
         session.flush()
     except RuntimeError:
         session.rollback()

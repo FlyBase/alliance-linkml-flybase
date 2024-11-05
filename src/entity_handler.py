@@ -37,7 +37,7 @@ class PrimaryEntityHandler(DataHandler):
         """Create the generic PrimaryEntityHandler object."""
         super().__init__(log, testing)
 
-    # Mappings of datatype to FlyBase primary chado tables.
+    # Mappings of self.datatype to FlyBase primary chado tables.
     main_chado_entity_types = {
         'allele': 'feature',
         'construct': 'feature',
@@ -70,25 +70,25 @@ class PrimaryEntityHandler(DataHandler):
     # Add methods to be run by get_general_data() below.
 
     # Add methods to be run by get_datatype_data() below.
-    def get_entities(self, session, datatype, fb_export_type):
+    def get_entities(self, session):
         """Get primary FlyBase data entities."""
-        chado_type = self.main_chado_entity_types[datatype]
-        self.log.info(f'Get {datatype} data entities from {chado_type} table.')
+        chado_type = self.main_chado_entity_types[self.datatype]
+        self.log.info(f'Get {self.datatype} data entities from {chado_type} table.')
         chado_table = self.chado_tables['main_table'][chado_type]
         filters = ()
-        if datatype in self.regex.keys():
-            self.log.info(f'Use this regex: {self.regex[datatype]}')
-            filters += (chado_table.uniquename.op('~')(self.regex[datatype]), )
-        if datatype in self.subtypes.keys():
-            self.log.info(f'Filter main table by these subtypes: {self.subtypes[datatype]}')
-            filters += (Cvterm.name.in_((self.subtypes[datatype])), )
+        if self.datatype in self.regex.keys():
+            self.log.info(f'Use this regex: {self.regex[self.datatype]}')
+            filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
+        if self.datatype in self.subtypes.keys():
+            self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.datatype]}')
+            filters += (Cvterm.name.in_((self.subtypes[self.datatype])), )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             filters += (chado_table.uniquename.in_((self.test_set.keys())), )
         if filters == ():
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
-        if datatype in self.subtypes.keys():
+        if self.datatype in self.subtypes.keys():
             results = session.query(chado_table).\
                 select_from(chado_table).\
                 join(Cvterm, (Cvterm.cvterm_id == chado_table.type_id)).\
@@ -103,35 +103,35 @@ class PrimaryEntityHandler(DataHandler):
         counter = 0
         for result in results:
             pkey_id = getattr(result, pkey_name)
-            self.fb_data_entities[pkey_id] = fb_export_type(result)
+            self.fb_data_entities[pkey_id] = self.fb_export_type(result)
             counter += 1
-        self.log.info(f'Found {counter} FlyBase {datatype} entities in chado.')
+        self.log.info(f'Found {counter} FlyBase {self.datatype} entities in chado.')
         return
 
-    def get_entityprops(self, session, datatype):
+    def get_entityprops(self, session):
         """Get primary FlyBase data entity props."""
         self.log.info('Get primary FlyBase data entity props.')
-        chado_type = self.main_chado_entity_types[datatype]
-        self.log.info(f'Get {datatype} props from {chado_type}prop table.')
+        chado_type = self.main_chado_entity_types[self.datatype]
+        self.log.info(f'Get {self.datatype} props from {chado_type}prop table.')
         chado_table = self.chado_tables['main_table'][chado_type]
         subject_key_name = self.chado_tables['primary_key'][chado_type]
         chado_prop_table = self.chado_tables['props'][chado_type]
         chado_prop_pub_table = self.chado_tables['prop_pubs'][chado_type]
         # Phase 1: Get all props.
         filters = ()
-        if datatype in self.regex.keys():
-            self.log.info(f'Use this regex: {self.regex[datatype]}')
-            filters += (chado_table.uniquename.op('~')(self.regex[datatype]), )
-        if datatype in self.subtypes.keys():
-            self.log.info(f'Filter main table by these subtypes: {self.subtypes[datatype]}')
-            filters += (Cvterm.name.in_((self.subtypes[datatype])), )
+        if self.datatype in self.regex.keys():
+            self.log.info(f'Use this regex: {self.regex[self.datatype]}')
+            filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
+        if self.datatype in self.subtypes.keys():
+            self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.datatype]}')
+            filters += (Cvterm.name.in_((self.subtypes[self.datatype])), )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             filters += (chado_table.uniquename.in_((self.test_set.keys())), )
         if filters == ():
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
-        if datatype in self.subtypes.keys():
+        if self.datatype in self.subtypes.keys():
             prop_results = session.query(chado_prop_table).\
                 select_from(chado_table).\
                 join(chado_prop_table).\
@@ -150,9 +150,9 @@ class PrimaryEntityHandler(DataHandler):
             prop_id = getattr(prop_result, f'{chado_type}prop_id')
             prop_dict[prop_id] = fb_datatypes.FBProp(prop_result)
             prop_counter += 1
-        self.log.info(f'Found {prop_counter} {chado_type}props for {datatype}s.')
+        self.log.info(f'Found {prop_counter} {chado_type}props for {self.datatype}s.')
         # Phase 2. Get pubs supporting props.
-        if datatype in self.subtypes.keys():
+        if self.datatype in self.subtypes.keys():
             prop_pub_results = session.query(chado_prop_pub_table).\
                 select_from(chado_table).\
                 join(chado_prop_table).\
@@ -175,7 +175,7 @@ class PrimaryEntityHandler(DataHandler):
                 prop_pub_counter += 1
             except KeyError:
                 pass
-        self.log.info(f'Found {prop_pub_counter} {chado_type}prop_pubs for {datatype}s.')
+        self.log.info(f'Found {prop_pub_counter} {chado_type}prop_pubs for {self.datatype}s.')
         # Phase 3. Add prop info to entities.
         assignment_counter = 0
         prop_type_tally = {}
@@ -194,18 +194,18 @@ class PrimaryEntityHandler(DataHandler):
                 prop_type_tally[prop_type_name] += 1
             except KeyError:
                 prop_type_tally[prop_type_name] = 1
-        self.log.info(f'Assigned {assignment_counter} {chado_type}props to {datatype}s.')
+        self.log.info(f'Assigned {assignment_counter} {chado_type}props to {self.datatype}s.')
         self.log.info(f'Found these types of {chado_type}props:')
         ordered_prop_types = sorted(list(prop_type_tally.keys()))
         for prop_type in ordered_prop_types:
             self.log.info(f'table={chado_type}, prop_type={prop_type}, count={prop_type_tally[prop_type]}.')
         return
 
-    def get_entity_pubs(self, session, datatype):
+    def get_entity_pubs(self, session):
         """Get pubs directly associated with FlyBase data entities."""
-        chado_type = self.main_chado_entity_types[datatype]
+        chado_type = self.main_chado_entity_types[self.datatype]
         asso_chado_table = self.chado_tables['pubs'][chado_type]
-        self.log.info(f'Get pubs for {datatype} data entities from {asso_chado_table}.')
+        self.log.info(f'Get pubs for {self.datatype} data entities from {asso_chado_table}.')
         main_pkey_name = self.chado_tables['primary_key'][chado_type]
         fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
         filters = (
@@ -223,15 +223,15 @@ class PrimaryEntityHandler(DataHandler):
                 counter += 1
             except KeyError:
                 pass_counter += 1
-        self.log.info(f'Found {counter} pubs for {datatype} entities.')
-        self.log.info(f'Ignored {pass_counter} pubs for irrelevant {datatype} entities.')
+        self.log.info(f'Found {counter} pubs for {self.datatype} entities.')
+        self.log.info(f'Ignored {pass_counter} pubs for irrelevant {self.datatype} entities.')
         return
 
-    def get_entity_synonyms(self, session, datatype):
+    def get_entity_synonyms(self, session):
         """Get synonyms for the FlyBase data entities."""
-        chado_type = self.main_chado_entity_types[datatype]
+        chado_type = self.main_chado_entity_types[self.datatype]
         asso_chado_table = self.chado_tables['synonyms'][chado_type]
-        self.log.info(f'Get synonyms for {datatype} data entities from {asso_chado_table}.')
+        self.log.info(f'Get synonyms for {self.datatype} data entities from {asso_chado_table}.')
         main_pkey_name = self.chado_tables['primary_key'][chado_type]
         fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
         filters = (
@@ -249,15 +249,15 @@ class PrimaryEntityHandler(DataHandler):
                 counter += 1
             except KeyError:
                 pass_counter += 1
-        self.log.info(f'Found {counter} synonyms for {datatype} entities.')
-        self.log.info(f'Ignored {pass_counter} synonyms for irrelevant {datatype} entities.')
+        self.log.info(f'Found {counter} synonyms for {self.datatype} entities.')
+        self.log.info(f'Ignored {pass_counter} synonyms for irrelevant {self.datatype} entities.')
         return
 
-    def get_entity_fb_xrefs(self, session, datatype):
+    def get_entity_fb_xrefs(self, session):
         """Get secondary FB xrefs for the FlyBase data entities."""
-        chado_type = self.main_chado_entity_types[datatype]
+        chado_type = self.main_chado_entity_types[self.datatype]
         asso_chado_table = self.chado_tables['dbxrefs'][chado_type]
-        self.log.info(f'Get non-current FlyBase xrefs for {datatype} data entities from {asso_chado_table}.')
+        self.log.info(f'Get non-current FlyBase xrefs for {self.datatype} data entities from {asso_chado_table}.')
         main_pkey_name = self.chado_tables['primary_key'][chado_type]
         fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
         filters = (
@@ -279,15 +279,15 @@ class PrimaryEntityHandler(DataHandler):
                 counter += 1
             except KeyError:
                 pass_counter += 1
-        self.log.info(f'Found {counter} 2o FB xrefs for {datatype} entities.')
-        self.log.info(f'Ignored {pass_counter} 2o FB xrefs for irrelevant {datatype} entities.')
+        self.log.info(f'Found {counter} 2o FB xrefs for {self.datatype} entities.')
+        self.log.info(f'Ignored {pass_counter} 2o FB xrefs for irrelevant {self.datatype} entities.')
         return
 
-    def get_entity_xrefs(self, session, datatype):
+    def get_entity_xrefs(self, session):
         """Get all other xrefs for the FlyBase data entities."""
-        chado_type = self.main_chado_entity_types[datatype]
+        chado_type = self.main_chado_entity_types[self.datatype]
         asso_chado_table = self.chado_tables['dbxrefs'][chado_type]
-        self.log.info(f'Get non-FlyBase xrefs for {datatype} data entities from {asso_chado_table}.')
+        self.log.info(f'Get non-FlyBase xrefs for {self.datatype} data entities from {asso_chado_table}.')
         main_pkey_name = self.chado_tables['primary_key'][chado_type]
         fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
         filters = (
@@ -309,14 +309,14 @@ class PrimaryEntityHandler(DataHandler):
                 counter += 1
             except KeyError:
                 pass_counter += 1
-        self.log.info(f'Found {counter} xrefs for {datatype} entities.')
-        self.log.info(f'Ignored {pass_counter} xrefs for irrelevant {datatype} entities.')
+        self.log.info(f'Found {counter} xrefs for {self.datatype} entities.')
+        self.log.info(f'Ignored {pass_counter} xrefs for irrelevant {self.datatype} entities.')
         return
 
-    def get_entity_timestamps(self, session, datatype):
+    def get_entity_timestamps(self, session):
         """Get timestamps for data entities."""
-        self.log.info(f'Get timestamps for FlyBase {datatype} entities.')
-        chado_type = self.main_chado_entity_types[datatype]
+        self.log.info(f'Get timestamps for FlyBase {self.datatype} entities.')
+        chado_type = self.main_chado_entity_types[self.datatype]
         entity_table_counter = 0
         audit_chado_counter = 0
         # Get distinct timestamps for each entity (do not distinguish by action, etc).
@@ -441,7 +441,7 @@ class PrimaryEntityHandler(DataHandler):
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
-    def map_data_provider_dto(self, datatype):
+    def map_data_provider_dto(self):
         """Return the DataProviderDTO for the FB data entity."""
         # Note - this method is depends on previous determination of fb_data_entity.curr_fb_symbol by synthesize_synonyms(), if applicable.
         self.log.info('Map data provider to Alliance object.')
@@ -481,7 +481,7 @@ class PrimaryEntityHandler(DataHandler):
                 pass
         return
 
-    def map_xrefs(self, datatype):
+    def map_xrefs(self):
         """Add a list of Alliance CrossReferenceDTO dicts to a FlyBase entity."""
         self.log.info('Map xrefs to Alliance object.')
         for fb_data_entity in self.fb_data_entities.values():
@@ -497,7 +497,7 @@ class PrimaryEntityHandler(DataHandler):
             for xref in fb_data_entity.dbxrefs:
                 # Build Alliance xref DTO
                 prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
-                # The page_area assignment assumes that the datatype has a matching value in the Alliance resourceDescriptors.yaml page.
+                # The page_area assignment assumes that the self.datatype has a matching value in the Alliance resourceDescriptors.yaml page.
                 try:
                     page_area = self.agr_page_area_dict[prefix]
                 except KeyError:
@@ -516,7 +516,7 @@ class PrimaryEntityHandler(DataHandler):
             fb_data_entity.linkmldto.cross_reference_dtos = cross_reference_dtos
         return
 
-    def map_synonyms(self, datatype, agr_export_type):
+    def map_synonyms(self):
         """Generate name/synonym DTOs for an entity."""
         self.log.info('Map synonyms to Alliance object.')
         # First determine synonym slots available, if any.
@@ -527,7 +527,7 @@ class PrimaryEntityHandler(DataHandler):
             'synonym_bin': '_synonym_dtos'
         }
         map_synonyms_required = False
-        linkml_dto_attributes = agr_export_type().__dict__.keys()
+        linkml_dto_attributes = self.agr_export_type().__dict__.keys()
         for dto_key in linkml_dto_attributes:
             for bin_type, bin_suffix in linkml_synonym_slots.items():
                 if dto_key.endswith(bin_suffix):
@@ -535,7 +535,7 @@ class PrimaryEntityHandler(DataHandler):
                     self.log.debug(f'Map {bin_type} to LinkML DTO slot {dto_key} because it has suffix "{bin_suffix}".')
                     map_synonyms_required = True
         if map_synonyms_required is False:
-            self.log.error(f'The map_synonyms() method has been incorrectly called for {datatype} objects.')
+            self.log.error(f'The map_synonyms() method has been incorrectly called for {self.datatype} objects.')
             return
         else:
             self.log.info(f'Have these linkml name dto slots to fill in: {linkml_synonym_slots.values()}')

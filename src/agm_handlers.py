@@ -44,22 +44,22 @@ class StrainHandler(PrimaryEntityHandler):
         return
 
     # Elaborate on get_datatype_data() for the StrainHandler.
-    def get_datatype_data(self, session, datatype, fb_export_type, agr_export_type):
+    def get_datatype_data(self, session):
         """Extend the method for the StrainHandler."""
-        super().get_datatype_data(session, datatype, fb_export_type, agr_export_type)
-        self.get_entities(session, self.datatype, self.fb_export_type)
-        self.get_entityprops(session, self.datatype)
-        self.get_entity_pubs(session, self.datatype)
-        self.get_entity_synonyms(session, self.datatype)
-        self.get_entity_fb_xrefs(session, self.datatype)
-        self.get_entity_xrefs(session, self.datatype)
-        self.get_entity_timestamps(session, self.datatype)
+        super().get_datatype_data(session)
+        self.get_entities(session)
+        self.get_entityprops(session)
+        self.get_entity_pubs(session)
+        self.get_entity_synonyms(session)
+        self.get_entity_fb_xrefs(session)
+        self.get_entity_xrefs(session)
+        self.get_entity_timestamps(session)
         return
 
     # Elaborate on synthesize_info() for the StrainHandler.
-    def synthesize_info(self, datatype, fb_export_type, agr_export_type):
+    def synthesize_info(self):
         """Extend the method for the StrainHandler."""
-        super().synthesize_info(datatype, fb_export_type, agr_export_type)
+        super().synthesize_info()
         self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
@@ -84,13 +84,13 @@ class StrainHandler(PrimaryEntityHandler):
             strain.linkmldto = agr_strain
         return
 
-    def map_fb_data_to_alliance(self, datatype, fb_export_type, agr_export_type):
+    def map_fb_data_to_alliance(self):
         """Extend the method for the StrainHandler."""
-        super().map_fb_data_to_alliance(datatype, fb_export_type, agr_export_type)
-        self.map_strain_basic(agr_export_type)
-        self.map_synonyms(datatype, agr_export_type)
-        self.map_data_provider_dto(datatype)
-        self.map_xrefs(datatype)
+        super().map_fb_data_to_alliance()
+        self.map_strain_basic()
+        self.map_synonyms()
+        self.map_data_provider_dto()
+        self.map_xrefs()
         self.map_pubs()
         self.map_timestamps()
         self.map_secondary_ids('agm_secondary_id_dtos')

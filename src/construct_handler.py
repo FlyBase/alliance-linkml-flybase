@@ -226,7 +226,7 @@ class ConstructHandler(FeatureHandler):
         self.log.info(f'Propagated {counter} allele-to-gene "alleleof" relationships to related constructs.')
         return
 
-    def get_datatype_data(self, session, datatype, fb_export_type, agr_export_type):
+    def get_datatype_data(self, session):
         """Extend the method for the ConstructHandler."""
         super().get_datatype_data(session, datatype, fb_export_type, agr_export_type)
         self.get_entities(session, self.datatype, self.fb_export_type)
@@ -441,9 +441,9 @@ class ConstructHandler(FeatureHandler):
         return
 
     # Elaborate on synthesize_info() for the ConstructHandler.
-    def synthesize_info(self, datatype, fb_export_type, agr_export_type):
+    def synthesize_info(self):
         """Extend the method for the ConstructHandler."""
-        super().synthesize_info(datatype, fb_export_type, agr_export_type)
+        super().synthesize_info()
         self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
@@ -516,9 +516,9 @@ class ConstructHandler(FeatureHandler):
         return
 
     # Elaborate on map_fb_data_to_alliance() for the ConstructHandler.
-    def map_fb_data_to_alliance(self, datatype, fb_export_type, agr_export_type):
+    def map_fb_data_to_alliance(self):
         """Extend the method for the ConstructHandler."""
-        super().map_fb_data_to_alliance(datatype, fb_export_type, agr_export_type)
+        super().map_fb_data_to_alliance()
         self.map_construct_basic(agr_export_type)
         self.map_synonyms(datatype, agr_export_type)
         self.map_data_provider_dto(datatype)
@@ -536,7 +536,7 @@ class ConstructHandler(FeatureHandler):
         return
 
     # Elaborate on query_chado_and_export() for the ConstructHandler.
-    def query_chado_and_export(self, session, datatype, fb_export_type, agr_export_type):
+    def query_chado_and_export(self, session):
         """Elaborate on query_chado_and_export method for the ConstructHandler."""
         super().query_chado_and_export(session, datatype, fb_export_type, agr_export_type)
         self.flag_unexportable_entities(self.construct_associations, 'construct_genomic_entity_association_ingest_set')

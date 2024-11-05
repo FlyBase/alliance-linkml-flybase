@@ -700,15 +700,15 @@ class DataHandler(object):
         return
 
     # The get_datatype_data() wrapper; sub-methods are defined and called in more specific DataHandler types.
-    def get_datatype_data(self, session, datatype, fb_export_type, agr_export_type):
+    def get_datatype_data(self, session):
         """Get datatype-specific FlyBase data from chado."""
-        self.log.info(f'GET FLYBASE {datatype.upper()} DATA FROM CHADO.')
+        self.log.info(f'GET FLYBASE {self.datatype.upper()} DATA FROM CHADO.')
         return
 
     # The synthesize_info() wrapper; sub-methods are defined and called in more specific DataHandler types.
-    def synthesize_info(self, datatype, fb_export_type, agr_export_type):
+    def synthesize_info(self):
         """Synthesize FB info for each data object."""
-        self.log.info(f'SYNTHESIZE FLYBASE {datatype.upper()} DATA FROM CHADO.')
+        self.log.info(f'SYNTHESIZE FLYBASE {self.datatype.upper()} DATA FROM CHADO.')
         return
 
     # Sub-methods for the map_fb_data_to_alliance() wrapper.
@@ -746,9 +746,9 @@ class DataHandler(object):
         return
 
     # The map_fb_data_to_alliance() wrapper; sub-methods are called (and usually defined) in more specific DataHandler types.
-    def map_fb_data_to_alliance(self, datatype, fb_export_type, agr_export_type):
+    def map_fb_data_to_alliance(self):
         """Map FB data to the Alliance LinkML object."""
-        self.log.info(f'Map FlyBase "{datatype}" data from {fb_export_type} to {agr_export_type}.'.upper())
+        self.log.info(f'MAP FLYBASE "{self.datatype}" DATA FROM {self.fb_export_type} TO {self.agr_export_type}.')
         return
 
     def flag_unexportable_entities(self, input_list: list, output_set_name: str):
@@ -832,13 +832,13 @@ class DataHandler(object):
         return
 
     # The query_chado_and_export() wrapper that runs sub-methods - same order of steps for every DataHandler type.
-    def query_chado_and_export(self, session, datatype, fb_export_type, agr_export_type):
+    def query_chado_and_export(self, session):
         """Wrapper that runs all methods within an SQLAlchemy session."""
         self.log.info('Run main query_chado_and_export() handler method.'.upper())
         self.get_general_data(session)
-        self.get_datatype_data(session, datatype, fb_export_type, agr_export_type)
-        self.synthesize_info(datatype, fb_export_type, agr_export_type)
-        self.map_fb_data_to_alliance(datatype, fb_export_type, agr_export_type)
+        self.get_datatype_data(session)
+        self.synthesize_info()
+        self.map_fb_data_to_alliance()
         self.flag_unexportable_entities(self.fb_data_entities.values(), self.primary_export_set)
         self.generate_export_dict(self.fb_data_entities.values(), self.primary_export_set)
         return
