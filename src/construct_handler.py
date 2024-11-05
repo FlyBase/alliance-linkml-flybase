@@ -229,7 +229,7 @@ class ConstructHandler(FeatureHandler):
     def get_datatype_data(self, session):
         """Extend the method for the ConstructHandler."""
         super().get_datatype_data(session)
-        self.get_entities(session, self.datatype, self.fb_export_type)
+        self.get_entities(session)
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
