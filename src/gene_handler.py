@@ -125,14 +125,14 @@ class GeneHandler(FeatureHandler):
 
     def get_datatype_data(self, session):
         """Extend the method for the GeneHandler."""
-        super().get_datatype_data(session, datatype, fb_export_type, agr_export_type)
-        self.get_entities(session, self.datatype, self.fb_export_type)
-        self.get_entityprops(session, self.datatype)
-        self.get_entity_pubs(session, self.datatype)
-        self.get_entity_synonyms(session, self.datatype)
-        self.get_entity_fb_xrefs(session, self.datatype)
-        self.get_entity_xrefs(session, self.datatype)
-        self.get_entity_timestamps(session, self.datatype)
+        super().get_datatype_data(session)
+        self.get_entities(session)
+        self.get_entityprops(session)
+        self.get_entity_pubs(session)
+        self.get_entity_synonyms(session)
+        self.get_entity_fb_xrefs(session)
+        self.get_entity_xrefs(session)
+        self.get_entity_timestamps(session)
         self.get_panther_info()
         self.get_annotation_ids(session)
         self.get_chr_featurelocs(session)
@@ -261,10 +261,10 @@ class GeneHandler(FeatureHandler):
     def map_fb_data_to_alliance(self):
         """Extend the method for the GeneHandler."""
         super().map_fb_data_to_alliance()
-        self.map_gene_basic(agr_export_type)
-        self.map_synonyms(datatype, agr_export_type)
-        self.map_data_provider_dto(datatype)
-        self.map_xrefs(datatype)
+        self.map_gene_basic()
+        self.map_synonyms()
+        self.map_data_provider_dto()
+        self.map_xrefs()
         # self.map_pubs()    # Suppress until LinkML Gene gets reference_curies slot.
         self.map_timestamps()
         self.map_secondary_ids('gene_secondary_id_dtos')
@@ -280,7 +280,7 @@ class GeneHandler(FeatureHandler):
     # Elaborate on query_chado_and_export() for the GeneHandler.
     def query_chado_and_export(self, session):
         """Elaborate on query_chado_and_export method for the GeneHandler."""
-        super().query_chado_and_export(session, datatype, fb_export_type, agr_export_type)
+        super().query_chado_and_export(session)
         self.flag_unexportable_entities(self.gene_allele_associations, 'allele_gene_association_ingest_set')
         self.generate_export_dict(self.gene_allele_associations, 'allele_gene_association_ingest_set')
         return

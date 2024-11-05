@@ -228,14 +228,14 @@ class ConstructHandler(FeatureHandler):
 
     def get_datatype_data(self, session):
         """Extend the method for the ConstructHandler."""
-        super().get_datatype_data(session, datatype, fb_export_type, agr_export_type)
+        super().get_datatype_data(session)
         self.get_entities(session, self.datatype, self.fb_export_type)
-        self.get_entityprops(session, self.datatype)
-        self.get_entity_pubs(session, self.datatype)
-        self.get_entity_synonyms(session, self.datatype)
-        self.get_entity_fb_xrefs(session, self.datatype)
-        self.get_entity_xrefs(session, self.datatype)
-        self.get_entity_timestamps(session, self.datatype)
+        self.get_entityprops(session)
+        self.get_entity_pubs(session)
+        self.get_entity_synonyms(session)
+        self.get_entity_fb_xrefs(session)
+        self.get_entity_xrefs(session)
+        self.get_entity_timestamps(session)
         self.get_construct_alleles(session)
         self.get_construct_encoded_tools(session)
         self.get_construct_reg_regions(session)
@@ -519,9 +519,9 @@ class ConstructHandler(FeatureHandler):
     def map_fb_data_to_alliance(self):
         """Extend the method for the ConstructHandler."""
         super().map_fb_data_to_alliance()
-        self.map_construct_basic(agr_export_type)
-        self.map_synonyms(datatype, agr_export_type)
-        self.map_data_provider_dto(datatype)
+        self.map_construct_basic()
+        self.map_synonyms()
+        self.map_data_provider_dto()
         # self.map_xrefs(datatype)    # ConstructDTO lacks cross_reference_dtos attribute.
         self.map_pubs()
         self.map_timestamps()
@@ -538,7 +538,7 @@ class ConstructHandler(FeatureHandler):
     # Elaborate on query_chado_and_export() for the ConstructHandler.
     def query_chado_and_export(self, session):
         """Elaborate on query_chado_and_export method for the ConstructHandler."""
-        super().query_chado_and_export(session, datatype, fb_export_type, agr_export_type)
+        super().query_chado_and_export(session)
         self.flag_unexportable_entities(self.construct_associations, 'construct_genomic_entity_association_ingest_set')
         self.generate_export_dict(self.construct_associations, 'construct_genomic_entity_association_ingest_set')
         return
