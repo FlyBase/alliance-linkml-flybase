@@ -398,11 +398,11 @@ class AlleleHandler(FeatureHandler):
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
-    def map_allele_basic(self, agr_export_type):
+    def map_allele_basic(self):
         """Map basic FlyBase allele data to the Alliance LinkML object."""
         self.log.info('Map basic allele info to Alliance object.')
         for allele in self.fb_data_entities.values():
-            agr_allele = agr_export_type()
+            agr_allele = self.agr_export_type()
             agr_allele.obsolete = allele.chado_obj.is_obsolete
             agr_allele.mod_entity_id = f'FB:{allele.uniquename}'
             agr_allele.mod_internal_id = str(allele.chado_obj.feature_id)
