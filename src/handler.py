@@ -74,39 +74,6 @@ class DataHandler(object):
     # Sample set for faster testing: use uniquename-keyed names of objects, tailored for each handler.
     test_set = {}
 
-    # DETRITUS
-    # Correspondence of FB data type to primary Alliance LinkML object.
-    # agr_linkmldto_dict = {
-    #     'gene': agr_datatypes.GeneDTO,
-    #     'allele': agr_datatypes.AlleleDTO,
-    #     'construct': agr_datatypes.ConstructDTO,
-    #     'strain': agr_datatypes.AffectedGenomicModelDTO,
-    #     'genotype': agr_datatypes.AffectedGenomicModelDTO,
-    #     'disease': agr_datatypes.AlleleDiseaseAnnotationDTO,
-    # }
-
-    # DETRITUS
-    # Correspondence of FB data type to Alliance data transfer ingest set.
-    # primary_agr_ingest_type_dict = {
-    #     'gene': 'gene_ingest_set',
-    #     'allele': 'allele_ingest_set',
-    #     'construct': 'construct_ingest_set',
-    #     'variation': 'variation_ingest_set',
-    #     'strain': 'agm_ingest_set',
-    #     'genotype': 'agm_ingest_set',
-    #     'disease': 'disease_allele_ingest_set'
-    # }
-
-    # DETRITUS
-    # Mappings of fb_data_type to a datatype Class that will be used to represent each FB entity.
-    # datatype_objects = {
-    #     'gene': fb_datatypes.FBGene,
-    #     'allele': fb_datatypes.FBAllele,
-    #     'construct': fb_datatypes.FBConstruct,
-    #     'strain': fb_datatypes.FBStrain,
-    #     'disease': fb_datatypes.FBAlleleDiseaseAnnotation,
-    # }
-
     # Alliance db names should correspond to the contents of this file:
     # https://github.com/alliance-genome/agr_schemas/blob/master/resourceDescriptors.yaml
     fb_agr_db_dict = {
