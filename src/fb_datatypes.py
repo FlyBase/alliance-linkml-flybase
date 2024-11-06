@@ -35,7 +35,7 @@ class FBExportEntity(object):
         self.for_export = True        # Made False to prevent Alliance export.
         self.internal_reasons = []    # Reasons an object was marked internal.
         self.export_warnings = []     # Reasons an object was not exported.
-        self.entity_desc = None       # A succinct description for this entity.
+        self.entity_desc = ''         # A succinct description for this entity.
 
     def __str__(self):
         """Basic descriptive info for the object."""
