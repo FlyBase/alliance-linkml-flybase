@@ -204,6 +204,114 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Found {counter} FlyBase {self.datatype} entities in chado.')
         return
 
+    def get_entity_relationships(self, session, role):
+        """Get relationships between primary FlyBase entities and other entities in the same chado table.
+
+        Args:
+            session (SQLAlchemy session): The session.
+            role (str): Filter for relationships where the primary FB entities are the 'subject' or the 'object', no other values allowed.
+
+        """
+        role_parameters = {
+            'subject': 'sbj_rels_by_type',
+            'object': 'obj_rels_by_type',
+        }
+        if role not in role_parameters.keys():
+            self.log.error(f'For "get_entity_relationships()", role was specified as "{role}"; only these values are allowed: "subject", "object".')
+            raise
+        if self.datatype in self.feature_datatypes:
+            chado_type = 'feature'
+        else:
+            chado_type = self.datatype
+        self.log.info(f'Get relationships from the {chado_type}_relationship table where the {self.datatype} is the {role}.')
+        chado_table = self.chado_tables['main_table'][chado_type]
+        entity_key_name = f'{chado_type}_id'
+        chado_rel_table = self.chado_tables['relationships'][chado_type]
+        chado_rel_pub_table = self.chado_tables['relationship_pubs'][chado_type]
+        # Phase 1: Get all relationships.
+        filters = ()
+        if self.datatype in self.regex.keys():
+            self.log.info(f'Use this regex: {self.regex[self.datatype]}')
+            filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
+        if self.datatype in self.subtypes.keys():
+            self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.datatype]}')
+            filters += (Cvterm.name.in_((self.subtypes[self.datatype])), )
+        if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            filters += (chado_table.uniquename.in_((self.test_set.keys())), )
+        if filters == ():
+            self.log.warning('Have no filters for the main FlyBase entity driver query.')
+            raise
+        if self.datatype in self.subtypes.keys():
+            rel_results = session.query(chado_rel_table).\
+                select_from(chado_table).\
+                join(Cvterm, (Cvterm.cvterm_id == chado_table.type_id)).\
+                join(chado_rel_table, (getattr(chado_rel_table, f'{role}_id') == getattr(chado_table, entity_key_name))).\
+                filter(*filters).\
+                distinct()
+        else:
+            rel_results = session.query(chado_rel_table).\
+                select_from(chado_table).\
+                join(chado_rel_table, (getattr(chado_rel_table, f'{role}_id') == getattr(chado_table, entity_key_name))).\
+                filter(*filters).\
+                distinct()
+        rel_dict = {}    # A temporary feature_relationship_id-keyed dict of FBRelationship objects.
+        rel_counter = 0
+        for rel_result in rel_results:
+            rel_id = getattr(rel_result, f'{chado_type}_relationship_id')
+            rel_dict[rel_id] = fb_datatypes.FBRelationship(rel_result)
+            rel_counter += 1
+        self.log.info(f'Found {rel_counter} {chado_type}_relationships where the {self.datatype} is the {role}.')
+        # Phase 2. Get pubs supporting relationships.
+        if self.datatype in self.subtypes.keys():
+            rel_pub_results = session.query(chado_rel_pub_table).\
+                select_from(chado_table).\
+                join(Cvterm, (Cvterm.cvterm_id == chado_table.type_id)).\
+                join(chado_rel_table, (getattr(chado_rel_table, f'{role}_id') == getattr(chado_table, entity_key_name))).\
+                join(chado_rel_pub_table).\
+                filter(*filters).\
+                distinct()
+        else:
+            rel_pub_results = session.query(chado_rel_pub_table).\
+                select_from(chado_table).\
+                join(chado_rel_table, (getattr(chado_rel_table, f'{role}_id') == getattr(chado_table, entity_key_name))).\
+                join(chado_rel_pub_table).\
+                filter(*filters).\
+                distinct()
+        rel_pub_counter = 0
+        for rel_pub_result in rel_pub_results:
+            rel_id = getattr(rel_pub_result, f'{chado_type}_relationship_id')
+            try:
+                rel_dict[rel_id].pubs.append(rel_pub_result.pub_id)
+                rel_pub_counter += 1
+            except KeyError:
+                pass
+        self.log.info(f'Found {rel_pub_counter} {chado_type}relationship_pubs where the {self.datatype} is the {role}.')
+        # Phase 3. Add rel info to entities.
+        assignment_counter = 0
+        rel_type_tally = {}
+        for rel in rel_dict.values():
+            # Assign the prop to the appropriate entity.
+            entity_id = getattr(rel.chado_obj, f'{role}_id')
+            entity_rel_dict = getattr(self.fb_data_entities[entity_id], role_parameters[role])
+            try:
+                entity_rel_dict[rel.chado_obj.type.name].append(rel)
+                assignment_counter += 1
+            except KeyError:
+                entity_rel_dict[rel.chado_obj.type.name] = [rel]
+                assignment_counter += 1
+            # Tally
+            try:
+                rel_type_tally[rel.chado_obj.type.name] += 1
+            except KeyError:
+                rel_type_tally[rel.chado_obj.type.name] = 1
+        self.log.info(f'Assigned {assignment_counter} {chado_type}_relationships where the {self.datatype} is the {role}.')
+        self.log.info(f'Found these types of {chado_type}_relationship types where the {self.datatype} is the {role}:')
+        ordered_rel_types = sorted(list(rel_type_tally.keys()))
+        for rel_type in ordered_rel_types:
+            self.log.info(f'table={chado_type}, rel_type={rel_type}, count={rel_type_tally[rel_type]}.')
+        return
+
     def get_entity_sbj_relationships(self, session):
         """Get relationships where the primary FlyBase entity is the subject."""
         # self.sbj_rels_by_type = {}      # Lists of FBRelationships where this entity is the subject; keyed by relationship type, then by related object type.
@@ -295,7 +403,7 @@ class PrimaryEntityHandler(DataHandler):
             except KeyError:
                 sbj_rel_type_tally[sbj_rel.chado_obj.type.name] = 1
         self.log.info(f'Assigned {assignment_counter} {chado_type}_relationships where the {self.datatype} is the subject.')
-        self.log.info(f'Found these types of {chado_type}_relationship types:')
+        self.log.info(f'Found these types of {chado_type}_relationship types where the {self.datatype} is the subject:')
         ordered_rel_types = sorted(list(sbj_rel_type_tally.keys()))
         for rel_type in ordered_rel_types:
             self.log.info(f'table={chado_type}, rel_type={rel_type}, count={sbj_rel_type_tally[rel_type]}.')
