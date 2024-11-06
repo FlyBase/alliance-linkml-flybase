@@ -448,11 +448,11 @@ class AlleleHandler(FeatureHandler):
         self.log.info('Map extinction info.')
         counter = 0
         for allele in self.fb_data_entities.values():
-            if 'availability' in allele.props.keys():
-                for prop in allele.props['availability']:
+            if 'availability' in allele.props_by_type.keys():
+                for prop in allele.props_by_type['availability']:
                     if prop.chado_obj.value == 'Stated to be lost.':
                         allele.linkmldto.is_extinct = True
-            for prop_type in allele.props.keys():
+            for prop_type in allele.props_by_type.keys():
                 if prop_type.startswith('derived_stock'):
                     # Stock availability trumps curated extinction comment.
                     if allele.linkmldto.is_extinct is True:

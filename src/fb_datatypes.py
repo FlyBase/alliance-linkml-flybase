@@ -91,7 +91,7 @@ class FBDataEntity(FBExportEntity):
         self.synonyms = []              # Synonym associations: e.g., FeatureSynonym.
         self.fb_sec_dbxrefs = []        # 2o/non-current FlyBase xref objects: e.g., FeatureDbxref.
         self.dbxrefs = []               # Current xref objects: e.g., FeatureDbxref.
-        self.props = {}                 # Lists of FBProp objects keyed by prop type name.
+        self.props_by_type = {}         # Lists of FBProp objects keyed by prop type name.
         # Processed FB data - processed from primary FB chado data above.
         self.ncbi_taxon_id = None       # The NCBITaxon dbxref.accession (str).
         self.synonym_dict = {}          # Will be synonym_id-keyed dicts of processed synonym info.
@@ -122,13 +122,11 @@ class FBGene(FBFeature):
         """Create the FBGene object."""
         super().__init__(chado_obj)
         # Primary FB chado data.
-        self.gene_type_names = []           # Will be "promoted_gene_type" Featureprops.
-        self.gene_snapshots = []            # Will be "gene_summary_text" Featureprops.
         self.allele_rels = []               # Direct FBal "alleleof" FBgn FeatureRelationships.
         # Processed FB data.
         self.gene_type_name = 'gene'        # Update default gene to SO term name from "promoted_gene_type" Featureprop, if available.
         self.gene_type_id = 'SO:0000704'    # Update default gene ID to SO term ID from "promoted_gene_type" Featureprop, if available.
-        self.alleles = {}                   # Will be allele_id-keyed list of pub_ids that support the allele-gene relationship.
+        self.allele_pubs = {}               # Will be allele_id-keyed list of pub_ids that support the allele-gene relationship.
 
 
 class FBAllele(FBFeature):
@@ -272,5 +270,5 @@ class FBProp(object):
         Returns:
             A FBProp object.
         """
-        self.chado_obj = chado_obj    # The prop object: e.g., Featureprop, Strainprop, etc.
+        self.chado_obj = chado_obj    # The prop object: e.g., Featureprop, Strainprop, FeatureRelationshipprop, etc.
         self.pubs = []                # Will be a list of pub_ids.

@@ -83,39 +83,40 @@ class GeneHandler(FeatureHandler):
         self.log.info(f'Processed {counter} lines from the panther orthology file.')
         return
 
-    def get_gene_snapshots(self, session):
-        """Get human-written gene summaries."""
-        self.log.info('Get human-written gene summaries.')
-        results = self.get_featureprops_by_type(session, 'gene_summary_text')
-        counter = 0
-        pass_counter = 0
-        for result in results:
-            entity_pkey_id = result.feature_id
-            try:
-                self.fb_data_entities[entity_pkey_id].gene_snapshots.append(result)
-                counter += 1
-            except KeyError:
-                pass_counter += 1
-        self.log.info(f'Found {counter} gene snapshots for {self.datatype} entities.')
-        self.log.info(f'Ignored {pass_counter} gene snapshots for {self.datatype} entities.')
-        return
+    # DETRITUS
+    # def get_gene_snapshots(self, session):
+    #     """Get human-written gene summaries."""
+    #     self.log.info('Get human-written gene summaries.')
+    #     results = self.get_featureprops_by_type(session, 'gene_summary_text')
+    #     counter = 0
+    #     pass_counter = 0
+    #     for result in results:
+    #         entity_pkey_id = result.feature_id
+    #         try:
+    #             self.fb_data_entities[entity_pkey_id].gene_snapshots.append(result)
+    #             counter += 1
+    #         except KeyError:
+    #             pass_counter += 1
+    #     self.log.info(f'Found {counter} gene snapshots for {self.datatype} entities.')
+    #     self.log.info(f'Ignored {pass_counter} gene snapshots for {self.datatype} entities.')
+    #     return
 
-    def get_gene_types(self, session):
-        """Get promoted_gene_type for genes."""
-        self.log.info('Get promoted_gene_type for genes.')
-        results = self.get_featureprops_by_type(session, 'promoted_gene_type')
-        counter = 0
-        pass_counter = 0
-        for result in results:
-            entity_pkey_id = result.feature_id
-            try:
-                self.fb_data_entities[entity_pkey_id].gene_type_names.append(result)
-                counter += 1
-            except KeyError:
-                pass_counter += 1
-        self.log.info(f'Found {counter} promoted_gene_types for {self.datatype} entities.')
-        self.log.info(f'Ignored {pass_counter} promoted_gene_types for {self.datatype} entities.')
-        return
+    # def get_gene_types(self, session):
+    #     """Get promoted_gene_type for genes."""
+    #     self.log.info('Get promoted_gene_type for genes.')
+    #     results = self.get_featureprops_by_type(session, 'promoted_gene_type')
+    #     counter = 0
+    #     pass_counter = 0
+    #     for result in results:
+    #         entity_pkey_id = result.feature_id
+    #         try:
+    #             self.fb_data_entities[entity_pkey_id].gene_type_names.append(result)
+    #             counter += 1
+    #         except KeyError:
+    #             pass_counter += 1
+    #     self.log.info(f'Found {counter} promoted_gene_types for {self.datatype} entities.')
+    #     self.log.info(f'Ignored {pass_counter} promoted_gene_types for {self.datatype} entities.')
+    #     return
 
     def get_gene_alleles(self, session):
         """Get alleles for genes."""
@@ -146,11 +147,12 @@ class GeneHandler(FeatureHandler):
         """Synthesize gene type."""
         self.log.info('Synthesize gene type.')
         for gene in self.fb_data_entities.values():
-            if len(gene.gene_type_names) == 1:
-                prop_value = gene.gene_type_names[0].value
+            gene_types = gene.props_by_type['promoted_gene_type']
+            if len(gene_types) == 1:
+                prop_value = gene_types[0].value
                 gene.gene_type_name = prop_value[11:-1]
                 gene.gene_type_id = prop_value[1:10].replace('SO', 'SO:')
-            elif len(gene.gene_type_names) > 1:
+            elif len(gene_types) > 1:
                 self.log.warning(f'{gene} has many promoted gene types.')
         return
 
@@ -166,15 +168,15 @@ class GeneHandler(FeatureHandler):
             # Find all pubs for a given gene-allele relationship.
             for rel in gene.allele_rels:
                 try:
-                    gene.alleles[rel.subject_id].extend(self.lookup_feat_rel_pub_ids(rel.feature_relationship_id))
+                    gene.allele_pubs[rel.subject_id].extend(self.lookup_feat_rel_pub_ids(rel.feature_relationship_id))
                 except KeyError:
-                    gene.alleles[rel.subject_id] = self.lookup_feat_rel_pub_ids(rel.feature_relationship_id)
-            for allele_id, pub_id_list in gene.alleles.items():
+                    gene.allele_pubs[rel.subject_id] = self.lookup_feat_rel_pub_ids(rel.feature_relationship_id)
+            for allele_id, pub_id_list in gene.allele_pubs.items():
                 feat_rel = fb_datatypes.FBRelationship('feature_relationship', allele_id, gene.db_primary_id, 'alleleof')
                 feat_rel.pub_ids = pub_id_list
                 feat_rel.entity_desc = f'{self.feature_lookup[allele_id]["uniquename"]} alleleof {gene.name} ({gene.uniquename})'
                 self.gene_allele_associations.append(feat_rel)
-            allele_counter += len(gene.alleles.keys())
+            allele_counter += len(gene.allele_pubs.keys())
         self.log.info(f'Found {allele_counter} alleles for {gene_counter} genes.')
         return
 
@@ -215,13 +217,14 @@ class GeneHandler(FeatureHandler):
         """Map gene snapshot."""
         self.log.info('Map gene snapshot to Alliance object.')
         for gene in self.fb_data_entities.values():
-            if len(gene.gene_snapshots) == 1:
+            gene_snapshots = gene.props_by_type['gene_summary_text']
+            if len(gene_snapshots) == 1:
                 note_type_name = 'MOD_provided_gene_description'
-                free_text = gene.gene_snapshots[0].value.replace('@', '')
+                free_text = gene_snapshots[0].value.replace('@', '')
                 pub_curies = ['FB:FBrf0232436']
                 snapshot_note_dto = agr_datatypes.NoteDTO(note_type_name, free_text, pub_curies).dict_export()
                 gene.linkmldto.related_notes.append(snapshot_note_dto)
-            elif len(gene.gene_snapshots) > 1:
+            elif len(gene_snapshots) > 1:
                 self.log.warning(f'{gene} has many gene snapshots.')
         return
 

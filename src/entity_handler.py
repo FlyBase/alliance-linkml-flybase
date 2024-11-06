@@ -182,18 +182,17 @@ class PrimaryEntityHandler(DataHandler):
         for prop in prop_dict.values():
             # Assign the prop to the appropriate entity.
             subject_id = getattr(prop.chado_obj, subject_key_name)
-            prop_type_name = prop.chado_obj.type.name
             try:
-                self.fb_data_entities[subject_id].props[prop_type_name].append(prop)
+                self.fb_data_entities[subject_id].props_by_type[prop.chado_obj.type.name].append(prop)
                 assignment_counter += 1
             except KeyError:
-                self.fb_data_entities[subject_id].props[prop_type_name] = [prop]
+                self.fb_data_entities[subject_id].props_by_type[prop.chado_obj.type.name] = [prop]
                 assignment_counter += 1
             # Tally
             try:
-                prop_type_tally[prop_type_name] += 1
+                prop_type_tally[prop.chado_obj.type.name] += 1
             except KeyError:
-                prop_type_tally[prop_type_name] = 1
+                prop_type_tally[prop.chado_obj.type.name] = 1
         self.log.info(f'Assigned {assignment_counter} {chado_type}props to {self.datatype}s.')
         self.log.info(f'Found these types of {chado_type}props:')
         ordered_prop_types = sorted(list(prop_type_tally.keys()))
@@ -434,7 +433,7 @@ class PrimaryEntityHandler(DataHandler):
         for fb_data_entity in self.fb_data_entities.values():
             for pub_source in pub_sources:
                 fb_data_entity.all_pubs.extend([i.pub_id for i in getattr(fb_data_entity, pub_source)])
-            for prop_list in fb_data_entity.props.values():
+            for prop_list in fb_data_entity.props_by_type.values():
                 for prop in prop_list:
                     fb_data_entity.all_pubs.extend(prop.pubs)
             fb_data_entity.all_pubs = list(set(fb_data_entity.all_pubs))
