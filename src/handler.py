@@ -346,10 +346,10 @@ class DataHandler(object):
             'allele': True,
             'construct': True,
             'gene': True,
-            'aberration': False,
-            'balancer': False,
+            'aberration': True,
+            'balancer': True,
             'chem': False,
-            'insertion': False,
+            'insertion': True,
             'seqfeat': False,
             'tool': False,
         }
