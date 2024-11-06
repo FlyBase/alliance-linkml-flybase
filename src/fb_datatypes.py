@@ -123,12 +123,9 @@ class FBGene(FBFeature):
     def __init__(self, chado_obj):
         """Create the FBGene object."""
         super().__init__(chado_obj)
-        # Primary FB chado data.
-        self.allele_rels = []               # Direct FBal "alleleof" FBgn FeatureRelationships.
         # Processed FB data.
-        self.gene_type_name = 'gene'        # Update default gene to SO term name from "promoted_gene_type" Featureprop, if available.
-        self.gene_type_id = 'SO:0000704'    # Update default gene ID to SO term ID from "promoted_gene_type" Featureprop, if available.
-        self.allele_pubs = {}               # Will be allele_id-keyed list of pub_ids that support the allele-gene relationship.
+        self.gene_type_name = 'gene'        # Update this default gene to SO term name from "promoted_gene_type" Featureprop, if available.
+        self.gene_type_id = 'SO:0000704'    # Update this default gene ID to SO term ID from "promoted_gene_type" Featureprop, if available.
 
 
 class FBAllele(FBFeature):

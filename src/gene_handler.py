@@ -47,8 +47,8 @@ class GeneHandler(FeatureHandler):
     }
 
     # Additional reference info.
-    gene_allele_associations = []    # Will be list of FBExportEntity objects (relationships).
-    pthr_dict = {}    # Will be an 1:1 FBgn_ID-PTHR xref dict.
+    gene_allele_associations = {}    # Will be (allele feature_id, gene feature_id) tuples keying lists of supporting pub_ids.
+    pthr_dict = {}                   # Will be an 1:1 FBgn_ID-PTHR xref dict.
 
     # Elaborate on get_general_data() for the GeneHandler.
     def get_general_data(self, session):
@@ -83,17 +83,17 @@ class GeneHandler(FeatureHandler):
         self.log.info(f'Processed {counter} lines from the panther orthology file.')
         return
 
-    def get_gene_alleles(self, session):
-        """Get alleles for genes."""
-        self.log.info('Get alleles for genes.')
-        self.get_entity_obj_feat_rel_by_type(session, 'allele_rels', rel_type='alleleof', sbj_type='allele', sbj_regex=self.regex['allele'])
-        return
+    # DETRITUS
+    # def get_gene_alleles(self, session):
+    #     """Get alleles for genes."""
+    #     self.log.info('Get alleles for genes.')
+    #     self.get_entity_obj_feat_rel_by_type(session, 'allele_rels', rel_type='alleleof', sbj_type='allele', sbj_regex=self.regex['allele'])
+    #     return
 
     def get_datatype_data(self, session):
         """Extend the method for the GeneHandler."""
         super().get_datatype_data(session)
         self.get_entities(session)
-        # self.get_entity_sbj_relationships(session)
         self.get_entity_relationships(session, 'subject')
         self.get_entity_relationships(session, 'object')
         self.get_entityprops(session)
@@ -105,7 +105,7 @@ class GeneHandler(FeatureHandler):
         self.get_panther_info()
         self.get_annotation_ids(session)
         self.get_chr_featurelocs(session)
-        self.get_gene_alleles(session)
+        # self.get_gene_alleles(session)    DETRITUS
         return
 
     # Add methods to be run by synthesize_info() below.
@@ -126,28 +126,22 @@ class GeneHandler(FeatureHandler):
 
     def synthesize_gene_alleles(self):
         """Synthesize gene allele relationships."""
-        # self.log.info('Synthesize gene allele relationships.')
-        # gene_counter = 0
-        # allele_counter = 0
-        # for gene in self.fb_data_entities.values():
-        #     # BOB - NEED TO REWRITE THIS DUE TO FBRELATIONSHIP CHANGES.
-        #     if not gene.allele_rels:
-        #         continue
-        #     gene_counter += 1
-        #     # Find all pubs for a given gene-allele relationship.
-        #     for rel in gene.allele_rels:
-        #         try:
-        #             gene.allele_pubs[rel.subject_id].extend(self.lookup_feat_rel_pub_ids(rel.feature_relationship_id))
-        #         except KeyError:
-        #             gene.allele_pubs[rel.subject_id] = self.lookup_feat_rel_pub_ids(rel.feature_relationship_id)
-        #     for allele_id, pub_id_list in gene.allele_pubs.items():
-        #         feat_rel = fb_datatypes.FBRelationship(rel)
-
-        #         feat_rel.pubs = pub_id_list
-        #         feat_rel.entity_desc = f'{self.feature_lookup[allele_id]["uniquename"]} alleleof {gene.name} ({gene.uniquename})'
-        #         self.gene_allele_associations.append(feat_rel)
-        #     allele_counter += len(gene.allele_pubs.keys())
-        # self.log.info(f'Found {allele_counter} alleles for {gene_counter} genes.')
+        self.log.info('Synthesize gene allele relationships.')
+        gene_counter = 0
+        allele_counter = 0
+        for gene in self.fb_data_entities.values():
+            if 'alleleof' not in gene.obj_rels_by_type.keys():
+                continue
+            gene_counter += 1
+            for allele_rel in gene.obj_rels_by_type['alleleof']:
+                allele_feature_id = allele_rel.subject_id
+                allele_gene_key = (allele_feature_id, gene.db_primary_id)
+                try:
+                    self.gene_allele_associations[allele_gene_key].extend(allele_rel.pubs)
+                except KeyError:
+                    self.gene_allele_associations[allele_gene_key] = allele_rel.pubs
+                    allele_counter += 1
+        self.log.info(f'Found {allele_counter} alleles for {gene_counter} genes.')
         return
 
     # Elaborate on synthesize_info() for the GeneHandler.
@@ -218,11 +212,13 @@ class GeneHandler(FeatureHandler):
     def map_gene_allele_associations(self):
         """Map gene-allele associations to Alliance object."""
         self.log.info('Map gene-allele associations to Alliance object.')
+        ALLELE = 0
+        GENE = 1
         counter = 0
-        for feat_rel in self.gene_allele_associations:
-            allele_curie = f'FB:{self.feature_lookup[feat_rel.subject_id]["uniquename"]}'
-            gene_curie = f'FB:{self.feature_lookup[feat_rel.object_id]["uniquename"]}'
-            pub_curies = self.lookup_pub_curies(feat_rel.pub_ids)
+        for feat_rel, pub_ids in self.gene_allele_associations.items():
+            allele_curie = f'FB:{self.feature_lookup[feat_rel[ALLELE]]["uniquename"]}'
+            gene_curie = f'FB:{self.feature_lookup[feat_rel[GENE]]["uniquename"]}'
+            pub_curies = self.lookup_pub_curies(pub_ids)
             rel_dto = agr_datatypes.AlleleGeneAssociationDTO(allele_curie, 'is_allele_of', gene_curie, pub_curies)
             if self.feature_lookup[feat_rel.subject_id]['is_obsolete'] is True or self.feature_lookup[feat_rel.object_id]['is_obsolete'] is True:
                 rel_dto.obsolete = True
