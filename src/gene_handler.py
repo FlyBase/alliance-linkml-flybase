@@ -93,6 +93,8 @@ class GeneHandler(FeatureHandler):
         """Extend the method for the GeneHandler."""
         super().get_datatype_data(session)
         self.get_entities(session)
+        self.get_entity_sbj_relationships(session)
+        self.get_entity_obj_relationships(session)
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
@@ -123,26 +125,28 @@ class GeneHandler(FeatureHandler):
 
     def synthesize_gene_alleles(self):
         """Synthesize gene allele relationships."""
-        self.log.info('Synthesize gene allele relationships.')
-        gene_counter = 0
-        allele_counter = 0
-        for gene in self.fb_data_entities.values():
-            if not gene.allele_rels:
-                continue
-            gene_counter += 1
-            # Find all pubs for a given gene-allele relationship.
-            for rel in gene.allele_rels:
-                try:
-                    gene.allele_pubs[rel.subject_id].extend(self.lookup_feat_rel_pub_ids(rel.feature_relationship_id))
-                except KeyError:
-                    gene.allele_pubs[rel.subject_id] = self.lookup_feat_rel_pub_ids(rel.feature_relationship_id)
-            for allele_id, pub_id_list in gene.allele_pubs.items():
-                feat_rel = fb_datatypes.FBRelationship('feature_relationship', allele_id, gene.db_primary_id, 'alleleof')
-                feat_rel.pub_ids = pub_id_list
-                feat_rel.entity_desc = f'{self.feature_lookup[allele_id]["uniquename"]} alleleof {gene.name} ({gene.uniquename})'
-                self.gene_allele_associations.append(feat_rel)
-            allele_counter += len(gene.allele_pubs.keys())
-        self.log.info(f'Found {allele_counter} alleles for {gene_counter} genes.')
+        # self.log.info('Synthesize gene allele relationships.')
+        # gene_counter = 0
+        # allele_counter = 0
+        # for gene in self.fb_data_entities.values():
+        #     # BOB - NEED TO REWRITE THIS DUE TO FBRELATIONSHIP CHANGES.
+        #     if not gene.allele_rels:
+        #         continue
+        #     gene_counter += 1
+        #     # Find all pubs for a given gene-allele relationship.
+        #     for rel in gene.allele_rels:
+        #         try:
+        #             gene.allele_pubs[rel.subject_id].extend(self.lookup_feat_rel_pub_ids(rel.feature_relationship_id))
+        #         except KeyError:
+        #             gene.allele_pubs[rel.subject_id] = self.lookup_feat_rel_pub_ids(rel.feature_relationship_id)
+        #     for allele_id, pub_id_list in gene.allele_pubs.items():
+        #         feat_rel = fb_datatypes.FBRelationship(rel)
+
+        #         feat_rel.pubs = pub_id_list
+        #         feat_rel.entity_desc = f'{self.feature_lookup[allele_id]["uniquename"]} alleleof {gene.name} ({gene.uniquename})'
+        #         self.gene_allele_associations.append(feat_rel)
+        #     allele_counter += len(gene.allele_pubs.keys())
+        # self.log.info(f'Found {allele_counter} alleles for {gene_counter} genes.')
         return
 
     # Elaborate on synthesize_info() for the GeneHandler.

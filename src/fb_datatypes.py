@@ -92,13 +92,15 @@ class FBDataEntity(FBExportEntity):
         self.fb_sec_dbxrefs = []        # 2o/non-current FlyBase xref objects: e.g., FeatureDbxref.
         self.dbxrefs = []               # Current xref objects: e.g., FeatureDbxref.
         self.props_by_type = {}         # Lists of FBProp objects keyed by prop type name.
+        self.sbj_rels_by_type = {}      # Lists of FBRelationships where this entity is the subject; keyed by relationship type.
+        self.obj_rels_by_type = {}      # Lists of FBRelationships where this entity is the object; keyed by relationship type.
         # Processed FB data - processed from primary FB chado data above.
         self.ncbi_taxon_id = None       # The NCBITaxon dbxref.accession (str).
         self.synonym_dict = {}          # Will be synonym_id-keyed dicts of processed synonym info.
         self.curr_fb_symbol = None      # The current symbol for the entity (UTF-8).
         self.curr_fb_fullname = None    # The current fullname for the entity (UTF-8).
         self.alt_fb_ids = []            # Secondary FB IDs (including the "FB:" prefix).
-        self.all_pubs = []           # Pub.pub_ids for pubs associated in any way with the entity.
+        self.all_pubs = []              # Pub.pub_ids for pubs associated in any way with the entity.
         self.prop_dict = {}             # cvterm name-keyed lists of FBProp objects.
 
 
@@ -196,27 +198,6 @@ class FBGenotype(FBDataEntity):
 
 
 # First class associations and annotations.
-class FBRelationship(FBExportEntity):
-    """FBRelationship class."""
-    def __init__(self, chado_table, subject_id, object_id, rel_type):
-        """Create a FBRelationship object.
-
-        Args:
-            chado_table (str): Name of chado table holding relationship: e.g., feature_relationship, strain_feature.
-            subject_id (int): Internal primary_key id for subject (e.g., strain_id for strain_feature table).
-            object_id (int): Internal primary_key id for object (e.g., feature_id for strain_feature table).
-            rel_type (str): CV term name for the relationship type. Use "unspecified" if not available.
-
-        """
-        super().__init__()
-        # Primary FB chado data.
-        self.chado_table_name = chado_table
-        self.subject_id = subject_id
-        self.object_id = object_id
-        self.rel_type = rel_type
-        self.pub_ids = []                      # Will be list of pub_ids supporting the relationship.
-
-
 class FBAlleleDiseaseAnnotation(FBExportEntity):
     """FBAlleleDiseaseAnnotation class."""
     def __init__(self, feature_cvterm, provenance_prop):
@@ -256,6 +237,21 @@ class FBAlleleDiseaseAnnotation(FBExportEntity):
                    self.evidence_code.value)
         self.entity_desc = desc
         return
+
+
+class FBRelationship(FBExportEntity):
+    """FBRelationship class."""
+    def __init__(self, chado_obj):
+        """Create a FBRelationship object, limited to associations of entities in the same table.
+
+        Args:
+            chado_obj (SQLAlchemy object): The Chado object representing the relationship: e.g., FeatureRelationship, StrainRelationship.
+
+        """
+        # Note that this class has props_by_type attribute that applies to FeatureRelationships only.
+        super().__init__()
+        self.chado_obj = chado_obj    # The relationship object: e.g., FeatureRelationship, StrainRelationship, etc.
+        self.pubs = []                # Will be list of pub_ids supporting the relationship.
 
 
 # Second class annotations (submitted as part of other objects).

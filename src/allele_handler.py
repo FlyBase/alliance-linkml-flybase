@@ -314,6 +314,8 @@ class AlleleHandler(FeatureHandler):
         """Extend the method for the GeneHandler."""
         super().get_datatype_data(session)
         self.get_entities(session)
+        self.get_entity_sbj_relationships(session)
+        self.get_entity_obj_relationships(session)
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
