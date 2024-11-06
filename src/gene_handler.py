@@ -47,7 +47,8 @@ class GeneHandler(FeatureHandler):
     }
 
     # Additional reference info.
-    gene_allele_associations = {}    # Will be (allele feature_id, gene feature_id) tuples keying lists of supporting pub_ids.
+    gene_allele_rels = {}            # Will be (allele feature_id, gene feature_id) tuples keying lists of FBRelationships.
+    gene_allele_associations = []    # Will be the final list of gene-allele FBRelationships to export.
     pthr_dict = {}                   # Will be an 1:1 FBgn_ID-PTHR xref dict.
 
     # Elaborate on get_general_data() for the GeneHandler.
@@ -129,6 +130,7 @@ class GeneHandler(FeatureHandler):
         self.log.info('Synthesize gene allele relationships.')
         gene_counter = 0
         allele_counter = 0
+        # Need to code for the rare possibility that gene-allele is represented by many feature_relationships.
         for gene in self.fb_data_entities.values():
             if 'alleleof' not in gene.obj_rels_by_type.keys():
                 continue
@@ -137,9 +139,9 @@ class GeneHandler(FeatureHandler):
                 allele_feature_id = allele_rel.chado_obj.subject_id
                 allele_gene_key = (allele_feature_id, gene.db_primary_id)
                 try:
-                    self.gene_allele_associations[allele_gene_key].extend(allele_rel.pubs)
+                    self.gene_allele_rels[allele_gene_key].extend(allele_rel)
                 except KeyError:
-                    self.gene_allele_associations[allele_gene_key] = allele_rel.pubs
+                    self.gene_allele_rels[allele_gene_key] = [allele_rel]
                     allele_counter += 1
         self.log.info(f'Found {allele_counter} alleles for {gene_counter} genes.')
         return
@@ -215,17 +217,23 @@ class GeneHandler(FeatureHandler):
         ALLELE = 0
         GENE = 1
         counter = 0
-        for feat_rel, pub_ids in self.gene_allele_associations.items():
-            allele_curie = f'FB:{self.feature_lookup[feat_rel[ALLELE]]["uniquename"]}'
-            gene_curie = f'FB:{self.feature_lookup[feat_rel[GENE]]["uniquename"]}'
-            pub_curies = self.lookup_pub_curies(pub_ids)
+        for allele_gene_key, allele_gene_rels in self.gene_allele_rels.items():
+            allele_curie = f'FB:{self.feature_lookup[allele_gene_key[ALLELE]]["uniquename"]}'
+            gene_curie = f'FB:{self.feature_lookup[allele_gene_key[GENE]]["uniquename"]}'
+            first_feat_rel = allele_gene_rels[0]
+            all_pub_ids = []
+            for allele_gene_rel in allele_gene_rels:
+                all_pub_ids.extend(allele_gene_rel.pubs)
+            first_feat_rel.pubs = all_pub_ids
+            pub_curies = self.lookup_pub_curies(all_pub_ids)
             rel_dto = agr_datatypes.AlleleGeneAssociationDTO(allele_curie, 'is_allele_of', gene_curie, pub_curies)
-            if self.feature_lookup[feat_rel[ALLELE]]['is_obsolete'] is True or self.feature_lookup[feat_rel[GENE]]['is_obsolete'] is True:
+            if self.feature_lookup[allele_gene_key[ALLELE]]['is_obsolete'] is True or self.feature_lookup[allele_gene_key[GENE]]['is_obsolete'] is True:
                 rel_dto.obsolete = True
                 rel_dto.internal = True
-            feat_rel.linkmldto = rel_dto
+            first_feat_rel.linkmldto = rel_dto
+            self.gene_allele_associations.append(first_feat_rel)
             counter += 1
-        self.log.info(f'Generated {counter} allele-gene associations.')
+        self.log.info(f'Generated {counter} allele-gene unique associations.')
         return
 
     # Elaborate on map_fb_data_to_alliance() for the GeneHandler.
