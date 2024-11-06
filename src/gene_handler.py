@@ -134,7 +134,7 @@ class GeneHandler(FeatureHandler):
                 continue
             gene_counter += 1
             for allele_rel in gene.obj_rels_by_type['alleleof']:
-                allele_feature_id = allele_rel.subject_id
+                allele_feature_id = allele_rel.chado_obj.subject_id
                 allele_gene_key = (allele_feature_id, gene.db_primary_id)
                 try:
                     self.gene_allele_associations[allele_gene_key].extend(allele_rel.pubs)
