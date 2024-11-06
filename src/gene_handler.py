@@ -114,7 +114,7 @@ class GeneHandler(FeatureHandler):
                 continue
             gene_types = gene.props_by_type['promoted_gene_type']
             if len(gene_types) == 1:
-                prop_value = gene_types[0].value
+                prop_value = gene_types[0].chado_obj.value
                 gene.gene_type_name = prop_value[11:-1]
                 gene.gene_type_id = prop_value[1:10].replace('SO', 'SO:')
             elif len(gene_types) > 1:
@@ -187,7 +187,7 @@ class GeneHandler(FeatureHandler):
             gene_snapshots = gene.props_by_type['gene_summary_text']
             if len(gene_snapshots) == 1:
                 note_type_name = 'MOD_provided_gene_description'
-                free_text = gene_snapshots[0].value.replace('@', '')
+                free_text = gene_snapshots[0].chado_obj.value.replace('@', '')
                 pub_curies = ['FB:FBrf0232436']
                 snapshot_note_dto = agr_datatypes.NoteDTO(note_type_name, free_text, pub_curies).dict_export()
                 gene.linkmldto.related_notes.append(snapshot_note_dto)
