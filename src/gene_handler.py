@@ -83,41 +83,6 @@ class GeneHandler(FeatureHandler):
         self.log.info(f'Processed {counter} lines from the panther orthology file.')
         return
 
-    # DETRITUS
-    # def get_gene_snapshots(self, session):
-    #     """Get human-written gene summaries."""
-    #     self.log.info('Get human-written gene summaries.')
-    #     results = self.get_featureprops_by_type(session, 'gene_summary_text')
-    #     counter = 0
-    #     pass_counter = 0
-    #     for result in results:
-    #         entity_pkey_id = result.feature_id
-    #         try:
-    #             self.fb_data_entities[entity_pkey_id].gene_snapshots.append(result)
-    #             counter += 1
-    #         except KeyError:
-    #             pass_counter += 1
-    #     self.log.info(f'Found {counter} gene snapshots for {self.datatype} entities.')
-    #     self.log.info(f'Ignored {pass_counter} gene snapshots for {self.datatype} entities.')
-    #     return
-
-    # def get_gene_types(self, session):
-    #     """Get promoted_gene_type for genes."""
-    #     self.log.info('Get promoted_gene_type for genes.')
-    #     results = self.get_featureprops_by_type(session, 'promoted_gene_type')
-    #     counter = 0
-    #     pass_counter = 0
-    #     for result in results:
-    #         entity_pkey_id = result.feature_id
-    #         try:
-    #             self.fb_data_entities[entity_pkey_id].gene_type_names.append(result)
-    #             counter += 1
-    #         except KeyError:
-    #             pass_counter += 1
-    #     self.log.info(f'Found {counter} promoted_gene_types for {self.datatype} entities.')
-    #     self.log.info(f'Ignored {pass_counter} promoted_gene_types for {self.datatype} entities.')
-    #     return
-
     def get_gene_alleles(self, session):
         """Get alleles for genes."""
         self.log.info('Get alleles for genes.')
@@ -137,8 +102,6 @@ class GeneHandler(FeatureHandler):
         self.get_panther_info()
         self.get_annotation_ids(session)
         self.get_chr_featurelocs(session)
-        self.get_gene_snapshots(session)
-        self.get_gene_types(session)
         self.get_gene_alleles(session)
         return
 
