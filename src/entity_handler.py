@@ -14,10 +14,14 @@ import re
 from logging import Logger
 from harvdev_utils.char_conversions import sub_sup_sgml_to_html
 from harvdev_utils.production import (
-    Cvterm, Db, Dbxref, Feature, FeatureCvterm, FeatureCvtermprop,
-    FeatureDbxref, Featureprop, FeaturepropPub, FeaturePub, FeatureSynonym,
-    Strain, StrainCvterm, StrainCvtermprop, StrainDbxref, Strainprop,
-    StrainpropPub, StrainPub, StrainSynonym
+    Cvterm, Db, Dbxref, CellLine, CellLineCvterm, CellLineCvtermprop, CellLineDbxref, CellLineprop, CellLinepropPub, CellLinePub, CellLineRelationship,
+    CellLineSynonym, Feature, FeatureCvterm, FeatureCvtermprop, FeatureDbxref, Featureprop, FeaturepropPub, FeaturePub, FeatureRelationship,
+    FeatureRelationshipPub, FeatureSynonym, Genotype, GenotypeCvterm, GenotypeCvtermprop, GenotypeDbxref, Genotypeprop, GenotypepropPub, GenotypePub,
+    GenotypeSynonym, Grp, GrpCvterm, GrpDbxref, Grpprop, GrppropPub, GrpPub, GrpRelationship, GrpRelationshipPub, GrpSynonym, Humanhealth, HumanhealthCvterm,
+    HumanhealthCvtermprop, HumanhealthDbxref, Humanhealthprop, HumanhealthpropPub, HumanhealthPub, HumanhealthRelationship, HumanhealthRelationshipPub,
+    HumanhealthSynonym, Library, LibraryCvterm, LibraryCvtermprop, LibraryDbxref, Libraryprop, LibrarypropPub, LibraryPub, LibraryRelationship,
+    LibraryRelationshipPub, LibrarySynonym, Strain, StrainCvterm, StrainCvtermprop, StrainDbxref, Strainprop, StrainpropPub, StrainPub, StrainRelationship,
+    StrainRelationshipPub, StrainSynonym
 )
 import agr_datatypes
 import fb_datatypes
@@ -42,23 +46,102 @@ class PrimaryEntityHandler(DataHandler):
         'allele': 'feature',
         'construct': 'feature',
         'gene': 'feature',
-        'strain': 'strain',
         'variation': 'feature',
     }
 
-    # Mappings of main data types to chado tables with associated data.
+    # Mappings of main data types to chado tables with associated data like cvterms, props, synonyms, etc.
     chado_tables = {
-        'primary_key': {'feature': 'feature_id', 'strain': 'strain_id'},
-        'main_table': {'feature': Feature, 'strain': Strain},
-        'pubs': {'feature': FeaturePub, 'strain': StrainPub},
-        'synonyms': {'feature': FeatureSynonym, 'strain': StrainSynonym},
-        'dbxrefs': {'feature': FeatureDbxref, 'strain': StrainDbxref},
-        'props': {'feature': Featureprop, 'strain': Strainprop},
-        'prop_pubs': {'feature': FeaturepropPub, 'strain': StrainpropPub},
-        'cvterms': {'feature': FeatureCvterm, 'strain': StrainCvterm},
-        'cvtermprops': {'feature': FeatureCvtermprop, 'strain': StrainCvtermprop}
+        'main_table': {
+            'cell_line': CellLine,
+            'feature': Feature,
+            'genotype': Genotype,
+            'grp': Grp,
+            'humanhealth': Humanhealth,
+            'library': Library,
+            'strain': Strain,
+        },
+        'pubs': {
+            'cell_line': CellLinePub,
+            'feature': FeaturePub,
+            'genotype': GenotypePub,
+            'grp': GrpPub,
+            'humanhealth': HumanhealthPub,
+            'library': LibraryPub,
+            'strain': StrainPub,
+        },
+        'synonyms': {
+            'cell_line': CellLineSynonym,
+            'feature': FeatureSynonym,
+            'genotype': GenotypeSynonym,
+            'grp': GrpSynonym,
+            'humanhealth': HumanhealthSynonym,
+            'library': LibrarySynonym,
+            'strain': StrainSynonym,
+        },
+        'dbxrefs': {
+            'cell_line': CellLineDbxref,
+            'feature': FeatureDbxref,
+            'genotype': GenotypeDbxref,
+            'grp': GrpDbxref,
+            'humanhealth': HumanhealthDbxref,
+            'library': LibraryDbxref,
+            'strain': StrainDbxref,
+        },
+        'props': {
+            'cell_line': CellLineprop,
+            'feature': Featureprop,
+            'genotype': Genotypeprop,
+            'grp': Grpprop,
+            'humanhealth': Humanhealthprop,
+            'library': Libraryprop,
+            'strain': Strainprop,
+        },
+        'prop_pubs': {
+            'cell_line': CellLinepropPub,
+            'feature': FeaturepropPub,
+            'genotype': GenotypepropPub,
+            'grp': GrppropPub,
+            'humanhealth': HumanhealthpropPub,
+            'library': LibrarypropPub,
+            'strain': StrainpropPub,
+        },
+        'cvterms': {
+            'cell_line': CellLineCvterm,
+            'feature': FeatureCvterm,
+            'genotype': GenotypeCvterm,
+            'grp': GrpCvterm,
+            'humanhealth': HumanhealthCvterm,
+            'library': LibraryCvterm,
+            'strain': StrainCvterm,
+        },
+        'cvtermprops': {
+            'cell_line': CellLineCvtermprop,
+            'feature': FeatureCvtermprop,
+            'genotype': GenotypeCvtermprop,
+            'grp': None,
+            'humanhealth': HumanhealthCvtermprop,
+            'library': LibraryCvtermprop,
+            'strain': StrainCvtermprop,
+        },
+        'relationships': {
+            'cell_line': CellLineRelationship,
+            'feature': FeatureRelationship,
+            'genotype': None,
+            'grp': GrpRelationship,
+            'humanhealth': HumanhealthRelationship,
+            'library': LibraryRelationship,
+            'strain': StrainRelationship,
+        },
+        'relationship_pubs': {
+            'cell_line': None,
+            'feature': FeatureRelationshipPub,
+            'genotype': None,
+            'grp': GrpRelationshipPub,
+            'humanhealth': HumanhealthRelationshipPub,
+            'library': LibraryRelationshipPub,
+            'strain': StrainRelationshipPub,
+        },
     }
-
     # CVterms used to define a fb_data_type within a larger chado table.
     subtypes = {
         'allele': ['allele'],
@@ -72,7 +155,10 @@ class PrimaryEntityHandler(DataHandler):
     # Add methods to be run by get_datatype_data() below.
     def get_entities(self, session):
         """Get primary FlyBase data entities."""
-        chado_type = self.main_chado_entity_types[self.datatype]
+        try:
+            chado_type = self.main_chado_entity_types[self.datatype]
+        except KeyError:
+            chado_type = self.datatype
         self.log.info(f'Get {self.datatype} data entities from {chado_type} table.')
         chado_table = self.chado_tables['main_table'][chado_type]
         filters = ()
@@ -98,7 +184,7 @@ class PrimaryEntityHandler(DataHandler):
             results = session.query(chado_table).\
                 filter(*filters).\
                 distinct()
-        pkey_name = self.chado_tables['primary_key'][chado_type]
+        pkey_name = f'{chado_type}_id'
         self.log.info(f'Have this primary_key name: {pkey_name}')
         counter = 0
         for result in results:
@@ -111,10 +197,13 @@ class PrimaryEntityHandler(DataHandler):
     def get_entityprops(self, session):
         """Get primary FlyBase data entity props."""
         self.log.info('Get primary FlyBase data entity props.')
-        chado_type = self.main_chado_entity_types[self.datatype]
+        try:
+            chado_type = self.main_chado_entity_types[self.datatype]
+        except KeyError:
+            chado_type = self.datatype
         self.log.info(f'Get {self.datatype} props from {chado_type}prop table.')
         chado_table = self.chado_tables['main_table'][chado_type]
-        subject_key_name = self.chado_tables['primary_key'][chado_type]
+        subject_key_name = f'{chado_type}_id'
         chado_prop_table = self.chado_tables['props'][chado_type]
         chado_prop_pub_table = self.chado_tables['prop_pubs'][chado_type]
         # Phase 1: Get all props.
@@ -202,10 +291,13 @@ class PrimaryEntityHandler(DataHandler):
 
     def get_entity_pubs(self, session):
         """Get pubs directly associated with FlyBase data entities."""
-        chado_type = self.main_chado_entity_types[self.datatype]
+        try:
+            chado_type = self.main_chado_entity_types[self.datatype]
+        except KeyError:
+            chado_type = self.datatype
         asso_chado_table = self.chado_tables['pubs'][chado_type]
         self.log.info(f'Get pubs for {self.datatype} data entities from {asso_chado_table}.')
-        main_pkey_name = self.chado_tables['primary_key'][chado_type]
+        main_pkey_name = f'{chado_type}_id'
         fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
         filters = (
             fkey_col.in_((self.fb_data_entities.keys())),
@@ -228,10 +320,13 @@ class PrimaryEntityHandler(DataHandler):
 
     def get_entity_synonyms(self, session):
         """Get synonyms for the FlyBase data entities."""
-        chado_type = self.main_chado_entity_types[self.datatype]
+        try:
+            chado_type = self.main_chado_entity_types[self.datatype]
+        except KeyError:
+            chado_type = self.datatype
         asso_chado_table = self.chado_tables['synonyms'][chado_type]
         self.log.info(f'Get synonyms for {self.datatype} data entities from {asso_chado_table}.')
-        main_pkey_name = self.chado_tables['primary_key'][chado_type]
+        main_pkey_name = f'{chado_type}_id'
         fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
         filters = (
             fkey_col.in_((self.fb_data_entities.keys())),
@@ -254,10 +349,13 @@ class PrimaryEntityHandler(DataHandler):
 
     def get_entity_fb_xrefs(self, session):
         """Get secondary FB xrefs for the FlyBase data entities."""
-        chado_type = self.main_chado_entity_types[self.datatype]
+        try:
+            chado_type = self.main_chado_entity_types[self.datatype]
+        except KeyError:
+            chado_type = self.datatype
         asso_chado_table = self.chado_tables['dbxrefs'][chado_type]
         self.log.info(f'Get non-current FlyBase xrefs for {self.datatype} data entities from {asso_chado_table}.')
-        main_pkey_name = self.chado_tables['primary_key'][chado_type]
+        main_pkey_name = f'{chado_type}_id'
         fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
         filters = (
             fkey_col.in_((self.fb_data_entities.keys())),
@@ -284,10 +382,13 @@ class PrimaryEntityHandler(DataHandler):
 
     def get_entity_xrefs(self, session):
         """Get all other xrefs for the FlyBase data entities."""
-        chado_type = self.main_chado_entity_types[self.datatype]
+        try:
+            chado_type = self.main_chado_entity_types[self.datatype]
+        except KeyError:
+            chado_type = self.datatype
         asso_chado_table = self.chado_tables['dbxrefs'][chado_type]
         self.log.info(f'Get non-FlyBase xrefs for {self.datatype} data entities from {asso_chado_table}.')
-        main_pkey_name = self.chado_tables['primary_key'][chado_type]
+        main_pkey_name = f'{chado_type}_id'
         fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
         filters = (
             fkey_col.in_((self.fb_data_entities.keys())),
@@ -315,7 +416,10 @@ class PrimaryEntityHandler(DataHandler):
     def get_entity_timestamps(self, session):
         """Get timestamps for data entities."""
         self.log.info(f'Get timestamps for FlyBase {self.datatype} entities.')
-        chado_type = self.main_chado_entity_types[self.datatype]
+        try:
+            chado_type = self.main_chado_entity_types[self.datatype]
+        except KeyError:
+            chado_type = self.datatype
         entity_table_counter = 0
         audit_chado_counter = 0
         # Get distinct timestamps for each entity (do not distinguish by action, etc).
