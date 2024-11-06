@@ -110,6 +110,8 @@ class GeneHandler(FeatureHandler):
         """Synthesize gene type."""
         self.log.info('Synthesize gene type.')
         for gene in self.fb_data_entities.values():
+            if 'promoted_gene_type' not in gene.props_by_type.keys():
+                continue
             gene_types = gene.props_by_type['promoted_gene_type']
             if len(gene_types) == 1:
                 prop_value = gene_types[0].value
@@ -180,6 +182,8 @@ class GeneHandler(FeatureHandler):
         """Map gene snapshot."""
         self.log.info('Map gene snapshot to Alliance object.')
         for gene in self.fb_data_entities.values():
+            if 'gene_summary_text' not in gene.props_by_type.keys():
+                continue
             gene_snapshots = gene.props_by_type['gene_summary_text']
             if len(gene_snapshots) == 1:
                 note_type_name = 'MOD_provided_gene_description'
