@@ -259,7 +259,7 @@ class PrimaryEntityHandler(DataHandler):
         # Phase 1: Get all relationships.
         filters = ()
         if self.datatype in self.regex.keys():
-            self.log.info(f'Use this regex: {self.regex[self.datatype]}')
+            self.log.info(f'Use this regex for primary entities: {self.regex[self.datatype]}')
             filters += (primary_entity.uniquename.op('~')(self.regex[self.datatype]), )
         if self.datatype in self.subtypes.keys():
             self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.datatype]}')
@@ -284,7 +284,7 @@ class PrimaryEntityHandler(DataHandler):
             rel_results = session.query(chado_rel_table).\
                 select_from(primary_entity).\
                 join(primary_entity_type, (primary_entity_type.cvterm_id == primary_entity.type_id)).\
-                join(chado_rel_table, (getattr(chado_rel_table, f'{role}_id') == getattr(chado_table, entity_key_name))).\
+                join(chado_rel_table, (getattr(chado_rel_table, f'{role}_id') == getattr(primary_entity, entity_key_name))).\
                 join(rel_type, (rel_type.cvterm_id == chado_rel_table.type_id)).\
                 join(secondary_entity, (getattr(secondary_entity, entity_key_name) == getattr(chado_rel_table, f'{role_inverse[role]}_id'))).\
                 join(secondary_entity_type, (secondary_entity_type.cvterm_id == secondary_entity.type_id)).\
@@ -293,7 +293,7 @@ class PrimaryEntityHandler(DataHandler):
         else:
             rel_results = session.query(chado_rel_table).\
                 select_from(primary_entity).\
-                join(chado_rel_table, (getattr(chado_rel_table, f'{role}_id') == getattr(chado_table, entity_key_name))).\
+                join(chado_rel_table, (getattr(chado_rel_table, f'{role}_id') == getattr(primary_entity, entity_key_name))).\
                 join(rel_type, (rel_type.cvterm_id == chado_rel_table.type_id)).\
                 join(secondary_entity, (getattr(secondary_entity, entity_key_name) == getattr(chado_rel_table, f'{role_inverse[role]}_id'))).\
                 filter(*filters).\
