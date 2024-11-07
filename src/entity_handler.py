@@ -328,7 +328,7 @@ class PrimaryEntityHandler(DataHandler):
                 rel_type_tally[rel_type] += 1
             except KeyError:
                 rel_type_tally[rel_type] = 1
-        self.log.info(f'Assigned {assignment_counter} {chado_type}_relationships where the {self.datatype} is the {role}.')
+        self.log.info(f'Indexed {assignment_counter} {chado_type}_relationships by relationship type where the {self.datatype} is the {role}.')
         self.log.info(f'Found these types of {chado_type}_relationship types where the {self.datatype} is the {role}:')
         ordered_rel_types = sorted(list(rel_type_tally.keys()))
         for rel_type in ordered_rel_types:
@@ -337,6 +337,7 @@ class PrimaryEntityHandler(DataHandler):
             return
         # For features only, also sort relationships by type of related entity.
         feature_type_tally = {}
+        new_assignment_counter = 0
         feat_type_skipped = 0
         for rel in rel_dict.values():
             entity_id = getattr(rel.chado_obj, f'{role}_id')
@@ -349,13 +350,16 @@ class PrimaryEntityHandler(DataHandler):
                 continue
             try:
                 entity_rel_dict[rel_feat_type].append(rel)
+                new_assignment_counter += 1
             except KeyError:
                 entity_rel_dict[rel_feat_type] = [rel]
+                new_assignment_counter += 1
             # Tally
             try:
                 feature_type_tally[rel_feat_type] += 1
             except KeyError:
                 feature_type_tally[rel_feat_type] = 1
+        self.log.info(f'Indexed {new_assignment_counter} {chado_type}_relationships by {role_inverse[role]} type where the {self.datatype} is the {role}.')
         self.log.info(f'Skipped {feat_type_skipped} feature_relationships to non-FB-curie features.')
         self.log.info(f'Found these types of features in {chado_type}_relationship, with a/an {self.datatype} as the {role}:')
         ordered_feat_types = sorted(list(feature_type_tally.keys()))
