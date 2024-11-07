@@ -205,7 +205,10 @@ class PrimaryEntityHandler(DataHandler):
         return
 
     def get_entity_relationships(self, session, role):
-        """Get relationships between primary FlyBase entities and other entities in the same chado table.
+        """Get relationships between primary FlyBase entities and other entities in the same chado table: e.g., feature_relationship, strain_relationship.
+
+        This method is not applicable to relationships across datatypes, which should be queried by more tailored methods within more-datatype-specific
+        handlers, as there are fewer similarities in data structure.
 
         Args:
             session (SQLAlchemy session): The session.
@@ -228,7 +231,7 @@ class PrimaryEntityHandler(DataHandler):
         entity_key_name = f'{chado_type}_id'
         chado_rel_table = self.chado_tables['relationships'][chado_type]
         if chado_rel_table is None:
-            msg = f'The get_entity_relationships() method has been called unnecessarily, because for '
+            msg = 'The get_entity_relationships() method has been called unnecessarily, because for '
             msg += f'{self.datatype}s, there is no {self.datatype}_relationship table.'
             self.log.warning(msg)
             return
@@ -294,7 +297,9 @@ class PrimaryEntityHandler(DataHandler):
             except KeyError:
                 pass
         self.log.info(f'Found {rel_pub_counter} {chado_type}_relationship_pubs where the {self.datatype} is the {role}.')
-        # Phase 3. Add rel info to entities.
+        # Phase 3. Add rel props/prop_pubs (for feature only).
+        # BILLY BOB - TO DO.
+        # Phase 4. Add rel info to entities.
         assignment_counter = 0
         rel_type_tally = {}
         for rel in rel_dict.values():
