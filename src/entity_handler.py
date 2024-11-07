@@ -262,7 +262,7 @@ class PrimaryEntityHandler(DataHandler):
             self.log.info(f'Use this regex for primary entities: {self.regex[self.datatype]}')
             filters += (primary_entity.uniquename.op('~')(self.regex[self.datatype]), )
         if self.datatype in self.subtypes.keys():
-            self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.datatype]}')
+            self.log.info(f'Filter main table for primary entities of these subtypes: {self.subtypes[self.datatype]}')
             filters += (primary_entity_type.name.in_((self.subtypes[self.datatype])), )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
@@ -364,7 +364,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Found these types of {chado_type}_relationship types where the {self.datatype} is the {role}:')
         ordered_rel_types = sorted(list(rel_type_tally.keys()))
         for rel_type in ordered_rel_types:
-            self.log.info(f'table={chado_type}, rel_type={rel_type}, count={rel_type_tally[rel_type]}.')
+            self.log.info(f'table={chado_type}_relationship, rel_type={rel_type}, count={rel_type_tally[rel_type]}.')
         if chado_type != 'feature':
             return
         # For features only, also sort relationships by type of related entity.
@@ -396,7 +396,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Found these types of features in {chado_type}_relationship, with a/an {self.datatype} as the {role}:')
         ordered_feat_types = sorted(list(feature_type_tally.keys()))
         for feat_type in ordered_feat_types:
-            self.log.info(f'table={chado_type}, feat_type={feat_type}, count={feature_type_tally[feat_type]}.')
+            self.log.info(f'table={chado_type}_relationship, feat_type={feat_type}, count={feature_type_tally[feat_type]}.')
         return
 
     def get_entityprops(self, session):
