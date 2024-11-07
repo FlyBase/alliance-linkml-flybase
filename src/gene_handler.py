@@ -84,13 +84,6 @@ class GeneHandler(FeatureHandler):
         self.log.info(f'Processed {counter} lines from the panther orthology file.')
         return
 
-    # DETRITUS
-    # def get_gene_alleles(self, session):
-    #     """Get alleles for genes."""
-    #     self.log.info('Get alleles for genes.')
-    #     self.get_entity_obj_feat_rel_by_type(session, 'allele_rels', rel_type='alleleof', sbj_type='allele', sbj_regex=self.regex['allele'])
-    #     return
-
     def get_datatype_data(self, session):
         """Extend the method for the GeneHandler."""
         super().get_datatype_data(session)
@@ -106,7 +99,6 @@ class GeneHandler(FeatureHandler):
         self.get_panther_info()
         self.get_annotation_ids(session)
         self.get_chr_featurelocs(session)
-        # self.get_gene_alleles(session)    DETRITUS
         return
 
     # Add methods to be run by synthesize_info() below.
