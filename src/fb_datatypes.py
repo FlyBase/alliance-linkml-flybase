@@ -111,8 +111,10 @@ class FBFeature(FBDataEntity):
         super().__init__(chado_obj)
         # Primary FB chado data.
         self.db_primary_id = chado_obj.feature_id
-        self.chr_flocs = []          # Will be chromosomal Featureloc objects for the entity.
-        self.fb_anno_dbxrefs = []    # Will be "FlyBase Annotation IDs" FeatureDbxref objects.
+        self.chr_flocs = []               # Will be chromosomal Featureloc objects for the entity.
+        self.fb_anno_dbxrefs = []         # Will be "FlyBase Annotation IDs" FeatureDbxref objects.
+        self.sbj_rels_by_obj_type = {}    # Lists of FBRelationships where this entity is the subject; keyed by object feature type.
+        self.obj_rels_by_sbj_type = {}    # Lists of FBRelationships where this entity is the object; keyed by subject feature type.
         # Processed FB data.
         self.curr_anno_id = None     # Will be current annotation ID for the gene, transcript or protein (str).
         self.alt_anno_ids = []       # Will be list of non-current annotation IDs for the gene, transcript or protein (str).
@@ -139,7 +141,7 @@ class FBAllele(FBFeature):
         self.dmel_insertions = []               # List of FeatureRelationships to associated Dmel insertions (FBti).
         self.non_dmel_insertions = []           # List of FeatureRelationships to associated non-Dmel insertions (FBti).
         self.args = []                          # List of FeatureRelationships to associated ARG (variation) features.
-        self.direct_colls = []                  # List of collecionts (Library objects) directly associated with the allele.
+        self.direct_colls = []                  # List of collections (Library objects) directly associated with the allele.
         self.ins_colls = []                     # List of collections (Library objects) indirectly associated with the allele via an FBti insertion.
         self.cons_colls = []                    # List of collections (Library objects) indirectly associated with the allele via an FBtp construct.
         self.sf_colls = []                      # List of collections (Library objects) indirectly associated with the allele via an FBsf feature.
