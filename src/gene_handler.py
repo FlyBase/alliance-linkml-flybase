@@ -210,16 +210,11 @@ class GeneHandler(FeatureHandler):
         counter = 0
         for allele_gene_key, allele_gene_rels in self.gene_allele_rels.items():
             allele_curie = f'FB:{self.feature_lookup[allele_gene_key[ALLELE]]["uniquename"]}'
-            if not allele_curie.startswith('FB:FBal'):
-                for allele_gene_rel in allele_gene_rels:
-                    allele_gene_rel.entity_desc = f'feature_relationship_id={allele_gene_rel.feature_relationship_id}'
-                    allele_gene_rel.for_export = False
-                    allele_gene_rel.export_warnings.append('"alleleof" relationship between gene and non-allele')
-                    self.log.warning(f'Skip atypical "alleleof" relationship to non-allele: {allele_curie}.')
-                continue
             gene_curie = f'FB:{self.feature_lookup[allele_gene_key[GENE]]["uniquename"]}'
             first_feat_rel = allele_gene_rels[0]
-            first_feat_rel.entity_desc = f'feature_relationship_id={first_feat_rel.feature_relationship_id}'
+            if not allele_curie.startswith('FB:FBal'):
+                first_feat_rel.for_export = False
+                first_feat_rel.export_warnings.append('"alleleof" relationship includes non-allele')
             all_pub_ids = []
             for allele_gene_rel in allele_gene_rels:
                 all_pub_ids.extend(allele_gene_rel.pubs)

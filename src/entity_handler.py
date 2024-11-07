@@ -275,7 +275,7 @@ class PrimaryEntityHandler(DataHandler):
         rel_counter = 0
         for rel_result in rel_results:
             rel_id = getattr(rel_result, f'{chado_type}_relationship_id')
-            rel_dict[rel_id] = fb_datatypes.FBRelationship(rel_result)
+            rel_dict[rel_id] = fb_datatypes.FBRelationship(rel_result, f'{chado_type}_relationship')
             rel_counter += 1
         self.log.info(f'Found {rel_counter} {chado_type}_relationships where the {self.datatype} is the {role}.')
         # Phase 2. Get pubs supporting relationships.
