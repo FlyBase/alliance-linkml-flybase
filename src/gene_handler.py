@@ -36,7 +36,7 @@ class GeneHandler(FeatureHandler):
         'FBgn0262451': 'mir-ban',           # Current annotated nuclear miRNA gene.
         'FBgn0034365': 'CG5335',            # Current annotated gene with CG symbol.
         'FBgn0003884': 'alphaTub84B',       # Current annotated gene with non-ASCII char in symbol.
-        'FBgn0263477': 'scaRNA:PsiU1-6',    # Current annotated gene needs systematic synonym dto.
+        'FBgn0263477': 'scaRNA:PsiU1-6',    # Current annotated gene needs systematic synonym dto generated from annotation ID.
         'FBgn0030179': 'CG12094',           # Obsolete unannotated gene, should not get systematic name but needs symbol.
         'FBgn0108495': 'Dere\\GG16260',     # Current unannotated non-Dmel with systematic name.
         'FBgn0031087': 'CG12656',           # Current withdrawn gene.
@@ -87,8 +87,8 @@ class GeneHandler(FeatureHandler):
         """Extend the method for the GeneHandler."""
         super().get_datatype_data(session)
         self.get_entities(session)
-        self.get_entity_relationships(session, 'subject')
-        self.get_entity_relationships(session, 'object')
+        # self.get_entity_relationships(session, 'subject')
+        self.get_entity_relationships(session, 'object', rel_type='alleleof', entity_type='allele', entity_regex=self.regex['allele'])
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)

@@ -18,8 +18,8 @@ from sqlalchemy.orm.exc import NoResultFound
 from harvdev_utils.char_conversions import sub_sup_sgml_to_html
 from harvdev_utils.production import (
     Cv, Cvterm, CvtermRelationship, Db, Dbxref, Feature, FeatureCvterm,
-    FeatureCvtermprop, FeatureRelationship, FeatureRelationshipPub,
-    FeatureSynonym, Featureprop, FeaturepropPub, Organism, OrganismDbxref,
+    FeatureCvtermprop, FeatureRelationship,
+    FeatureSynonym, Featureprop, Organism, OrganismDbxref,
     Organismprop, Pub, PubDbxref, Synonym
 )
 
@@ -103,7 +103,7 @@ class DataHandler(object):
         'aberration': r'^FBab[0-9]{7}$',
         'allele': r'^FBal[0-9]{7}$',
         'balancer': r'^FBba[0-9]{7}$',
-        'chem': r'^FBch[0-9]{7}$',
+        'chemical': r'^FBch[0-9]{7}$',
         'consins': r'^FB(tp|ti)[0-9]{7}$',
         'construct': r'^FBtp[0-9]{7}$',
         'fb_curie': r'^FB:FB[a-z]{2}[0-9]{7,10}$',
@@ -332,16 +332,16 @@ class DataHandler(object):
         return
 
     def build_feature_lookup(self, session):
-        """Build a simple feature lookup."""
+        """Build a simple feature lookup for FlyBase features having an FB ID."""
         # Note - depends on prior construction of self.ncbi_taxon_lookup and self.cvterm_lookup.
         self.log.info('Build a simple feature lookup.')
         feat_type_export = {
+            'aberration': True,
             'allele': True,
+            'balancer': True,
+            'chemical': False,
             'construct': True,
             'gene': True,
-            'aberration': True,
-            'balancer': True,
-            'chem': False,
             'insertion': True,
             'seqfeat': False,
             'tool': False,

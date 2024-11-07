@@ -12,6 +12,7 @@ Author(s):
 
 import re
 from logging import Logger
+from sqlalchemy.orm import aliased
 from harvdev_utils.char_conversions import sub_sup_sgml_to_html
 from harvdev_utils.production import (
     Cvterm, Db, Dbxref, CellLine, CellLineCvterm, CellLineCvtermprop, CellLineDbxref, CellLineprop, CellLinepropPub, CellLinePub, CellLineRelationship,
@@ -204,7 +205,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Found {counter} FlyBase {self.datatype} entities in chado.')
         return
 
-    def get_entity_relationships(self, session, role):
+    def get_entity_relationships(self, session, role, **kwargs):
         """Get relationships between primary FlyBase entities and other entities in the same chado table: e.g., feature_relationship, strain_relationship.
 
         This method is not applicable to relationships across datatypes, which should be queried by more tailored methods within more-datatype-specific
@@ -213,6 +214,11 @@ class PrimaryEntityHandler(DataHandler):
         Args:
             session (SQLAlchemy session): The session.
             role (str): Filter for relationships where the primary FB entities are the 'subject' or the 'object', no other values allowed.
+
+        Keyword Args:
+            rel_type (str or list): The CV term name for the relationship of interest. If none given, any rel_type allowed.
+            entity_type (str or list): The CV term names for the types of related entities desired; if none given, any related entity type allowed.
+            entity_regex (str): The regex for related entity uniquenames; if none given, any uniquename is allowed.
 
         """
         role_inverse = {
@@ -235,9 +241,15 @@ class PrimaryEntityHandler(DataHandler):
         else:
             chado_type = self.datatype
         self.log.info(f'Get relationships from the {chado_type}_relationship table where the {self.datatype} is the {role}.')
+        self.log.info(f'Use these additional criteria to filter relationships: {kwargs}')
         chado_table = self.chado_tables['main_table'][chado_type]
         entity_key_name = f'{chado_type}_id'
         chado_rel_table = self.chado_tables['relationships'][chado_type]
+        primary_entity = aliased(chado_table, name='primary_entity')
+        secondary_entity = aliased(chado_table, name='secondary_entity')
+        primary_entity_type = aliased(Cvterm, name='primary_entity_type')
+        secondary_entity_type = aliased(Cvterm, name='secondary_entity_type')
+        rel_type = aliased(Cvterm, name='rel_type')
         if chado_rel_table is None:
             msg = 'The get_entity_relationships() method has been called unnecessarily, because for '
             msg += f'{self.datatype}s, there is no {self.datatype}_relationship table.'
@@ -248,27 +260,42 @@ class PrimaryEntityHandler(DataHandler):
         filters = ()
         if self.datatype in self.regex.keys():
             self.log.info(f'Use this regex: {self.regex[self.datatype]}')
-            filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
+            filters += (primary_entity.uniquename.op('~')(self.regex[self.datatype]), )
         if self.datatype in self.subtypes.keys():
             self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.datatype]}')
-            filters += (Cvterm.name.in_((self.subtypes[self.datatype])), )
+            filters += (primary_entity_type.name.in_((self.subtypes[self.datatype])), )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
-            filters += (chado_table.uniquename.in_((self.test_set.keys())), )
+            filters += (primary_entity.uniquename.in_((self.test_set.keys())), )
+        if 'rel_type' in kwargs.keys():
+            if type(kwargs['rel_type']) != list:
+                kwargs['rel_type'] = [kwargs['rel_type']]
+            filters += (rel_type.name.in_((kwargs['rel_type'])), )
+        if 'entity_type' in kwargs.keys():
+            if type(kwargs['entity_type']) != list:
+                kwargs['entity_type'] = [kwargs['entity_type']]
+            filters += (secondary_entity_type.name.in_((kwargs['entity_type'])), )
+        if 'entity_regex' in kwargs.keys():
+            filters += (secondary_entity.uniquename.op('~')(kwargs['entity_regex']), )
         if filters == ():
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
         if self.datatype in self.subtypes.keys():
             rel_results = session.query(chado_rel_table).\
-                select_from(chado_table).\
-                join(Cvterm, (Cvterm.cvterm_id == chado_table.type_id)).\
+                select_from(primary_entity).\
+                join(primary_entity_type, (primary_entity_type.cvterm_id == primary_entity.type_id)).\
                 join(chado_rel_table, (getattr(chado_rel_table, f'{role}_id') == getattr(chado_table, entity_key_name))).\
+                join(rel_type, (rel_type.cvterm_id == chado_rel_table.type_id)).\
+                join(secondary_entity, (getattr(secondary_entity, entity_key_name) == getattr(chado_rel_table, f'{role_inverse[role]}_id'))).\
+                join(secondary_entity_type, (secondary_entity_type.cvterm_id == secondary_entity.type_id)).\
                 filter(*filters).\
                 distinct()
         else:
             rel_results = session.query(chado_rel_table).\
-                select_from(chado_table).\
+                select_from(primary_entity).\
                 join(chado_rel_table, (getattr(chado_rel_table, f'{role}_id') == getattr(chado_table, entity_key_name))).\
+                join(rel_type, (rel_type.cvterm_id == chado_rel_table.type_id)).\
+                join(secondary_entity, (getattr(secondary_entity, entity_key_name) == getattr(chado_rel_table, f'{role_inverse[role]}_id'))).\
                 filter(*filters).\
                 distinct()
         rel_dict = {}    # A temporary feature_relationship_id-keyed dict of FBRelationship objects.
