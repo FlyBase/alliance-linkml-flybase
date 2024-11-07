@@ -185,18 +185,10 @@ class DataHandler(object):
         self.log.info(f'Found {pmid_counter} PMID IDs for {pub_counter} current FB publications.')
         return
 
-    def lookup_pub_curie(self, pub_id):
-        """Return a single curie (PMID or FB) given an internal chado pub_id."""
-        try:
-            pub_curie = self.bibliography[pub_id]
-        except KeyError:
-            pub_curie = None
-        if pub_curie == 'FB:unattributed':
-            pub_curie = None
-        return pub_curie
-
     def lookup_pub_curies(self, pub_id_list):
         """Return a list of curies from a list of internal chado pub_ids."""
+        if type(pub_id_list) is not list:
+            pub_id_list = [pub_id_list]
         pub_curie_list = []
         # First, try to get curies for each pub_id.
         for pub_id in set(pub_id_list):
@@ -475,52 +467,34 @@ class DataHandler(object):
         self.log.info(f'Got basic info for {counter} current Dmel chr scaffolds.')
         return
 
-    def build_featureprop_evidence_lookup(self, session):
-        """Build evidence lookup for featureprops."""
-        self.log.info('Build evidence lookup for featureprops.')
-        FPROP_ID = 0
-        PUB_ID = 1
-        counter = 0
-        fp_counter = 0
-        results = session.query(FeaturepropPub.featureprop_id, FeaturepropPub.pub_id).distinct()
-        for result in results:
-            try:
-                self.featureprop_pub_lookup[result[FPROP_ID]].append(result[PUB_ID])
-                counter += 1
-            except KeyError:
-                self.featureprop_pub_lookup[result[FPROP_ID]] = [result[PUB_ID]]
-                fp_counter += 1
-                counter += 1
-        self.log.info(f'Found {counter} pubs supporting {fp_counter} featureprops.')
-        return
+    # DETRITUS
+    # def build_feature_relationship_evidence_lookup(self, session):
+    #     """Build evidence lookup for feature_relationships."""
+    #     self.log.info('Build evidence lookup for feature_relationships.')
+    #     results = session.query(FeatureRelationshipPub.feature_relationship_id,
+    #                             FeatureRelationshipPub.pub_id).distinct()
+    #     FEAT_REL_ID = 0
+    #     PUB_ID = 1
+    #     counter = 0
+    #     fr_counter = 0
+    #     for result in results:
+    #         try:
+    #             self.feat_rel_pub_lookup[result[FEAT_REL_ID]].append(result[PUB_ID])
+    #             counter += 1
+    #         except KeyError:
+    #             self.feat_rel_pub_lookup[result[FEAT_REL_ID]] = [result[PUB_ID]]
+    #             fr_counter += 1
+    #             counter += 1
+    #     self.log.info(f'Found {counter} pubs supporting {fr_counter} feature_relationships.')
+    #     return
 
-    def build_feature_relationship_evidence_lookup(self, session):
-        """Build evidence lookup for feature_relationships."""
-        self.log.info('Build evidence lookup for feature_relationships.')
-        results = session.query(FeatureRelationshipPub.feature_relationship_id,
-                                FeatureRelationshipPub.pub_id).distinct()
-        FEAT_REL_ID = 0
-        PUB_ID = 1
-        counter = 0
-        fr_counter = 0
-        for result in results:
-            try:
-                self.feat_rel_pub_lookup[result[FEAT_REL_ID]].append(result[PUB_ID])
-                counter += 1
-            except KeyError:
-                self.feat_rel_pub_lookup[result[FEAT_REL_ID]] = [result[PUB_ID]]
-                fr_counter += 1
-                counter += 1
-        self.log.info(f'Found {counter} pubs supporting {fr_counter} feature_relationships.')
-        return
-
-    def lookup_feat_rel_pub_ids(self, feature_relationship_id):
-        """Return a list of pub_ids supporting a given feature_relationship."""
-        try:
-            pub_ids = self.feat_rel_pub_lookup[feature_relationship_id]
-        except KeyError:
-            pub_ids = []
-        return pub_ids
+    # def lookup_feat_rel_pub_ids(self, feature_relationship_id):
+    #     """Return a list of pub_ids supporting a given feature_relationship."""
+    #     try:
+    #         pub_ids = self.feat_rel_pub_lookup[feature_relationship_id]
+    #     except KeyError:
+    #         pub_ids = []
+    #     return pub_ids
 
     def build_allele_gene_lookup(self, session):
         """Build an allele-gene lookup dict, current features only."""
