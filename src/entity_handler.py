@@ -215,11 +215,19 @@ class PrimaryEntityHandler(DataHandler):
             role (str): Filter for relationships where the primary FB entities are the 'subject' or the 'object', no other values allowed.
 
         """
-        role_parameters = {
+        role_inverse = {
+            'subject': 'object',
+            'object': 'subject',
+        }
+        role_rel_type_buckets = {
             'subject': 'sbj_rels_by_type',
             'object': 'obj_rels_by_type',
         }
-        if role not in role_parameters.keys():
+        role_feature_type_buckets = {
+            'subject': 'sbj_rels_by_obj_type',
+            'object': 'obj_rels_by_sbj_type',
+        }
+        if role not in role_inverse.keys():
             self.log.error(f'For "get_entity_relationships()", role was specified as "{role}"; only these values are allowed: "subject", "object".')
             raise
         if self.datatype in self.feature_datatypes:
@@ -299,29 +307,52 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Found {rel_pub_counter} {chado_type}_relationship_pubs where the {self.datatype} is the {role}.')
         # Phase 3. Add rel props/prop_pubs (for feature only).
         # BILLY BOB - TO DO.
-        # Phase 4. Add rel info to entities.
+        # Phase 4. Add rel info to entities, keyed by relationship type.
         assignment_counter = 0
         rel_type_tally = {}
+        # Assign the prop to the appropriate entity.
         for rel in rel_dict.values():
-            # Assign the prop to the appropriate entity.
             entity_id = getattr(rel.chado_obj, f'{role}_id')
-            entity_rel_dict = getattr(self.fb_data_entities[entity_id], role_parameters[role])
+            entity_rel_dict = getattr(self.fb_data_entities[entity_id], role_rel_type_buckets[role])
+            rel_type = rel.chado_obj.type.name
             try:
-                entity_rel_dict[rel.chado_obj.type.name].append(rel)
+                entity_rel_dict[rel_type].append(rel)
                 assignment_counter += 1
             except KeyError:
-                entity_rel_dict[rel.chado_obj.type.name] = [rel]
+                entity_rel_dict[rel_type] = [rel]
                 assignment_counter += 1
             # Tally
             try:
-                rel_type_tally[rel.chado_obj.type.name] += 1
+                rel_type_tally[rel_type] += 1
             except KeyError:
-                rel_type_tally[rel.chado_obj.type.name] = 1
+                rel_type_tally[rel_type] = 1
         self.log.info(f'Assigned {assignment_counter} {chado_type}_relationships where the {self.datatype} is the {role}.')
         self.log.info(f'Found these types of {chado_type}_relationship types where the {self.datatype} is the {role}:')
         ordered_rel_types = sorted(list(rel_type_tally.keys()))
         for rel_type in ordered_rel_types:
             self.log.info(f'table={chado_type}, rel_type={rel_type}, count={rel_type_tally[rel_type]}.')
+        if chado_type != 'feature':
+            return
+        # For features only, also sort relationships by type of related entity.
+        feature_type_tally = {}
+        for rel in rel_dict.values():
+            entity_id = getattr(rel.chado_obj, f'{role}_id')
+            entity_rel_dict = getattr(self.fb_data_entities[entity_id], role_feature_type_buckets[role])
+            rel_feat_id = getattr(rel.chado_obj, f'{role_inverse[role]}_id')
+            rel_feat_type = self.feature_lookup[rel_feat_id]['type']
+            try:
+                entity_rel_dict[rel_feat_type].append(rel)
+            except KeyError:
+                entity_rel_dict[rel_feat_type] = [rel]
+            # Tally
+            try:
+                feature_type_tally[rel_feat_type] += 1
+            except KeyError:
+                feature_type_tally[rel_feat_type] = 1
+        self.log.info(f'Found these types of features in {chado_type}_relationship, with a/an {self.datatype} as the {role}:')
+        ordered_feat_types = sorted(list(feature_type_tally.keys()))
+        for feat_type in ordered_feat_types:
+            self.log.info(f'table={chado_type}, feat_type={feat_type}, count={feature_type_tally[feat_type]}.')
         return
 
     def get_entityprops(self, session):

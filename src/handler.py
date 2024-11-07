@@ -409,7 +409,7 @@ class DataHandler(object):
             self.log.info(f'Found {syno_counter} symbol synonyms for {feat_counter} {feat_type} features.')
         return
 
-    def find_internal_genes(self, session):
+    def get_internal_genes(self, session):
         """Find FlyBase genes that should be internal at the Alliance due to their type."""
         self.log.info('Find FlyBase genes that should be internal at the Alliance due to their type.')
         internal_gene_types = [

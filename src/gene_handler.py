@@ -59,7 +59,7 @@ class GeneHandler(FeatureHandler):
         self.build_cvterm_lookup(session)
         self.build_ncbi_taxon_lookup(session)
         self.build_feature_lookup(session)
-        self.find_internal_genes(session)
+        self.get_internal_genes(session)
         self.get_chr_info(session)
         return
 
