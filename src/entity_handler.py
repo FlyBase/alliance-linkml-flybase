@@ -310,16 +310,21 @@ class PrimaryEntityHandler(DataHandler):
             rel_pub_results = []
         elif self.datatype in self.subtypes.keys():
             rel_pub_results = session.query(chado_rel_pub_table).\
-                select_from(chado_table).\
-                join(Cvterm, (Cvterm.cvterm_id == chado_table.type_id)).\
-                join(chado_rel_table, (getattr(chado_rel_table, f'{role}_id') == getattr(chado_table, entity_key_name))).\
+                select_from(primary_entity).\
+                join(primary_entity_type, (primary_entity_type.cvterm_id == primary_entity.type_id)).\
+                join(chado_rel_table, (getattr(chado_rel_table, f'{role}_id') == getattr(primary_entity, entity_key_name))).\
+                join(rel_type, (rel_type.cvterm_id == chado_rel_table.type_id)).\
+                join(secondary_entity, (getattr(secondary_entity, entity_key_name) == getattr(chado_rel_table, f'{role_inverse[role]}_id'))).\
+                join(secondary_entity_type, (secondary_entity_type.cvterm_id == secondary_entity.type_id)).\
                 join(chado_rel_pub_table).\
                 filter(*filters).\
                 distinct()
         else:
             rel_pub_results = session.query(chado_rel_pub_table).\
-                select_from(chado_table).\
-                join(chado_rel_table, (getattr(chado_rel_table, f'{role}_id') == getattr(chado_table, entity_key_name))).\
+                select_from(primary_entity).\
+                join(chado_rel_table, (getattr(chado_rel_table, f'{role}_id') == getattr(primary_entity, entity_key_name))).\
+                join(rel_type, (rel_type.cvterm_id == chado_rel_table.type_id)).\
+                join(secondary_entity, (getattr(secondary_entity, entity_key_name) == getattr(chado_rel_table, f'{role_inverse[role]}_id'))).\
                 join(chado_rel_pub_table).\
                 filter(*filters).\
                 distinct()
