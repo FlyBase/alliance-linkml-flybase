@@ -77,6 +77,8 @@ class AlleleHandler(FeatureHandler):
         self.build_feature_relationship_evidence_lookup(session)
         return
 
+    # Additional sub-methods for get_datatype_data().
+
     def get_related_features(self, session):
         """Get allele-associated features."""
         self.log.info('Get allele-associated features.')
@@ -310,6 +312,7 @@ class AlleleHandler(FeatureHandler):
         self.log.info(f'Found {counter} allele phenotypes from single locus genotypes.')
         return
 
+    # Elaborate on get_datatype_data() for the AlleleHandler.
     def get_datatype_data(self, session):
         """Extend the method for the GeneHandler."""
         super().get_datatype_data(session)

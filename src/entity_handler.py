@@ -306,8 +306,10 @@ class PrimaryEntityHandler(DataHandler):
                 pass
         self.log.info(f'Found {rel_pub_counter} {chado_type}_relationship_pubs where the {self.datatype} is the {role}.')
         # Phase 3. Add rel props/prop_pubs (for feature only).
-        # BILLY BOB - TO DO.
-        # Phase 4. Add rel info to entities, keyed by relationship type.
+        if chado_type == 'feature':
+            # BILLY BOB - TO DO.
+            pass
+        # Phase 3. Add rel info to entities, keyed by relationship type.
         assignment_counter = 0
         rel_type_tally = {}
         # Assign the prop to the appropriate entity.
@@ -335,11 +337,16 @@ class PrimaryEntityHandler(DataHandler):
             return
         # For features only, also sort relationships by type of related entity.
         feature_type_tally = {}
+        feat_type_skipped = 0
         for rel in rel_dict.values():
             entity_id = getattr(rel.chado_obj, f'{role}_id')
             entity_rel_dict = getattr(self.fb_data_entities[entity_id], role_feature_type_buckets[role])
             rel_feat_id = getattr(rel.chado_obj, f'{role_inverse[role]}_id')
-            rel_feat_type = self.feature_lookup[rel_feat_id]['type']
+            try:
+                rel_feat_type = self.feature_lookup[rel_feat_id]['type']
+            except KeyError:
+                feat_type_skipped += 1
+                continue
             try:
                 entity_rel_dict[rel_feat_type].append(rel)
             except KeyError:
@@ -349,6 +356,7 @@ class PrimaryEntityHandler(DataHandler):
                 feature_type_tally[rel_feat_type] += 1
             except KeyError:
                 feature_type_tally[rel_feat_type] = 1
+        self.log.info(f'Skipped {feat_type_skipped} feature_relationships to non-FB-curie features.')
         self.log.info(f'Found these types of features in {chado_type}_relationship, with a/an {self.datatype} as the {role}:')
         ordered_feat_types = sorted(list(feature_type_tally.keys()))
         for feat_type in ordered_feat_types:

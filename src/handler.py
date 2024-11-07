@@ -106,6 +106,7 @@ class DataHandler(object):
         'chem': r'^FBch[0-9]{7}$',
         'consins': r'^FB(tp|ti)[0-9]{7}$',
         'construct': r'^FBtp[0-9]{7}$',
+        'fb_curie': r'^FB:FB[a-z]{2}[0-9]{7,10}$',
         'fb_uniquename': r'^FB[a-z]{2}[0-9]{7,10}$',
         'gene': r'^FBgn[0-9]{7}$',
         'insertion': r'^FBti[0-9]{7}$',
