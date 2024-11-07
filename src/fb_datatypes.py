@@ -240,17 +240,20 @@ class FBAlleleDiseaseAnnotation(FBExportEntity):
 
 class FBRelationship(FBExportEntity):
     """FBRelationship class."""
-    def __init__(self, chado_obj):
+    def __init__(self, chado_obj, table_name):
         """Create a FBRelationship object, limited to associations of entities in the same table.
 
         Args:
             chado_obj (SQLAlchemy object): The Chado object representing the relationship: e.g., FeatureRelationship, StrainRelationship.
+            table_name (str): The relationship table name for the relationship.
 
         """
         # Note that this class has props_by_type attribute that applies to FeatureRelationships only.
         super().__init__()
-        self.chado_obj = chado_obj    # The relationship object: e.g., FeatureRelationship, StrainRelationship, etc.
-        self.pubs = []                # Will be list of pub_ids supporting the relationship.
+        self.chado_obj = chado_obj
+        self.db_primary_id = getattr(chado_obj, f'{table_name}_id')
+        self.entity_desc = f'{table_name}_id={self.db_primary_id}'
+        self.pubs = []    # Will be list of Pub.pub_ids supporting the relationship.
 
 
 # Second class annotations (submitted as part of other objects).
