@@ -331,10 +331,17 @@ class DataHandler(object):
         self.log.info(f'Found {counter} Drosophilid organisms in chado.')
         return
 
-    def build_feature_lookup(self, session):
-        """Build a simple feature lookup for FlyBase features having an FB ID."""
+    def build_public_feature_lookup(self, session, **kwargs):
+        """Build a simple feature lookup for FlyBase features having an FB ID.
+
+        Args:
+            session (SQLAlchemy session): The object that queries the database.
+
+        Keyword Args:
+            feature_types (str|list): A list of public feature types to add to the lookup.
+
+        """
         # Note - depends on prior construction of self.ncbi_taxon_lookup and self.cvterm_lookup.
-        self.log.info('Build a simple feature lookup.')
         feat_type_export = {
             'aberration': True,
             'allele': True,
@@ -346,8 +353,23 @@ class DataHandler(object):
             'seqfeat': False,
             'tool': False,
         }
+        if 'feature_types' in kwargs.keys():
+            if type(kwargs['feature_types']) is str:
+                kwargs['feature_types'] = [kwargs['feature_types']]
+            elif type(kwargs['feature_types']) is not list or type(kwargs['feature_types'][0]) is not str:
+                error_msg = 'The build_public_feature_lookup() method accepts only a string or list of strings,'
+                error_msg += f'but the "feature_types" argument given was this: {kwargs['feature_types']}.'
+                self.log.error(error_msg)
+                raise
+        else:
+            kwargs['feature_types'] = list(feat_type_export.keys())
+        self.log.info(f'Build a simple feature lookup for these public feature types: {kwargs["feature_types"]}.')
+
         # First get features.
-        for feat_type, is_exported in feat_type_export.items():
+        for feat_type in kwargs['feature_types']:
+            if feat_type not in feat_type_export.keys():
+                self.log.error(f'The feature type given, "{feat_type}" is not in the acceptable list: {feat_type_export.keys()}')
+                raise
             self.log.info(f'Looking up {feat_type} features.')
             feat_filters = (
                 Feature.uniquename.op('~')(self.regex[feat_type]),
@@ -376,7 +398,7 @@ class DataHandler(object):
                     'species': f'{result[GENUS]} {result[SPECIES]}',
                     'name': result[NAME],
                     'symbol': result[NAME],
-                    'exported': is_exported,
+                    'exported': feat_type_export[feat_type],
                 }
                 try:
                     feat_dict['taxon_id'] = self.ncbi_taxon_lookup[result[ORG_ID]]

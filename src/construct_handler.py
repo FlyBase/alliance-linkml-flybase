@@ -65,7 +65,7 @@ class ConstructHandler(FeatureHandler):
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
         self.build_ncbi_taxon_lookup(session)
-        self.build_feature_lookup(session)
+        self.build_public_feature_lookup(session)
         self.build_feature_relationship_evidence_lookup(session)
         self.build_allele_class_lookup(session)
         self.build_seqfeat_gene_lookup(session)

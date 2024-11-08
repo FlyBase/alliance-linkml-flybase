@@ -72,7 +72,7 @@ class AlleleHandler(FeatureHandler):
         self.get_key_cvterm_sets(session)
         self.build_ncbi_taxon_lookup(session)
         self.get_drosophilid_organisms(session)
-        self.build_feature_lookup(session)
+        self.build_public_feature_lookup(session)
         self.get_internal_genes(session)
         self.build_feature_relationship_evidence_lookup(session)
         return
