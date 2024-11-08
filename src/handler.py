@@ -442,7 +442,6 @@ class DataHandler(object):
             feat_type_term = aliased(Cvterm, name='feat_type_term')
             syno_type = aliased(Cvterm, name='syno_type')
             syno_filters = (
-                Feature.uniquename.op('~')(self.regex[feat_type]),
                 FeatureSynonym.is_current.is_(True),
                 syno_type.name == 'symbol',
             )
