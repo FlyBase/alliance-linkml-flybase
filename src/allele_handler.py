@@ -597,7 +597,7 @@ class AlleleHandler(FeatureHandler):
                 pub_curies = self.lookup_pub_curies(pub_ids)
                 mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, pub_curies)
                 allele.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
-                self.log.info(f'BILLYBOB: Have this LinkML object: {mutant_type_annotation}')
+                self.log.info(f'BILLYBOB: Have this LinkML object: {mutant_type_annotation.dict_export()}')
                 counter += 1
         self.log.info(f'Mapped {counter} mutation type annotations.')
         return
