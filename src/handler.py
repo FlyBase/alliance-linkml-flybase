@@ -438,16 +438,31 @@ class DataHandler(object):
                 feat_counter += 1
             self.log.info(f'Added {feat_counter} {feat_type} features to the feature_lookup.')
             # Second, get current symbol synonym for each feature, if it exists.
+            feat_type_term = aliased(Cvterm, name='feat_type_term')
+            syno_type = aliased(Cvterm, name='syno_type')
             syno_filters = (
                 Feature.uniquename.op('~')(self.regex[feat_type]),
                 FeatureSynonym.is_current.is_(True),
-                Cvterm.name == 'symbol',
+                syno_type.name == 'symbol',
             )
+            if feat_type in self.subtypes.keys():
+                syno_filters += (
+                    feat_type_term.name.in_((self.subtypes[feat_type])),
+                )
+            else:
+                syno_filters += (
+                    feat_type_term.name == feat_type,
+                )
+            if feat_type in self.regex.keys():
+                syno_filters += (
+                    Feature.uniquename.op('~')(self.regex[feat_type]),
+                )
             syno_results = session.query(Feature.feature_id, Synonym.name).\
                 select_from(Feature).\
+                join(feat_type_term, (feat_type_term.cvterm_id == Feature.type_id)).\
                 join(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
                 join(Synonym, (Synonym.synonym_id == FeatureSynonym.synonym_id)).\
-                join(Cvterm, (Cvterm.cvterm_id == Synonym.type_id)).\
+                join(syno_type, (syno_type.cvterm_id == Synonym.type_id)).\
                 filter(*syno_filters).\
                 distinct()
             FEATURE_ID = 0
