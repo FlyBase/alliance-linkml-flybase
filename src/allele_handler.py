@@ -555,23 +555,16 @@ class AlleleHandler(FeatureHandler):
         }
         counter = 0
         for allele in self.fb_data_entities.values():
-            self.log.debug(f'BILLYBOB: Map mutations for {allele}.')
-            self.log.debug(f'BILLYBOB: Have {len(allele.arg_rels)} ARG rels.')
-            self.log.debug(f'BILLYBOB: Have {len(allele.dmel_ins_rels)} Dmel ins rels.')
-            self.log.debug(f'BILLYBOB: Have {len(allele.non_dmel_ins_rels)} non-Dmel ins rels.')
             mutation_types = {}    # Will be a dict of mutation type curies and supporting pub ids.
             relevant_ins_rels = []
             relevant_ins_rels.extend(allele.dmel_ins_rels)
             relevant_ins_rels.extend(allele.non_dmel_ins_rels)
-            self.log.debug(f'BILLYBOB: Overall, have {len(relevant_ins_rels)} relevant insertion feat_rels.')
             for arg_rel in allele.arg_rels:
                 mutation_type_curie = None
                 fb_feat_type_id = arg_rel.chado_obj.subject.type_id
                 fb_feat_type_name = self.cvterm_lookup[fb_feat_type_id]['name']
-                self.log.debug(f'BILLYBOB: For {arg_rel}, have this related type: {fb_feat_type_name}')
                 if fb_feat_type_id in self.allele_mutant_type_terms:
                     mutation_type_curie = self.cvterm_lookup[fb_feat_type_id]['curie']
-                    self.log.debug(f'BILLYBOB: For {arg_rel}, have this type curie: {mutation_type_curie}')
                 if mutation_type_curie is None:
                     continue
                 if mutation_type_curie in mutation_types.keys():
@@ -582,22 +575,18 @@ class AlleleHandler(FeatureHandler):
                 mutation_type_curie = None
                 fb_feat_type_id = ins_rel.chado_obj.object.type_id
                 fb_feat_type_name = self.cvterm_lookup[fb_feat_type_id]['name']
-                self.log.debug(f'BILLYBOB: For {ins_rel}, have this related type: {fb_feat_type_name}')
                 if fb_feat_type_name in insertion_conversion.keys():
                     mutation_type_curie = insertion_conversion[fb_feat_type_name]
-                    self.log.debug(f'BILLYBOB: For {ins_rel}, have this type curie: {mutation_type_curie}')
                 if mutation_type_curie is None:
                     continue
                 if mutation_type_curie in mutation_types.keys():
                     mutation_types[mutation_type_curie].extend(ins_rel.pubs)
                 else:
                     mutation_types[mutation_type_curie] = ins_rel.pubs
-            self.log.info(f'BILLYBOB: For {allele}, have these mutation_type_curies: {mutation_types.keys()}')
             for mutation_type_curie, pub_ids in mutation_types.items():
                 pub_curies = self.lookup_pub_curies(pub_ids)
                 mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, pub_curies)
                 allele.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
-                self.log.info(f'BILLYBOB: Have this LinkML object: {mutant_type_annotation.dict_export()}')
                 counter += 1
         self.log.info(f'Mapped {counter} mutation type annotations.')
         return

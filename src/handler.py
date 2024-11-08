@@ -322,7 +322,6 @@ class DataHandler(object):
         # Build the list from the results.
         cvterm_id_list = [i[0] for i in recursive_query_total_results]
         self.log.info(f'Found {len(cvterm_id_list)} terms under "{starting_cvterm_name}" from the "{starting_cvterm_cv_name}" CV.')
-        self.log.info(f'BILLYBOB: Have this cvterm_id_list (parent not yet added): {cvterm_id_list}')
         cvterm_id_list.append(starting_cvterm.cvterm_id)
         return cvterm_id_list
 
