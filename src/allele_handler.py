@@ -16,7 +16,7 @@ from fb_datatypes import FBAllele
 from feature_handler import FeatureHandler
 from harvdev_utils.production import (
     Cvterm, Feature, FeatureCvterm, FeatureGenotype, FeatureRelationship,
-    Genotype, Library, LibraryFeature, LibraryFeatureprop, Organism, Phenotype,
+    Genotype, Library, LibraryFeature, LibraryFeatureprop, Phenotype,
     PhenotypeCvterm, Phenstatement, Pub
 )
 
@@ -44,7 +44,7 @@ class AlleleHandler(FeatureHandler):
         'FBal0015410': 'sei[2]',                # Has codominant annotation from single locus unspecified zygosity genotype.
         'FBal0198096': 'tal[1]',                # Allele of internal type gene tal (gene_with_polycistronic_transcript).
         'FBal0055793': 'wg[UAS.Tag:HA]',        # Allele is directly related to a construct.
-        'FBal0048226': 'Dmau\w[a23]',           # Non-Dmel allele related to non-Dmel insertion.
+        'FBal0048226': 'Dmau_w[a23]',           # Non-Dmel allele related to non-Dmel insertion.
     }
 
     # Additional reference info.
@@ -322,11 +322,12 @@ class AlleleHandler(FeatureHandler):
         has_args_counter = 0
         for allele in self.fb_data_entities.values():
             # Assess relationships to current constructs.
-            for cons_rel in allele.sbj_rels_by_type['derived_tp_assoc_alleles']:
-                construct = self.feature_lookup[cons_rel.chado_obj.object_id]
-                if construct['is_obsolete'] is False and construct['uniquename'].startswith('FBtp'):
-                    allele.has_constructs = True
-                    has_construct_counter += 1
+            if 'derived_tp_assoc_alleles' in allele.sbj_rels_by_type.keys():
+                for cons_rel in allele.sbj_rels_by_type['derived_tp_assoc_alleles']:
+                    construct = self.feature_lookup[cons_rel.chado_obj.object_id]
+                    if construct['is_obsolete'] is False and construct['uniquename'].startswith('FBtp'):
+                        allele.has_constructs = True
+                        has_construct_counter += 1
             # Assess relationships to current insertions.
             for feat_rel_type, feat_rel_list in allele.sbj_rels_by_obj_type.items():
                 if feat_rel_type in self.subtypes['insertion']:
@@ -340,11 +341,12 @@ class AlleleHandler(FeatureHandler):
                                 allele.has_non_dmel_insertions = True
                                 has_non_dmel_insertion_counter += 1
             # Assess relationships to ARGs.
-            for arg_rel in allele.obj_rels_by_type['partof']:
-                arg = self.feature_lookup[arg_rel.chado_obj.subject_id]
-                if arg['is_obsolete'] is False and arg['type'] in self.subtypes['variation']:
-                    allele.has_args = True
-                    has_args_counter += 1
+            if 'partof' in allele.obj_rels_by_type.keys():
+                for arg_rel in allele.obj_rels_by_type['partof']:
+                    arg = self.feature_lookup[arg_rel.chado_obj.subject_id]
+                    if arg['is_obsolete'] is False and arg['type'] in self.subtypes['variation']:
+                        allele.has_args = True
+                        has_args_counter += 1
         self.log.info(f'Found {has_construct_counter} alleles related to a construct.')
         self.log.info(f'Found {has_dmel_insertion_counter} alleles related to a Dmel insertion.')
         self.log.info(f'Found {has_non_dmel_insertion_counter} alleles related to a non-Dmel insertion.')
