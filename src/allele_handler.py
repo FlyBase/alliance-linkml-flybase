@@ -288,10 +288,11 @@ class AlleleHandler(FeatureHandler):
         allele_counter = 0
         for allele in self.fb_data_entities.values():
             parent_gene_ids = []
-            for allele_gene_rel in allele.sbj_rels_by_type['alleleof']:
-                parent_gene = self.feature_lookup[allele_gene_rel.chado_obj.object_id]
-                if parent_gene['is_obsolete'] is False:
-                    parent_gene_ids.append(parent_gene['uniquename'])
+            if 'alleleof' in allele.sbj_rels_by_type.keys():
+                for allele_gene_rel in allele.sbj_rels_by_type['alleleof']:
+                    parent_gene = self.feature_lookup[allele_gene_rel.chado_obj.object_id]
+                    if parent_gene['is_obsolete'] is False:
+                        parent_gene_ids.append(parent_gene['uniquename'])
             if len(parent_gene_ids) == 1:
                 allele.parent_gene_id = parent_gene_ids[0]
                 allele_counter += 1
