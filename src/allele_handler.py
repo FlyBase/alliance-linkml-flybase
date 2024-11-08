@@ -585,13 +585,13 @@ class AlleleHandler(FeatureHandler):
                 self.log.debug(f'BILLYBOB: For {ins_rel}, have this related type: {fb_feat_type_name}')
                 if fb_feat_type_name in insertion_conversion.keys():
                     mutation_type_curie = insertion_conversion[fb_feat_type_name]
-                    self.log.debug(f'BILLYBOB: For {arg_rel}, have this type curie: {mutation_type_curie}')
+                    self.log.debug(f'BILLYBOB: For {ins_rel}, have this type curie: {mutation_type_curie}')
                 if mutation_type_curie is None:
                     continue
                 if mutation_type_curie in mutation_types.keys():
-                    mutation_types[mutation_type_curie].extend(arg_rel.pubs)
+                    mutation_types[mutation_type_curie].extend(ins_rel.pubs)
                 else:
-                    mutation_types[mutation_type_curie] = arg_rel.pubs
+                    mutation_types[mutation_type_curie] = ins_rel.pubs
 
                 if mutation_type_curie in mutation_types.keys():
                     mutation_types[mutation_type_curie].extend(ins_rel.pubs)
