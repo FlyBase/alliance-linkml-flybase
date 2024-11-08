@@ -391,12 +391,13 @@ class DataHandler(object):
                 self.log.error(f'The feature type given, "{feat_type}" is not in the acceptable list: {self.feat_type_export.keys()}')
                 raise
             self.log.info(f'Looking up {feat_type} features.')
+            feat_filters = ()
             if feat_type in self.subtypes.keys():
-                feat_filters = (
+                feat_filters += (
                     Cvterm.name.in_((self.subtypes[feat_type])),
                 )
             else:
-                feat_filters = (
+                feat_filters += (
                     Cvterm.name == feat_type,
                 )
             if feat_type in self.regex.keys():
