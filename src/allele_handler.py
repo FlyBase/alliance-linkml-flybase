@@ -75,7 +75,7 @@ class AlleleHandler(FeatureHandler):
         self.get_key_cvterm_sets(session)
         self.build_ncbi_taxon_lookup(session)
         self.get_drosophilid_organisms(session)
-        self.build_feature_lookup(session, feature_types=['gene', 'variation'])
+        self.build_feature_lookup(session, feature_types=['construct', 'gene', 'insertion', 'variation'])
         self.get_internal_genes(session)
         return
 
