@@ -248,8 +248,11 @@ class PrimaryEntityHandler(DataHandler):
                 kwargs['rel_type'] = [kwargs['rel_type']]
             filters += (rel_type.name.in_((kwargs['rel_type'])), )
         if 'entity_type' in kwargs.keys():
-            if type(kwargs['entity_type']) != list:
-                kwargs['entity_type'] = [kwargs['entity_type']]
+            if type(kwargs['entity_type']) is str:
+                if kwargs['entity_type'] in self.subtypes.keys():
+                    kwargs['entity_type'] = self.subtypes[kwargs['entity_type']]
+                else:
+                    kwargs['entity_type'] = [kwargs['entity_type']]
             filters += (secondary_entity_type.name.in_((kwargs['entity_type'])), )
         if 'entity_regex' in kwargs.keys():
             filters += (secondary_entity.uniquename.op('~')(kwargs['entity_regex']), )

@@ -72,13 +72,11 @@ class AlleleHandler(FeatureHandler):
         self.get_key_cvterm_sets(session)
         self.build_ncbi_taxon_lookup(session)
         self.get_drosophilid_organisms(session)
-        self.build_feature_lookup(session)
+        self.build_feature_lookup(session, feature_types=['gene', 'variation'])
         self.get_internal_genes(session)
-        self.build_feature_relationship_evidence_lookup(session)
         return
 
     # Additional sub-methods for get_datatype_data().
-
     def get_related_features(self, session):
         """Get allele-associated features."""
         self.log.info('Get allele-associated features.')
@@ -317,8 +315,10 @@ class AlleleHandler(FeatureHandler):
         """Extend the method for the GeneHandler."""
         super().get_datatype_data(session)
         self.get_entities(session)
-        self.get_entity_sbj_relationships(session)
-        self.get_entity_obj_relationships(session)
+        self.get_entity_relationships(session, 'subject', rel_type='alleleof', entity_type='gene', entity_regex=self.regex['gene'])
+        self.get_entity_relationships(session, 'subject', rel_type='derived_tp_assoc_alleles', entity_type='construct', entity_regex=self.regex['construct'])
+        self.get_entity_relationships(session, 'subject', rel_type='associated_with', entity_type='insertion', entity_regex=self.regex['insertion'])
+        self.get_entity_relationships(session, 'object', rel_type='partof', entity_type='variation')
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
@@ -326,8 +326,8 @@ class AlleleHandler(FeatureHandler):
         self.get_entity_xrefs(session)
         self.get_entity_timestamps(session)
         self.get_phenotypes(session)
-        self.get_related_features(session)
-        self.get_associated_insertions(session)
+        # self.get_related_features(session)         # DETRITUS
+        # self.get_associated_insertions(session)    # DETRITUS
         self.find_in_vitro_alleles(session)
         self.get_direct_collections(session)
         self.get_indirect_collections(session)
