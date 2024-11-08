@@ -343,7 +343,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Found these types of {chado_type}_relationship types where the {self.datatype} is the {role}:')
         ordered_rel_types = sorted(list(rel_type_tally.keys()))
         for rel_type in ordered_rel_types:
-            self.log.info(f'table={chado_type}_relationship, rel_type={rel_type}, count={rel_type_tally[rel_type]}.')
+            self.log.debug(f'table={chado_type}_relationship, rel_type={rel_type}, count={rel_type_tally[rel_type]}.')
         if chado_type != 'feature':
             return
         # For features only, also sort relationships by type of related entity.
@@ -375,7 +375,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Found these types of features in {chado_type}_relationship, with a/an {self.datatype} as the {role}:')
         ordered_feat_types = sorted(list(feature_type_tally.keys()))
         for feat_type in ordered_feat_types:
-            self.log.info(f'table={chado_type}_relationship, feat_type={feat_type}, count={feature_type_tally[feat_type]}.')
+            self.log.debug(f'table={chado_type}_relationship, feat_type={feat_type}, count={feature_type_tally[feat_type]}.')
         return
 
     def get_entityprops(self, session):
@@ -470,7 +470,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Found these types of {chado_type}props:')
         ordered_prop_types = sorted(list(prop_type_tally.keys()))
         for prop_type in ordered_prop_types:
-            self.log.info(f'table={chado_type}, prop_type={prop_type}, count={prop_type_tally[prop_type]}.')
+            self.log.debug(f'table={chado_type}, prop_type={prop_type}, count={prop_type_tally[prop_type]}.')
         return
 
     def get_entity_pubs(self, session):
