@@ -61,7 +61,7 @@ class DataHandler(object):
         self.drosophilid_list = []          # A list of organism_ids for Drosophilid species.
         self.chr_dict = {}                  # Will be a feature_id-keyed dict of chr scaffold uniquenames.
         self.feature_lookup = {}            # feature_id-keyed dicts with these keys: uniquename, is_obsolete, name, symbol, exported, taxon_id, species.
-        self.internal_gene_ids = []         # A list of feature_ids for FlyBase genes that should be internal at the Alliance: e.g., 'engineered_fusion_gene'.
+        self.internal_gene_ids = []         # A list of FBgn IDs for FlyBase genes that should be internal at the Alliance: e.g., 'engineered_fusion_gene'.
         self.featureprop_pub_lookup = {}    # Will be featureprop_id-keyed lists of supporting pub_ids.
         self.feat_rel_pub_lookup = {}       # Will be feature_relationship_id-keyed lists of supporting pub_ids.
         # Trackers.
@@ -509,7 +509,7 @@ class DataHandler(object):
             gene_type_name = result.value[11:-1]
             if gene_type_name in internal_gene_types:
                 counter += 1
-                self.internal_gene_ids.append(result.feature_id)
+                self.internal_gene_ids.append(self.feature_lookup[result.feature_id]["uniquename"])
         self.log.info(f'Found {counter} internal type genes.')
         return
 

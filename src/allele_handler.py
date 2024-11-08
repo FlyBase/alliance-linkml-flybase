@@ -42,6 +42,9 @@ class AlleleHandler(FeatureHandler):
         'FBal0011189': 'sti[1]',                # Has recessive annotation from single locus hemizygous genotype over a deficiency.
         'FBal0007942': '18w[00053]',            # Has recessive annotation from single locus unspecified zygosity genotype.
         'FBal0015410': 'sei[2]',                # Has codominant annotation from single locus unspecified zygosity genotype.
+        'FBal0198096': 'tal[1]',                # Allele of internal type gene tal (gene_with_polycistronic_transcript).
+        'FBal0055793': 'wg[UAS.Tag:HA]',        # Allele is directly related to a construct.
+        'FBal0048226': 'Dmau\w[a23]',           # Non-Dmel allele related to non-Dmel insertion.
     }
 
     # Additional reference info.
@@ -77,60 +80,6 @@ class AlleleHandler(FeatureHandler):
         return
 
     # Additional sub-methods for get_datatype_data().
-    def get_related_features(self, session):
-        """Get allele-associated features."""
-        self.log.info('Get allele-associated features.')
-        self.get_entity_sbj_feat_rel_by_type(session, 'parent_gene_rels', rel_type='alleleof', obj_type='gene', obj_regex=self.regex['gene'])
-        self.get_entity_sbj_feat_rel_by_type(session, 'constructs', rel_type='derived_tp_assoc_alleles', obj_regex=self.regex['construct'])
-        classical_allele_arg_types = [
-            'MNV',
-            'complex_substitution',
-            'deletion',
-            'delins',
-            'insertion',
-            'point_mutation',
-            'sequence_alteration',
-            'sequence_variant',
-        ]
-        self.get_entity_obj_feat_rel_by_type(session, 'args', rel_type='partof', sbj_type=classical_allele_arg_types)
-        return
-
-    def get_associated_insertions(self, session):
-        """Get allele-associated insertions."""
-        self.log.info('Get allele-associated insertions')
-        allele = aliased(Feature, name='allele')
-        insertion = aliased(Feature, name='insertion')
-        filters = (
-            allele.is_obsolete.is_(False),
-            allele.uniquename.op('~')(self.regex['allele']),
-            insertion.is_obsolete.is_(False),
-            insertion.is_analysis.is_(False),
-            insertion.uniquename.op('~')(self.regex['insertion']),
-            Cvterm.name == 'associated_with'
-        )
-        if self.testing:
-            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
-            filters += (allele.uniquename.in_((self.test_set.keys())), )
-        insertion_results = session.query(Organism, FeatureRelationship).\
-            select_from(insertion).\
-            join(Organism, (Organism.organism_id == insertion.organism_id)).\
-            join(FeatureRelationship, (FeatureRelationship.object_id == insertion.feature_id)).\
-            join(allele, (allele.feature_id == FeatureRelationship.subject_id)).\
-            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
-            filter(*filters).\
-            distinct()
-        dmel_counter = 0
-        non_dmel_counter = 0
-        for result in insertion_results:
-            if result.Organism.abbreviation == 'Dmel':
-                self.fb_data_entities[result.FeatureRelationship.subject_id].dmel_insertions.append(result.FeatureRelationship)
-                dmel_counter += 1
-            else:
-                self.fb_data_entities[result.FeatureRelationship.subject_id].non_dmel_insertions.append(result.FeatureRelationship)
-                non_dmel_counter += 1
-        self.log.info(f'Found {dmel_counter} Dmel and {non_dmel_counter} non-Dmel insertions related to alleles.')
-        return
-
     def find_in_vitro_alleles(self, session):
         """Find in vitro alleles."""
         self.log.info('Find in vitro alleles.')
@@ -326,8 +275,6 @@ class AlleleHandler(FeatureHandler):
         self.get_entity_xrefs(session)
         self.get_entity_timestamps(session)
         self.get_phenotypes(session)
-        # self.get_related_features(session)         # DETRITUS
-        # self.get_associated_insertions(session)    # DETRITUS
         self.find_in_vitro_alleles(session)
         self.get_direct_collections(session)
         self.get_indirect_collections(session)
@@ -341,8 +288,8 @@ class AlleleHandler(FeatureHandler):
         allele_counter = 0
         for allele in self.fb_data_entities.values():
             parent_gene_ids = []
-            for feat_rel in allele.parent_gene_rels:
-                parent_gene = self.feature_lookup[feat_rel.object_id]
+            for allele_gene_rel in allele.sbj_rels_by_type['alleleof']:
+                parent_gene = self.feature_lookup[allele_gene_rel.chado_obj.object_id]
                 if parent_gene['is_obsolete'] is False:
                     parent_gene_ids.append(parent_gene['uniquename'])
             if len(parent_gene_ids) == 1:
@@ -358,27 +305,76 @@ class AlleleHandler(FeatureHandler):
     def flag_alleles_of_internal_genes(self):
         """Flag alleles of internal genes."""
         self.log.info('Flag alleles of internal genes.')
+        counter = 0
         for allele in self.fb_data_entities.values():
             if allele.parent_gene_id in self.internal_gene_ids:
                 allele.allele_of_internal_gene = True
+                counter += 1
+        self.log.info(f'Flagged {counter} alleles as related to internal genes.')
+        return
+
+    def synthesize_related_features(self):
+        """Synthesize allele attributes based on related features."""
+        self.log.info('Synthesize allele attributes based on related features.')
+        has_construct_counter = 0
+        has_dmel_insertion_counter = 0
+        has_non_dmel_insertion_counter = 0
+        has_args_counter = 0
+        for allele in self.fb_data_entities.values():
+            # Assess relationships to current constructs.
+            for cons_rel in allele.sbj_rels_by_type['derived_tp_assoc_alleles']:
+                construct = self.feature_lookup[cons_rel.chado_obj.object_id]
+                if construct['is_obsolete'] is False and construct['uniquename'].startswith('FBtp'):
+                    allele.has_constructs = True
+                    has_construct_counter += 1
+            # Assess relationships to current insertions.
+            for feat_rel_type, feat_rel_list in allele.sbj_rels_by_obj_type.items():
+                if feat_rel_type in self.subtypes['insertion']:
+                    for feat_rel in feat_rel_list:
+                        insertion = self.feature_lookup[feat_rel.chado_obj.object_id]
+                        if insertion['is_obsolete'] is False and insertion['uniquename'].startswith('FBti'):
+                            if insertion['species'] == 'Drosophila melanogaster':
+                                allele.has_dmel_insertions = True
+                                has_dmel_insertion_counter += 1
+                            else:
+                                allele.has_non_dmel_insertions = True
+                                has_non_dmel_insertion_counter += 1
+            # Assess relationships to ARGs.
+            for arg_rel in allele.obj_rels_by_type['partof']:
+                arg = self.feature_lookup[arg_rel.chado_obj.subject_id]
+                if arg['is_obsolete'] is False and arg['type'] in self.subtypes['variation']:
+                    allele.has_args = True
+                    has_args_counter += 1
+        self.log.info(f'Found {has_construct_counter} alleles related to a construct.')
+        self.log.info(f'Found {has_dmel_insertion_counter} alleles related to a Dmel insertion.')
+        self.log.info(f'Found {has_non_dmel_insertion_counter} alleles related to a non-Dmel insertion.')
+        self.log.info(f'Found {has_args_counter} alleles related to a mapped variation feature (ARGs).')
         return
 
     def adjust_allele_organism(self):
         """Adjust organism for classical non-Dmel alleles."""
         self.log.info('Adjust organism for classical non-Dmel alleles.')
+        # The default allele.adj_org_abbr is Dmel. Change this if needed.
         counter = 0
         for allele in self.fb_data_entities.values():
-            # Skip alleles that unambiguously occur in Dmel.
+            # Skip alleles that exist in Dmel (certainly or most likely).
             if allele.org_abbr == 'Dmel':
                 continue
-            if allele.dmel_insertions:
+            elif allele.has_dmel_insertions is True:
                 continue
-            if allele.constructs:
+            # Mapped mutations (ARGs) are exclusively Dmel genome mapped features for Dmel alleles.
+            elif allele.has_args is True:
+                continue
+            # The assumption here is that transgenic alleles for non-Dmel species are inserted into the Dmel genome.
+            # This may not always be true, but there way to ascertain the host species in the database, so we assume this is so.
+            elif allele.has_constructs is True:
                 continue
             # Find clear evidence that allele is non-Dmel classical allele.
             is_non_dmel_classical = False
-            if allele.non_dmel_insertions:
+            # A non-Dmel insertion is good evidence that the allele exists in a non-Dmel species.
+            if allele.has_non_dmel_insertions is True:
                 is_non_dmel_classical = True
+            # If there is no indication that the allele is transgenic, we assume that it exists in a non-Dmel species.
             elif allele.organism_id in self.drosophilid_list and allele.in_vitro is False:
                 is_non_dmel_classical = True
             # Make the adjustment.
@@ -399,6 +395,7 @@ class AlleleHandler(FeatureHandler):
         self.synthesize_pubs()
         self.synthesize_parent_genes()
         self.flag_alleles_of_internal_genes()
+        self.synthesize_related_features()
         self.adjust_allele_organism()
         return
 
