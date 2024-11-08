@@ -143,10 +143,10 @@ class FBAllele(FBFeature):
         self.phenstatements = []                # List of SQLAlchemy (Feature, Genotype, Phenotype, Cvterm, Pub) results from Phenstatements.
         # Processed FB data.
         self.parent_gene_id = None              # The FBgn ID for the allele's parent gene.
-        self.has_constructs = False             # True if there are associated constructs.
-        self.has_dmel_insertions = False        # List of FBRelationships to associated Dmel insertions (FBti).
-        self.has_non_dmel_insertions = False    # List of FBRelationships to associated non-Dmel insertions (FBti).
-        self.has_args = False                   # List of FBRelationships to associated ARG (variation) features.
+        self.cons_rels = []                     # List of current cons FBRelationships.
+        self.dmel_ins_rels = []                 # List of current Dmel FBti FBRelationships.
+        self.non_dmel_ins_rels = False          # List of current non-Dmel FBti FBRelationships.
+        self.arg_rels = []                      # List of current ARG FBRelationships.
         self.adj_org_abbr = 'Dmel'              # Assume allele is Dmel (classical/transgenic) unless it can be shown to be a non-Dmel classical allele.
         self.in_vitro = False                   # Change to True if the allele is associated with an "in vitro%" term.
         self.allele_of_internal_gene = False    # Change to True if the allele is related to an internal-type gene (e.g., origin of replication).

@@ -326,7 +326,7 @@ class AlleleHandler(FeatureHandler):
                 for cons_rel in allele.sbj_rels_by_type['derived_tp_assoc_alleles']:
                     construct = self.feature_lookup[cons_rel.chado_obj.object_id]
                     if construct['is_obsolete'] is False and construct['uniquename'].startswith('FBtp'):
-                        allele.has_constructs = True
+                        allele.cons_rels.append(cons_rel)
                         has_construct_counter += 1
             # Assess relationships to current insertions.
             for feat_rel_type, feat_rel_list in allele.sbj_rels_by_obj_type.items():
@@ -335,17 +335,17 @@ class AlleleHandler(FeatureHandler):
                         insertion = self.feature_lookup[feat_rel.chado_obj.object_id]
                         if insertion['is_obsolete'] is False and insertion['uniquename'].startswith('FBti'):
                             if insertion['species'] == 'Drosophila melanogaster':
-                                allele.has_dmel_insertions = True
+                                allele.dmel_ins_rels.append(feat_rel)
                                 has_dmel_insertion_counter += 1
                             else:
-                                allele.has_non_dmel_insertions = True
+                                allele.non_dmel_ins_rels.append(feat_rel)
                                 has_non_dmel_insertion_counter += 1
             # Assess relationships to ARGs.
             if 'partof' in allele.obj_rels_by_type.keys():
                 for arg_rel in allele.obj_rels_by_type['partof']:
                     arg = self.feature_lookup[arg_rel.chado_obj.subject_id]
                     if arg['is_obsolete'] is False and arg['type'] in self.subtypes['variation']:
-                        allele.has_args = True
+                        allele.arg_rels.append(arg_rel)
                         has_args_counter += 1
         self.log.info(f'Found {has_construct_counter} alleles related to a construct.')
         self.log.info(f'Found {has_dmel_insertion_counter} alleles related to a Dmel insertion.')
@@ -362,19 +362,19 @@ class AlleleHandler(FeatureHandler):
             # Skip alleles that exist in Dmel (certainly or most likely).
             if allele.org_abbr == 'Dmel':
                 continue
-            elif allele.has_dmel_insertions is True:
+            elif allele.dmel_ins_rels:
                 continue
             # Mapped mutations (ARGs) are exclusively Dmel genome mapped features for Dmel alleles.
-            elif allele.has_args is True:
+            elif allele.arg_rels is True:
                 continue
             # The assumption here is that transgenic alleles for non-Dmel species are inserted into the Dmel genome.
             # This may not always be true, but there way to ascertain the host species in the database, so we assume this is so.
-            elif allele.has_constructs is True:
+            elif allele.cons_rels is True:
                 continue
             # Find clear evidence that allele is non-Dmel classical allele.
             is_non_dmel_classical = False
             # A non-Dmel insertion is good evidence that the allele exists in a non-Dmel species.
-            if allele.has_non_dmel_insertions is True:
+            if allele.non_dmel_ins_rels is True:
                 is_non_dmel_classical = True
             # If there is no indication that the allele is transgenic, we assume that it exists in a non-Dmel species.
             elif allele.organism_id in self.drosophilid_list and allele.in_vitro is False:
@@ -553,17 +553,16 @@ class AlleleHandler(FeatureHandler):
             'transposable_element': 'SO:0001837',                   # mobile_element_insertion
             'insertion': 'SO:0000667'                               # insertion
         }
-        mutation_types = {}    # Will be a dict of mutation type curies and supporting pub curies.
+        counter = 0
         for allele in self.fb_data_entities.values():
+            mutation_types = {}    # Will be a dict of mutation type curies and supporting pub ids.
             relevant_feat_rels = []
-            relevant_feat_rels.extend(allele.args)
-            relevant_feat_rels.extend(allele.dmel_insertions)
-            relevant_feat_rels.extend(allele.non_dmel_insertions)
-            counter = 0
+            relevant_feat_rels.extend(allele.arg_rels)
+            relevant_feat_rels.extend(allele.dmel_ins_rels)
+            relevant_feat_rels.extend(allele.non_dmel_ins_rels)
             for feat_rel in relevant_feat_rels:
-                counter += 1
                 mutation_type_curie = None
-                fb_feat_type_id = feat_rel.object.type_id
+                fb_feat_type_id = feat_rel.chado_obj.object.type_id
                 fb_feat_type_name = self.cvterm_lookup[fb_feat_type_id]['name']
                 if fb_feat_type_name in insertion_conversion.keys():
                     mutation_type_curie = insertion_conversion[fb_feat_type_name]
@@ -571,18 +570,15 @@ class AlleleHandler(FeatureHandler):
                     mutation_type_curie = self.cvterm_lookup[fb_feat_type_id]['curie']
                 else:
                     continue
-                if feat_rel.feature_relationship_id in self.feat_rel_pub_lookup.keys():
-                    pub_ids = self.feat_rel_pub_lookup[feat_rel.feature_relationship_id]
-                    pub_curies = self.lookup_pub_curies(pub_ids)
-                else:
-                    pub_curies = []
                 if mutation_type_curie in mutation_types.keys():
-                    mutation_types[mutation_type_curie].extend(pub_curies)
+                    mutation_types[mutation_type_curie].extend(feat_rel.pubs)
                 else:
-                    mutation_types[mutation_type_curie] = pub_curies
-            for mutation_type_curie, full_pub_curie_list in mutation_types.items():
-                mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, full_pub_curie_list)
+                    mutation_types[mutation_type_curie] = feat_rel.pubs
+            for mutation_type_curie, pub_ids in mutation_types.items():
+                pub_curies = self.lookup_pub_curies(pub_ids)
+                mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, pub_curies)
                 allele.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
+        self.log.info(f'Mapped {counter} mutation type annotations.')
         return
 
     # Elaborate on map_fb_data_to_alliance() for the GeneHandler.
