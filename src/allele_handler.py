@@ -592,11 +592,6 @@ class AlleleHandler(FeatureHandler):
                     mutation_types[mutation_type_curie].extend(ins_rel.pubs)
                 else:
                     mutation_types[mutation_type_curie] = ins_rel.pubs
-
-                if mutation_type_curie in mutation_types.keys():
-                    mutation_types[mutation_type_curie].extend(ins_rel.pubs)
-                else:
-                    mutation_types[mutation_type_curie] = ins_rel.pubs
             self.log.info(f'BILLYBOB: For {allele}, have these mutation_type_curies: {mutation_types.keys()}')
             for mutation_type_curie, pub_ids in mutation_types.items():
                 pub_curies = self.lookup_pub_curies(pub_ids)
