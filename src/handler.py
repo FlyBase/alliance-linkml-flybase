@@ -358,7 +358,7 @@ class DataHandler(object):
                 kwargs['feature_types'] = [kwargs['feature_types']]
             elif type(kwargs['feature_types']) is not list or type(kwargs['feature_types'][0]) is not str:
                 error_msg = 'The build_public_feature_lookup() method accepts only a string or list of strings,'
-                error_msg += f'but the "feature_types" argument given was this: {kwargs['feature_types']}.'
+                error_msg += f'but the "feature_types" argument given was this: {kwargs["feature_types"]}.'
                 self.log.error(error_msg)
                 raise
         else:
