@@ -42,30 +42,6 @@ class PrimaryEntityHandler(DataHandler):
         """Create the generic PrimaryEntityHandler object."""
         super().__init__(log, testing)
 
-    # Feature sub-types that are considered their own data class.
-    feature_datatypes = [
-        'aberration',
-        'allele',
-        'balancer',
-        'chemical',
-        'construct',
-        'gene',
-        'insertion',
-        'variation',
-    ]
-
-    # CVterms used to define a fb_data_type within a larger chado table.
-    subtypes = {
-        'aberration': ['chromosome_structure_variation'],
-        'allele': ['allele'],
-        'balancer': ['chromosome_structure_variation'],
-        'chemical': ['chemical entity'],
-        'construct': ['engineered_transposable_element', 'engineered_region', 'transgenic_transposable_element'],
-        'gene': ['gene'],
-        'insertion': ['insertion_site', 'transposable_element', 'transposable_element_insertion_site'],
-        'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion', 'point_mutation', 'sequence_alteration', 'sequence_variant']
-    }
-
     # Mappings of main data types to chado tables with associated data like cvterms, props, synonyms, etc.
     chado_tables = {
         'main_table': {
@@ -166,7 +142,7 @@ class PrimaryEntityHandler(DataHandler):
     # Add methods to be run by get_datatype_data() below.
     def get_entities(self, session):
         """Get primary FlyBase data entities."""
-        if self.datatype in self.feature_datatypes:
+        if self.datatype in self.feat_type_export.keys():
             chado_type = 'feature'
         else:
             chado_type = self.datatype
@@ -236,7 +212,7 @@ class PrimaryEntityHandler(DataHandler):
         if role not in role_inverse.keys():
             self.log.error(f'For "get_entity_relationships()", role was specified as "{role}"; only these values are allowed: "subject", "object".')
             raise
-        if self.datatype in self.feature_datatypes:
+        if self.datatype in self.feat_type_export.keys():
             chado_type = 'feature'
         else:
             chado_type = self.datatype
@@ -402,7 +378,7 @@ class PrimaryEntityHandler(DataHandler):
     def get_entityprops(self, session):
         """Get primary FlyBase data entity props."""
         self.log.info('Get primary FlyBase data entity props.')
-        if self.datatype in self.feature_datatypes:
+        if self.datatype in self.feat_type_export.keys():
             chado_type = 'feature'
         else:
             chado_type = self.datatype
@@ -496,7 +472,7 @@ class PrimaryEntityHandler(DataHandler):
 
     def get_entity_pubs(self, session):
         """Get pubs directly associated with FlyBase data entities."""
-        if self.datatype in self.feature_datatypes:
+        if self.datatype in self.feat_type_export.keys():
             chado_type = 'feature'
         else:
             chado_type = self.datatype
@@ -525,7 +501,7 @@ class PrimaryEntityHandler(DataHandler):
 
     def get_entity_synonyms(self, session):
         """Get synonyms for the FlyBase data entities."""
-        if self.datatype in self.feature_datatypes:
+        if self.datatype in self.feat_type_export.keys():
             chado_type = 'feature'
         else:
             chado_type = self.datatype
@@ -554,7 +530,7 @@ class PrimaryEntityHandler(DataHandler):
 
     def get_entity_fb_xrefs(self, session):
         """Get secondary FB xrefs for the FlyBase data entities."""
-        if self.datatype in self.feature_datatypes:
+        if self.datatype in self.feat_type_export.keys():
             chado_type = 'feature'
         else:
             chado_type = self.datatype
@@ -587,7 +563,7 @@ class PrimaryEntityHandler(DataHandler):
 
     def get_entity_xrefs(self, session):
         """Get all other xrefs for the FlyBase data entities."""
-        if self.datatype in self.feature_datatypes:
+        if self.datatype in self.feat_type_export.keys():
             chado_type = 'feature'
         else:
             chado_type = self.datatype
@@ -621,7 +597,7 @@ class PrimaryEntityHandler(DataHandler):
     def get_entity_timestamps(self, session):
         """Get timestamps for data entities."""
         self.log.info(f'Get timestamps for FlyBase {self.datatype} entities.')
-        if self.datatype in self.feature_datatypes:
+        if self.datatype in self.feat_type_export.keys():
             chado_type = 'feature'
         else:
             chado_type = self.datatype

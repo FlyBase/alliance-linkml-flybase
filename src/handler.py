@@ -89,6 +89,7 @@ class DataHandler(object):
         'MGD': 'MGI',
         'MGI': 'MGI'
     }
+
     # Specify page_area for cross-references for specific external databases.
     # For Alliance MODs, the page_area will be the data type: e.g., gene.s
     agr_page_area_dict = {
@@ -96,6 +97,7 @@ class DataHandler(object):
         'RNAcentral': 'default',
         'UniProtKB': 'default',
     }
+
     # Useful regexes.
     regex = {
         'pub': r'^(FBrf[0-9]{7}|unattributed)$',
@@ -117,7 +119,37 @@ class DataHandler(object):
         'library': r'^FBlc[0-9]{7}$',
         'cell': r'^FBcl[0-9]{7}$',
         'panther': r'PTHR[0-9]{5}',
-        'systematic_name': r'^(D[a-z]{3}\\|)(CG|CR|G[A-Z])[0-9]{4,5}'
+        'systematic_name': r'^(D[a-z]{3}\\|)(CG|CR|G[A-Z])[0-9]{4,5}',
+    }
+
+    # Feature sub-types that are considered their own data class.
+    # If these are exported to the Alliance, then value is True.
+    # Most of these that are exported will have an FB-type uniquename (except variants).
+    feat_type_export = {
+        'aberration': True,
+        'allele': True,
+        'balancer': True,
+        'chemical': False,
+        'construct': True,
+        'gene': True,
+        'insertion': True,
+        'seqfeat': False,
+        'tool': False,
+        'variation': True,
+    }
+
+    # CVterms used to define a fb_data_type within a larger chado table.
+    subtypes = {
+        'aberration': ['chromosome_structure_variation'],
+        'allele': ['allele'],
+        'balancer': ['chromosome_structure_variation'],
+        'chemical': ['chemical entity'],
+        'construct': ['engineered_transposable_element', 'engineered_region', 'transgenic_transposable_element'],
+        'gene': ['gene'],
+        'insertion': ['insertion_site', 'transposable_element', 'transposable_element_insertion_site'],
+        'seqfeat': None,    # The list is too long, so for this case let the code be flexible.
+        'tool': ['engineered_region'],
+        'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion', 'point_mutation', 'sequence_alteration', 'sequence_variant'],
     }
 
     # Methods
@@ -331,60 +363,58 @@ class DataHandler(object):
         self.log.info(f'Found {counter} Drosophilid organisms in chado.')
         return
 
-    def build_public_feature_lookup(self, session, **kwargs):
-        """Build a simple feature lookup for FlyBase features having an FB ID.
+    def build_feature_lookup(self, session, **kwargs):
+        """Build a simple feature lookup for FlyBase features.
 
         Args:
             session (SQLAlchemy session): The object that queries the database.
 
         Keyword Args:
-            feature_types (str|list): A list of public feature types to add to the lookup.
+            feature_types (str|list): A list of feature types to add to the lookup.
 
         """
         # Note - depends on prior construction of self.ncbi_taxon_lookup and self.cvterm_lookup.
-        feat_type_export = {
-            'aberration': True,
-            'allele': True,
-            'balancer': True,
-            'chemical': False,
-            'construct': True,
-            'gene': True,
-            'insertion': True,
-            'seqfeat': False,
-            'tool': False,
-        }
         if 'feature_types' in kwargs.keys():
             if type(kwargs['feature_types']) is str:
                 kwargs['feature_types'] = [kwargs['feature_types']]
             elif type(kwargs['feature_types']) is not list or type(kwargs['feature_types'][0]) is not str:
-                error_msg = 'The build_public_feature_lookup() method accepts only a string or list of strings,'
+                error_msg = 'The build_feature_lookup() method accepts only a string or list of strings,'
                 error_msg += f'but the "feature_types" argument given was this: {kwargs["feature_types"]}.'
                 self.log.error(error_msg)
                 raise
         else:
-            kwargs['feature_types'] = list(feat_type_export.keys())
+            kwargs['feature_types'] = list(self.feat_type_export.keys())
         self.log.info(f'Build a simple feature lookup for these public feature types: {kwargs["feature_types"]}.')
-
         # First get features.
         for feat_type in kwargs['feature_types']:
-            if feat_type not in feat_type_export.keys():
-                self.log.error(f'The feature type given, "{feat_type}" is not in the acceptable list: {feat_type_export.keys()}')
+            if feat_type not in self.feat_type_export.keys():
+                self.log.error(f'The feature type given, "{feat_type}" is not in the acceptable list: {self.feat_type_export.keys()}')
                 raise
             self.log.info(f'Looking up {feat_type} features.')
-            feat_filters = (
-                Feature.uniquename.op('~')(self.regex[feat_type]),
-            )
+            if feat_type in self.subtypes.keys():
+                feat_filters = (
+                    Cvterm.name.in_((self.subtypes[feat_type])),
+                )
+            else:
+                feat_filters = (
+                    Cvterm.name == feat_type,
+                )
+            if feat_type in self.regex.keys():
+                feat_filters += (
+                    Feature.uniquename.op('~')(self.regex[feat_type]),
+                )
             feat_results = session.query(Feature.feature_id, Feature.uniquename, Feature.is_obsolete,
-                                         Feature.type_id, Organism.organism_id, Organism.genus,
+                                         Cvterm.name, Organism.organism_id, Organism.genus,
                                          Organism.species, Feature.name).\
                 select_from(Feature).\
                 join(Organism, (Organism.organism_id == Feature.organism_id)).\
+                join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
                 filter(*feat_filters).\
                 distinct()
             FEATURE_ID = 0
             UNIQUENAME = 1
             OBSOLETE = 2
-            TYPE_ID = 3
+            TYPE = 3
             ORG_ID = 4
             GENUS = 5
             SPECIES = 6
@@ -394,11 +424,11 @@ class DataHandler(object):
                 feat_dict = {
                     'uniquename': result[UNIQUENAME],
                     'is_obsolete': result[OBSOLETE],
-                    'type': self.cvterm_lookup[result[TYPE_ID]]['name'],
+                    'type': result[TYPE],
                     'species': f'{result[GENUS]} {result[SPECIES]}',
                     'name': result[NAME],
                     'symbol': result[NAME],
-                    'exported': feat_type_export[feat_type],
+                    'exported': self.feat_type_export[feat_type],
                 }
                 try:
                     feat_dict['taxon_id'] = self.ncbi_taxon_lookup[result[ORG_ID]]

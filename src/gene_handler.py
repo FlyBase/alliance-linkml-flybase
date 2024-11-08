@@ -58,7 +58,7 @@ class GeneHandler(FeatureHandler):
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
         self.build_ncbi_taxon_lookup(session)
-        self.build_public_feature_lookup(session, feature_types=['gene', 'allele'])
+        self.build_feature_lookup(session, feature_types=['gene', 'allele'])
         self.get_internal_genes(session)
         self.get_chr_info(session)
         return
