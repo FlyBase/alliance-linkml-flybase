@@ -145,7 +145,7 @@ class FBAllele(FBFeature):
         self.parent_gene_id = None              # The FBgn ID for the allele's parent gene.
         self.cons_rels = []                     # List of current cons FBRelationships.
         self.dmel_ins_rels = []                 # List of current Dmel FBti FBRelationships.
-        self.non_dmel_ins_rels = False          # List of current non-Dmel FBti FBRelationships.
+        self.non_dmel_ins_rels = []             # List of current non-Dmel FBti FBRelationships.
         self.arg_rels = []                      # List of current ARG FBRelationships.
         self.adj_org_abbr = 'Dmel'              # Assume allele is Dmel (classical/transgenic) unless it can be shown to be a non-Dmel classical allele.
         self.in_vitro = False                   # Change to True if the allele is associated with an "in vitro%" term.
