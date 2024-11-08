@@ -48,8 +48,8 @@ class StrainHandler(PrimaryEntityHandler):
         """Extend the method for the StrainHandler."""
         super().get_datatype_data(session)
         self.get_entities(session)
-        self.get_entity_sbj_relationships(session)
-        self.get_entity_obj_relationships(session)
+        self.get_entity_relationships(session, 'subject')
+        self.get_entity_relationships(session, 'object')
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
