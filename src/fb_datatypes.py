@@ -145,7 +145,7 @@ class FBDataEntity(FBExportEntity):
         # Check that rel_entity_types is allowed for the relevant FB datatype.
         rel_entity_types = None
         if 'rel_entity_types' in kwargs.keys():
-            if self.datatype not in self.feat_type_export.keys():
+            if not isinstance(self, FBFeature):
                 self.log.error(f'Cannot specify "rel_entity_types" for "{self.datatype}" entities, only for feature types.')
                 raise
             else:
