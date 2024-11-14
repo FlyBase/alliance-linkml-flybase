@@ -165,7 +165,8 @@ class FBDataEntity(FBExportEntity):
             relevant_rel_dict = getattr(self, bucket_name)
             if rel_types:
                 for rel_type in rel_types:
-                    rel_ids_of_interest.extend(relevant_rel_dict[rel_type])
+                    if rel_type in relevant_rel_dict.keys():
+                        rel_ids_of_interest.extend(relevant_rel_dict[rel_type])
             else:
                 for rel_list in relevant_rel_dict.values():
                     rel_ids_of_interest.extend(rel_list)
@@ -179,7 +180,8 @@ class FBDataEntity(FBExportEntity):
             for additional_bucket_name in additional_relevant_bucket_names:
                 additional_relevant_rel_dict = getattr(self, additional_bucket_name)
                 for rel_entity_type in rel_entity_types:
-                    additional_rel_ids_of_interest.extend(additional_relevant_rel_dict[rel_entity_type])
+                    if rel_entity_type in additional_relevant_rel_dict.keys():
+                        additional_rel_ids_of_interest.extend(additional_relevant_rel_dict[rel_entity_type])
             rel_ids_of_interest = list(set(rel_ids_of_interest.intersection(set(additional_rel_ids_of_interest))))
         for rel_id in rel_ids_of_interest:
             rels_of_interest.append(self.rels_by_id[rel_id])
