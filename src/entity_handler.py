@@ -332,9 +332,8 @@ class PrimaryEntityHandler(DataHandler):
                 distinct()
             rel_prop_counter = 0
             for rel_prop_result in rel_prop_results:
-                # BOB - implement this after initial debug.
-                # if rel_prop_result.feature_relationship_id not in rel_dict.keys():
-                #     continue
+                if rel_prop_result.feature_relationship_id not in rel_dict.keys():
+                    continue
                 rel_prop_dict[rel_prop_result.feature_relationshipprop_id] = fb_datatypes.FBProp(rel_prop_result)
                 rel_prop_counter += 1
             # Second, get pubs for these feature_relationshipprops.
