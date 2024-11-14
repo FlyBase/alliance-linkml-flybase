@@ -288,11 +288,12 @@ class AlleleHandler(FeatureHandler):
         allele_counter = 0
         for allele in self.fb_data_entities.values():
             parent_gene_ids = []
-            if 'alleleof' in allele.sbj_rels_by_type.keys():
-                for allele_gene_rel in allele.sbj_rels_by_type['alleleof']:
-                    parent_gene = self.feature_lookup[allele_gene_rel.chado_obj.object_id]
-                    if parent_gene['is_obsolete'] is False:
-                        parent_gene_ids.append(parent_gene['uniquename'])
+            relevant_rels = allele.recall_relationships(entity_role='subject', rel_types='alleleof', rel_entity_types='gene')
+            self.log.debug(f'BILLYBOB: For {allele}, found {len(relevant_rels)} alleleof relationships to genes.')
+            for allele_gene_rel in relevant_rels:
+                parent_gene = self.feature_lookup[allele_gene_rel.chado_obj.object_id]
+                if parent_gene['is_obsolete'] is False:
+                    parent_gene_ids.append(parent_gene['uniquename'])
             if len(parent_gene_ids) == 1:
                 allele.parent_gene_id = parent_gene_ids[0]
                 allele_counter += 1
@@ -323,31 +324,34 @@ class AlleleHandler(FeatureHandler):
         has_args_counter = 0
         for allele in self.fb_data_entities.values():
             # Assess relationships to current constructs.
-            if 'derived_tp_assoc_alleles' in allele.sbj_rels_by_type.keys():
-                for cons_rel in allele.sbj_rels_by_type['derived_tp_assoc_alleles']:
-                    construct = self.feature_lookup[cons_rel.chado_obj.object_id]
-                    if construct['is_obsolete'] is False and construct['uniquename'].startswith('FBtp'):
-                        allele.cons_rels.append(cons_rel)
-                        has_construct_counter += 1
+            relevant_cons_rels = allele.recall_relationships(entity_role='subject', rel_types='derived_tp_assoc_alleles',
+                                                             rel_entity_types=self.subtypes['construct'])
+            self.log.debug(f'BILLYBOB: For {allele}, found {len(relevant_cons_rels)} cons rels to review.')
+            for cons_rel in relevant_cons_rels:
+                construct = self.feature_lookup[cons_rel.chado_obj.object_id]
+                if construct['is_obsolete'] is False and construct['uniquename'].startswith('FBtp'):
+                    allele.cons_rels.append(cons_rel)
+                    has_construct_counter += 1
             # Assess relationships to current insertions.
-            for feat_rel_type, feat_rel_list in allele.sbj_rels_by_obj_type.items():
-                if feat_rel_type in self.subtypes['insertion']:
-                    for feat_rel in feat_rel_list:
-                        insertion = self.feature_lookup[feat_rel.chado_obj.object_id]
-                        if insertion['is_obsolete'] is False and insertion['uniquename'].startswith('FBti'):
-                            if insertion['species'] == 'Drosophila melanogaster':
-                                allele.dmel_ins_rels.append(feat_rel)
-                                has_dmel_insertion_counter += 1
-                            else:
-                                allele.non_dmel_ins_rels.append(feat_rel)
-                                has_non_dmel_insertion_counter += 1
+            relevant_ins_rels = allele.recall_relationships(entity_role='subject', rel_entity_types=self.subtypes['insertion'])
+            self.log.debug(f'BILLYBOB: For {allele}, found {len(relevant_ins_rels)} ins rels to review.')
+            for ins_rel in relevant_ins_rels:
+                insertion = self.feature_lookup[ins_rel.chado_obj.object_id]
+                if insertion['is_obsolete'] is False and insertion['uniquename'].startswith('FBti'):
+                    if insertion['species'] == 'Drosophila melanogaster':
+                        allele.dmel_ins_rels.append(ins_rel)
+                        has_dmel_insertion_counter += 1
+                    else:
+                        allele.non_dmel_ins_rels.append(ins_rel)
+                        has_non_dmel_insertion_counter += 1
             # Assess relationships to ARGs.
-            if 'partof' in allele.obj_rels_by_type.keys():
-                for arg_rel in allele.obj_rels_by_type['partof']:
-                    arg = self.feature_lookup[arg_rel.chado_obj.subject_id]
-                    if arg['is_obsolete'] is False and arg['type'] in self.subtypes['variation']:
-                        allele.arg_rels.append(arg_rel)
-                        has_args_counter += 1
+            relevant_rels = allele.recall_relationships(entity_role='object', rel_type='partof', entity_rel_type=self.subtypes['variation'])
+            self.log.debug(f'BILLYBOB: For {allele}, found {len(relevant_rels)} partof relationships to ARGs.')
+            for arg_rel in relevant_rels:
+                arg = self.feature_lookup[arg_rel.chado_obj.subject_id]
+                if arg['is_obsolete'] is False:
+                    allele.arg_rels.append(arg_rel)
+                    has_args_counter += 1
         self.log.info(f'Found {has_construct_counter} alleles related to a construct.')
         self.log.info(f'Found {has_dmel_insertion_counter} alleles related to a Dmel insertion.')
         self.log.info(f'Found {has_non_dmel_insertion_counter} alleles related to a non-Dmel insertion.')

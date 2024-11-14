@@ -17,12 +17,12 @@ from harvdev_utils.char_conversions import sub_sup_sgml_to_html
 from harvdev_utils.production import (
     Cvterm, Db, Dbxref, CellLine, CellLineCvterm, CellLineCvtermprop, CellLineDbxref, CellLineprop, CellLinepropPub, CellLinePub, CellLineRelationship,
     CellLineSynonym, Feature, FeatureCvterm, FeatureCvtermprop, FeatureDbxref, Featureprop, FeaturepropPub, FeaturePub, FeatureRelationship,
-    FeatureRelationshipPub, FeatureSynonym, Genotype, GenotypeCvterm, GenotypeCvtermprop, GenotypeDbxref, Genotypeprop, GenotypepropPub, GenotypePub,
-    GenotypeSynonym, Grp, GrpCvterm, GrpDbxref, Grpprop, GrppropPub, GrpPub, GrpRelationship, GrpRelationshipPub, GrpSynonym, Humanhealth, HumanhealthCvterm,
-    HumanhealthCvtermprop, HumanhealthDbxref, Humanhealthprop, HumanhealthpropPub, HumanhealthPub, HumanhealthRelationship, HumanhealthRelationshipPub,
-    HumanhealthSynonym, Library, LibraryCvterm, LibraryCvtermprop, LibraryDbxref, Libraryprop, LibrarypropPub, LibraryPub, LibraryRelationship,
-    LibraryRelationshipPub, LibrarySynonym, Strain, StrainCvterm, StrainCvtermprop, StrainDbxref, Strainprop, StrainpropPub, StrainPub, StrainRelationship,
-    StrainRelationshipPub, StrainSynonym
+    FeatureRelationshipPub, FeatureRelationshipprop, FeatureRelationshippropPub, FeatureSynonym, Genotype, GenotypeCvterm, GenotypeCvtermprop, GenotypeDbxref,
+    Genotypeprop, GenotypepropPub, GenotypePub, GenotypeSynonym, Grp, GrpCvterm, GrpDbxref, Grpprop, GrppropPub, GrpPub, GrpRelationship, GrpRelationshipPub,
+    GrpSynonym, Humanhealth, HumanhealthCvterm, HumanhealthCvtermprop, HumanhealthDbxref, Humanhealthprop, HumanhealthpropPub, HumanhealthPub,
+    HumanhealthRelationship, HumanhealthRelationshipPub, HumanhealthSynonym, Library, LibraryCvterm, LibraryCvtermprop, LibraryDbxref, Libraryprop,
+    LibrarypropPub, LibraryPub, LibraryRelationship, LibraryRelationshipPub, LibrarySynonym, Strain, StrainCvterm, StrainCvtermprop, StrainDbxref, Strainprop,
+    StrainpropPub, StrainPub, StrainRelationship, StrainRelationshipPub, StrainSynonym
 )
 import agr_datatypes
 import fb_datatypes
@@ -202,12 +202,12 @@ class PrimaryEntityHandler(DataHandler):
             'object': 'subject',
         }
         role_rel_type_buckets = {
-            'subject': 'sbj_rels_by_type',
-            'object': 'obj_rels_by_type',
+            'subject': 'sbj_rel_ids_by_type',
+            'object': 'obj_rel_ids_by_type',
         }
         role_feature_type_buckets = {
-            'subject': 'sbj_rels_by_obj_type',
-            'object': 'obj_rels_by_sbj_type',
+            'subject': 'sbj_rel_ids_by_obj_type',
+            'object': 'obj_rel_ids_by_sbj_type',
         }
         if role not in role_inverse.keys():
             self.log.error(f'For "get_entity_relationships()", role was specified as "{role}"; only these values are allowed: "subject", "object".')
@@ -316,23 +316,68 @@ class PrimaryEntityHandler(DataHandler):
             except KeyError:
                 pass
         self.log.info(f'Found {rel_pub_counter} {chado_type}_relationship_pubs where the {self.datatype} is the {role}.')
-        # Phase 3. Add rel props/prop_pubs (for feature only).
+        # Phase 3. Get rel props/prop_pubs (for feature only).
         if chado_type == 'feature':
-            # BILLY BOB - TO DO.
-            pass
+            # First get feature_relationshipprops.
+            rel_prop_dict = {}    # A feature_relationshipprop_id-keyed dict of FBProp objects.
+            rel_type_black_list = ['orthologous_to', 'paralogous_to']    # Ignore props for these types of relationships.
+            rel_prop_filters = (
+                Cvterm.name.not_in((rel_type_black_list)),
+            )
+            rel_prop_results = session.query(FeatureRelationshipprop).\
+                select_from(FeatureRelationshipprop).\
+                join(FeatureRelationship, (FeatureRelationship.feature_relationship_id == FeatureRelationshipprop.feature_relationship_id)).\
+                join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+                filter(*rel_prop_filters).\
+                distinct()
+            rel_prop_counter = 0
+            for rel_prop_result in rel_prop_results:
+                # BOB - implement this after initial debug.
+                # if rel_prop_result.feature_relationship_id not in rel_dict.keys():
+                #     continue
+                rel_prop_dict[rel_prop_result.feature_relationshipprop_id] = fb_datatypes.FBProp(rel_prop_result)
+                rel_prop_counter += 1
+            # Second, get pubs for these feature_relationshipprops.
+            rel_prop_pub_results = session.query(FeatureRelationshippropPub).distinct()
+            rel_prop_pub_counter = 0
+            for rel_prop_pub_result in rel_prop_pub_results:
+                feat_relprop_id = rel_prop_pub_result.feature_relationshipprop_id
+                try:
+                    rel_prop_dict[feat_relprop_id].pubs.append(rel_prop_pub_result.pub_id)
+                    rel_prop_pub_counter += 1
+                except KeyError:
+                    pass
+            self.log.info(f'Found {rel_prop_counter} feature_relationshipprops with {rel_prop_pub_counter} supporting pubs.')
+            # Third, integrate relationshipprops with relationships.
+            props_for_rel_counter = 0
+            rel_with_prop_counter = 0
+            for rel_prop in rel_prop_dict.values():
+                feat_rel_id = rel_prop.chado_obj.feature_relationship_id
+                rel_prop_type_name = rel_prop.chado_obj.type.name
+                if feat_rel_id in rel_dict.keys():
+                    props_for_rel_counter += 1
+                    try:
+                        rel_dict[feat_rel_id].props_by_type[rel_prop_type_name].append(rel_prop)
+                    except KeyError:
+                        rel_dict[feat_rel_id].props_by_type[rel_prop_type_name] = [rel_prop]
+                        rel_with_prop_counter += 1
+            self.log.info(f'Found relevant {props_for_rel_counter} for {rel_with_prop_counter} feature_relationships.')
         # Phase 3. Add rel info to entities, keyed by relationship type.
         assignment_counter = 0
         rel_type_tally = {}
         # Assign the prop to the appropriate entity.
-        for rel in rel_dict.values():
+        for rel_id, rel in rel_dict.items():
+            # First associate the relationship with the entity.
             entity_id = getattr(rel.chado_obj, f'{role}_id')
-            entity_rel_dict = getattr(self.fb_data_entities[entity_id], role_rel_type_buckets[role])
+            self.fb_data_entities[entity_id].rels_by_id[rel_id] = rel
+            # Then sort the relationship into the appropriate relationship type bucket.
             rel_type = rel.chado_obj.type.name
+            entity_rel_dict = getattr(self.fb_data_entities[entity_id], role_rel_type_buckets[role])
             try:
-                entity_rel_dict[rel_type].append(rel)
+                entity_rel_dict[rel_type].append(rel_id)
                 assignment_counter += 1
             except KeyError:
-                entity_rel_dict[rel_type] = [rel]
+                entity_rel_dict[rel_type] = [rel_id]
                 assignment_counter += 1
             # Tally
             try:
@@ -350,7 +395,7 @@ class PrimaryEntityHandler(DataHandler):
         feature_type_tally = {}
         new_assignment_counter = 0
         feat_type_skipped = 0
-        for rel in rel_dict.values():
+        for rel_id, rel in rel_dict.items():
             entity_id = getattr(rel.chado_obj, f'{role}_id')
             entity_rel_dict = getattr(self.fb_data_entities[entity_id], role_feature_type_buckets[role])
             rel_feat_id = getattr(rel.chado_obj, f'{role_inverse[role]}_id')
@@ -360,10 +405,10 @@ class PrimaryEntityHandler(DataHandler):
                 feat_type_skipped += 1
                 continue
             try:
-                entity_rel_dict[rel_feat_type].append(rel)
+                entity_rel_dict[rel_feat_type].append(rel_id)
                 new_assignment_counter += 1
             except KeyError:
-                entity_rel_dict[rel_feat_type] = [rel]
+                entity_rel_dict[rel_feat_type] = [rel_id]
                 new_assignment_counter += 1
             # Tally
             try:

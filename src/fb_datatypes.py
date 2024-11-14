@@ -87,13 +87,14 @@ class FBDataEntity(FBExportEntity):
         self.entity_desc = f'{self.name} ({self.uniquename})'
         # Primary FB chado data from direct db query results, no or minimal processing.
         # These attributes apply to various FlyBase entities: e.g., gene, strain, genotype, gene group, etc.
-        self.pubs = []                  # Pub associations: e.g., FeaturePub, StrainPub.
-        self.synonyms = []              # Synonym associations: e.g., FeatureSynonym.
-        self.fb_sec_dbxrefs = []        # 2o/non-current FlyBase xref objects: e.g., FeatureDbxref.
-        self.dbxrefs = []               # Current xref objects: e.g., FeatureDbxref.
-        self.props_by_type = {}         # Lists of FBProp objects keyed by prop type name.
-        self.sbj_rels_by_type = {}      # Lists of FBRelationships where this entity is the subject; keyed by relationship type.
-        self.obj_rels_by_type = {}      # Lists of FBRelationships where this entity is the object; keyed by relationship type.
+        self.pubs = []                   # Pub associations: e.g., FeaturePub, StrainPub.
+        self.synonyms = []               # Synonym associations: e.g., FeatureSynonym.
+        self.fb_sec_dbxrefs = []         # 2o/non-current FlyBase xref objects: e.g., FeatureDbxref.
+        self.dbxrefs = []                # Current xref objects: e.g., FeatureDbxref.
+        self.props_by_type = {}          # Lists of FBProp objects keyed by prop type name.
+        self.rels_by_id = {}             # Internal relationship_id-keyed dict of FBRelationship entities.
+        self.sbj_rel_ids_by_type = {}    # Lists of relationship_ids where this entity is the subject; keyed by relationship type name.
+        self.obj_rel_ids_by_type = {}    # Lists of relationship_ids where this entity is the object; keyed by relationship type name.
         # Processed FB data - processed from primary FB chado data above.
         self.ncbi_taxon_id = None       # The NCBITaxon dbxref.accession (str).
         self.synonym_dict = {}          # Will be synonym_id-keyed dicts of processed synonym info.
@@ -101,7 +102,88 @@ class FBDataEntity(FBExportEntity):
         self.curr_fb_fullname = None    # The current fullname for the entity (UTF-8).
         self.alt_fb_ids = []            # Secondary FB IDs (including the "FB:" prefix).
         self.all_pubs = []              # Pub.pub_ids for pubs associated in any way with the entity.
-        self.prop_dict = {}             # cvterm name-keyed lists of FBProp objects.
+
+    def recall_relationships(self, **kwargs):
+        """Recall FBRelationship objects with specified attributes from previous db queries for entity relationships.
+
+        Args:
+            fb_entity (FBExportEntity): The primary FB export entity: e.g., FBAllele.
+
+        Keyword Args:
+            entity_role (str): Indicate if entity is the subject or object in the relationship.
+            rel_types (str, list): The CV term name(s) for the relationship of interest.
+            rel_entity_types (str, list): The CV term name(s) for the related entity type; only useful for features.
+            One or both keyword arguments must be specified.
+
+        Returns:
+            A list of FBRelationship objects that meet the specified criteria.
+
+        """
+        rel_ids_of_interest = []
+        rels_of_interest = []
+        rel_buckets = {
+            'subject': 'sbj_rel_ids_by_type',
+            'object': 'obj_rel_ids_by_type',
+        }
+        additional_rel_buckets = {
+            'subject': 'sbj_rel_ids_by_obj_type',
+            'object': 'obj_rel_ids_by_sbj_type',
+        }
+        # Check for allowable entity_role value.
+        entity_role = None
+        if 'entity_role' in kwargs.keys():
+            entity_role = kwargs['entity_role']
+        if entity_role not in rel_buckets.keys():
+            self.log.error(f'The entity role given is not allowed: "{entity_role}"; must be "subject" or "object" only.')
+            raise
+        # Convert rel_types to list if applicable.
+        rel_types = None
+        if 'rel_types' in kwargs.keys():
+            rel_types = kwargs['rel_types']
+            if type(rel_types) is str:
+                rel_types = [rel_types]
+        # Check that rel_entity_types is allowed for the relevant FB datatype.
+        rel_entity_types = None
+        if 'rel_entity_types' in kwargs.keys():
+            if self.datatype not in self.feat_type_export.keys():
+                self.log.error(f'Cannot specify "rel_entity_types" for "{self.datatype}" entities, only for feature types.')
+                raise
+            else:
+                rel_entity_types = kwargs['rel_entity_types']
+                if type(rel_entity_types) is str:
+                    rel_entity_types = [rel_entity_types]
+        # Check that rel_types and/or rel_entity_types are defined.
+        if rel_types is None and rel_entity_types is None:
+            self.log.error('Neither rel_types nor rel_entity_types keyword arguments were given: must provide one or both of these.')
+            raise
+        # Get the initial list of relevant relationship_ids.
+        if entity_role:
+            relevant_bucket_names = [rel_buckets[entity_role]]
+        else:
+            relevant_bucket_names = list(rel_buckets.values())
+        for bucket_name in relevant_bucket_names:
+            relevant_rel_dict = getattr(self, bucket_name)
+            if rel_types:
+                for rel_type in rel_types:
+                    rel_ids_of_interest.extend(relevant_rel_dict[rel_type])
+            else:
+                for rel_list in relevant_rel_dict.values():
+                    rel_ids_of_interest.extend(rel_list)
+        # Further filter the list by related entity type if applicable.
+        if rel_entity_types:
+            additional_rel_ids_of_interest = []
+            if entity_role:
+                additional_relevant_bucket_names = [additional_rel_buckets[entity_role]]
+            else:
+                additional_relevant_bucket_names = list(additional_rel_buckets.values())
+            for additional_bucket_name in additional_relevant_bucket_names:
+                additional_relevant_rel_dict = getattr(self, additional_bucket_name)
+                for rel_entity_type in rel_entity_types:
+                    additional_rel_ids_of_interest.extend(additional_relevant_rel_dict[rel_entity_type])
+            rel_ids_of_interest = list(set(rel_ids_of_interest.intersection(set(additional_rel_ids_of_interest))))
+        for rel_id in rel_ids_of_interest:
+            rels_of_interest.append(self.rels_by_id[rel_id])
+        return rels_of_interest
 
 
 class FBFeature(FBDataEntity):
@@ -111,10 +193,10 @@ class FBFeature(FBDataEntity):
         super().__init__(chado_obj)
         # Primary FB chado data.
         self.db_primary_id = chado_obj.feature_id
-        self.chr_flocs = []               # Will be chromosomal Featureloc objects for the entity.
-        self.fb_anno_dbxrefs = []         # Will be "FlyBase Annotation IDs" FeatureDbxref objects.
-        self.sbj_rels_by_obj_type = {}    # Lists of FBRelationships where this entity is the subject; keyed by object feature type.
-        self.obj_rels_by_sbj_type = {}    # Lists of FBRelationships where this entity is the object; keyed by subject feature type.
+        self.chr_flocs = []                  # Will be chromosomal Featureloc objects for the entity.
+        self.fb_anno_dbxrefs = []            # Will be "FlyBase Annotation IDs" FeatureDbxref objects.
+        self.sbj_rel_ids_by_obj_type = {}    # Lists of relationship_ids where this entity is the subject; keyed by object feature type.
+        self.obj_rel_ids_by_sbj_type = {}    # Lists of relationship_ids where this entity is the object; keyed by subject feature type.
         # Processed FB data.
         self.curr_anno_id = None     # Will be current annotation ID for the gene, transcript or protein (str).
         self.alt_anno_ids = []       # Will be list of non-current annotation IDs for the gene, transcript or protein (str).

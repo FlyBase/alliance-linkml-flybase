@@ -126,7 +126,9 @@ class GeneHandler(FeatureHandler):
             if 'alleleof' not in gene.obj_rels_by_type.keys():
                 continue
             gene_counter += 1
-            for allele_rel in gene.obj_rels_by_type['alleleof']:
+            relevant_allele_rels = gene.recall_relationships(entity_role='object', rel_types='alleleof', entity_rel_type='allele')
+            self.log.debug(f'BILLYBOB: For {gene}, found {len(relevant_allele_rels)} allele rels to review.')
+            for allele_rel in relevant_allele_rels:
                 allele_feature_id = allele_rel.chado_obj.subject_id
                 allele_gene_key = (allele_feature_id, gene.db_primary_id)
                 try:
