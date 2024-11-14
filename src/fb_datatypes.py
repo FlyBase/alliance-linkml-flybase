@@ -87,7 +87,7 @@ class FBDataEntity(FBExportEntity):
         self.entity_desc = f'{self.name} ({self.uniquename})'
         # Primary FB chado data from direct db query results, no or minimal processing.
         # These attributes apply to various FlyBase entities: e.g., gene, strain, genotype, gene group, etc.
-        self.pubs = []                   # Pub associations: e.g., FeaturePub, StrainPub.
+        self.pub_associations = []       # Pub associations: e.g., FeaturePub, StrainPub.
         self.synonyms = []               # Synonym associations: e.g., FeatureSynonym.
         self.fb_sec_dbxrefs = []         # 2o/non-current FlyBase xref objects: e.g., FeatureDbxref.
         self.dbxrefs = []                # Current xref objects: e.g., FeatureDbxref.
@@ -334,6 +334,7 @@ class FBRelationship(FBExportEntity):
         self.chado_obj = chado_obj
         self.db_primary_id = getattr(chado_obj, f'{table_name}_id')
         self.entity_desc = f'{table_name}_id={self.db_primary_id}'
+        self.props_by_type = {}    # Lists of FBProp objects keyed by prop type name.
         self.pubs = []    # Will be list of Pub.pub_ids supporting the relationship.
 
 

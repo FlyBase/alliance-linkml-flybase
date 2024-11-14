@@ -535,35 +535,6 @@ class DataHandler(object):
         self.log.info(f'Got basic info for {counter} current Dmel chr scaffolds.')
         return
 
-    # DETRITUS
-    # def build_feature_relationship_evidence_lookup(self, session):
-    #     """Build evidence lookup for feature_relationships."""
-    #     self.log.info('Build evidence lookup for feature_relationships.')
-    #     results = session.query(FeatureRelationshipPub.feature_relationship_id,
-    #                             FeatureRelationshipPub.pub_id).distinct()
-    #     FEAT_REL_ID = 0
-    #     PUB_ID = 1
-    #     counter = 0
-    #     fr_counter = 0
-    #     for result in results:
-    #         try:
-    #             self.feat_rel_pub_lookup[result[FEAT_REL_ID]].append(result[PUB_ID])
-    #             counter += 1
-    #         except KeyError:
-    #             self.feat_rel_pub_lookup[result[FEAT_REL_ID]] = [result[PUB_ID]]
-    #             fr_counter += 1
-    #             counter += 1
-    #     self.log.info(f'Found {counter} pubs supporting {fr_counter} feature_relationships.')
-    #     return
-
-    # def lookup_feat_rel_pub_ids(self, feature_relationship_id):
-    #     """Return a list of pub_ids supporting a given feature_relationship."""
-    #     try:
-    #         pub_ids = self.feat_rel_pub_lookup[feature_relationship_id]
-    #     except KeyError:
-    #         pub_ids = []
-    #     return pub_ids
-
     def build_allele_gene_lookup(self, session):
         """Build an allele-gene lookup dict, current features only."""
         self.log.info('Build an allele-gene lookup dict, current features only.')

@@ -539,7 +539,7 @@ class PrimaryEntityHandler(DataHandler):
         for result in results:
             entity_pkey_id = getattr(result, main_pkey_name)
             try:
-                self.fb_data_entities[entity_pkey_id].pubs.append(result)
+                self.fb_data_entities[entity_pkey_id].pub_associations.append(result)
                 counter += 1
             except KeyError:
                 pass_counter += 1
@@ -762,7 +762,7 @@ class PrimaryEntityHandler(DataHandler):
     def synthesize_pubs(self):
         """Collect pub_ids associated directly or indirectly with the entity."""
         self.log.info('Collect pub_ids associated directly or indirectly with the entity.')
-        pub_sources = ['pubs', 'synonyms']
+        pub_sources = ['pub_associations', 'synonyms']
         for fb_data_entity in self.fb_data_entities.values():
             for pub_source in pub_sources:
                 fb_data_entity.all_pubs.extend([i.pub_id for i in getattr(fb_data_entity, pub_source)])
