@@ -123,10 +123,9 @@ class GeneHandler(FeatureHandler):
         allele_counter = 0
         # Need to code for the rare possibility that gene-allele is represented by many feature_relationships.
         for gene in self.fb_data_entities.values():
-            if 'alleleof' not in gene.obj_rels_by_type.keys():
-                continue
-            gene_counter += 1
             relevant_allele_rels = gene.recall_relationships(entity_role='object', rel_types='alleleof', entity_rel_type='allele')
+            if relevant_allele_rels:
+                gene_counter += 1
             self.log.debug(f'BILLYBOB: For {gene}, found {len(relevant_allele_rels)} allele rels to review.')
             for allele_rel in relevant_allele_rels:
                 allele_feature_id = allele_rel.chado_obj.subject_id
