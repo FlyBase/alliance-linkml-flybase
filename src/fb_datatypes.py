@@ -182,7 +182,7 @@ class FBDataEntity(FBExportEntity):
                 for rel_entity_type in rel_entity_types:
                     if rel_entity_type in additional_relevant_rel_dict.keys():
                         additional_rel_ids_of_interest.extend(additional_relevant_rel_dict[rel_entity_type])
-            rel_ids_of_interest = list(set(rel_ids_of_interest.intersection(set(additional_rel_ids_of_interest))))
+            rel_ids_of_interest = list(set(rel_ids_of_interest).intersection(set(additional_rel_ids_of_interest)))
         for rel_id in rel_ids_of_interest:
             rels_of_interest.append(self.rels_by_id[rel_id])
         return rels_of_interest
