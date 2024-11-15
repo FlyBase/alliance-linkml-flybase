@@ -46,30 +46,32 @@ class DataHandler(object):
 
         """
         self.log = log
-        self.datatype = None                   # A single word describing the datatype: e.g., 'gene'. Define for more specific handlers.
-        self.fb_export_type = None             # Will be the relevant FBExportEntity object: e.g., FBGene. Define for more specific handlers.
-        self.agr_export_type = None            # Will be the LinkML object to export to: e.g., GeneDTO. Define for more specific handlers.
-        self.primary_agr_ingest_type = None    # Will be name of the Alliance ingest set: e.g., 'gene_ingest_set'.
         self.testing = testing
+        self.datatype = None                        # A single word describing the datatype: e.g., 'gene'. Define for more specific handlers.
+        self.fb_export_type = None                  # Will be the relevant FBExportEntity object: e.g., FBGene. Define for more specific handlers.
+        self.agr_export_type = None                 # Will be the LinkML object to export to: e.g., GeneDTO. Define for more specific handlers.
+        self.primary_agr_ingest_type = None         # Will be name of the Alliance ingest set: e.g., 'gene_ingest_set'.
         # Datatype bins.
-        self.fb_data_entities = {}          # db_primary_id-keyed dict of chado objects to export.
-        self.export_data = {}               # agr_ingest_set_name-keyed lists of data objects for export.
+        self.fb_data_entities = {}                  # db_primary_id-keyed dict of chado objects to export.
+        self.export_data = {}                       # agr_ingest_set_name-keyed lists of data objects for export.
         # General data bins.
-        self.bibliography = {}              # A pub_id-keyed dict of pub curies (PMID, or, FBrf if no PMID).
-        self.cvterm_lookup = {}             # A cvterm_id-keyed dict of dicts with these keys: 'name', 'cv_name', 'db_name', 'curie'.
-        self.ncbi_taxon_lookup = {}         # An organism_id-keyed dict of f'NCBITaxon:{Dbxref.accession}' strings.
-        self.drosophilid_list = []          # A list of organism_ids for Drosophilid species.
-        self.chr_dict = {}                  # Will be a feature_id-keyed dict of chr scaffold uniquenames.
-        self.feature_lookup = {}            # feature_id-keyed dicts with these keys: uniquename, is_obsolete, name, symbol, exported, taxon_id, species.
-        self.internal_gene_ids = []         # A list of FBgn IDs for FlyBase genes that should be internal at the Alliance: e.g., 'engineered_fusion_gene'.
-        self.featureprop_pub_lookup = {}    # Will be featureprop_id-keyed lists of supporting pub_ids.
-        self.feat_rel_pub_lookup = {}       # Will be feature_relationship_id-keyed lists of supporting pub_ids.
+        self.bibliography = {}                      # A pub_id-keyed dict of pub curies (PMID, or, FBrf if no PMID).
+        self.cvterm_lookup = {}                     # A cvterm_id-keyed dict of dicts with these keys: 'name', 'cv_name', 'db_name', 'curie'.
+        self.ncbi_taxon_lookup = {}                 # An organism_id-keyed dict of f'NCBITaxon:{Dbxref.accession}' strings.
+        self.drosophilid_list = []                  # A list of organism_ids for Drosophilid species.
+        self.chr_dict = {}                          # Will be a feature_id-keyed dict of chr scaffold uniquenames.
+        self.feature_lookup = {}                    # feature_id-keyed dicts with these keys: uniquename, is_obsolete, name, symbol, exported, taxon_id, species
+        self.allele_gene_lookup = {}                # allele feature_id-keyed dict of related gene feature_id (current features only).
+        self.seqfeat_gene_lookup = {}               # Will be seqfeat feature_id-keyed lists of gene feature_ids (current features only).
+        self.gene_tool_lookup = {}                  # Will be gene feature_id-keyed lists of related FBto tools (current features only).
+        self.internal_gene_ids = []                 # FBgn IDs for FlyBase genes that should be internal at the Alliance: e.g., 'engineered_fusion_gene'
+        self.transgenic_allele_class_lookup = {}    # Will be an allele feature_id-keyed list of "transgenic product class" CV terms (current features only).
         # Trackers.
-        self.input_count = 0                # Count of entities found in FlyBase chado database.
-        self.export_count = 0               # Count of exported Alliance entities.
-        self.internal_count = 0             # Count of exported entities marked as internal.
-        self.warnings = []                  # Handler issues of note.
-        self.errors = []                    # Handler issues that break things.
+        self.input_count = 0                        # Count of entities found in FlyBase chado database.
+        self.export_count = 0                       # Count of exported Alliance entities.
+        self.internal_count = 0                     # Count of exported entities marked as internal.
+        self.warnings = []                          # Handler issues of note.
+        self.errors = []                            # Handler issues that break things.
 
     # Sample set for faster testing: use uniquename-keyed names of objects, tailored for each handler.
     test_set = {}

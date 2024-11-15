@@ -11,12 +11,12 @@ Author(s):
 
 from logging import Logger
 from sqlalchemy.orm import aliased
+import agr_datatypes
+import fb_datatypes
+from feature_handler import FeatureHandler
 from harvdev_utils.production import (
     Cvterm, Feature, FeatureRelationship
 )
-import fb_datatypes
-import agr_datatypes
-from feature_handler import FeatureHandler
 
 
 class ConstructHandler(FeatureHandler):
@@ -52,12 +52,6 @@ class ConstructHandler(FeatureHandler):
     # Additional set for export added to the handler.
     construct_associations = []            # Will be a list of FBExportEntity objects (relationships), map to ConstructGenomicEntityAssociationDTO.
 
-    # Lookups needed.
-    allele_gene_lookup = {}                # Will be allele feature_id-keyed of a single gene feature_id per allele.
-    seqfeat_gene_lookup = {}               # Will be seqfeat feature_id-keyed of a lists of gene feature_ids.
-    transgenic_allele_class_lookup = {}    # Will be an allele feature_id-keyed list of "transgenic product class" CV terms.
-    gene_tool_lookup = {}                  # Will be gene feature_id-keyed lists of related FBto tools.
-
     # Elaborate on get_general_data() for the ConstructHandler.
     def get_general_data(self, session):
         """Extend the method for the ConstructHandler."""
@@ -66,37 +60,13 @@ class ConstructHandler(FeatureHandler):
         self.build_cvterm_lookup(session)
         self.build_ncbi_taxon_lookup(session)
         self.build_feature_lookup(session)
-        self.build_feature_relationship_evidence_lookup(session)
+        self.build_allele_gene_lookup(session)
         self.build_allele_class_lookup(session)
         self.build_seqfeat_gene_lookup(session)
         self.build_gene_tool_lookup(session)
         return
 
     # Elaborate on get_datatype_data() for the ConstructHandler.
-    def get_construct_alleles(self, session):
-        """Get allele(s) to which constructs belong."""
-        self.log.info('Get allele(s) to which constructs belong.')
-        self.get_entity_obj_feat_rel_by_type(session, 'parent_allele_rels', rel_type='associated_with', sbj_type='allele', sbj_regex=self.regex['allele'])
-        return
-
-    def get_construct_encoded_tools(self, session):
-        """Get directly related encoded FBto/FBsf objects for the construct."""
-        self.log.info('Get directly related encoded FBto/FBsf objects for the construct.')
-        self.get_entity_sbj_feat_rel_by_type(session, 'encodes_tool_rels', rel_type='encodes_tool', obj_regex=self.regex['fb_uniquename'])
-        return
-
-    def get_construct_reg_regions(self, session):
-        """Get directly related regulatory FBgn/FBto/FBsf objects for the construct."""
-        self.log.info('Get directly related regulatory FBgn/FBto/FBsf objects for the construct.')
-        self.get_entity_sbj_feat_rel_by_type(session, 'reg_region_rels', rel_type='has_reg_region', obj_regex=self.regex['fb_uniquename'])
-        return
-
-    def get_construct_reg_regions_old(self, session):
-        """Get directly related regulatory_region FBsf objects, old type of association."""
-        self.log.info('Get directly related regulatory_region FBsf objects, old type of association.')
-        self.get_entity_obj_feat_rel_by_type(session, 'seqfeat_rels', rel_type='associated_with', sbj_type='regulatory_region', sbj_regex=self.regex['seqfeat'])
-        return
-
     def get_allele_encoded_tools(self, session):
         """Get encoded FBto/FBsf objects for the constructs via alleles."""
         self.log.info('Get encoded FBto/FBsf objects for the constructs via alleles.')
@@ -116,28 +86,29 @@ class ConstructHandler(FeatureHandler):
             join(component, (component.feature_id == FeatureRelationship.object_id)).\
             filter(*filters).\
             distinct()
-        # Create allele feature_id-keyed lists of allele-component "encodes_tool" FeatureRelationship objects.
-        al_comp_dict = {}
+        # Create allele feature_id-keyed lists of allele-component "encodes_tool" FBRelationship objects.
+        al_tool_dict = {}
         counter = 0
         for result in results:
             try:
-                al_comp_dict[result.subject_id].append(result)
+                al_tool_dict[result.subject_id].append(fb_datatypes.FBRelationship(result, 'feature_relationship'))
                 counter += 1
             except KeyError:
-                al_comp_dict[result.subject_id] = [result]
+                al_tool_dict[result.subject_id] = [fb_datatypes.FBRelationship(result, 'feature_relationship')]
                 counter += 1
         self.log.info(f'Found {counter} allele-to-component "encodes_tool" relationships.')
         self.log.info('Now propagate these "encodes_tool" relationships to constructs.')
-        counter = 0
+        cons_counter = 0
         for construct in self.fb_data_entities.values():
-            for allele_rel in construct.parent_allele_rels:
-                allele_id = allele_rel.subject_id
+            al_cons_rels = construct.recall_relationships(self.log, entity_role='object', rel_types='associated_with', rel_entity_types='allele')
+            for al_cons_rel in al_cons_rels:
+                allele_id = al_cons_rel.chado_obj.subject_id
                 try:
-                    construct.al_encodes_tool_rels.extend(al_comp_dict[allele_id])
-                    counter += len(construct.al_encodes_tool_rels)
+                    construct.al_encodes_tool_rels.extend(al_tool_dict[allele_id])
+                    cons_counter += len(al_tool_dict[allele_id])
                 except KeyError:
                     pass
-        self.log.info(f'Propagated {counter} allele-to-component "encodes_tool" relationships to related constructs.')
+        self.log.info(f'Propagated {cons_counter} allele-to-component "encodes_tool" relationships to related constructs.')
         return
 
     def get_allele_reg_regions(self, session):
@@ -160,94 +131,68 @@ class ConstructHandler(FeatureHandler):
             filter(*filters).\
             distinct()
         # Create allele feature_id-keyed lists of allele-component "has_reg_region" FeatureRelationship objects.
-        al_comp_dict = {}
+        al_reg_region_dict = {}
         counter = 0
         for result in results:
             try:
-                al_comp_dict[result.subject_id].append(result)
+                al_reg_region_dict[result.subject_id].append(fb_datatypes.FBRelationship(result, 'feature_relationship'))
                 counter += 1
             except KeyError:
-                al_comp_dict[result.subject_id] = [result]
+                al_reg_region_dict[result.subject_id] = [fb_datatypes.FBRelationship(result, 'feature_relationship')]
                 counter += 1
         self.log.info(f'Found {counter} allele-to-component "has_reg_region" relationships.')
         self.log.info('Now propagate "has_reg_region" relationships to constructs.')
-        counter = 0
+        cons_counter = 0
         for construct in self.fb_data_entities.values():
-            for allele_rel in construct.parent_allele_rels:
-                allele_id = allele_rel.subject_id
+            al_cons_rels = construct.recall_relationships(self.log, entity_role='object', rel_types='associated_with', rel_entity_types='allele')
+            for al_cons_rel in al_cons_rels:
+                allele_id = al_cons_rel.chado_obj.subject_id
                 try:
-                    construct.al_reg_region_rels.extend(al_comp_dict[allele_id])
-                    counter += len(construct.al_reg_region_rels)
+                    construct.al_reg_region_rels.extend(al_reg_region_dict[allele_id])
+                    counter += len(al_reg_region_dict[allele_id])
                 except KeyError:
                     pass
-        self.log.info(f'Propagated {counter} allele-to-component "has_reg_region" relationships to related constructs.')
-        return
-
-    def get_cons_genes_via_alleles(self, session):
-        """Get genes for the constructs via alleles."""
-        self.log.info('Get genes for the constructs via alleles.')
-        # First, create allele feature_id-keyed lists of allele-gene "alleleof" FeatureRelationship objects.
-        allele = aliased(Feature, name='allele')
-        gene = aliased(Feature, name='gene')
-        filters = (
-            # allele.is_obsolete.is_(False),
-            allele.uniquename.op('~')(self.regex['allele']),
-            # gene.is_obsolete.is_(False),
-            gene.uniquename.op('~')(self.regex['gene']),
-            Cvterm.name == 'alleleof',
-        )
-        results = session.query(FeatureRelationship).\
-            select_from(allele).\
-            join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
-            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
-            join(gene, (gene.feature_id == FeatureRelationship.object_id)).\
-            filter(*filters).\
-            distinct()
-        al_comp_dict = {}
-        counter = 0
-        for result in results:
-            try:
-                al_comp_dict[result.subject_id].append(result)
-                counter += 1
-            except KeyError:
-                al_comp_dict[result.subject_id] = [result]
-                counter += 1
-        self.log.info(f'Found {counter} allele-to-gene "alleleof" relationships.')
-        self.log.info('Now propagate "alleleof" relationships to constructs.')
-        counter = 0
-        for construct in self.fb_data_entities.values():
-            for allele_rel in construct.parent_allele_rels:
-                allele_id = allele_rel.subject_id
-                try:
-                    construct.al_genes.extend(al_comp_dict[allele_id])
-                except KeyError:
-                    pass
-            counter += len(construct.al_genes)
-        self.log.info(f'Propagated {counter} allele-to-gene "alleleof" relationships to related constructs.')
+        self.log.info(f'Propagated {cons_counter} allele-to-component "has_reg_region" relationships to related constructs.')
         return
 
     def get_datatype_data(self, session):
         """Extend the method for the ConstructHandler."""
         super().get_datatype_data(session)
         self.get_entities(session)
-        self.get_entity_sbj_relationships(session)
-        self.get_entity_obj_relationships(session)
+        self.get_entity_relationships(session, 'subject')
+        self.get_entity_relationships(session, 'object')
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
         self.get_entity_fb_xrefs(session)
         self.get_entity_xrefs(session)
         self.get_entity_timestamps(session)
-        self.get_construct_alleles(session)
-        self.get_construct_encoded_tools(session)
-        self.get_construct_reg_regions(session)
         self.get_allele_encoded_tools(session)
         self.get_allele_reg_regions(session)
-        self.get_construct_reg_regions_old(session)
         self.get_cons_genes_via_alleles(session)
         return
 
     # Add methods to be run by synthesize_info() below.
+
+    # BILLYBOB: Use recall_relationships() to replace these deleted methods below.
+    # def get_construct_alleles(self, session):
+    # self.get_entity_obj_feat_rel_by_type(session, 'parent_allele_rels', rel_type='associated_with', sbj_type='allele', sbj_regex=self.regex['allele'])
+    # def get_construct_encoded_tools(self, session):
+    # self.get_entity_sbj_feat_rel_by_type(session, 'encodes_tool_rels', rel_type='encodes_tool', obj_regex=self.regex['fb_uniquename'])
+    # def get_construct_reg_regions(self, session):
+    # self.get_entity_sbj_feat_rel_by_type(session, 'reg_region_rels', rel_type='has_reg_region', obj_regex=self.regex['fb_uniquename'])
+    # def get_construct_reg_regions_old(self, session):
+    # self.get_entity_obj_feat_rel_by_type(session, 'seqfeat_rels', rel_type='associated_with', sbj_type='regulatory_region', sbj_regex=self.regex['seqfeat'])
+
+    # BILLYBOB: Obsolete methods above populated these obsolete FBConstruct fields.
+    # Direct relationships (FeatureRelationship objects); ignoring carries_tool and tagged_with.
+    # self.parent_allele_rels = []      # Direct FBal "associated_with" FBtp FeatureRelationships.
+    # self.encodes_tool_rels = []       # Direct FBtp "encodes_tool" FBto FeatureRelationships.
+    # self.reg_region_rels = []         # Direct FBtp "has_reg_region" FBto/FBgn/FBsf FeatureRelationships.
+    # self.seqfeat_rels = []            # Direct FBsf "associated_with" FBtp FeatureRelationships (old style).
+    # Indirect relationships.
+    # self.al_genes = []                # Indirect gene relationships: a list of allele-to-FBgn FBRelationship objects.
+
     def synthesize_encoded_tools(self):
         """Synthesize encoded components."""
         self.log.info('Synthesize encoded components.')
