@@ -135,7 +135,7 @@ class FBDataEntity(FBExportEntity):
             entity_role = kwargs['entity_role']
         if entity_role not in rel_buckets.keys():
             log.error(f'For recall_relationships(), the entity role given is not allowed: "{entity_role}"; must be "subject" or "object" only.')
-            raise
+            raise ValueError
         # Convert rel_types to list if applicable.
         rel_types = None
         if 'rel_types' in kwargs.keys():
@@ -146,8 +146,8 @@ class FBDataEntity(FBExportEntity):
         rel_entity_types = None
         if 'rel_entity_types' in kwargs.keys():
             if not isinstance(self, FBFeature):
-                log.error(f'For recall_relationships(), cannot specify "rel_entity_types" for "{self.datatype}" entities, only for feature types.')
-                raise
+                log.error(f'For recall_relationships(), cannot specify "rel_entity_types" for "{type(self)} entities, only for feature types.')
+                raise ValueError
             else:
                 rel_entity_types = kwargs['rel_entity_types']
                 if type(rel_entity_types) is str:
@@ -155,13 +155,13 @@ class FBDataEntity(FBExportEntity):
         # Check that rel_types and/or rel_entity_types are defined.
         if rel_types is None and rel_entity_types is None:
             log.error('For recall_relationships(), must provide rel_types and/or rel_entity_types keyword arguments: neither were given.')
-            raise
+            raise ValueError
         # Check for unexpected kwargs.
         good_kwargs = {'entity_role', 'rel_types', 'rel_entity_types'}
         bad_kwargs = kwargs.keys() - good_kwargs
         if bad_kwargs:
             log.error(f'For recall_relationships(), found unexpected kwargs: {bad_kwargs}. Only these are allowed: {good_kwargs}.')
-            raise
+            raise ValueError
         # Get the initial list of relevant relationship_ids.
         if entity_role:
             relevant_bucket_names = [rel_buckets[entity_role]]
