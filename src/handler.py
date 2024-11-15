@@ -392,14 +392,16 @@ class DataHandler(object):
                 raise
             self.log.info(f'Looking up {feat_type} features.')
             feat_filters = ()
-            if feat_type in self.feature_subtypes.keys():
+            if feat_type not in self.feature_subtypes.keys():
+                feat_filters += (
+                    Cvterm.name == feat_type,
+                )
+            elif feat_type in self.feature_subtypes.keys() and self.feature_subtypes[feat_type] is not None:
                 feat_filters += (
                     Cvterm.name.in_((self.feature_subtypes[feat_type])),
                 )
             else:
-                feat_filters += (
-                    Cvterm.name == feat_type,
-                )
+                self.log.info(f'Note: for feat_type={feat_type}, there is no restriction by feature.type_id.')
             if feat_type in self.regex.keys():
                 feat_filters += (
                     Feature.uniquename.op('~')(self.regex[feat_type]),
