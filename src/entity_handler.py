@@ -323,7 +323,7 @@ class PrimaryEntityHandler(DataHandler):
         # Phase 3. Get rel props/prop_pubs (for feature only).
         if chado_type == 'feature':
             # First get feature_relationshipprops.
-            rel_prop_filters += (rel_type.name.not_in((['orthologous_to', 'paralogous_to'])), )
+            filters += (rel_type.name.not_in((['orthologous_to', 'paralogous_to'])), )
             rel_prop_results = session.query(FeatureRelationshipprop).\
                 select_from(primary_entity).\
                 join(primary_entity_type, (primary_entity_type.cvterm_id == primary_entity.type_id)).\
