@@ -139,7 +139,7 @@ class DataHandler(object):
     }
 
     # CVterms used to define a fb_data_type within a larger chado table.
-    subtypes = {
+    feature_subtypes = {
         'aberration': ['chromosome_structure_variation'],
         'allele': ['allele'],
         'balancer': ['chromosome_structure_variation'],
@@ -392,9 +392,9 @@ class DataHandler(object):
                 raise
             self.log.info(f'Looking up {feat_type} features.')
             feat_filters = ()
-            if feat_type in self.subtypes.keys():
+            if feat_type in self.feature_subtypes.keys():
                 feat_filters += (
-                    Cvterm.name.in_((self.subtypes[feat_type])),
+                    Cvterm.name.in_((self.feature_subtypes[feat_type])),
                 )
             else:
                 feat_filters += (
@@ -445,9 +445,9 @@ class DataHandler(object):
                 FeatureSynonym.is_current.is_(True),
                 syno_type.name == 'symbol',
             )
-            if feat_type in self.subtypes.keys():
+            if feat_type in self.feature_subtypes.keys():
                 syno_filters += (
-                    feat_type_term.name.in_((self.subtypes[feat_type])),
+                    feat_type_term.name.in_((self.feature_subtypes[feat_type])),
                 )
             else:
                 syno_filters += (

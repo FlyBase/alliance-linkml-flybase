@@ -37,9 +37,9 @@ class FeatureHandler(PrimaryEntityHandler):
             Feature.is_analysis.is_(False),
             Db.name == 'FlyBase Annotation IDs'
         )
-        if self.datatype in self.subtypes.keys():
-            self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.datatype]}')
-            filters += (Cvterm.name.in_((self.subtypes[self.datatype])), )
+        if self.datatype in self.feature_subtypes.keys():
+            self.log.info(f'Filter main table by these feature_subtypes: {self.feature_subtypes[self.datatype]}')
+            filters += (Cvterm.name.in_((self.feature_subtypes[self.datatype])), )
         if self.testing:
             filters += (Feature.uniquename.in_((self.test_set.keys())), )
         results = session.query(FeatureDbxref).\
@@ -73,9 +73,9 @@ class FeatureHandler(PrimaryEntityHandler):
         if self.datatype in self.regex.keys():
             self.log.info(f'Use this regex: {self.regex[self.datatype]}')
             filters += (Feature.uniquename.op('~')(self.regex[self.datatype]), )
-        if self.datatype in self.subtypes.keys():
-            self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.datatype]}')
-            filters += (Cvterm.name.in_((self.subtypes[self.datatype])), )
+        if self.datatype in self.feature_subtypes.keys():
+            self.log.info(f'Filter main table by these feature_subtypes: {self.feature_subtypes[self.datatype]}')
+            filters += (Cvterm.name.in_((self.feature_subtypes[self.datatype])), )
         if self.testing:
             filters += (Feature.uniquename.in_((self.test_set.keys())), )
         results = session.query(Featureloc).\
@@ -109,9 +109,9 @@ class FeatureHandler(PrimaryEntityHandler):
         if self.datatype in self.regex.keys():
             self.log.info(f'Use this regex: {self.regex[self.datatype]}')
             filters += (Feature.uniquename.op('~')(self.regex[self.datatype]), )
-        if self.datatype in self.subtypes.keys():
-            self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.datatype]}')
-            filters += (feat_type.name.in_((self.subtypes[self.datatype])), )
+        if self.datatype in self.feature_subtypes.keys():
+            self.log.info(f'Filter main table by these feature_subtypes: {self.feature_subtypes[self.datatype]}')
+            filters += (feat_type.name.in_((self.feature_subtypes[self.datatype])), )
         if self.testing:
             filters += (Feature.uniquename.in_((self.test_set.keys())), )
         results = session.query(Featureprop).\

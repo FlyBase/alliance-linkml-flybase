@@ -152,16 +152,16 @@ class PrimaryEntityHandler(DataHandler):
         if self.datatype in self.regex.keys():
             self.log.info(f'Use this regex: {self.regex[self.datatype]}')
             filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
-        if self.datatype in self.subtypes.keys():
-            self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.datatype]}')
-            filters += (Cvterm.name.in_((self.subtypes[self.datatype])), )
+        if self.datatype in self.feature_subtypes.keys():
+            self.log.info(f'Filter main table by these feature_subtypes: {self.feature_subtypes[self.datatype]}')
+            filters += (Cvterm.name.in_((self.feature_subtypes[self.datatype])), )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             filters += (chado_table.uniquename.in_((self.test_set.keys())), )
         if filters == ():
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
-        if self.datatype in self.subtypes.keys():
+        if self.datatype in self.feature_subtypes.keys():
             results = session.query(chado_table).\
                 select_from(chado_table).\
                 join(Cvterm, (Cvterm.cvterm_id == chado_table.type_id)).\
@@ -237,9 +237,9 @@ class PrimaryEntityHandler(DataHandler):
         if self.datatype in self.regex.keys():
             self.log.info(f'Use this regex for primary entities: {self.regex[self.datatype]}')
             filters += (primary_entity.uniquename.op('~')(self.regex[self.datatype]), )
-        if self.datatype in self.subtypes.keys():
-            self.log.info(f'Filter main table for primary entities of these subtypes: {self.subtypes[self.datatype]}')
-            filters += (primary_entity_type.name.in_((self.subtypes[self.datatype])), )
+        if self.datatype in self.feature_subtypes.keys():
+            self.log.info(f'Filter main table for primary entities of these feature_subtypes: {self.feature_subtypes[self.datatype]}')
+            filters += (primary_entity_type.name.in_((self.feature_subtypes[self.datatype])), )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             filters += (primary_entity.uniquename.in_((self.test_set.keys())), )
@@ -249,8 +249,8 @@ class PrimaryEntityHandler(DataHandler):
             filters += (rel_type.name.in_((kwargs['rel_type'])), )
         if 'entity_type' in kwargs.keys():
             if type(kwargs['entity_type']) is str:
-                if kwargs['entity_type'] in self.subtypes.keys():
-                    kwargs['entity_type'] = self.subtypes[kwargs['entity_type']]
+                if kwargs['entity_type'] in self.feature_subtypes.keys():
+                    kwargs['entity_type'] = self.feature_subtypes[kwargs['entity_type']]
                 else:
                     kwargs['entity_type'] = [kwargs['entity_type']]
             filters += (secondary_entity_type.name.in_((kwargs['entity_type'])), )
@@ -259,7 +259,7 @@ class PrimaryEntityHandler(DataHandler):
         if filters == ():
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
-        if self.datatype in self.subtypes.keys():
+        if self.datatype in self.feature_subtypes.keys():
             rel_results = session.query(chado_rel_table).\
                 select_from(primary_entity).\
                 join(primary_entity_type, (primary_entity_type.cvterm_id == primary_entity.type_id)).\
@@ -287,7 +287,7 @@ class PrimaryEntityHandler(DataHandler):
         # Phase 2. Get pubs supporting relationships.
         if chado_rel_pub_table is None:
             rel_pub_results = []
-        elif self.datatype in self.subtypes.keys():
+        elif self.datatype in self.feature_subtypes.keys():
             rel_pub_results = session.query(chado_rel_pub_table).\
                 select_from(primary_entity).\
                 join(primary_entity_type, (primary_entity_type.cvterm_id == primary_entity.type_id)).\
@@ -439,16 +439,16 @@ class PrimaryEntityHandler(DataHandler):
         if self.datatype in self.regex.keys():
             self.log.info(f'Use this regex: {self.regex[self.datatype]}')
             filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
-        if self.datatype in self.subtypes.keys():
-            self.log.info(f'Filter main table by these subtypes: {self.subtypes[self.datatype]}')
-            filters += (Cvterm.name.in_((self.subtypes[self.datatype])), )
+        if self.datatype in self.feature_subtypes.keys():
+            self.log.info(f'Filter main table by these feature_subtypes: {self.feature_subtypes[self.datatype]}')
+            filters += (Cvterm.name.in_((self.feature_subtypes[self.datatype])), )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             filters += (chado_table.uniquename.in_((self.test_set.keys())), )
         if filters == ():
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
-        if self.datatype in self.subtypes.keys():
+        if self.datatype in self.feature_subtypes.keys():
             prop_results = session.query(chado_prop_table).\
                 select_from(chado_table).\
                 join(chado_prop_table).\
@@ -469,7 +469,7 @@ class PrimaryEntityHandler(DataHandler):
             prop_counter += 1
         self.log.info(f'Found {prop_counter} {chado_type}props for {self.datatype}s.')
         # Phase 2. Get pubs supporting props.
-        if self.datatype in self.subtypes.keys():
+        if self.datatype in self.feature_subtypes.keys():
             prop_pub_results = session.query(chado_prop_pub_table).\
                 select_from(chado_table).\
                 join(chado_prop_table).\

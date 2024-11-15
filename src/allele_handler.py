@@ -325,7 +325,7 @@ class AlleleHandler(FeatureHandler):
         for allele in self.fb_data_entities.values():
             # Assess relationships to current constructs.
             relevant_cons_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='derived_tp_assoc_alleles',
-                                                             rel_entity_types=self.subtypes['construct'])
+                                                             rel_entity_types=self.feature_subtypes['construct'])
             self.log.debug(f'BILLYBOB: For {allele}, found {len(relevant_cons_rels)} cons rels to review.')
             for cons_rel in relevant_cons_rels:
                 construct = self.feature_lookup[cons_rel.chado_obj.object_id]
@@ -333,7 +333,7 @@ class AlleleHandler(FeatureHandler):
                     allele.cons_rels.append(cons_rel)
                     has_construct_counter += 1
             # Assess relationships to current insertions.
-            relevant_ins_rels = allele.recall_relationships(self.log, entity_role='subject', rel_entity_types=self.subtypes['insertion'])
+            relevant_ins_rels = allele.recall_relationships(self.log, entity_role='subject', rel_entity_types=self.feature_subtypes['insertion'])
             self.log.debug(f'BILLYBOB: For {allele}, found {len(relevant_ins_rels)} ins rels to review.')
             for ins_rel in relevant_ins_rels:
                 insertion = self.feature_lookup[ins_rel.chado_obj.object_id]
@@ -345,7 +345,7 @@ class AlleleHandler(FeatureHandler):
                         allele.non_dmel_ins_rels.append(ins_rel)
                         has_non_dmel_insertion_counter += 1
             # Assess relationships to ARGs.
-            relevant_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='partof', rel_entity_types=self.subtypes['variation'])
+            relevant_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='partof', rel_entity_types=self.feature_subtypes['variation'])
             self.log.debug(f'BILLYBOB: For {allele}, found {len(relevant_rels)} partof relationships to ARGs.')
             for arg_rel in relevant_rels:
                 arg = self.feature_lookup[arg_rel.chado_obj.subject_id]
