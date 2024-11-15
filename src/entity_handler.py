@@ -316,37 +316,39 @@ class PrimaryEntityHandler(DataHandler):
             except KeyError:
                 pass
         self.log.info(f'Found {rel_pub_counter} {chado_type}_relationship_pubs where the {self.datatype} is the {role}.')
+
+        ########################################################################################################################################################
+        ########################################################################################################################################################
+        ########################################################################################################################################################
         # Phase 3. Get rel props/prop_pubs (for feature only).
         if chado_type == 'feature':
             # First get feature_relationshipprops.
-            rel_prop_dict = {}    # A feature_relationshipprop_id-keyed dict of FBProp objects.
-            rel_type_black_list = ['orthologous_to', 'paralogous_to']    # Ignore props for these types of relationships.
-            rel_prop_filters = (
-                Cvterm.name.not_in((rel_type_black_list)),
-            )
+            rel_prop_filters += (rel_type.name.not_in((['orthologous_to', 'paralogous_to'])), )
             rel_prop_results = session.query(FeatureRelationshipprop).\
-                select_from(FeatureRelationshipprop).\
-                join(FeatureRelationship, (FeatureRelationship.feature_relationship_id == FeatureRelationshipprop.feature_relationship_id)).\
-                join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
-                filter(*rel_prop_filters).\
+                select_from(primary_entity).\
+                join(primary_entity_type, (primary_entity_type.cvterm_id == primary_entity.type_id)).\
+                join(chado_rel_table, (getattr(chado_rel_table, f'{role}_id') == getattr(primary_entity, entity_key_name))).\
+                join(rel_type, (rel_type.cvterm_id == chado_rel_table.type_id)).\
+                join(secondary_entity, (getattr(secondary_entity, entity_key_name) == getattr(chado_rel_table, f'{role_inverse[role]}_id'))).\
+                join(secondary_entity_type, (secondary_entity_type.cvterm_id == secondary_entity.type_id)).\
+                join(FeatureRelationshipprop, (FeatureRelationshipprop.feature_relationship_id == chado_rel_table.feature_relationship_id)).\
+                filter(*filters).\
                 distinct()
+            rel_prop_dict = {}    # A temporary feature_relationshipprop_id-keyed dict of FBProp objects.
             rel_prop_counter = 0
             for rel_prop_result in rel_prop_results:
-                if rel_prop_result.feature_relationship_id not in rel_dict.keys():
-                    continue
                 rel_prop_dict[rel_prop_result.feature_relationshipprop_id] = fb_datatypes.FBProp(rel_prop_result)
                 rel_prop_counter += 1
+            self.log.info(f'Found {rel_prop_counter} relevant feature_relationshipprops.')
             # Second, get pubs for these feature_relationshipprops.
             rel_prop_pub_results = session.query(FeatureRelationshippropPub).distinct()
             rel_prop_pub_counter = 0
             for rel_prop_pub_result in rel_prop_pub_results:
                 feat_relprop_id = rel_prop_pub_result.feature_relationshipprop_id
-                try:
+                if feat_relprop_id in rel_prop_dict.keys():
                     rel_prop_dict[feat_relprop_id].pubs.append(rel_prop_pub_result.pub_id)
                     rel_prop_pub_counter += 1
-                except KeyError:
-                    pass
-            self.log.info(f'Found {rel_prop_counter} feature_relationshipprops with {rel_prop_pub_counter} supporting pubs.')
+            self.log.info(f'Found {rel_prop_pub_counter} relevant feature_relationshipprop pubs.')
             # Third, integrate relationshipprops with relationships.
             props_for_rel_counter = 0
             rel_with_prop_counter = 0
@@ -360,8 +362,11 @@ class PrimaryEntityHandler(DataHandler):
                     except KeyError:
                         rel_dict[feat_rel_id].props_by_type[rel_prop_type_name] = [rel_prop]
                         rel_with_prop_counter += 1
-            self.log.info(f'Found relevant {props_for_rel_counter} for {rel_with_prop_counter} feature_relationships.')
-        # Phase 3. Add rel info to entities, keyed by relationship type.
+            self.log.info(f'Found {props_for_rel_counter} relevant props for {rel_with_prop_counter} relevant feature_relationships.')
+        ########################################################################################################################################################
+        ########################################################################################################################################################
+        ########################################################################################################################################################
+        # Phase 4. Add rel info to entities.
         assignment_counter = 0
         rel_type_tally = {}
         # Assign the prop to the appropriate entity.
