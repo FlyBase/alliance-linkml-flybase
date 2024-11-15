@@ -447,13 +447,13 @@ class DataHandler(object):
                 FeatureSynonym.is_current.is_(True),
                 syno_type.name == 'symbol',
             )
-            if feat_type in self.feature_subtypes.keys():
-                syno_filters += (
-                    feat_type_term.name.in_((self.feature_subtypes[feat_type])),
-                )
-            else:
+            if feat_type not in self.feature_subtypes.keys():
                 syno_filters += (
                     feat_type_term.name == feat_type,
+                )
+            elif feat_type in self.feature_subtypes.keys() and self.feature_subtypes[feat_type] is not None:
+                syno_filters += (
+                    feat_type_term.name.in_((self.feature_subtypes[feat_type])),
                 )
             if feat_type in self.regex.keys():
                 syno_filters += (
