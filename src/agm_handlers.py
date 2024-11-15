@@ -72,12 +72,20 @@ class StrainHandler(PrimaryEntityHandler):
     def map_strain_basic(self):
         """Map basic FlyBase strain data to the Alliance object."""
         self.log.info('Map basic strain info.')
+        bob_counter = 0
+        billy_counter = 0
+        bad_counter = 0
         for strain in self.fb_data_entities.values():
             # BILLYBOB: Test recall_relationships() for non-feature entities.
             bob_rels = strain.recall_relationships(self.log, entity_role='subject', rel_types='derived_from')
             self.log.info(f'For {strain}, found {len(bob_rels)} relationships where strain is the subject and the rel_types="derived_from".')
-            billy_rels = strain.recall_relationships(self.log, entity_role='subject', rel_entity_types='billy')
-            self.log.info(f'For {strain}, found {len(billy_rels)} relationships where strain is the subject and the rel_entity_types="billy".')
+            bob_counter += len(bob_rels)
+            billy_rels = strain.recall_relationships(self.log, entity_role='object', rel_types='derived_from')
+            self.log.info(f'For {strain}, found {len(billy_rels)} relationships where strain is the object and the rel_types="derived_from".')
+            billy_counter += len(billy_rels)
+            bad_rels = strain.recall_relationships(self.log, entity_role='object', rel_types='billybob')
+            self.log.info(f'For {strain}, found {len(bad_rels)} relationships where strain is the object and the rel_types="billybob".')
+            bad_counter += len(bad_rels)
             agr_strain = self.agr_export_type()
             agr_strain.obsolete = strain.chado_obj.is_obsolete
             agr_strain.mod_entity_id = f'FB:{strain.uniquename}'
@@ -86,6 +94,9 @@ class StrainHandler(PrimaryEntityHandler):
             agr_strain.name = strain.name
             agr_strain.subtype_name = 'strain'
             strain.linkmldto = agr_strain
+        self.log.info(f'BILLYBOB: bob_counter={bob_counter}')
+        self.log.info(f'BILLYBOB: billy_counter={billy_counter}')
+        self.log.info(f'BILLYBOB: bad_counter={bad_counter}')
         return
 
     def map_fb_data_to_alliance(self):

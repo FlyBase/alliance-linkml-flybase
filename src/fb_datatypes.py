@@ -146,7 +146,7 @@ class FBDataEntity(FBExportEntity):
         rel_entity_types = None
         if 'rel_entity_types' in kwargs.keys():
             if not isinstance(self, FBFeature):
-                log.error(f'For recall_relationships(), cannot specify "rel_entity_types" for "{type(self)} entities, only for feature types.')
+                log.error(f'For recall_relationships(), cannot specify "rel_entity_types" for {type(self)} entities, only for feature types.')
                 raise ValueError
             else:
                 rel_entity_types = kwargs['rel_entity_types']
