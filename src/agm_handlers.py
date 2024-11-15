@@ -73,6 +73,11 @@ class StrainHandler(PrimaryEntityHandler):
         """Map basic FlyBase strain data to the Alliance object."""
         self.log.info('Map basic strain info.')
         for strain in self.fb_data_entities.values():
+            # BILLYBOB: Test recall_relationships() for non-feature entities.
+            bob_rels = strain.recall_relationships(self.log, entity_role='subject', rel_types='derived_from')
+            self.log.info(f'For {strain}, found {len(bob_rels)} relationships where strain is the subject and the rel_types="derived_from".')
+            billy_rels = strain.recall_relationships(self.log, entity_role='subject', rel_entity_types='billy')
+            self.log.info(f'For {strain}, found {len(billy_rels)} relationships where strain is the subject and the rel_entity_types="billy".')
             agr_strain = self.agr_export_type()
             agr_strain.obsolete = strain.chado_obj.is_obsolete
             agr_strain.mod_entity_id = f'FB:{strain.uniquename}'
