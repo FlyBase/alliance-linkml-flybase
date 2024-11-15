@@ -103,11 +103,11 @@ class FBDataEntity(FBExportEntity):
         self.alt_fb_ids = []            # Secondary FB IDs (including the "FB:" prefix).
         self.all_pubs = []              # Pub.pub_ids for pubs associated in any way with the entity.
 
-    def recall_relationships(self, **kwargs):
+    def recall_relationships(self, log, **kwargs):
         """Recall FBRelationship objects with specified attributes from previous db queries for entity relationships.
 
         Args:
-            fb_entity (FBExportEntity): The primary FB export entity: e.g., FBAllele.
+            log (Logger): The logger for any messages.
 
         Keyword Args:
             entity_role (str): Indicate if entity is the subject or object in the relationship.
@@ -134,7 +134,7 @@ class FBDataEntity(FBExportEntity):
         if 'entity_role' in kwargs.keys():
             entity_role = kwargs['entity_role']
         if entity_role not in rel_buckets.keys():
-            self.log.error(f'The entity role given is not allowed: "{entity_role}"; must be "subject" or "object" only.')
+            log.error(f'The entity role given is not allowed: "{entity_role}"; must be "subject" or "object" only.')
             raise
         # Convert rel_types to list if applicable.
         rel_types = None
@@ -146,7 +146,7 @@ class FBDataEntity(FBExportEntity):
         rel_entity_types = None
         if 'rel_entity_types' in kwargs.keys():
             if not isinstance(self, FBFeature):
-                self.log.error(f'Cannot specify "rel_entity_types" for "{self.datatype}" entities, only for feature types.')
+                log.error(f'Cannot specify "rel_entity_types" for "{self.datatype}" entities, only for feature types.')
                 raise
             else:
                 rel_entity_types = kwargs['rel_entity_types']
@@ -154,7 +154,12 @@ class FBDataEntity(FBExportEntity):
                     rel_entity_types = [rel_entity_types]
         # Check that rel_types and/or rel_entity_types are defined.
         if rel_types is None and rel_entity_types is None:
-            self.log.error('Neither rel_types nor rel_entity_types keyword arguments were given: must provide one or both of these.')
+            log.error('Neither rel_types nor rel_entity_types keyword arguments were given: must provide one or both of these.')
+            raise
+        # Check for unexpected kwargs.
+        expected_kwargs = {'entity_role', 'rel_types', 'rel_entity_types'}
+        if kwargs.keys() - expected_kwargs:
+            log.error(f'Found unexpected keyword args: {kwargs.keys() - expected_kwargs}')
             raise
         # Get the initial list of relevant relationship_ids.
         if entity_role:
