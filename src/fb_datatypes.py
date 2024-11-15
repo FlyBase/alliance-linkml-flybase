@@ -134,7 +134,7 @@ class FBDataEntity(FBExportEntity):
         if 'entity_role' in kwargs.keys():
             entity_role = kwargs['entity_role']
         if entity_role not in rel_buckets.keys():
-            log.error(f'The entity role given is not allowed: "{entity_role}"; must be "subject" or "object" only.')
+            log.error(f'For recall_relationships(), the entity role given is not allowed: "{entity_role}"; must be "subject" or "object" only.')
             raise
         # Convert rel_types to list if applicable.
         rel_types = None
@@ -146,7 +146,7 @@ class FBDataEntity(FBExportEntity):
         rel_entity_types = None
         if 'rel_entity_types' in kwargs.keys():
             if not isinstance(self, FBFeature):
-                log.error(f'Cannot specify "rel_entity_types" for "{self.datatype}" entities, only for feature types.')
+                log.error(f'For recall_relationships(), cannot specify "rel_entity_types" for "{self.datatype}" entities, only for feature types.')
                 raise
             else:
                 rel_entity_types = kwargs['rel_entity_types']
@@ -154,12 +154,13 @@ class FBDataEntity(FBExportEntity):
                     rel_entity_types = [rel_entity_types]
         # Check that rel_types and/or rel_entity_types are defined.
         if rel_types is None and rel_entity_types is None:
-            log.error('Neither rel_types nor rel_entity_types keyword arguments were given: must provide one or both of these.')
+            log.error('For recall_relationships(), must provide rel_types and/or rel_entity_types keyword arguments: neither were given.')
             raise
         # Check for unexpected kwargs.
-        expected_kwargs = {'entity_role', 'rel_types', 'rel_entity_types'}
-        if kwargs.keys() - expected_kwargs:
-            log.error(f'Found unexpected keyword args: {kwargs.keys() - expected_kwargs}')
+        good_kwargs = {'entity_role', 'rel_types', 'rel_entity_types'}
+        bad_kwargs = kwargs.keys() - good_kwargs
+        if bad_kwargs:
+            log.error(f'For recall_relationships(), found unexpected kwargs: {bad_kwargs}. Only these are allowed: {good_kwargs}.')
             raise
         # Get the initial list of relevant relationship_ids.
         if entity_role:
