@@ -236,10 +236,10 @@ class ConstructHandler(FeatureHandler):
             self.log.debug(f'Assess encoded tools for {construct}.')
             # Reference of related alleles.
             cons_al_rels = construct.recall_relationships(self.log, entity_role='object', rel_types='associated_with', rel_entity_types='allele')
-            self.log.debug(f'BILLYBOB: {construct} has {len(cons_al_rels)} direct allele relationships.')
+            # self.log.debug(f'{construct} has {len(cons_al_rels)} direct allele relationships.')
             # Direct encodes_tool relationships.
             cons_tool_rels = construct.recall_relationships(self.log, entity_role='subject', rel_types='encodes_tool')
-            self.log.debug(f'BILLYBOB: {construct} has {len(cons_tool_rels)} direct tool relationships.')
+            # self.log.debug(f'{construct} has {len(cons_tool_rels)} direct tool relationships.')
             for cons_tool_rel in cons_tool_rels:
                 component_id = cons_tool_rel.chado_obj.object_id
                 try:
@@ -248,7 +248,7 @@ class ConstructHandler(FeatureHandler):
                     construct.expressed_features[component_id] = cons_tool_rel.pubs
             self.log.debug(f'For {construct}, found {len(construct.expressed_features.keys())} encoded tools via direct relationships.')
             # Indirect encodes_tool relationships.
-            self.log.debug(f'BILLYBOB: {construct} has {len(construct.al_encodes_tool_rels)} indirect tool relationships via alleles.')
+            # self.log.debug(f'{construct} has {len(construct.al_encodes_tool_rels)} indirect tool relationships via alleles.')
             for al_tool_rel in construct.al_encodes_tool_rels:
                 allele_id = al_tool_rel.chado_obj.subject_id
                 component_id = al_tool_rel.chado_obj.object_id
@@ -260,7 +260,7 @@ class ConstructHandler(FeatureHandler):
                 for cons_al_rel in cons_al_rels:
                     if cons_al_rel.chado_obj.subject_id == allele_id:
                         construct.expressed_features[component_id].extend(cons_al_rel.pubs)
-                        self.log.debug(f'BILLYBOB: {construct} has these pubs via allele-tool: {cons_al_rel.pubs}')
+                        # self.log.debug(f'{construct} has these pubs via allele-tool: {cons_al_rel.pubs}')
             counter += len(construct.expressed_features.keys())
         self.log.info(f'Found {counter} encoded tools for constructs via direct and indirect (via allele) relationships.')
         return
@@ -275,7 +275,7 @@ class ConstructHandler(FeatureHandler):
             this_targeted_gene_counter = 0
             # Reference of related alleles.
             cons_al_rels = construct.recall_relationships(self.log, entity_role='object', rel_types='associated_with', rel_entity_types='allele')
-            self.log.debug(f'BILLYBOB: {construct} has {len(cons_al_rels)} direct allele relationships.')
+            # self.log.debug(f'{construct} has {len(cons_al_rels)} direct allele relationships.')
             for cons_al_rel in cons_al_rels:
                 allele_id = cons_al_rel.chado_obj.subject_id
                 # Skip obsolete alleles.
@@ -309,10 +309,10 @@ class ConstructHandler(FeatureHandler):
         for construct in self.fb_data_entities.values():
             # Reference of related alleles.
             cons_al_rels = construct.recall_relationships(self.log, entity_role='object', rel_types='associated_with', rel_entity_types='allele')
-            self.log.debug(f'BILLYBOB: {construct} has {len(cons_al_rels)} direct allele relationships.')
+            # self.log.debug(f'{construct} has {len(cons_al_rels)} direct allele relationships.')
             # Direct has_reg_region relationships (new implementation).
             cons_reg_region_rels = construct.recall_relationships(self.log, entity_role='subject', rel_types='has_reg_region')
-            self.log.debug(f'BILLYBOB: {construct} has {len(cons_reg_region_rels)} direct reg_region relationships.')
+            # self.log.debug(f'{construct} has {len(cons_reg_region_rels)} direct reg_region relationships.')
             for cons_reg_region_rel in cons_reg_region_rels:
                 reg_region_id = cons_reg_region_rel.chado_obj.object_id
                 try:
@@ -322,7 +322,7 @@ class ConstructHandler(FeatureHandler):
             self.log.debug(f'For {construct}, found {len(construct.regulating_features.keys())} encoded reg_regions via direct relationships.')
             # Direct relationships to regulatory_regions (old implementation).
             old_cons_reg_region_rels = construct.recall_relationships(self.log, entity_role='object', rel_entity_types=['region', 'regulatory_region'])
-            self.log.debug(f'BILLYBOB: {construct} has {len(old_cons_reg_region_rels)} old style direct regulatory_region relationships.')
+            # self.log.debug(f'{construct} has {len(old_cons_reg_region_rels)} old style direct regulatory_region relationships.')
             for old_cons_reg_region_rel in old_cons_reg_region_rels:
                 reg_region_id = old_cons_reg_region_rel.chado_obj.subject_id
                 try:
@@ -341,7 +341,7 @@ class ConstructHandler(FeatureHandler):
                 for cons_al_rel in cons_al_rels:
                     if cons_al_rel.chado_obj.subject_id == allele_id:
                         construct.regulating_features[reg_region_id].extend(cons_al_rel.pubs)
-                        self.log.debug(f'BILLYBOB: {construct} has these pubs via allele-reg_region: {cons_al_rel.pubs}')
+                        # self.log.debug(f'{construct} has these pubs via allele-reg_region: {cons_al_rel.pubs}')
             # Add relationships to genes via seqfeat regulatory_regions.
             for reg_region_id in list(construct.regulating_features.keys()):
                 pub_ids = construct.regulating_features[reg_region_id]
@@ -392,31 +392,6 @@ class ConstructHandler(FeatureHandler):
             self.log.info(f'Will suppress {counter} genes from construct {slot_name} that are better represented as tools.')
         return
 
-    # CONTINUE HERE
-    def synthesize_construct_genomic_entity_associations(self):
-        """Synthesize construct-genomic entity associations."""
-        self.log.info('Synthesize construct-genomic entity associations.')
-        slot_rel_types = {
-            'expressed_features': 'expresses',
-            'targeted_features': 'targets',
-            'regulating_features': 'is_regulated_by',
-        }
-        for feature_slot_name, rel_type in slot_rel_types.items():
-            self.log.info(f'Sort out Alliance genomic entities from "{feature_slot_name}" to "{rel_type}" associations.')
-            counter = 0
-            for construct in self.fb_data_entities.values():
-                component_slot = getattr(construct, feature_slot_name)
-                for feature_id, pub_ids in component_slot.items():
-                    if self.feature_lookup[feature_id]['type'] != 'gene' or not self.feature_lookup[feature_id]['uniquename'].startswith('FBgn'):
-                        continue
-                    feat_rel = fb_datatypes.FBRelationship('feature_relationship', construct.db_primary_id, feature_id, rel_type)
-                    feat_rel.pub_ids = pub_ids
-                    feat_rel.entity_desc = f'{construct.uniquename} {rel_type} {self.feature_lookup[feature_id]["uniquename"]}'
-                    self.construct_associations.append(feat_rel)
-                    counter += 1
-            self.log.info(f'Synthesized {counter} construct-gene associations.')
-        return
-
     # Elaborate on synthesize_info() for the ConstructHandler.
     def synthesize_info(self):
         """Extend the method for the ConstructHandler."""
@@ -429,7 +404,6 @@ class ConstructHandler(FeatureHandler):
         self.synthesize_component_genes()
         self.synthesize_reg_regions()
         self.synthesize_redundant_tool_genes()
-        self.synthesize_construct_genomic_entity_associations()
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
@@ -444,6 +418,9 @@ class ConstructHandler(FeatureHandler):
             construct.linkmldto = agr_construct
         return
 
+    # Note: There are two distinct mapping types: ConstructComponentSlotAnnotationDTO and ConstructGenomicEntityAssociationDTO.
+    #       ConstructComponentSlotAnnotationDTO can list anything (whether or not the component is known to the Alliance).
+    #       ConstructGenomicEntityAssociationDTO is restricted to Alliance-submitted objects (currently genes only).
     def map_construct_components(self):
         """Map current construct components to the Alliance LinkML object."""
         self.log.info('Map current construct components to the Alliance LinkML object.')
@@ -460,7 +437,6 @@ class ConstructHandler(FeatureHandler):
                     # Do not report obsolete components.
                     if self.feature_lookup[feature_id]['is_obsolete'] is True:
                         continue
-                    # Do not report genes that are better reported as tools.
                     elif slot_name == 'expressed_features' and feature_id in construct.expressed_tool_genes:
                         continue
                     elif slot_name == 'regulating_features' and feature_id in construct.regulating_tool_genes:
@@ -478,17 +454,32 @@ class ConstructHandler(FeatureHandler):
     def map_construct_genomic_associations(self):
         """Map current construct relations to the Alliance LinkML object."""
         self.log.info('Map current construct relations to the Alliance LinkML object.')
-        counter = 0
-        for cons_asso in self.construct_associations:
-            cons_curie = f'FB:{self.feature_lookup[cons_asso.subject_id]["uniquename"]}'
-            obj_curie = f'FB:{self.feature_lookup[cons_asso.object_id]["uniquename"]}'
-            pub_curies = self.lookup_pub_curies(cons_asso.pub_ids)
-            rel_dto = agr_datatypes.ConstructGenomicEntityAssociationDTO(cons_curie, cons_asso.rel_type, obj_curie, pub_curies)
-            if self.feature_lookup[cons_asso.subject_id]['is_obsolete'] is True or self.feature_lookup[cons_asso.object_id]['is_obsolete'] is True:
-                rel_dto.obsolete = True
-                rel_dto.internal = True
-            cons_asso.linkmldto = rel_dto
-            counter += 1
+        slot_rel_types = {
+            'expressed_features': 'expresses',
+            'targeted_features': 'targets',
+            'regulating_features': 'is_regulated_by',
+        }
+        for feature_slot_name, rel_type in slot_rel_types.items():
+            self.log.info(f'Sort out Alliance genomic entities from "{feature_slot_name}" to "{rel_type}" associations.')
+            counter = 0
+            for construct in self.fb_data_entities.values():
+                component_slot = getattr(construct, feature_slot_name)
+                for feature_id, pub_ids in component_slot.items():
+                    # Associations are currently limited to genes.
+                    # Expand to tools (FBto) and seq features (FBsf) once those are submitted to the Alliance.
+                    if self.feature_lookup[feature_id]['type'] != 'gene' or not self.feature_lookup[feature_id]['uniquename'].startswith('FBgn'):
+                        continue
+                    cons_curie = f'FB:{construct.uniquename}'
+                    obj_curie = f'FB:{self.feature_lookup[feature_id]["uniquename"]}'
+                    pub_curies = self.lookup_pub_curies(pub_ids)
+                    fb_rel = fb_datatypes.FBExportEntity()
+                    rel_dto = agr_datatypes.ConstructGenomicEntityAssociationDTO(cons_curie, rel_type, obj_curie, pub_curies)
+                    if construct.is_obsolete is True or self.feature_lookup[feature_id]['is_obsolete'] is True:
+                        rel_dto.obsolete = True
+                        rel_dto.internal = True
+                    fb_rel.linkmldto = rel_dto
+                    self.construct_associations.append(fb_rel)
+                    counter += 1
         self.log.info(f'Mapped construct_relationships to {counter} ConstructGenomicEntityAssociationDTOs.')
         return
 

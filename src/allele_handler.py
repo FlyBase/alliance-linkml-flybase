@@ -289,7 +289,7 @@ class AlleleHandler(FeatureHandler):
         for allele in self.fb_data_entities.values():
             parent_gene_ids = []
             relevant_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='alleleof', rel_entity_types='gene')
-            self.log.debug(f'BILLYBOB: For {allele}, found {len(relevant_rels)} alleleof relationships to genes.')
+            # self.log.debug(f'For {allele}, found {len(relevant_rels)} alleleof relationships to genes.')
             for allele_gene_rel in relevant_rels:
                 parent_gene = self.feature_lookup[allele_gene_rel.chado_obj.object_id]
                 if parent_gene['is_obsolete'] is False:
@@ -326,7 +326,7 @@ class AlleleHandler(FeatureHandler):
             # Assess relationships to current constructs.
             relevant_cons_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='derived_tp_assoc_alleles',
                                                              rel_entity_types=self.feature_subtypes['construct'])
-            self.log.debug(f'BILLYBOB: For {allele}, found {len(relevant_cons_rels)} cons rels to review.')
+            # self.log.debug(f'For {allele}, found {len(relevant_cons_rels)} cons rels to review.')
             for cons_rel in relevant_cons_rels:
                 construct = self.feature_lookup[cons_rel.chado_obj.object_id]
                 if construct['is_obsolete'] is False and construct['uniquename'].startswith('FBtp'):
@@ -334,7 +334,7 @@ class AlleleHandler(FeatureHandler):
                     has_construct_counter += 1
             # Assess relationships to current insertions.
             relevant_ins_rels = allele.recall_relationships(self.log, entity_role='subject', rel_entity_types=self.feature_subtypes['insertion'])
-            self.log.debug(f'BILLYBOB: For {allele}, found {len(relevant_ins_rels)} ins rels to review.')
+            # self.log.debug(f'For {allele}, found {len(relevant_ins_rels)} ins rels to review.')
             for ins_rel in relevant_ins_rels:
                 insertion = self.feature_lookup[ins_rel.chado_obj.object_id]
                 if insertion['is_obsolete'] is False and insertion['uniquename'].startswith('FBti'):
@@ -346,7 +346,7 @@ class AlleleHandler(FeatureHandler):
                         has_non_dmel_insertion_counter += 1
             # Assess relationships to ARGs.
             relevant_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='partof', rel_entity_types=self.feature_subtypes['variation'])
-            self.log.debug(f'BILLYBOB: For {allele}, found {len(relevant_rels)} partof relationships to ARGs.')
+            # self.log.debug(f'For {allele}, found {len(relevant_rels)} partof relationships to ARGs.')
             for arg_rel in relevant_rels:
                 arg = self.feature_lookup[arg_rel.chado_obj.subject_id]
                 if arg['is_obsolete'] is False:

@@ -126,7 +126,7 @@ class GeneHandler(FeatureHandler):
             relevant_allele_rels = gene.recall_relationships(self.log, entity_role='object', rel_types='alleleof', rel_entity_types='allele')
             if relevant_allele_rels:
                 gene_counter += 1
-            self.log.debug(f'BILLYBOB: For {gene}, found {len(relevant_allele_rels)} allele rels to review.')
+            # self.log.debug(f'For {gene}, found {len(relevant_allele_rels)} allele rels to review.')
             for allele_rel in relevant_allele_rels:
                 allele_feature_id = allele_rel.chado_obj.subject_id
                 allele_gene_key = (allele_feature_id, gene.db_primary_id)
