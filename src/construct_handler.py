@@ -87,7 +87,7 @@ class ConstructHandler(FeatureHandler):
             filter(*filters).\
             distinct()
         # Build pub lookup for relationship results.
-        pub_results = session.query(FeatureRelationship).\
+        pub_results = session.query(FeatureRelationshipPub).\
             select_from(allele).\
             join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
             join(FeatureRelationshipPub, (FeatureRelationshipPub.feature_relationship_id == FeatureRelationship.feature_relationship_id)).\
@@ -149,7 +149,7 @@ class ConstructHandler(FeatureHandler):
             filter(*filters).\
             distinct()
         # Build pub lookup for relationship results.
-        pub_results = session.query(FeatureRelationship).\
+        pub_results = session.query(FeatureRelationshipPub).\
             select_from(allele).\
             join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
             join(FeatureRelationshipPub, (FeatureRelationshipPub.feature_relationship_id == FeatureRelationship.feature_relationship_id)).\
