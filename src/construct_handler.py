@@ -278,6 +278,9 @@ class ConstructHandler(FeatureHandler):
             self.log.debug(f'BILLYBOB: {construct} has {len(cons_al_rels)} direct allele relationships.')
             for cons_al_rel in cons_al_rels:
                 allele_id = cons_al_rel.chado_obj.subject_id
+                # Skip obsolete alleles.
+                if allele_id not in self.allele_gene_lookup.keys():
+                    continue
                 gene_id = self.allele_gene_lookup[allele_id]
                 # Slot for gene_id depends on the allele class.
                 if allele_id in self.transgenic_allele_class_lookup.keys():
