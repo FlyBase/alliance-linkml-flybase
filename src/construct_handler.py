@@ -235,10 +235,10 @@ class ConstructHandler(FeatureHandler):
         for construct in self.fb_data_entities.values():
             self.log.debug(f'Assess encoded tools for {construct}.')
             # Reference of related alleles.
-            cons_al_rels = construct.recall_relationships('object', rel_types='associated_with', rel_entity_types='allele')
+            cons_al_rels = construct.recall_relationships(self.log, entity_role='object', rel_types='associated_with', rel_entity_types='allele')
             self.log.debug(f'BILLYBOB: {construct} has {len(cons_al_rels)} direct allele relationships.')
             # Direct encodes_tool relationships.
-            cons_tool_rels = construct.recall_relationships('subject', rel_types='encodes_tool')
+            cons_tool_rels = construct.recall_relationships(self.log, entity_role='subject', rel_types='encodes_tool')
             self.log.debug(f'BILLYBOB: {construct} has {len(cons_tool_rels)} direct tool relationships.')
             for cons_tool_rel in cons_tool_rels:
                 component_id = cons_tool_rel.chado_obj.object_id
@@ -274,7 +274,7 @@ class ConstructHandler(FeatureHandler):
             this_expressed_gene_counter = 0
             this_targeted_gene_counter = 0
             # Reference of related alleles.
-            cons_al_rels = construct.recall_relationships('object', rel_types='associated_with', rel_entity_types='allele')
+            cons_al_rels = construct.recall_relationships(self.log, entity_role='object', rel_types='associated_with', rel_entity_types='allele')
             self.log.debug(f'BILLYBOB: {construct} has {len(cons_al_rels)} direct allele relationships.')
             for cons_al_rel in cons_al_rels:
                 allele_id = cons_al_rel.chado_obj.subject_id
@@ -305,10 +305,10 @@ class ConstructHandler(FeatureHandler):
         counter = 0
         for construct in self.fb_data_entities.values():
             # Reference of related alleles.
-            cons_al_rels = construct.recall_relationships('object', rel_types='associated_with', rel_entity_types='allele')
+            cons_al_rels = construct.recall_relationships(self.log, entity_role='object', rel_types='associated_with', rel_entity_types='allele')
             self.log.debug(f'BILLYBOB: {construct} has {len(cons_al_rels)} direct allele relationships.')
             # Direct has_reg_region relationships (new implementation).
-            cons_reg_region_rels = construct.recall_relationships('subject', rel_types='has_reg_region')
+            cons_reg_region_rels = construct.recall_relationships(self.log, entity_role='subject', rel_types='has_reg_region')
             self.log.debug(f'BILLYBOB: {construct} has {len(cons_reg_region_rels)} direct reg_region relationships.')
             for cons_reg_region_rel in cons_reg_region_rels:
                 reg_region_id = cons_reg_region_rel.chado_obj.object_id
@@ -318,7 +318,7 @@ class ConstructHandler(FeatureHandler):
                     construct.regulating_features[reg_region_id] = cons_reg_region_rel.pubs
             self.log.debug(f'For {construct}, found {len(len(construct.regulating_features.keys()))} encoded reg_regions via direct relationships.')
             # Direct relationships to regulatory_regions (old implementation).
-            old_cons_reg_region_rels = construct.recall_relationships('object', rel_entity_types=['region', 'regulatory_region'])
+            old_cons_reg_region_rels = construct.recall_relationships(self.log, entity_role='object', rel_entity_types=['region', 'regulatory_region'])
             self.log.debug(f'BILLYBOB: {construct} has {len(old_cons_reg_region_rels)} old style direct regulatory_region relationships.')
             for old_cons_reg_region_rel in old_cons_reg_region_rels:
                 reg_region_id = old_cons_reg_region_rel.chado_obj.subject_id
