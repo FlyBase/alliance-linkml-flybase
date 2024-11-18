@@ -208,26 +208,6 @@ class ConstructHandler(FeatureHandler):
         return
 
     # Add methods to be run by synthesize_info() below.
-    # DETRITUS
-    # BILLYBOB: Use recall_relationships() to replace these deleted methods below.
-    # def get_construct_alleles(self, session):
-    # self.get_entity_obj_feat_rel_by_type(session, 'parent_allele_rels', rel_type='associated_with', sbj_type='allele', sbj_regex=self.regex['allele'])
-    # def get_construct_encoded_tools(self, session):
-    # self.get_entity_sbj_feat_rel_by_type(session, 'encodes_tool_rels', rel_type='encodes_tool', obj_regex=self.regex['fb_uniquename'])
-    # def get_construct_reg_regions(self, session):
-    # self.get_entity_sbj_feat_rel_by_type(session, 'reg_region_rels', rel_type='has_reg_region', obj_regex=self.regex['fb_uniquename'])
-    # def get_construct_reg_regions_old(self, session):
-    # self.get_entity_obj_feat_rel_by_type(session, 'seqfeat_rels', rel_type='associated_with', sbj_type='regulatory_region', sbj_regex=self.regex['seqfeat'])
-
-    # BILLYBOB: Obsolete methods above populated these obsolete FBConstruct fields.
-    # Direct relationships (FeatureRelationship objects); ignoring carries_tool and tagged_with.
-    # self.parent_allele_rels = []      # Direct FBal "associated_with" FBtp FeatureRelationships.
-    # self.encodes_tool_rels = []       # Direct FBtp "encodes_tool" FBto FeatureRelationships.
-    # self.reg_region_rels = []         # Direct FBtp "has_reg_region" FBto/FBgn/FBsf FeatureRelationships.
-    # self.seqfeat_rels = []            # Direct FBsf "associated_with" FBtp FeatureRelationships (old style).
-    # Indirect relationships.
-    # self.al_genes = []                # Indirect gene relationships: a list of allele-to-FBgn FBRelationship objects.
-
     def synthesize_encoded_tools(self):
         """Synthesize encoded components."""
         self.log.info('Synthesize encoded components.')

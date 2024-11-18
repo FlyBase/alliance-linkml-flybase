@@ -316,10 +316,6 @@ class PrimaryEntityHandler(DataHandler):
             except KeyError:
                 pass
         self.log.info(f'Found {rel_pub_counter} {chado_type}_relationship_pubs where the {self.datatype} is the {role}.')
-
-        ########################################################################################################################################################
-        ########################################################################################################################################################
-        ########################################################################################################################################################
         # Phase 3. Get rel props/prop_pubs (for feature only).
         if chado_type == 'feature':
             # First get feature_relationshipprops.
@@ -363,9 +359,6 @@ class PrimaryEntityHandler(DataHandler):
                         rel_dict[feat_rel_id].props_by_type[rel_prop_type_name] = [rel_prop]
                         rel_with_prop_counter += 1
             self.log.info(f'Found {props_for_rel_counter} relevant props for {rel_with_prop_counter} relevant feature_relationships.')
-        ########################################################################################################################################################
-        ########################################################################################################################################################
-        ########################################################################################################################################################
         # Phase 4. Add rel info to entities.
         assignment_counter = 0
         rel_type_tally = {}
