@@ -1,7 +1,7 @@
 """Module:: FlyBase datatypes.
 
 Synopsis:
-    Ojects representing FlyBase chado data types, for export to the Alliance in
+    Objects representing FlyBase chado data types, for export to the Alliance in
     LinkML-compliant JSON files.
 
 Author(s):
