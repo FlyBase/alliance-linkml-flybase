@@ -97,7 +97,7 @@ def main():
     }
     association_export_dict['allele_gene_association_ingest_set'] = []
     # association_export_dict['allele_gene_association_ingest_set'].extend(allele_handler.export_data['allele_gene_association_ingest_set'])
-    association_export_dict['allele_gene_association_ingest_set'].extend(insertion_handler.export_data['allele_gene_association_ingest_set'])
+    # association_export_dict['allele_gene_association_ingest_set'].extend(insertion_handler.export_data['allele_gene_association_ingest_set'])
     # association_export_dict['allele_gene_association_ingest_set'].extend(aberration_handler.export_data['allele_gene_association_ingest_set'])
     generate_export_file(association_export_dict, log, association_output_filename)
 
