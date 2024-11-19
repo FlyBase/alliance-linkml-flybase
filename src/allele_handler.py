@@ -630,19 +630,18 @@ class AlleleHandler(FeatureHandler):
         GENE = 1
         counter = 0
         for allele_gene_key, allele_gene_rels in self.gene_allele_rels.items():
-            allele_curie = f'FB:{self.feature_lookup[allele_gene_key[ALLELE]]["uniquename"]}'
-            gene_curie = f'FB:{self.feature_lookup[allele_gene_key[GENE]]["uniquename"]}'
+            allele = self.fb_data_entities[allele_gene_key[ALLELE]]
+            allele_curie = f'FB:{allele.uniquename}'
+            gene = self.feature_lookup[allele_gene_key[GENE]]
+            gene_curie = f'FB:{gene["uniquename"]}'
             first_feat_rel = allele_gene_rels[0]
-            if not allele_curie.startswith('FB:FBal'):
-                first_feat_rel.for_export = False
-                first_feat_rel.export_warnings.append('"alleleof" relationship includes non-allele')
             all_pub_ids = []
             for allele_gene_rel in allele_gene_rels:
                 all_pub_ids.extend(allele_gene_rel.pubs)
             first_feat_rel.pubs = all_pub_ids
             pub_curies = self.lookup_pub_curies(all_pub_ids)
             rel_dto = agr_datatypes.AlleleGeneAssociationDTO(allele_curie, 'is_allele_of', gene_curie, pub_curies)
-            if self.feature_lookup[allele_gene_key[ALLELE]]['is_obsolete'] is True or self.feature_lookup[allele_gene_key[GENE]]['is_obsolete'] is True:
+            if allele.is_obsolete is True or gene['is_obsolete'] is True:
                 rel_dto.obsolete = True
                 rel_dto.internal = True
             first_feat_rel.linkmldto = rel_dto
