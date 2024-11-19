@@ -24,7 +24,9 @@ import argparse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
+from allele_handler import AberrationHandler
 from allele_handler import AlleleHandler
+from allele_handler import InsertionHandler
 from utils import db_query_transaction, generate_export_file
 
 # Data types handled by this script.
@@ -70,6 +72,8 @@ def main():
 
     # Get the data and process it.
     allele_handler = AlleleHandler(log, testing)
+    # insertion_handler = InsertionHandler(log, testing)
+    # aberration_handler = AberrationHandler(log, testing)
     db_query_transaction(session, log, allele_handler)
 
     # Export the data.
@@ -77,8 +81,23 @@ def main():
         'linkml_version': linkml_release,
         'alliance_member_release_version': database_release,
     }
-    export_dict[allele_handler.primary_export_set] = allele_handler.export_data[allele_handler.primary_export_set]
+    export_dict[allele_handler.primary_export_set] = []
+    export_dict[allele_handler.primary_export_set].extend(allele_handler.export_data[allele_handler.primary_export_set])
+    # export_dict[allele_handler.primary_export_set].extend(insertion_handler.export_data[allele_handler.primary_export_set])
+    # export_dict[allele_handler.primary_export_set].extend(aberration_handler.export_data[allele_handler.primary_export_set])
     generate_export_file(export_dict, log, output_filename)
+
+    # Export the gene-allele associations to a separate file.
+    association_output_filename = output_filename.replace('allele', 'gene_allele_association')
+    association_export_dict = {
+        'linkml_version': linkml_release,
+        'alliance_member_release_version': database_release,
+    }
+    association_export_dict['allele_gene_association_ingest_set'] = []
+    association_export_dict['allele_gene_association_ingest_set'].extend(allele_handler.export_data['allele_gene_association_ingest_set'])
+    # association_export_dict['allele_gene_association_ingest_set'].extend(insertion_handler.export_data['allele_gene_association_ingest_set'])
+    # association_export_dict['allele_gene_association_ingest_set'].extend(aberration_handler.export_data['allele_gene_association_ingest_set'])
+    generate_export_file(association_export_dict, log, association_output_filename)
 
     log.info('Ended main function.\n')
 
