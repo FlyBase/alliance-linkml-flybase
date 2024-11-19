@@ -20,8 +20,17 @@
   * [References](#References)
 
 ## Overview
-FlyBase in-house scripts export FlyBase data in Alliance LinkML-compliant JSON format.
-Files are uploaded to the Alliance persistent store.
+This code controls the export of FlyBase data to Alliance LinkML-compliant JSON
+format. FlyBase and Alliance data types are represented by their own classes in
+the `fb_datatypes.py` and `agr_datatypes.py` files, respectively.
+There are various handlers dedicated to the transformation of specific
+datatypes: e.g., `gene_handler.py`.
+Specific scripts are then used to call various handlers. A script may call on
+multiple handlers for the generation of a single export file: e.g., Alliance
+AGMs encompass both FB strains and genotypes. A script may also output multiple
+files: e.g., `AGM_data_retrieval_curation_gene.py` generates both gene and
+allele-gene-association files.
+The export files are then uploaded to the Alliance persistent store.
 
 ## CodeManagement
 Modifications this repo should be made in new "release" branches corresponding to Alliance LinkML schema release branches: e.g., `v1.3.1`.  
@@ -61,7 +70,7 @@ With each run, files generated are stored locally in a directory within `/data/a
   - Specify these variables at the `Alliance_LinkML_Submission` pipeline level.  
     - `SERVER` - flysql machine where the reporting db is located: e.g., `flysql25`  
     - `DATABASE` - the name of the db to use (with `audit_chado`): e.g., `production_chado` or `fb_2022_05_reporting_audit`  
-    - `RELEASE` - ensure that the release matches the db used: e.g., `2022_05`.  
+    - `RELEASE` - ensure that the release matches the db used: e.g., `2022_05` (reporting) or `2022_05_EP3` (production).  
     - `ITERATION` - the date `MMMDD` on which the pipeline is run.  
     - `LINKML_VERSION` - the LinkML version for the data: e.g., `v1.3.1`.  
 ### GoCDPipeline
@@ -72,7 +81,7 @@ The `Alliance_LinkML_Submission` pipeline automates these steps:
 4. Fetches data using `alliance-linkml-flybase` scripts from a specified branch or release tag.  
 5. Validates data files using the Alliance `validate_agr_schema.py` against the `jsonschema/allianceModel.schema` file.  
 6. Sends e-mail that files are ready for review (size, contents), then pauses the pipeline.  
-7. Upon manual unpausing (assuming files look ok), the pipeline resumes to upload the files.  
+7. Has a separate, manually initiated phase for each file upload (due to dependencies).  
 
 ## DataSubmission
 ### FileUpload
@@ -80,6 +89,7 @@ As mentioned above, the GoCD pipeline will upload files to the Alliance.
 Details of how to upload files are [here](https://github.com/alliance-genome/agr_curation#submitting-data).  
 - Your personal `API Curation Token` is required (available from your profile the [Alliance Curation Site](https://curation.alliancegenome.org/#/)).  
 Expect an `OK` message upon completion of a successful file upload.
+There are dependencies: e.g., the ALLELE file should be fully loaded (takes many hours) at the Alliance before uploading the disease file.
 ### ConfirmUploads
 Go to the [Alliance Curation Site](https://curation.alliancegenome.org/#/).  
 - From the left options, choose `Other Links` (at the bottom), then `Data Loads`.  

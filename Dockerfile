@@ -12,11 +12,11 @@ RUN mkdir /src/temp/
 
 # 1. FlyBase scripts.
 ADD git_alliance-linkml-flybase/requirements.txt                              /src/requirements.txt
-ADD git_alliance-linkml-flybase/src/AGR*.py                                   /src/
+ADD git_alliance-linkml-flybase/src/*.py                                      /src/
 
 # 2. Alliance LinkML schema and validation script.
 ADD git_agr_curation_schema/util/validate_agr_schema.py                       /src/validate_agr_schema.py
-ADD git_agr_curation_schema/generated/jsonschema/allianceModel.schema.json    jsonschema/allianceModel.schema.json
+ADD git_agr_curation_schema/generated/jsonschema/allianceModel.schema.json    generated/jsonschema/allianceModel.schema.json
 
 # Install required modules.
 RUN pip3 install -r requirements.txt --no-cache-dir

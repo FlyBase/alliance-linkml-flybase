@@ -1,21 +1,21 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Data retrieval of FlyBase AGM for Alliance curation database.
+"""Data retrieval of FlyBase construct for Alliance curation database.
 
 Author(s):
     Gil dos Santos dossantos@morgan.harvard.edu
 
 Usage:
-    AGR_data_retrieval_curation_agm.py [-h]
+    AGR_data_retrieval_curation_construct.py [-h]
     [-l LINKML_RELEASE] [-v VERBOSE] [-c CONFIG] [-t TESTING]
 
 Example:
-    python AGR_data_retrieval_curation_agm.py -v -r 2023_05 -l v1.1.2
+    python AGR_data_retrieval_curation_construct.py -v -l v1.1.2
     -c /path/to/config.cfg
 
 Notes:
-    This script exports FlyBase AGM data as a JSON file conforming to the
-    AGM LinkML specs for the Alliance persistent curation database.
+    This script exports FlyBase construct data as a JSON file conforming to the
+    construct LinkML specs for the Alliance persistent curation database.
     A chado database with a full "audit_chado" table is required.
 
 """
@@ -24,11 +24,11 @@ import argparse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
-from agm_handlers import StrainHandler
+from construct_handler import ConstructHandler
 from utils import db_query_transaction, generate_export_file
 
 # Data types handled by this script.
-REPORT_LABEL = 'agm_curation'
+REPORT_LABEL = 'construct_curation'
 
 # Now proceed with generic setup.
 set_up_dict = set_up_db_reading(REPORT_LABEL)
@@ -69,22 +69,25 @@ def main():
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Get the data and process it.
-    strain_handler = StrainHandler(log, testing)
-    db_query_transaction(session, log, strain_handler)
+    cons_handler = ConstructHandler(log, testing)
+    db_query_transaction(session, log, cons_handler)
 
-    # Export the data.
+    # Export the construct data.
     export_dict = {
         'linkml_version': linkml_release,
         'alliance_member_release_version': database_release,
     }
-
-    # Export strains first.
-    export_dict[strain_handler.primary_export_set] = strain_handler.export_data[strain_handler.primary_export_set]
-
-    # Then add genotypes to export list.
-    # Future work.
-
+    export_dict['construct_ingest_set'] = cons_handler.export_data['construct_ingest_set']
     generate_export_file(export_dict, log, output_filename)
+
+    # Export the construct associations to a separate file.
+    association_output_filename = output_filename.replace('construct', 'construct_association')
+    association_export_dict = {
+        'linkml_version': linkml_release,
+        'alliance_member_release_version': database_release,
+    }
+    association_export_dict['construct_genomic_entity_association_ingest_set'] = cons_handler.export_data['construct_genomic_entity_association_ingest_set']
+    generate_export_file(association_export_dict, log, association_output_filename)
 
     log.info('Ended main function.\n')
 
