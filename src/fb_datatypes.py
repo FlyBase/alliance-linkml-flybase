@@ -267,6 +267,21 @@ class FBConstruct(FBFeature):
         self.regulating_tool_genes = []   # Will be list of feature_ids for genes for which related tools are also associated in construct.targeted_features.
 
 
+class FBInsertion(FBFeature):
+    """A FlyBase Insertion entity with all its related data."""
+    def __init__(self, chado_obj):
+        """Create the FBInsertion object."""
+        super().__init__(chado_obj)
+        # Primary FB chado data.
+        self.direct_colls = []                  # List of collections (Library objects) directly associated with the insertion.
+        self.ins_colls = []                     # List of collections (Library objects) indirectly associated with the allele via an FBti insertion.
+        self.cons_colls = []                    # List of collections (Library objects) indirectly associated with the allele via an FBtp construct.
+        self.sf_colls = []                      # List of collections (Library objects) indirectly associated with the allele via an FBsf feature.
+        # Processed FB data.
+        self.parent_gene_ids = []                  # List of what? BOB
+        self.insertion_of_internal_gene = False    # Change to True if the allele is related to an internal-type gene (e.g., origin of replication).
+
+
 class FBStrain(FBDataEntity):
     """A FlyBase Strain entity with all its related data."""
     def __init__(self, chado_obj):
