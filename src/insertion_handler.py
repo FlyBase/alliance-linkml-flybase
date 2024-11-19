@@ -276,14 +276,9 @@ class InsertionHandler(FeatureHandler):
     def map_mutation_types(self):
         """Map mutation types."""
         self.log.info('Map mutation types.')
-        insertion_conversion = {
-            'transposable_element_insertion_site': 'SO:0001218',    # transgenic_insertion
-            'transposable_element': 'SO:0001837',                   # mobile_element_insertion
-            'insertion': 'SO:0000667'                               # insertion
-        }
         counter = 0
         for insertion in self.fb_data_entities.values():
-            mutation_type_curie = insertion_conversion[self.cvterm_lookup[insertion.type_id]['name']]
+            mutation_type_curie = self.cvterm_lookup[insertion.type_id]['curie']
             pub_curies = []
             mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, pub_curies)
             insertion.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
