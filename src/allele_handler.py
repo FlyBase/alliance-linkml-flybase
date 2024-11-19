@@ -47,6 +47,10 @@ class AlleleHandler(FeatureHandler):
         'FBal0048226': 'Dmau_w[a23]',           # Non-Dmel allele related to non-Dmel insertion.
     }
 
+    # Additional export sets.
+    gene_allele_rels = {}            # Will be (allele feature_id, gene feature_id) tuples keying lists of FBRelationships.
+    gene_allele_associations = []    # Will be the final list of gene-allele FBRelationships to export.
+
     # Additional reference info.
     allele_class_terms = []          # A list of cvterm_ids for child terms of "allele_class" (FBcv:0000286).
     allele_mutant_type_terms = []    # A list of cvterm_ids for child terms of chromosome_structure_variation or sequence_alteration.
@@ -392,6 +396,28 @@ class AlleleHandler(FeatureHandler):
         self.log.info(f'Adjusted organism to be "non-Dmel" for {counter} alleles.')
         return
 
+    def synthesize_gene_alleles(self):
+        """Synthesize gene allele relationships."""
+        self.log.info('Synthesize gene allele relationships.')
+        gene_counter = 0
+        allele_counter = 0
+        # Need to code for the rare possibility that gene-allele is represented by many feature_relationships.
+        for allele in self.fb_data_entities.values():
+            relevant_gene_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='alleleof', rel_entity_types='gene')
+            if relevant_gene_rels:
+                allele_counter += 1
+            # self.log.debug(f'For {gene}, found {len(relevant_allele_rels)} allele rels to review.')
+            for gene_rel in relevant_gene_rels:
+                gene_feature_id = gene_rel.chado_obj.object_id
+                allele_gene_key = (allele.db_primary_id, gene_feature_id)
+                try:
+                    self.gene_allele_rels[allele_gene_key].extend(gene_rel)
+                except KeyError:
+                    self.gene_allele_rels[allele_gene_key] = [gene_rel]
+                    gene_counter += 1
+        self.log.info(f'Found {gene_counter} genes for {allele_counter} alleles.')
+        return
+
     # Elaborate on synthesize_info() for the GeneHandler.
     def synthesize_info(self):
         """Extend the method for the GeneHandler."""
@@ -404,6 +430,7 @@ class AlleleHandler(FeatureHandler):
         self.flag_alleles_of_internal_genes()
         self.synthesize_related_features()
         self.adjust_allele_organism()
+        self.synthesize_gene_alleles()
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
@@ -596,6 +623,34 @@ class AlleleHandler(FeatureHandler):
         self.log.info(f'Mapped {counter} mutation type annotations.')
         return
 
+    def map_gene_allele_associations(self):
+        """Map gene-allele associations to Alliance object."""
+        self.log.info('Map gene-allele associations to Alliance object.')
+        ALLELE = 0
+        GENE = 1
+        counter = 0
+        for allele_gene_key, allele_gene_rels in self.gene_allele_rels.items():
+            allele_curie = f'FB:{self.feature_lookup[allele_gene_key[ALLELE]]["uniquename"]}'
+            gene_curie = f'FB:{self.feature_lookup[allele_gene_key[GENE]]["uniquename"]}'
+            first_feat_rel = allele_gene_rels[0]
+            if not allele_curie.startswith('FB:FBal'):
+                first_feat_rel.for_export = False
+                first_feat_rel.export_warnings.append('"alleleof" relationship includes non-allele')
+            all_pub_ids = []
+            for allele_gene_rel in allele_gene_rels:
+                all_pub_ids.extend(allele_gene_rel.pubs)
+            first_feat_rel.pubs = all_pub_ids
+            pub_curies = self.lookup_pub_curies(all_pub_ids)
+            rel_dto = agr_datatypes.AlleleGeneAssociationDTO(allele_curie, 'is_allele_of', gene_curie, pub_curies)
+            if self.feature_lookup[allele_gene_key[ALLELE]]['is_obsolete'] is True or self.feature_lookup[allele_gene_key[GENE]]['is_obsolete'] is True:
+                rel_dto.obsolete = True
+                rel_dto.internal = True
+            first_feat_rel.linkmldto = rel_dto
+            self.gene_allele_associations.append(first_feat_rel)
+            counter += 1
+        self.log.info(f'Generated {counter} allele-gene unique associations.')
+        return
+
     # Elaborate on map_fb_data_to_alliance() for the GeneHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the GeneHandler."""
@@ -614,10 +669,14 @@ class AlleleHandler(FeatureHandler):
         self.map_timestamps()
         self.map_secondary_ids('allele_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
+        self.map_gene_allele_associations()
+        self.flag_internal_fb_entities('gene_allele_associations')
         return
 
     # Elaborate on query_chado_and_export() for the GeneHandler.
     def query_chado_and_export(self, session):
         """Elaborate on query_chado_and_export method for the GeneHandler."""
         super().query_chado_and_export(session)
+        self.flag_unexportable_entities(self.gene_allele_associations, 'allele_gene_association_ingest_set')
+        self.generate_export_dict(self.gene_allele_associations, 'allele_gene_association_ingest_set')
         return
