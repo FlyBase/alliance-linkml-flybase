@@ -144,8 +144,8 @@ class InsertionHandler(FeatureHandler):
         """Extend the method for the GeneHandler."""
         super().get_datatype_data(session)
         self.get_entities(session)
-        # self.get_entity_relationships(session, 'subject')
-        # self.get_entity_relationships(session, 'object')
+        self.get_entity_relationships(session, 'subject')
+        self.get_entity_relationships(session, 'object')
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)

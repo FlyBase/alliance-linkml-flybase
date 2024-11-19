@@ -90,7 +90,7 @@ def main():
     generate_export_file(export_dict, log, output_filename)
 
     # Export the gene-allele associations to a separate file.
-    association_output_filename = output_filename.replace('allele', 'gene_allele_association')
+    association_output_filename = output_filename.replace('allele', 'allele_gene_association')
     association_export_dict = {
         'linkml_version': linkml_release,
         'alliance_member_release_version': database_release,
