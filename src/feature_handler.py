@@ -247,7 +247,7 @@ class FeatureHandler(PrimaryEntityHandler):
             Library.uniquename.op('~')(self.regex['library']),
             libtype.name == 'reagent collection',
             libfeattype.name == 'member_of_reagent_collection',
-            featreltype.name == 'associated_with'
+            featreltype.name == 'producedby',
         )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
