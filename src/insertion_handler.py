@@ -77,7 +77,7 @@ class InsertionHandler(FeatureHandler):
         self.get_direct_reagent_collections(session)
         self.get_indirect_reagent_collections(session, 'object', 'associated_with', 'allele')
         self.get_indirect_reagent_collections(session, 'subject', 'producedby', 'construct')
-        # self.get_sf_collections(session)          # BOB: Need to update this for insertions.
+        self.get_very_indirect_reagent_collections(session)
         return
 
     # Add sub-methods to be run by synthesize_info() below.

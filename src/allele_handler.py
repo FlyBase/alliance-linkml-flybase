@@ -108,53 +108,6 @@ class AlleleHandler(FeatureHandler):
         self.log.info(f'Flagged {counter} alleles as "in vitro"')
         return
 
-    def get_sf_collections(self, session):
-        """Find collections indirectly related to alleles via sequence features."""
-        self.log.info('Find collections indirectly related to alleles via sequence features.')
-        allele = aliased(Feature, name='allele')
-        construct = aliased(Feature, name='construct')
-        seqfeat = aliased(Feature, name='seqfeat')
-        libtype = aliased(Cvterm, name='libtype')
-        libfeattype = aliased(Cvterm, name='libfeattype')
-        featreltype = aliased(Cvterm, name='featreltype')
-        allele_construct = aliased(FeatureRelationship, name='allele_construct')
-        seqfeat_construct = aliased(FeatureRelationship, name='seqfeat_construct')
-        filters = (
-            allele.uniquename.op('~')(self.regex['allele']),
-            construct.uniquename.op('~')(self.regex['construct']),
-            seqfeat.uniquename.op('~')(self.regex['seqfeat']),
-            construct.is_obsolete.is_(False),
-            seqfeat.is_obsolete.is_(False),
-            Library.is_obsolete.is_(False),
-            Library.uniquename.op('~')(self.regex['library']),
-            libtype.name == 'reagent collection',
-            libfeattype.name == 'member_of_reagent_collection',
-            featreltype.name == 'associated_with'
-        )
-        if self.testing:
-            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
-            filters += (allele.uniquename.in_((self.test_set.keys())), )
-        sf_collections = session.query(allele, Library).\
-            select_from(allele).\
-            join(allele_construct, (allele_construct.subject_id == allele.feature_id)).\
-            join(construct, (construct.feature_id == allele_construct.object_id)).\
-            join(featreltype, (featreltype.cvterm_id == allele_construct.type_id)).\
-            join(seqfeat_construct, (seqfeat_construct.object_id == construct.feature_id)).\
-            join(seqfeat, (seqfeat.feature_id == seqfeat_construct.subject_id)).\
-            join(LibraryFeature, (LibraryFeature.feature_id == seqfeat.feature_id)).\
-            join(Library, (Library.library_id == LibraryFeature.library_id)).\
-            join(LibraryFeatureprop, (LibraryFeatureprop.library_feature_id == LibraryFeature.library_feature_id)).\
-            join(libtype, (libtype.cvterm_id == Library.type_id)).\
-            join(libfeattype, (libfeattype.cvterm_id == LibraryFeatureprop.type_id)).\
-            filter(*filters).\
-            distinct()
-        counter = 0
-        for result in sf_collections:
-            self.fb_data_entities[result.allele.feature_id].sf_reagent_colls.append(result.Library)
-            counter += 1
-        self.log.info(f'Found {counter} sequence feature-mediated allele-library associations.')
-        return
-
     def get_phenotypes(self, session):
         """Get phenotypes from single locus genotypes related to alleles."""
         self.log.info('Get phenotypes from single locus genotypes related to alleles.')
@@ -204,9 +157,10 @@ class AlleleHandler(FeatureHandler):
         self.get_phenotypes(session)
         self.find_in_vitro_alleles(session)
         self.get_direct_reagent_collections(session)
-        self.get_indirect_reagent_collections(session, 'subject', 'associated_with', 'construct')
         self.get_indirect_reagent_collections(session, 'subject', 'associated_with', 'insertion')
-        self.get_sf_collections(session)
+        self.get_indirect_reagent_collections(session, 'subject', 'associated_with', 'construct')
+        self.get_indirect_reagent_collections(session, 'subject', ['has_reg_region', 'encodes_tool'], 'seqfeat')
+        self.get_very_indirect_reagent_collections(session)
         return
 
     # Add sub-methods to be run by synthesize_info() below.

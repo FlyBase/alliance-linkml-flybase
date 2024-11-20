@@ -226,6 +226,53 @@ class FeatureHandler(PrimaryEntityHandler):
         self.log.info(f'Found {counter} indirect reagent collections for {self.datatype}s using these parameters: {parameter_str}')
         return
 
+    def get_very_indirect_reagent_collections(self, session):
+        """Find reagent collections indirectly related to primary features via FBtp-FBsf chains."""
+        self.log.info('Find reagent collections indirectly related to primary features via FBtp-FBsf chains.')
+        subject = aliased(Feature, name='subject')
+        construct = aliased(Feature, name='construct')
+        seqfeat = aliased(Feature, name='seqfeat')
+        libtype = aliased(Cvterm, name='libtype')
+        libfeattype = aliased(Cvterm, name='libfeattype')
+        featreltype = aliased(Cvterm, name='featreltype')
+        subject_construct = aliased(FeatureRelationship, name='subject_construct')
+        seqfeat_construct = aliased(FeatureRelationship, name='seqfeat_construct')
+        filters = (
+            subject.uniquename.op('~')(self.regex[self.datatype]),
+            construct.uniquename.op('~')(self.regex['construct']),
+            seqfeat.uniquename.op('~')(self.regex['seqfeat']),
+            construct.is_obsolete.is_(False),
+            seqfeat.is_obsolete.is_(False),
+            Library.is_obsolete.is_(False),
+            Library.uniquename.op('~')(self.regex['library']),
+            libtype.name == 'reagent collection',
+            libfeattype.name == 'member_of_reagent_collection',
+            featreltype.name == 'associated_with'
+        )
+        if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            filters += (subject.uniquename.in_((self.test_set.keys())), )
+        sf_collections = session.query(subject, Library).\
+            select_from(subject).\
+            join(subject_construct, (subject_construct.subject_id == subject.feature_id)).\
+            join(construct, (construct.feature_id == subject_construct.object_id)).\
+            join(featreltype, (featreltype.cvterm_id == subject_construct.type_id)).\
+            join(seqfeat_construct, (seqfeat_construct.object_id == construct.feature_id)).\
+            join(seqfeat, (seqfeat.feature_id == seqfeat_construct.subject_id)).\
+            join(LibraryFeature, (LibraryFeature.feature_id == seqfeat.feature_id)).\
+            join(Library, (Library.library_id == LibraryFeature.library_id)).\
+            join(LibraryFeatureprop, (LibraryFeatureprop.library_feature_id == LibraryFeature.library_feature_id)).\
+            join(libtype, (libtype.cvterm_id == Library.type_id)).\
+            join(libfeattype, (libfeattype.cvterm_id == LibraryFeatureprop.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in sf_collections:
+            self.fb_data_entities[result.subject.feature_id].sf_reagent_colls.append(result.Library)
+            counter += 1
+        self.log.info(f'Found {counter} reagent collection associations via FBtp-FBsf chains.')
+        return
+
     # Add methods to be run by synthesize_info() below.
     def synthesize_anno_ids(self):
         """Synthesize annotation IDs."""
