@@ -134,15 +134,16 @@ class FeatureHandler(PrimaryEntityHandler):
         """Find reagent collections indirectly related through some feature_relationship.
 
         Args:
+            session (SQLAlchemy session): The session for the query.
             entity_role (str): Role of primary feature in the feature_relationship: must be "subject" or "object".
-            rel_entity_type (str): Type of features to use in getting indirectly related collections.
             rel_types (str|list): Types of feature_relationships to use for the query.
+            rel_entity_type (str): Type of features to use in getting indirectly related collections.
 
         """
         parameter_str = f'entity_role={entity_role}, rel_entity_type={rel_entity_type}, rel_types={rel_types}'
         self.log.info(f'Look for indirect reagent collections for {self.datatype}s using these parameters: {parameter_str}')
         if entity_role not in ['subject', 'object']:
-            self.log.error(f'Unknown entity_role given to get_indirect_reagent_collections(): must be "subject" or "object".')
+            self.log.error(f'Unknown entity_role "{entity_role}" given to get_indirect_reagent_collections(): must be "subject" or "object".')
             raise ValueError
         if type(rel_types) is str:
             rel_types = [rel_types]

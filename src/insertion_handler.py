@@ -10,7 +10,7 @@ Author(s):
 """
 
 from logging import Logger
-from sqlalchemy.orm import aliased
+# from sqlalchemy.orm import aliased
 import agr_datatypes
 from fb_datatypes import FBInsertion
 from feature_handler import FeatureHandler
