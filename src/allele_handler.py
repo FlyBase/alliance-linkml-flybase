@@ -44,6 +44,7 @@ class AlleleHandler(FeatureHandler):
         'FBal0198096': 'tal[1]',                # Allele of internal type gene tal (gene_with_polycistronic_transcript).
         'FBal0055793': 'wg[UAS.Tag:HA]',        # Allele is directly related to a construct.
         'FBal0048226': 'Dmau_w[a23]',           # Non-Dmel allele related to non-Dmel insertion.
+        'FBal0198528': 'CG33269[HMJ22303]'
     }
 
     # Additional export sets.
