@@ -14,9 +14,9 @@ from sqlalchemy.orm import aliased
 import agr_datatypes
 from fb_datatypes import FBInsertion
 from feature_handler import FeatureHandler
-from harvdev_utils.production import (
-    Cvterm, Feature, FeatureRelationship, Library, LibraryFeature, LibraryFeatureprop
-)
+# from harvdev_utils.production import (
+#     Cvterm, Feature, FeatureRelationship, Library, LibraryFeature, LibraryFeatureprop
+# )
 
 
 class InsertionHandler(FeatureHandler):
@@ -32,11 +32,14 @@ class InsertionHandler(FeatureHandler):
     # Types: 228747 transposable_element_insertion_site; 7726 insertion_site; 5753 transposable element; 3573 match (internal).
     # Relationships: 234754 FBti(producedby)FBtp; 64920 FBal(associated_with)FBti.
     test_set = {
-        'FBti0000040': 'P{hsneo}Xrp1[142]',     # type=transposable_element_insertion_site. Location trap. FBal-(associated_with)->FBti-(producedby)->FBtp.
-        'FBti0151770': 'P{UAS-stnB.M}vl',       # type=transposable_element_insertion_site. FBti-(producedby)->FBtp<-(associated_with)-FBal.
-        'FBti0167947': 'TI{TI}wg[GFP]',         # type=insertion_site. FBti-(producedby)->FBtp<-(associated_with)-FBal.
-        'FBti0018862': '17.6{}804',             # type=17.6{}804; this insertion shares its uniquename with two internal "match" features.
-        'FBti0016979': 'P{PZ}Vha44[06072b]',    # type=transposable_element_insertion_site. Direct "associated_with" association to a gene.
+        'FBti0000040': 'P{hsneo}Xrp1[142]',         # type=transposable_element_insertion_site. Location trap. FBal-(associated_with)->FBti-(producedby)->FBtp.
+        'FBti0151770': 'P{UAS-stnB.M}vl',           # type=transposable_element_insertion_site. FBti-(producedby)->FBtp<-(associated_with)-FBal.
+        'FBti0167947': 'TI{TI}wg[GFP]',             # type=insertion_site. FBti-(producedby)->FBtp<-(associated_with)-FBal.
+        'FBti0018862': '17.6{}804',                 # type=17.6{}804; this insertion shares its uniquename with two internal "match" features.
+        'FBti0016979': 'P{PZ}Vha44[06072b]',        # type=transposable_element_insertion_site. Direct "associated_with" association to a gene.
+        'FBti0186374': 'P{TOE.GS00088}attP40',      # type=transposable_element_insertion_site. Related to TRiP-OE-VPR collection via FBtp0116301.
+        'FBti0178263': 'TI{TI}Rab1[EYFP]',          # type=insertion_site. Related to YRab collection via FBal0314192.
+        'FBti0164639': 'P{TRiP.HMJ22303}attP40',    # type=transposable_element_insertion_site. Related to TRiP-3 collection via FBtp0097015-FBsf0000443916.
     }
 
     # Additional export sets.
@@ -56,53 +59,7 @@ class InsertionHandler(FeatureHandler):
         return
 
     # Additional sub-methods for get_datatype_data().
-    def get_sf_collections(self, session):
-        """Find collections indirectly related to insertions via sequence features."""
-        self.log.info('Find collections indirectly related to insertions via sequence features.')
-        # Placeholder.
-        # insertion = aliased(Feature, name='insertion')
-        # construct = aliased(Feature, name='construct')
-        # seqfeat = aliased(Feature, name='seqfeat')
-        # libtype = aliased(Cvterm, name='libtype')
-        # libfeattype = aliased(Cvterm, name='libfeattype')
-        # featreltype = aliased(Cvterm, name='featreltype')
-        # insertion_construct = aliased(FeatureRelationship, name='insertion_construct')
-        # seqfeat_construct = aliased(FeatureRelationship, name='seqfeat_construct')
-        # filters = (
-        #     insertion.uniquename.op('~')(self.regex['insertion']),
-        #     construct.uniquename.op('~')(self.regex['construct']),
-        #     seqfeat.uniquename.op('~')(self.regex['seqfeat']),
-        #     construct.is_obsolete.is_(False),
-        #     seqfeat.is_obsolete.is_(False),
-        #     Library.is_obsolete.is_(False),
-        #     Library.uniquename.op('~')(self.regex['library']),
-        #     libtype.name == 'reagent collection',
-        #     libfeattype.name == 'member_of_reagent_collection',
-        #     featreltype.name == 'associated_with'
-        # )
-        # if self.testing:
-        #     self.log.info(f'TESTING: limit to these entities: {self.test_set}')
-        #     filters += (insertion.uniquename.in_((self.test_set.keys())), )
-        # sf_collections = session.query(insertion, Library).\
-        #     select_from(insertion).\
-        #     join(insertion_construct, (insertion_construct.subject_id == insertion.feature_id)).\
-        #     join(construct, (construct.feature_id == insertion_construct.object_id)).\
-        #     join(featreltype, (featreltype.cvterm_id == insertion_construct.type_id)).\
-        #     join(seqfeat_construct, (seqfeat_construct.object_id == construct.feature_id)).\
-        #     join(seqfeat, (seqfeat.feature_id == seqfeat_construct.subject_id)).\
-        #     join(LibraryFeature, (LibraryFeature.feature_id == seqfeat.feature_id)).\
-        #     join(Library, (Library.library_id == LibraryFeature.library_id)).\
-        #     join(LibraryFeatureprop, (LibraryFeatureprop.library_feature_id == LibraryFeature.library_feature_id)).\
-        #     join(libtype, (libtype.cvterm_id == Library.type_id)).\
-        #     join(libfeattype, (libfeattype.cvterm_id == LibraryFeatureprop.type_id)).\
-        #     filter(*filters).\
-        #     distinct()
-        # counter = 0
-        # for result in sf_collections:
-        #     self.fb_data_entities[result.insertion.feature_id].sf_colls.append(result.Library)
-        #     counter += 1
-        # self.log.info(f'Found {counter} sequence feature-mediated insertion-library associations.')
-        return
+    # Placeholder.
 
     # Elaborate on get_datatype_data() for the InsertionHandler.
     def get_datatype_data(self, session):
