@@ -14,7 +14,7 @@ Author(s):
 from logging import Logger
 from sqlalchemy.orm import aliased
 from harvdev_utils.production import (
-    Cvterm, Db, Dbxref, Featureloc, Feature, FeatureDbxref, Featureprop,
+    Cvterm, Db, Dbxref, Featureloc, Feature, FeatureDbxref, Library, LibraryFeature, LibraryFeatureprop
 )
 import agr_datatypes
 from entity_handler import PrimaryEntityHandler
@@ -27,6 +27,7 @@ class FeatureHandler(PrimaryEntityHandler):
         super().__init__(log, testing)
 
     # Add methods to be run by get_general_data() below.
+    # Placeholder.
 
     # Add methods to be run by get_datatype_data() below.
     def get_annotation_ids(self, session):
@@ -97,31 +98,36 @@ class FeatureHandler(PrimaryEntityHandler):
         self.log.info(f'Ignored {pass_counter} chromosomal featurelocs for {self.datatype} entities.')
         return
 
-    def get_featureprops_by_type(self, session, fprop_type):
-        """Return a list of featureprops of a given type."""
-        self.log.info(f'Get featureprops of type {fprop_type} for {self.datatype} entities.')
-        feat_type = aliased(Cvterm, name='feat_type')
-        prop_type = aliased(Cvterm, name='prop_type')
+    def get_direct_reagent_collections(self, session):
+        """Find reagent collections directly related to primary features."""
+        self.log.info('Find reagent collections directly related to primary features.')
+        libtype = aliased(Cvterm, name='libtype')
+        libfeattype = aliased(Cvterm, name='libfeattype')
         filters = (
-            Feature.is_analysis.is_(False),
-            prop_type.name == fprop_type
+            Feature.uniquename.op('~')(self.regex[self.datatype]),
+            Library.is_obsolete.is_(False),
+            Library.uniquename.op('~')(self.regex['library']),
+            libtype.name == 'reagent collection',
+            libfeattype.name == 'member_of_reagent_collection'
         )
-        if self.datatype in self.regex.keys():
-            self.log.info(f'Use this regex: {self.regex[self.datatype]}')
-            filters += (Feature.uniquename.op('~')(self.regex[self.datatype]), )
-        if self.datatype in self.feature_subtypes.keys():
-            self.log.info(f'Filter main table by these feature_subtypes: {self.feature_subtypes[self.datatype]}')
-            filters += (feat_type.name.in_((self.feature_subtypes[self.datatype])), )
         if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             filters += (Feature.uniquename.in_((self.test_set.keys())), )
-        results = session.query(Featureprop).\
+        collections = session.query(Feature, Library).\
             select_from(Feature).\
-            join(feat_type, (feat_type.cvterm_id == Feature.type_id)).\
-            join(Featureprop, (Featureprop.feature_id == Feature.feature_id)).\
-            join(prop_type, (prop_type.cvterm_id == Featureprop.type_id)).\
+            join(LibraryFeature, (LibraryFeature.feature_id == Feature.feature_id)).\
+            join(Library, (Library.library_id == LibraryFeature.library_id)).\
+            join(LibraryFeatureprop, (LibraryFeatureprop.library_feature_id == LibraryFeature.library_feature_id)).\
+            join(libtype, (libtype.cvterm_id == Library.type_id)).\
+            join(libfeattype, (libfeattype.cvterm_id == LibraryFeatureprop.type_id)).\
             filter(*filters).\
             distinct()
-        return results
+        counter = 0
+        for result in collections:
+            self.fb_data_entities[result.Feature.feature_id].reagent_colls.append(result.Library)
+            counter += 1
+        self.log.info(f'Found {counter} direct allele-collection associations.')
+        return
 
     # Add methods to be run by synthesize_info() below.
     def synthesize_anno_ids(self):

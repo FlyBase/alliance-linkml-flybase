@@ -108,37 +108,6 @@ class AlleleHandler(FeatureHandler):
         self.log.info(f'Flagged {counter} alleles as "in vitro"')
         return
 
-    def get_direct_collections(self, session):
-        """Find collections directly related to alleles."""
-        self.log.info('Find collections directly related to alleles.')
-        libtype = aliased(Cvterm, name='libtype')
-        libfeattype = aliased(Cvterm, name='libfeattype')
-        filters = (
-            Feature.uniquename.op('~')(self.regex['allele']),
-            Library.is_obsolete.is_(False),
-            Library.uniquename.op('~')(self.regex['library']),
-            libtype.name == 'reagent collection',
-            libfeattype.name == 'member_of_reagent_collection'
-        )
-        if self.testing:
-            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
-            filters += (Feature.uniquename.in_((self.test_set.keys())), )
-        collections = session.query(Feature, Library).\
-            select_from(Feature).\
-            join(LibraryFeature, (LibraryFeature.feature_id == Feature.feature_id)).\
-            join(Library, (Library.library_id == LibraryFeature.library_id)).\
-            join(LibraryFeatureprop, (LibraryFeatureprop.library_feature_id == LibraryFeature.library_feature_id)).\
-            join(libtype, (libtype.cvterm_id == Library.type_id)).\
-            join(libfeattype, (libfeattype.cvterm_id == LibraryFeatureprop.type_id)).\
-            filter(*filters).\
-            distinct()
-        counter = 0
-        for result in collections:
-            self.fb_data_entities[result.Feature.feature_id].direct_colls.append(result.Library)
-            counter += 1
-        self.log.info(f'Found {counter} direct allele-collection associations.')
-        return
-
     def get_indirect_collections(self, session):
         """Find collections indirectly related to alleles via insertions or constructs."""
         self.log.info('Find collections indirectly related to alleles via insertions or constructs.')
@@ -176,10 +145,10 @@ class AlleleHandler(FeatureHandler):
         fbtp_counter = 0
         for result in indirect_collections:
             if result.feature.uniquename.startswith('FBti'):
-                self.fb_data_entities[result.allele.feature_id].ins_colls.append(result.Library)
+                self.fb_data_entities[result.allele.feature_id].ti_colls.append(result.Library)
                 fbti_counter += 1
             elif result.feature.uniquename.startswith('FBtp'):
-                self.fb_data_entities[result.allele.feature_id].cons_colls.append(result.Library)
+                self.fb_data_entities[result.allele.feature_id].tp_colls.append(result.Library)
                 fbtp_counter += 1
         self.log.info(f'Found {fbti_counter} insertion-mediated allele-collection associations.')
         self.log.info(f'Found {fbtp_counter} construct-mediated allele-collection associations.')
@@ -280,7 +249,7 @@ class AlleleHandler(FeatureHandler):
         self.get_entity_timestamps(session)
         self.get_phenotypes(session)
         self.find_in_vitro_alleles(session)
-        self.get_direct_collections(session)
+        self.get_direct_reagent_collections(session)
         self.get_indirect_collections(session)
         self.get_sf_collections(session)
         return
@@ -464,12 +433,12 @@ class AlleleHandler(FeatureHandler):
         self.log.info('Map allele collections.')
         for allele in self.fb_data_entities.values():
             collections = []
-            if allele.direct_colls:
-                collections.extend(allele.direct_colls)
-            elif allele.ins_colls:
-                collections.extend(allele.ins_colls)
-            elif allele.cons_colls:
-                collections.extend(allele.cons_colls)
+            if allele.reagent_colls:
+                collections.extend(allele.reagent_colls)
+            elif allele.ti_colls:
+                collections.extend(allele.ti_colls)
+            elif allele.tp_colls:
+                collections.extend(allele.tp_colls)
             elif allele.sf_colls:
                 collections.extend(allele.sf_colls)
             if collections:

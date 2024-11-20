@@ -226,10 +226,10 @@ class FBAllele(FBFeature):
         """Create the FBAllele object."""
         super().__init__(chado_obj)
         # Primary FB chado data.
-        self.direct_colls = []                  # List of collections (Library objects) directly associated with the allele.
-        self.ins_colls = []                     # List of collections (Library objects) indirectly associated with the allele via an FBti insertion.
-        self.cons_colls = []                    # List of collections (Library objects) indirectly associated with the allele via an FBtp construct.
-        self.sf_colls = []                      # List of collections (Library objects) indirectly associated with the allele via an FBsf feature.
+        self.reagent_colls = []                 # List of reagent collections (Library objects) directly associated with the allele.
+        self.ti_colls = []                      # List of reagent collections (Library objects) indirectly associated with the allele via an FBti insertion.
+        self.tp_colls = []                      # List of reagent collections (Library objects) indirectly associated with the allele via an FBtp construct.
+        self.sf_colls = []                      # List of reagent collections (Library objects) indirectly associated with the allele via an FBsf feature.
         self.phenstatements = []                # List of SQLAlchemy (Feature, Genotype, Phenotype, Cvterm, Pub) results from Phenstatements.
         # Processed FB data.
         self.parent_gene_id = None              # The FBgn ID for the allele's parent gene.
@@ -273,10 +273,10 @@ class FBInsertion(FBFeature):
         """Create the FBInsertion object."""
         super().__init__(chado_obj)
         # Primary FB chado data.
-        self.direct_colls = []                  # List of collections (Library objects) directly associated with the insertion.
-        self.ins_colls = []                     # List of collections (Library objects) indirectly associated with the allele via an FBti insertion.
-        self.cons_colls = []                    # List of collections (Library objects) indirectly associated with the allele via an FBtp construct.
-        self.sf_colls = []                      # List of collections (Library objects) indirectly associated with the allele via an FBsf feature.
+        self.reagent_colls = []                 # List of reagent collections (Library objects) directly associated with the insertion.
+        self.al_colls = []                      # List of reagent collections (Library objects) indirectly associated with the insertion via an FBal allele.
+        self.tp_colls = []                      # List of reagent collections (Library objects) indirectly associated with the insertion via an FBtp construct.
+        self.sf_colls = []                      # List of reagent collections (Library objects) indirectly associated with the insertion via an FBsf feature.
         # Processed FB data.
         self.parent_gene_ids = []                  # List of what? BOB
         self.insertion_of_internal_gene = False    # Change to True if the allele is related to an internal-type gene (e.g., origin of replication).

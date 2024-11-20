@@ -56,37 +56,6 @@ class InsertionHandler(FeatureHandler):
         return
 
     # Additional sub-methods for get_datatype_data().
-    def get_direct_collections(self, session):
-        """Find collections directly related to insertions."""
-        self.log.info('Find collections directly related to insertions.')
-        libtype = aliased(Cvterm, name='libtype')
-        libfeattype = aliased(Cvterm, name='libfeattype')
-        filters = (
-            Feature.uniquename.op('~')(self.regex['insertion']),
-            Library.is_obsolete.is_(False),
-            Library.uniquename.op('~')(self.regex['library']),
-            libtype.name == 'reagent collection',
-            libfeattype.name == 'member_of_reagent_collection'
-        )
-        if self.testing:
-            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
-            filters += (Feature.uniquename.in_((self.test_set.keys())), )
-        collections = session.query(Feature, Library).\
-            select_from(Feature).\
-            join(LibraryFeature, (LibraryFeature.feature_id == Feature.feature_id)).\
-            join(Library, (Library.library_id == LibraryFeature.library_id)).\
-            join(LibraryFeatureprop, (LibraryFeatureprop.library_feature_id == LibraryFeature.library_feature_id)).\
-            join(libtype, (libtype.cvterm_id == Library.type_id)).\
-            join(libfeattype, (libfeattype.cvterm_id == LibraryFeatureprop.type_id)).\
-            filter(*filters).\
-            distinct()
-        counter = 0
-        for result in collections:
-            self.fb_data_entities[result.Feature.feature_id].direct_colls.append(result.Library)
-            counter += 1
-        self.log.info(f'Found {counter} direct insertion-collection associations.')
-        return
-
     def get_indirect_collections(self, session):
         # Placeholder.
         return
@@ -152,7 +121,7 @@ class InsertionHandler(FeatureHandler):
         self.get_entity_fb_xrefs(session)
         self.get_entity_xrefs(session)
         self.get_entity_timestamps(session)
-        self.get_direct_collections(session)
+        self.get_direct_reagent_collections(session)
         # self.get_indirect_collections(session)    # BOB: Need to update this for insertions.
         # self.get_sf_collections(session)          # BOB: Need to update this for insertions.
         return
@@ -220,8 +189,8 @@ class InsertionHandler(FeatureHandler):
         self.log.info('Map insertion collections.')
         for insertion in self.fb_data_entities.values():
             collections = []
-            if insertion.direct_colls:
-                collections.extend(insertion.direct_colls)
+            if insertion.reagent_colls:
+                collections.extend(insertion.reagent_colls)
             elif insertion.ins_colls:
                 collections.extend(insertion.ins_colls)
             elif insertion.cons_colls:

@@ -385,7 +385,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Found these types of {chado_type}_relationship types where the {self.datatype} is the {role}:')
         ordered_rel_types = sorted(list(rel_type_tally.keys()))
         for rel_type in ordered_rel_types:
-            self.log.debug(f'table={chado_type}_relationship, rel_type={rel_type}, count={rel_type_tally[rel_type]}.')
+            self.log.debug(f'table={chado_type}_relationship, role={role}, rel_type={rel_type}, count={rel_type_tally[rel_type]}.')
         if chado_type != 'feature':
             return
         # For features only, also sort relationships by type of related entity.
