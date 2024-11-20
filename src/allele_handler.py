@@ -10,13 +10,12 @@ Author(s):
 """
 
 from logging import Logger
-from sqlalchemy.orm import aliased
+# from sqlalchemy.orm import aliased
 import agr_datatypes
 from fb_datatypes import FBAllele
 from feature_handler import FeatureHandler
 from harvdev_utils.production import (
-    Cvterm, Feature, FeatureCvterm, FeatureGenotype, FeatureRelationship,
-    Genotype, Library, LibraryFeature, LibraryFeatureprop, Phenotype,
+    Cvterm, Feature, FeatureCvterm, FeatureGenotype, Genotype, Phenotype,
     PhenotypeCvterm, Phenstatement, Pub
 )
 
