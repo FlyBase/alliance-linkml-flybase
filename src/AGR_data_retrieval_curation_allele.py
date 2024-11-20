@@ -26,7 +26,7 @@ from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
 # from aberration_handler import AberrationHandler
 from allele_handler import AlleleHandler
-from insertion_handler import InsertionHandler
+# from insertion_handler import InsertionHandler
 from utils import db_query_transaction, generate_export_file
 
 # Data types handled by this script.
