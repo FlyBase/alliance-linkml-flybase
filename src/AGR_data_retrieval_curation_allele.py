@@ -26,7 +26,7 @@ from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
 # from aberration_handler import AberrationHandler
 from allele_handler import AlleleHandler
-# from insertion_handler import InsertionHandler
+from insertion_handler import InsertionHandler
 from utils import db_query_transaction, generate_export_file
 
 # Data types handled by this script.
@@ -72,10 +72,10 @@ def main():
 
     # Get the data and process it.
     allele_handler = AlleleHandler(log, testing)
-    # insertion_handler = InsertionHandler(log, testing)
+    insertion_handler = InsertionHandler(log, testing)
     # aberration_handler = AberrationHandler(log, testing)
     db_query_transaction(session, log, allele_handler)
-    # db_query_transaction(session, log, insertion_handler)
+    db_query_transaction(session, log, insertion_handler)
     # db_query_transaction(session, log, aberration_handler)
 
     # Export the data.
@@ -85,7 +85,7 @@ def main():
     }
     export_dict[allele_handler.primary_export_set] = []
     export_dict[allele_handler.primary_export_set].extend(allele_handler.export_data[allele_handler.primary_export_set])
-    # export_dict[allele_handler.primary_export_set].extend(insertion_handler.export_data[allele_handler.primary_export_set])
+    export_dict[allele_handler.primary_export_set].extend(insertion_handler.export_data[allele_handler.primary_export_set])
     # export_dict[allele_handler.primary_export_set].extend(aberration_handler.export_data[allele_handler.primary_export_set])
     generate_export_file(export_dict, log, output_filename)
 
