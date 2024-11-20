@@ -205,6 +205,11 @@ class FBFeature(FBDataEntity):
         self.fb_anno_dbxrefs = []            # Will be "FlyBase Annotation IDs" FeatureDbxref objects.
         self.sbj_rel_ids_by_obj_type = {}    # Lists of relationship_ids where this entity is the subject; keyed by object feature type.
         self.obj_rel_ids_by_sbj_type = {}    # Lists of relationship_ids where this entity is the object; keyed by subject feature type.
+        self.reagent_colls = []              # List of reagent collections (Library objects) directly associated with the feature.
+        self.al_reagent_colls = []           # List of reagent collections (Library objects) indirectly associated with the feature via an FBal allele.
+        self.ti_reagent_colls = []           # List of reagent collections (Library objects) indirectly associated with the feature via an FBti insertion.
+        self.tp_reagent_colls = []           # List of reagent collections (Library objects) indirectly associated with the feature via an FBtp construct.
+        self.sf_reagent_colls = []           # List of reagent collections (Library objects) indirectly associated with the feature via an FBsf feature.
         # Processed FB data.
         self.curr_anno_id = None     # Will be current annotation ID for the gene, transcript or protein (str).
         self.alt_anno_ids = []       # Will be list of non-current annotation IDs for the gene, transcript or protein (str).
@@ -226,10 +231,6 @@ class FBAllele(FBFeature):
         """Create the FBAllele object."""
         super().__init__(chado_obj)
         # Primary FB chado data.
-        self.reagent_colls = []                 # List of reagent collections (Library objects) directly associated with the allele.
-        self.ti_colls = []                      # List of reagent collections (Library objects) indirectly associated with the allele via an FBti insertion.
-        self.tp_colls = []                      # List of reagent collections (Library objects) indirectly associated with the allele via an FBtp construct.
-        self.sf_colls = []                      # List of reagent collections (Library objects) indirectly associated with the allele via an FBsf feature.
         self.phenstatements = []                # List of SQLAlchemy (Feature, Genotype, Phenotype, Cvterm, Pub) results from Phenstatements.
         # Processed FB data.
         self.parent_gene_id = None              # The FBgn ID for the allele's parent gene.
@@ -273,7 +274,6 @@ class FBInsertion(FBFeature):
         """Create the FBInsertion object."""
         super().__init__(chado_obj)
         # Primary FB chado data.
-        self.reagent_colls = []                 # List of reagent collections (Library objects) directly associated with the insertion.
         self.al_colls = []                      # List of reagent collections (Library objects) indirectly associated with the insertion via an FBal allele.
         self.tp_colls = []                      # List of reagent collections (Library objects) indirectly associated with the insertion via an FBtp construct.
         self.sf_colls = []                      # List of reagent collections (Library objects) indirectly associated with the insertion via an FBsf feature.

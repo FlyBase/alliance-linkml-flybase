@@ -56,10 +56,6 @@ class InsertionHandler(FeatureHandler):
         return
 
     # Additional sub-methods for get_datatype_data().
-    def get_indirect_collections(self, session):
-        # Placeholder.
-        return
-
     def get_sf_collections(self, session):
         """Find collections indirectly related to insertions via sequence features."""
         self.log.info('Find collections indirectly related to insertions via sequence features.')
@@ -122,7 +118,8 @@ class InsertionHandler(FeatureHandler):
         self.get_entity_xrefs(session)
         self.get_entity_timestamps(session)
         self.get_direct_reagent_collections(session)
-        # self.get_indirect_collections(session)    # BOB: Need to update this for insertions.
+        self.get_indirect_reagent_collections(session, 'object', 'associated_with', 'allele')
+        self.get_indirect_reagent_collections(session, 'subject', 'producedby', 'construct')
         # self.get_sf_collections(session)          # BOB: Need to update this for insertions.
         return
 
@@ -191,12 +188,12 @@ class InsertionHandler(FeatureHandler):
             collections = []
             if insertion.reagent_colls:
                 collections.extend(insertion.reagent_colls)
-            elif insertion.ins_colls:
-                collections.extend(insertion.ins_colls)
-            elif insertion.cons_colls:
-                collections.extend(insertion.cons_colls)
-            elif insertion.sf_colls:
-                collections.extend(insertion.sf_colls)
+            elif insertion.al_reagent_colls:
+                collections.extend(insertion.al_reagent_colls)
+            elif insertion.tp_reagent_colls:
+                collections.extend(insertion.tp_reagent_colls)
+            elif insertion.sf_reagent_colls:
+                collections.extend(insertion.sf_reagent_colls)
             if collections:
                 collections = list(set(collections))
                 insertion.linkmldto.in_collection_name = collections[0].name
