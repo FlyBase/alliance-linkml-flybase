@@ -597,7 +597,6 @@ class InsertionHandler(FeatureHandler):
         self.build_ncbi_taxon_lookup(session)
         self.build_feature_lookup(session, feature_types=['gene', 'allele', 'construct'])
         self.build_allele_gene_lookup(session)
-        self.get_internal_genes(session)
         return
 
     # Additional sub-methods for get_datatype_data().
@@ -629,12 +628,6 @@ class InsertionHandler(FeatureHandler):
         # Placeholder.
         return
 
-    def flag_insertions_of_internal_genes(self):
-        """Flag insertions of internal genes."""
-        self.log.info('Flag insertions of internal genes.')
-        # Placeholder - insertion can have many genes associated - make internal only if all related genes are internal.
-        return
-
     def synthesize_gene_insertions(self):
         """Synthesize gene-insertion relationships."""
         self.log.info('Synthesize gene-insertion relationships.')
@@ -650,7 +643,6 @@ class InsertionHandler(FeatureHandler):
         self.synthesize_synonyms()
         self.synthesize_pubs()
         self.synthesize_parent_genes()
-        self.flag_insertions_of_internal_genes()
         self.synthesize_gene_insertions()
         return
 
@@ -723,18 +715,12 @@ class InsertionHandler(FeatureHandler):
     def map_internal_insertion_status(self):
         """Flag internal insertions using insertion-specific criteria."""
         self.log.info('Flag internal insertions using insertion-specific criteria.')
-        internal_gene_counter = 0
         non_dmel_drosophilid_counter = 0
         for insertion in self.fb_data_entities.values():
-            if insertion.insertion_of_internal_gene is True:
-                insertion.linkmldto.internal = True
-                insertion.internal_reasons.append('Insertion related to an internal type FB gene')
-                internal_gene_counter += 1
             if insertion.org_abbr != 'Dmel':
                 insertion.linkmldto.internal = True
                 insertion.internal_reasons.append('A non-Dmel insertion')
                 non_dmel_drosophilid_counter += 1
-        self.log.info(f'Flagged {internal_gene_counter} insertions of internal-type genes as internal.')
         self.log.info(f'Flagged {non_dmel_drosophilid_counter} non-Dmel Drosophilid insertions as internal.')
         return
 
@@ -842,12 +828,6 @@ class AberrationHandler(FeatureHandler):
         # Placeholder.
         return
 
-    def flag_aberrations_of_internal_genes(self):
-        """Flag aberrations of internal genes."""
-        self.log.info('Flag aberrations of internal genes.')
-        # Placeholder - aberration can have many genes associated - make internal only if all related genes are internal.
-        return
-
     def synthesize_gene_aberrations(self):
         """Synthesize gene-aberration relationships."""
         self.log.info('Synthesize gene-aberration relationships.')
@@ -863,7 +843,6 @@ class AberrationHandler(FeatureHandler):
         self.synthesize_synonyms()
         self.synthesize_pubs()
         self.synthesize_parent_genes()
-        self.flag_aberrations_of_internal_genes()
         self.synthesize_gene_aberrations()
         return
 
@@ -927,18 +906,12 @@ class AberrationHandler(FeatureHandler):
     def map_internal_aberration_status(self):
         """Flag internal aberrations using aberration-specific criteria."""
         self.log.info('Flag internal aberrations using aberration-specific criteria.')
-        internal_gene_counter = 0
         non_dmel_drosophilid_counter = 0
         for aberration in self.fb_data_entities.values():
-            if aberration.aberration_of_internal_gene is True:
-                aberration.linkmldto.internal = True
-                aberration.internal_reasons.append('aberration related to an internal type FB gene')
-                internal_gene_counter += 1
             if aberration.org_abbr != 'Dmel':
                 aberration.linkmldto.internal = True
                 aberration.internal_reasons.append('A non-Dmel aberration')
                 non_dmel_drosophilid_counter += 1
-        self.log.info(f'Flagged {internal_gene_counter} aberrations of internal-type genes as internal.')
         self.log.info(f'Flagged {non_dmel_drosophilid_counter} non-Dmel Drosophilid aberrations as internal.')
         return
 
@@ -1046,12 +1019,6 @@ class BalancerHandler(FeatureHandler):
         # Placeholder.
         return
 
-    def flag_balancers_of_internal_genes(self):
-        """Flag balancers of internal genes."""
-        self.log.info('Flag balancers of internal genes.')
-        # Placeholder - balancer can have many genes associated - make internal only if all related genes are internal.
-        return
-
     def synthesize_gene_balancers(self):
         """Synthesize gene-balancer relationships."""
         self.log.info('Synthesize gene-balancer relationships.')
@@ -1067,7 +1034,6 @@ class BalancerHandler(FeatureHandler):
         self.synthesize_synonyms()
         self.synthesize_pubs()
         self.synthesize_parent_genes()
-        self.flag_balancers_of_internal_genes()
         self.synthesize_gene_balancers()
         return
 
@@ -1124,18 +1090,12 @@ class BalancerHandler(FeatureHandler):
     def map_internal_balancer_status(self):
         """Flag internal balancers using balancer-specific criteria."""
         self.log.info('Flag internal balancers using balancer-specific criteria.')
-        internal_gene_counter = 0
         non_dmel_drosophilid_counter = 0
         for balancer in self.fb_data_entities.values():
-            if balancer.balancer_of_internal_gene is True:
-                balancer.linkmldto.internal = True
-                balancer.internal_reasons.append('balancer related to an internal type FB gene')
-                internal_gene_counter += 1
             if balancer.org_abbr != 'Dmel':
                 balancer.linkmldto.internal = True
                 balancer.internal_reasons.append('A non-Dmel balancer')
                 non_dmel_drosophilid_counter += 1
-        self.log.info(f'Flagged {internal_gene_counter} balancers of internal-type genes as internal.')
         self.log.info(f'Flagged {non_dmel_drosophilid_counter} non-Dmel Drosophilid balancers as internal.')
         return
 
@@ -1176,7 +1136,6 @@ class BalancerHandler(FeatureHandler):
         self.map_secondary_ids('allele_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
         # self.map_gene_balancer_associations()    # BOB
-        # self.flag_internal_fb_entities('gene_balancer_associations')    # BOB
         return
 
     # Elaborate on query_chado_and_export() for the BalancerHandler.

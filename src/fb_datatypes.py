@@ -289,7 +289,6 @@ class FBInsertion(FBFeature):
         super().__init__(chado_obj)
         # Processed FB data.
         self.parent_gene_ids = []                  # List of what? BOB
-        self.insertion_of_internal_gene = False    # Change to True if the allele is related to an internal-type gene (e.g., origin of replication).
 
 
 class FBStrain(FBDataEntity):
