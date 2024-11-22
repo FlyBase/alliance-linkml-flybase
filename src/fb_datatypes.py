@@ -195,7 +195,7 @@ class FBDataEntity(FBExportEntity):
 
 
 class FBFeature(FBDataEntity):
-    """An abstract, generic FlyBase Feature entity with all its related data."""
+    """An abstract, generic FlyBase feature entity with all its related data."""
     def __init__(self, chado_obj):
         """Create the FBGene object."""
         super().__init__(chado_obj)
@@ -215,18 +215,15 @@ class FBFeature(FBDataEntity):
         self.alt_anno_ids = []       # Will be list of non-current annotation IDs for the gene, transcript or protein (str).
 
 
-class FBGene(FBFeature):
-    """A FlyBase Gene entity with all its related data."""
+class FBAberration(FBFeature):
+    """A FlyBase aberration entity with all its related data."""
     def __init__(self, chado_obj):
-        """Create the FBGene object."""
+        """Create the FBAberration object."""
         super().__init__(chado_obj)
-        # Processed FB data.
-        self.gene_type_name = 'gene'        # Update this default gene to SO term name from "promoted_gene_type" Featureprop, if available.
-        self.gene_type_id = 'SO:0000704'    # Update this default gene ID to SO term ID from "promoted_gene_type" Featureprop, if available.
 
 
 class FBAllele(FBFeature):
-    """A FlyBase Allele entity with all its related data."""
+    """A FlyBase allele entity with all its related data."""
     def __init__(self, chado_obj):
         """Create the FBAllele object."""
         super().__init__(chado_obj)
@@ -243,8 +240,15 @@ class FBAllele(FBFeature):
         self.allele_of_internal_gene = False    # Change to True if the allele is related to an internal-type gene (e.g., origin of replication).
 
 
+class FBBalancer(FBFeature):
+    """A FlyBase balancer entity with all its related data."""
+    def __init__(self, chado_obj):
+        """Create the FBBalancer object."""
+        super().__init__(chado_obj)
+
+
 class FBConstruct(FBFeature):
-    """A FlyBase Construct entity with all its related data."""
+    """A FlyBase construct entity with all its related data."""
     def __init__(self, chado_obj):
         """Create the FBConstruct object."""
         super().__init__(chado_obj)
@@ -268,22 +272,28 @@ class FBConstruct(FBFeature):
         self.regulating_tool_genes = []   # Will be list of feature_ids for genes for which related tools are also associated in construct.targeted_features.
 
 
+class FBGene(FBFeature):
+    """A FlyBase gene entity with all its related data."""
+    def __init__(self, chado_obj):
+        """Create the FBGene object."""
+        super().__init__(chado_obj)
+        # Processed FB data.
+        self.gene_type_name = 'gene'        # Update this default gene to SO term name from "promoted_gene_type" Featureprop, if available.
+        self.gene_type_id = 'SO:0000704'    # Update this default gene ID to SO term ID from "promoted_gene_type" Featureprop, if available.
+
+
 class FBInsertion(FBFeature):
-    """A FlyBase Insertion entity with all its related data."""
+    """A FlyBase insertion entity with all its related data."""
     def __init__(self, chado_obj):
         """Create the FBInsertion object."""
         super().__init__(chado_obj)
-        # Primary FB chado data.
-        self.al_colls = []                      # List of reagent collections (Library objects) indirectly associated with the insertion via an FBal allele.
-        self.tp_colls = []                      # List of reagent collections (Library objects) indirectly associated with the insertion via an FBtp construct.
-        self.sf_colls = []                      # List of reagent collections (Library objects) indirectly associated with the insertion via an FBsf feature.
         # Processed FB data.
         self.parent_gene_ids = []                  # List of what? BOB
         self.insertion_of_internal_gene = False    # Change to True if the allele is related to an internal-type gene (e.g., origin of replication).
 
 
 class FBStrain(FBDataEntity):
-    """A FlyBase Strain entity with all its related data."""
+    """A FlyBase strain entity with all its related data."""
     def __init__(self, chado_obj):
         """Create the FBStrain object."""
         super().__init__(chado_obj)
@@ -293,7 +303,7 @@ class FBStrain(FBDataEntity):
 
 
 class FBGenotype(FBDataEntity):
-    """A FlyBase Genotype entity with all its related data."""
+    """A FlyBase genotype entity with all its related data."""
     def __init__(self, chado_obj):
         """Create the FBGenotype object."""
         super().__init__(chado_obj)

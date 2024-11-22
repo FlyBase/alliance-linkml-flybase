@@ -12,7 +12,9 @@ Author(s):
 from logging import Logger
 # from sqlalchemy.orm import aliased
 import agr_datatypes
-from fb_datatypes import FBAllele, FBInsertion
+from fb_datatypes import (
+    FBAberration, FBAllele, FBBalancer, FBInsertion
+)
 from feature_handler import FeatureHandler
 from harvdev_utils.production import (
     Cvterm, Feature, FeatureCvterm, FeatureGenotype, Genotype, Phenotype,
@@ -141,7 +143,7 @@ class AlleleHandler(FeatureHandler):
 
     # Elaborate on get_datatype_data() for the AlleleHandler.
     def get_datatype_data(self, session):
-        """Extend the method for the GeneHandler."""
+        """Extend the method for the AlleleHandler."""
         super().get_datatype_data(session)
         self.get_entities(session)
         self.get_entity_relationships(session, 'subject', rel_type='alleleof', entity_type='gene', entity_regex=self.regex['gene'])
@@ -296,9 +298,9 @@ class AlleleHandler(FeatureHandler):
         self.log.info(f'Found {gene_counter} genes for {allele_counter} alleles.')
         return
 
-    # Elaborate on synthesize_info() for the GeneHandler.
+    # Elaborate on synthesize_info() for the AlleleHandler.
     def synthesize_info(self):
-        """Extend the method for the GeneHandler."""
+        """Extend the method for the AlleleHandler."""
         super().synthesize_info()
         self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
@@ -528,9 +530,9 @@ class AlleleHandler(FeatureHandler):
         self.log.info(f'Generated {counter} allele-gene unique associations.')
         return
 
-    # Elaborate on map_fb_data_to_alliance() for the GeneHandler.
+    # Elaborate on map_fb_data_to_alliance() for the AlleleHandler.
     def map_fb_data_to_alliance(self):
-        """Extend the method for the GeneHandler."""
+        """Extend the method for the AlleleHandler."""
         super().map_fb_data_to_alliance()
         self.map_allele_basic()
         self.map_synonyms()
@@ -550,9 +552,9 @@ class AlleleHandler(FeatureHandler):
         self.flag_internal_fb_entities('gene_allele_associations')
         return
 
-    # Elaborate on query_chado_and_export() for the GeneHandler.
+    # Elaborate on query_chado_and_export() for the AlleleHandler.
     def query_chado_and_export(self, session):
-        """Elaborate on query_chado_and_export method for the GeneHandler."""
+        """Elaborate on query_chado_and_export method for the AlleleHandler."""
         super().query_chado_and_export(session)
         self.flag_unexportable_entities(self.gene_allele_associations, 'allele_gene_association_ingest_set')
         self.generate_export_dict(self.gene_allele_associations, 'allele_gene_association_ingest_set')
@@ -603,7 +605,7 @@ class InsertionHandler(FeatureHandler):
 
     # Elaborate on get_datatype_data() for the InsertionHandler.
     def get_datatype_data(self, session):
-        """Extend the method for the GeneHandler."""
+        """Extend the method for the InsertionHandler."""
         super().get_datatype_data(session)
         self.get_entities(session)
         self.get_entity_relationships(session, 'subject')
@@ -639,9 +641,9 @@ class InsertionHandler(FeatureHandler):
         # Placeholder.
         return
 
-    # Elaborate on synthesize_info() for the GeneHandler.
+    # Elaborate on synthesize_info() for the InsertionHandler.
     def synthesize_info(self):
-        """Extend the method for the GeneHandler."""
+        """Extend the method for the InsertionHandler."""
         super().synthesize_info()
         self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
@@ -755,9 +757,9 @@ class InsertionHandler(FeatureHandler):
         # Placeholder.
         return
 
-    # Elaborate on map_fb_data_to_alliance() for the GeneHandler.
+    # Elaborate on map_fb_data_to_alliance() for the InsertionHandler.
     def map_fb_data_to_alliance(self):
-        """Extend the method for the GeneHandler."""
+        """Extend the method for the InsertionHandler."""
         super().map_fb_data_to_alliance()
         self.map_insertion_basic()
         self.map_synonyms()
@@ -776,10 +778,411 @@ class InsertionHandler(FeatureHandler):
         # self.flag_internal_fb_entities('gene_insertion_associations')    # BOB
         return
 
-    # Elaborate on query_chado_and_export() for the GeneHandler.
+    # Elaborate on query_chado_and_export() for the InsertionHandler.
     def query_chado_and_export(self, session):
-        """Elaborate on query_chado_and_export method for the GeneHandler."""
+        """Elaborate on query_chado_and_export method for the InsertionHandler."""
         super().query_chado_and_export(session)
         # self.flag_unexportable_entities(self.gene_insertion_associations, 'allele_gene_association_ingest_set')
         # self.generate_export_dict(self.gene_insertion_associations, 'allele_gene_association_ingest_set')
+        return
+
+
+class AberrationHandler(FeatureHandler):
+    """This object gets, synthesizes and filters aberration data for export."""
+    def __init__(self, log: Logger, testing: bool):
+        """Create the AberrationHandler object."""
+        super().__init__(log, testing)
+        self.datatype = 'aberration'
+        self.fb_export_type = FBAberration
+        self.agr_export_type = agr_datatypes.AlleleDTO
+        self.primary_export_set = 'allele_ingest_set'
+
+    test_set = {
+        'FBab0000001': 'Df(2R)03072',    # Random selection.
+    }
+
+    # Additional export sets.
+    gene_aberration_rels = {}            # Will be (aberration feature_id, gene feature_id) tuples keying lists of FBRelationships.
+    gene_aberration_associations = []    # Will be the final list of gene-aberration FBRelationships to export.
+
+    # Elaborate on get_general_data() for the AberrationHandler.
+    def get_general_data(self, session):
+        """Extend the method for the AberrationHandler."""
+        super().get_general_data(session)
+        self.build_bibliography(session)
+        self.build_cvterm_lookup(session)
+        self.build_ncbi_taxon_lookup(session)
+        self.build_feature_lookup(session, feature_types=['gene', 'allele', 'construct', 'insertion'])
+        self.build_allele_gene_lookup(session)
+        return
+
+    # Additional sub-methods for get_datatype_data().
+    # Placeholder.
+
+    # Elaborate on get_datatype_data() for the AberrationHandler.
+    def get_datatype_data(self, session):
+        """Extend the method for the AberrationHandler."""
+        super().get_datatype_data(session)
+        self.get_entities(session)
+        self.get_entity_relationships(session, 'subject')
+        self.get_entity_relationships(session, 'object')
+        self.get_entityprops(session)
+        self.get_entity_pubs(session)
+        self.get_entity_synonyms(session)
+        self.get_entity_fb_xrefs(session)
+        self.get_entity_xrefs(session)
+        self.get_entity_timestamps(session)
+        self.get_direct_reagent_collections(session)
+        return
+
+    # Add sub-methods to be run by synthesize_info() below.
+    def synthesize_parent_genes(self):
+        """Get aberration parent gene IDs."""
+        self.log.info('Get aberration parent gene IDs.')
+        # Placeholder.
+        return
+
+    def flag_aberrations_of_internal_genes(self):
+        """Flag aberrations of internal genes."""
+        self.log.info('Flag aberrations of internal genes.')
+        # Placeholder - aberration can have many genes associated - make internal only if all related genes are internal.
+        return
+
+    def synthesize_gene_aberrations(self):
+        """Synthesize gene-aberration relationships."""
+        self.log.info('Synthesize gene-aberration relationships.')
+        # Placeholder.
+        return
+
+    # Elaborate on synthesize_info() for the AberrationHandler.
+    def synthesize_info(self):
+        """Extend the method for the AberrationHandler."""
+        super().synthesize_info()
+        self.synthesize_ncbi_taxon_id()
+        self.synthesize_secondary_ids()
+        self.synthesize_synonyms()
+        self.synthesize_pubs()
+        self.synthesize_parent_genes()
+        self.flag_aberrations_of_internal_genes()
+        self.synthesize_gene_aberrations()
+        return
+
+    # Add methods to be run by map_fb_data_to_alliance() below.
+    def map_aberration_basic(self):
+        """Map basic FlyBase aberration data to the Alliance LinkML object."""
+        self.log.info('Map basic aberration info to Alliance object.')
+        for aberration in self.fb_data_entities.values():
+            agr_aberration = self.agr_export_type()
+            agr_aberration.obsolete = aberration.chado_obj.is_obsolete
+            agr_aberration.mod_entity_id = f'FB:{aberration.uniquename}'
+            agr_aberration.mod_internal_id = str(aberration.chado_obj.feature_id)
+            agr_aberration.taxon_curie = aberration.ncbi_taxon_id
+            aberration.linkmldto = agr_aberration
+        return
+
+    def map_aberration_database_status(self):
+        """Map aberration database status."""
+        self.log.info('Map aberration database status.')
+        evidence_curies = []
+        for aberration in self.fb_data_entities.values():
+            if aberration.is_obsolete is False:
+                db_status = 'approved'
+            else:
+                db_status = 'deleted'
+            db_status_annotation = agr_datatypes.AlleleDatabaseStatusSlotAnnotationDTO(db_status, evidence_curies)
+            aberration.linkmldto.allele_database_status_dto = db_status_annotation.dict_export()
+        return
+
+    def map_collections(self):
+        """Map aberration collections."""
+        self.log.info('Map aberration collections.')
+        for aberration in self.fb_data_entities.values():
+            if aberration.reagent_colls:
+                collections = list(set(aberration.reagent_colls))
+                aberration.linkmldto.in_collection_name = collections[0].name
+                if len(collections) > 1:
+                    self.log.warning(f'{aberration} has many relevant collections: {[i.name for i in collections]}')
+        return
+
+    def map_extinction_info(self):
+        """Map extinction info."""
+        self.log.info('Map extinction info.')
+        counter = 0
+        for aberration in self.fb_data_entities.values():
+            if 'availability' in aberration.props_by_type.keys():
+                for prop in aberration.props_by_type['availability']:
+                    if prop.chado_obj.value == 'Stated to be lost.':
+                        aberration.linkmldto.is_extinct = True
+            for prop_type in aberration.props_by_type.keys():
+                if prop_type.startswith('derived_stock'):
+                    # Stock availability trumps curated extinction comment.
+                    if aberration.linkmldto.is_extinct is True:
+                        self.log.warning(f'{aberration} is stated to be lost but has stocks.')
+                    aberration.linkmldto.is_extinct = False
+            if aberration.linkmldto.is_extinct is True:
+                counter += 1
+        self.log.info(f'Flagged {counter} aberrations as extinct.')
+        return
+
+    def map_internal_aberration_status(self):
+        """Flag internal aberrations using aberration-specific criteria."""
+        self.log.info('Flag internal aberrations using aberration-specific criteria.')
+        internal_gene_counter = 0
+        non_dmel_drosophilid_counter = 0
+        for aberration in self.fb_data_entities.values():
+            if aberration.aberration_of_internal_gene is True:
+                aberration.linkmldto.internal = True
+                aberration.internal_reasons.append('aberration related to an internal type FB gene')
+                internal_gene_counter += 1
+            if aberration.org_abbr != 'Dmel':
+                aberration.linkmldto.internal = True
+                aberration.internal_reasons.append('A non-Dmel aberration')
+                non_dmel_drosophilid_counter += 1
+        self.log.info(f'Flagged {internal_gene_counter} aberrations of internal-type genes as internal.')
+        self.log.info(f'Flagged {non_dmel_drosophilid_counter} non-Dmel Drosophilid aberrations as internal.')
+        return
+
+    def map_mutation_types(self):
+        """Map mutation types."""
+        self.log.info('Map mutation types.')
+        counter = 0
+        for aberration in self.fb_data_entities.values():
+            mutation_type_curie = self.cvterm_lookup[aberration.type_id]['curie']
+            pub_curies = []
+            mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, pub_curies)
+            aberration.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
+            counter += 1
+        self.log.info(f'Mapped {counter} mutation type annotations.')
+        return
+
+    def map_gene_aberration_associations(self):
+        """Map gene-aberration associations to Alliance object."""
+        self.log.info('Map gene-aberration associations to Alliance object.')
+        # Placeholder.
+        return
+
+    # Elaborate on map_fb_data_to_alliance() for the AberrationHandler.
+    def map_fb_data_to_alliance(self):
+        """Extend the method for the AberrationHandler."""
+        super().map_fb_data_to_alliance()
+        self.map_aberration_basic()
+        self.map_synonyms()
+        self.map_data_provider_dto()
+        self.map_xrefs()
+        self.map_internal_aberration_status()
+        self.map_extinction_info()
+        self.map_collections()
+        self.map_aberration_database_status()
+        self.map_mutation_types()
+        # self.map_pubs()    # TEMPORARILY SUPPRESS UNTIL ALLIANCE LOAD SPEED IMPROVES
+        self.map_timestamps()
+        self.map_secondary_ids('allele_secondary_id_dtos')
+        self.flag_internal_fb_entities('fb_data_entities')
+        # self.map_gene_aberration_associations()    # BOB
+        # self.flag_internal_fb_entities('gene_aberration_associations')    # BOB
+        return
+
+    # Elaborate on query_chado_and_export() for the AberrationHandler.
+    def query_chado_and_export(self, session):
+        """Elaborate on query_chado_and_export method for the AberrationHandler."""
+        super().query_chado_and_export(session)
+        # self.flag_unexportable_entities(self.gene_aberration_associations, 'allele_gene_association_ingest_set')
+        # self.generate_export_dict(self.gene_aberration_associations, 'allele_gene_association_ingest_set')
+        return
+
+
+class BalancerHandler(FeatureHandler):
+    """This object gets, synthesizes and filters balancer data for export."""
+    def __init__(self, log: Logger, testing: bool):
+        """Create the BalancerHandler object."""
+        super().__init__(log, testing)
+        self.datatype = 'balancer'
+        self.fb_export_type = FBBalancer
+        self.agr_export_type = agr_datatypes.AlleleDTO
+        self.primary_export_set = 'allele_ingest_set'
+
+    test_set = {
+        'FBba0000001': 'CyO-Df(2R)B80',    # Random selection.
+    }
+
+    # Additional export sets.
+    gene_balancer_rels = {}            # Will be (balancer feature_id, gene feature_id) tuples keying lists of FBRelationships.
+    gene_balancer_associations = []    # Will be the final list of gene-balancer FBRelationships to export.
+
+    # Elaborate on get_general_data() for the BalancerHandler.
+    def get_general_data(self, session):
+        """Extend the method for the BalancerHandler."""
+        super().get_general_data(session)
+        self.build_bibliography(session)
+        self.build_cvterm_lookup(session)
+        self.build_ncbi_taxon_lookup(session)
+        self.build_feature_lookup(session, feature_types=['gene', 'allele', 'construct', 'insertion'])
+        self.build_allele_gene_lookup(session)
+        return
+
+    # Additional sub-methods for get_datatype_data().
+    # Placeholder.
+
+    # Elaborate on get_datatype_data() for the BalancerHandler.
+    def get_datatype_data(self, session):
+        """Extend the method for the BalancerHandler."""
+        super().get_datatype_data(session)
+        self.get_entities(session)
+        self.get_entity_relationships(session, 'subject')
+        self.get_entity_relationships(session, 'object')
+        self.get_entityprops(session)
+        self.get_entity_pubs(session)
+        self.get_entity_synonyms(session)
+        self.get_entity_fb_xrefs(session)
+        self.get_entity_xrefs(session)
+        self.get_entity_timestamps(session)
+        self.get_direct_reagent_collections(session)
+        return
+
+    # Add sub-methods to be run by synthesize_info() below.
+    def synthesize_parent_genes(self):
+        """Get balancer parent gene IDs."""
+        self.log.info('Get balancer parent gene IDs.')
+        # Placeholder.
+        return
+
+    def flag_balancers_of_internal_genes(self):
+        """Flag balancers of internal genes."""
+        self.log.info('Flag balancers of internal genes.')
+        # Placeholder - balancer can have many genes associated - make internal only if all related genes are internal.
+        return
+
+    def synthesize_gene_balancers(self):
+        """Synthesize gene-balancer relationships."""
+        self.log.info('Synthesize gene-balancer relationships.')
+        # Placeholder.
+        return
+
+    # Elaborate on synthesize_info() for the BalancerHandler.
+    def synthesize_info(self):
+        """Extend the method for the BalancerHandler."""
+        super().synthesize_info()
+        self.synthesize_ncbi_taxon_id()
+        self.synthesize_secondary_ids()
+        self.synthesize_synonyms()
+        self.synthesize_pubs()
+        self.synthesize_parent_genes()
+        self.flag_balancers_of_internal_genes()
+        self.synthesize_gene_balancers()
+        return
+
+    # Add methods to be run by map_fb_data_to_alliance() below.
+    def map_balancer_basic(self):
+        """Map basic FlyBase balancer data to the Alliance LinkML object."""
+        self.log.info('Map basic balancer info to Alliance object.')
+        for balancer in self.fb_data_entities.values():
+            agr_balancer = self.agr_export_type()
+            agr_balancer.obsolete = balancer.chado_obj.is_obsolete
+            agr_balancer.mod_entity_id = f'FB:{balancer.uniquename}'
+            agr_balancer.mod_internal_id = str(balancer.chado_obj.feature_id)
+            agr_balancer.taxon_curie = balancer.ncbi_taxon_id
+            balancer.linkmldto = agr_balancer
+        return
+
+    def map_balancer_database_status(self):
+        """Map balancer database status."""
+        self.log.info('Map balancer database status.')
+        evidence_curies = []
+        for balancer in self.fb_data_entities.values():
+            if balancer.is_obsolete is False:
+                db_status = 'approved'
+            else:
+                db_status = 'deleted'
+            db_status_annotation = agr_datatypes.AlleleDatabaseStatusSlotAnnotationDTO(db_status, evidence_curies)
+            balancer.linkmldto.allele_database_status_dto = db_status_annotation.dict_export()
+        return
+
+    def map_collections(self):
+        """Map balancer collections."""
+        self.log.info('Map balancer collections.')
+        for balancer in self.fb_data_entities.values():
+            if balancer.reagent_colls:
+                collections = list(set(balancer.reagent_colls))
+                balancer.linkmldto.in_collection_name = collections[0].name
+                if len(collections) > 1:
+                    self.log.warning(f'{balancer} has many relevant collections: {[i.name for i in collections]}')
+        return
+
+    def map_extinction_info(self):
+        """Map extinction info."""
+        self.log.info('Map extinction info.')
+        counter = 0
+        for balancer in self.fb_data_entities.values():
+            for prop_type in balancer.props_by_type.keys():
+                if prop_type.startswith('derived_stock'):
+                    balancer.linkmldto.is_extinct = False
+            if balancer.linkmldto.is_extinct is True:
+                counter += 1
+        self.log.info(f'Flagged {counter} balancers as extinct.')
+        return
+
+    def map_internal_balancer_status(self):
+        """Flag internal balancers using balancer-specific criteria."""
+        self.log.info('Flag internal balancers using balancer-specific criteria.')
+        internal_gene_counter = 0
+        non_dmel_drosophilid_counter = 0
+        for balancer in self.fb_data_entities.values():
+            if balancer.balancer_of_internal_gene is True:
+                balancer.linkmldto.internal = True
+                balancer.internal_reasons.append('balancer related to an internal type FB gene')
+                internal_gene_counter += 1
+            if balancer.org_abbr != 'Dmel':
+                balancer.linkmldto.internal = True
+                balancer.internal_reasons.append('A non-Dmel balancer')
+                non_dmel_drosophilid_counter += 1
+        self.log.info(f'Flagged {internal_gene_counter} balancers of internal-type genes as internal.')
+        self.log.info(f'Flagged {non_dmel_drosophilid_counter} non-Dmel Drosophilid balancers as internal.')
+        return
+
+    def map_mutation_types(self):
+        """Map mutation types."""
+        self.log.info('Map mutation types.')
+        counter = 0
+        for balancer in self.fb_data_entities.values():
+            mutation_type_curie = self.cvterm_lookup[balancer.type_id]['curie']
+            pub_curies = []
+            mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, pub_curies)
+            balancer.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
+            counter += 1
+        self.log.info(f'Mapped {counter} mutation type annotations.')
+        return
+
+    def map_gene_balancer_associations(self):
+        """Map gene-balancer associations to Alliance object."""
+        self.log.info('Map gene-balancer associations to Alliance object.')
+        # Placeholder.
+        return
+
+    # Elaborate on map_fb_data_to_alliance() for the BalancerHandler.
+    def map_fb_data_to_alliance(self):
+        """Extend the method for the BalancerHandler."""
+        super().map_fb_data_to_alliance()
+        self.map_balancer_basic()
+        self.map_synonyms()
+        self.map_data_provider_dto()
+        self.map_xrefs()
+        self.map_internal_balancer_status()
+        self.map_extinction_info()
+        self.map_collections()
+        self.map_balancer_database_status()
+        self.map_mutation_types()
+        # self.map_pubs()    # TEMPORARILY SUPPRESS UNTIL ALLIANCE LOAD SPEED IMPROVES
+        self.map_timestamps()
+        self.map_secondary_ids('allele_secondary_id_dtos')
+        self.flag_internal_fb_entities('fb_data_entities')
+        # self.map_gene_balancer_associations()    # BOB
+        # self.flag_internal_fb_entities('gene_balancer_associations')    # BOB
+        return
+
+    # Elaborate on query_chado_and_export() for the BalancerHandler.
+    def query_chado_and_export(self, session):
+        """Elaborate on query_chado_and_export method for the BalancerHandler."""
+        super().query_chado_and_export(session)
+        # self.flag_unexportable_entities(self.gene_balancer_associations, 'allele_gene_association_ingest_set')
+        # self.generate_export_dict(self.gene_balancer_associations, 'allele_gene_association_ingest_set')
         return
