@@ -436,7 +436,7 @@ class PrimaryEntityHandler(DataHandler):
         excluded_cv_names = ['disease_ontology', 'cellular_component', 'biological_process', 'molecular_function']
         # Phase 1: Get all CV term annotations, except for DO and GO (handled elsewhere).
         filters = (
-            Cv.name.not_in_((excluded_cv_names)),
+            Cv.name.not_in((excluded_cv_names)),
         )
         if self.datatype in self.regex.keys():
             self.log.info(f'Use this regex for primary entities: {self.regex[self.datatype]}')

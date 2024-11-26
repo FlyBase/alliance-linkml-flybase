@@ -150,6 +150,7 @@ class MetaAlleleHandler(FeatureHandler):
                 counter += 1
             elif metaallele.uniquename.startswith('FBab'):
                 # Placeholder.
+                # BOB
                 pass
             elif metaallele.uniquename.startswith('FBal'):
                 mutation_types = {}    # Will be a dict of mutation type curies and supporting pub ids.
@@ -311,6 +312,7 @@ class AlleleHandler(MetaAlleleHandler):
         self.get_entity_relationships(session, 'subject', rel_type='derived_tp_assoc_alleles', entity_type='construct', entity_regex=self.regex['construct'])
         self.get_entity_relationships(session, 'subject', rel_type='associated_with', entity_type='insertion', entity_regex=self.regex['insertion'])
         self.get_entity_relationships(session, 'object', rel_type='partof', entity_type='variation')
+        self.get_entity_cvterms(session)
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
@@ -638,6 +640,7 @@ class InsertionHandler(MetaAlleleHandler):
         self.get_entities(session)
         self.get_entity_relationships(session, 'subject')
         self.get_entity_relationships(session, 'object')
+        self.get_entity_cvterms(session)
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
@@ -858,6 +861,7 @@ class BalancerHandler(MetaAlleleHandler):
         self.get_entities(session)
         self.get_entity_relationships(session, 'subject')
         self.get_entity_relationships(session, 'object')
+        self.get_entity_cvterms(session)
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
