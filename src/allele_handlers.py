@@ -136,7 +136,7 @@ class MetaAlleleHandler(FeatureHandler):
         mutation_type_conversion = {
             'transposable_element_insertion_site': 'SO:0001218',    # transgenic_insertion
             'transposable_element': 'SO:0001837',                   # mobile_element_insertion
-            'insertion': 'SO:0000667',                              # insertion
+            'insertion_site': 'SO:0000667',                         # insertion
             'chromosome_structure_variation': 'SO:0001784',         # complex_structural_alteration
         }
         counter = 0
