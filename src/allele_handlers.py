@@ -25,6 +25,7 @@ from harvdev_utils.production import (
 class MetaAlleleHandler(FeatureHandler):
     """This objects gets, synthesizes and filters data for various FlyBase features exported as alleles."""
     def __init__(self, log: Logger, testing: bool):
+        """Create the generic MetaAlleleHandler."""
         super().__init__(log, testing)
         self.agr_export_type = agr_datatypes.AlleleDTO
         self.primary_export_set = 'allele_ingest_set'
@@ -124,7 +125,7 @@ class MetaAlleleHandler(FeatureHandler):
                     metaallele.linkmldto.internal = True
                     metaallele.internal_reasons.append('Non-Dmel')
                     non_dmel_drosophilid_counter += 1
-        if self.datatype ==  'allele':
+        if self.datatype == 'allele':
             self.log.info(f'Flagged {internal_gene_counter} alleles of internal-type genes as internal.')
         self.log.info(f'Flagged {non_dmel_drosophilid_counter} non-Dmel Drosophilid alleles as internal.')
         return
@@ -615,7 +616,7 @@ class InsertionHandler(FeatureHandler):
 
     # Additional sub-methods for get_general_data().
     # Placeholder.
- 
+
     # Elaborate on get_general_data() for the InsertionHandler.
     def get_general_data(self, session):
         """Extend the method for the InsertionHandler."""
@@ -721,11 +722,13 @@ class AberrationHandler(FeatureHandler):
 
     test_set = {
         'FBab0000001': 'Df(2R)03072',    # Random selection.
+        'FBab0024587': 'Dp(1;f)8D',      # Unusual feature type: "free duplication".
+        'FBab0005448': 'In(3LR)P88',     # Many distinct "wt_aberr" type CV term annotations.
     }
 
     # Additional sub-methods for get_general_data().
     # Placeholder.
- 
+
     # Elaborate on get_general_data() for the AberrationHandler.
     def get_general_data(self, session):
         """Extend the method for the AberrationHandler."""
@@ -832,7 +835,7 @@ class BalancerHandler(FeatureHandler):
 
     # Additional sub-methods for get_general_data().
     # Placeholder.
- 
+
     # Elaborate on get_general_data() for the BalancerHandler.
     def get_general_data(self, session):
         """Extend the method for the BalancerHandler."""
