@@ -15,7 +15,7 @@ from logging import Logger
 from sqlalchemy.orm import aliased
 from harvdev_utils.char_conversions import sub_sup_sgml_to_html
 from harvdev_utils.production import (
-    Cvterm, Db, Dbxref, CellLine, CellLineCvterm, CellLineCvtermprop, CellLineDbxref, CellLineprop, CellLinepropPub, CellLinePub, CellLineRelationship,
+    Cv, Cvterm, Db, Dbxref, CellLine, CellLineCvterm, CellLineCvtermprop, CellLineDbxref, CellLineprop, CellLinepropPub, CellLinePub, CellLineRelationship,
     CellLineSynonym, Feature, FeatureCvterm, FeatureCvtermprop, FeatureDbxref, Featureprop, FeaturepropPub, FeaturePub, FeatureRelationship,
     FeatureRelationshipPub, FeatureRelationshipprop, FeatureRelationshippropPub, FeatureSynonym, Genotype, GenotypeCvterm, GenotypeCvtermprop, GenotypeDbxref,
     Genotypeprop, GenotypepropPub, GenotypePub, GenotypeSynonym, Grp, GrpCvterm, GrpDbxref, Grpprop, GrppropPub, GrpPub, GrpRelationship, GrpRelationshipPub,
@@ -418,6 +418,118 @@ class PrimaryEntityHandler(DataHandler):
         ordered_feat_types = sorted(list(feature_type_tally.keys()))
         for feat_type in ordered_feat_types:
             self.log.debug(f'table={chado_type}_relationship, feat_type={feat_type}, count={feature_type_tally[feat_type]}.')
+        return
+
+    def get_entity_cvterms(self, session):
+        """Get CV term annotations for FlyBase entities."""
+        if self.datatype in self.feat_type_export.keys():
+            chado_type = 'feature'
+        else:
+            chado_type = self.datatype
+        self.log.info(f'Get CV term annotations from the {chado_type}_cvterm table for {self.datatype} entities.')
+        chado_table = self.chado_tables['main_table'][chado_type]
+        entity_key_name = f'{chado_type}_id'
+        cvterm_table = self.chado_tables['cvterms'][chado_type]
+        cvtermprop_table = self.chado_tables['cvtermprops'][chado_type]
+        entity_type = aliased(Cvterm, name='entity_type')
+        annotated_cvterm = aliased(Cvterm, name='annotated_cvterm')
+        excluded_cv_names = ['disease_ontology', 'cellular_component', 'biological_process', 'molecular_function']
+        # Phase 1: Get all CV term annotations, except for DO and GO (handled elsewhere).
+        filters = (
+            Cv.name.not_in_((excluded_cv_names)),
+        )
+        if self.datatype in self.regex.keys():
+            self.log.info(f'Use this regex for primary entities: {self.regex[self.datatype]}')
+            filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
+        if self.datatype in self.feature_subtypes.keys():
+            self.log.info(f'Filter main table for entities of these feature_subtypes: {self.feature_subtypes[self.datatype]}')
+            filters += (entity_type.name.in_((self.feature_subtypes[self.datatype])), )
+        if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            filters += (chado_table.uniquename.in_((self.test_set.keys())), )
+        if filters == ():
+            self.log.warning('Have no filters for the main FlyBase entity driver query.')
+            raise
+        if self.datatype in self.feature_subtypes.keys():
+            cvterm_results = session.query(cvterm_table).\
+                select_from(chado_table).\
+                join(entity_type, (entity_type.cvterm_id == chado_table.type_id)).\
+                join(cvterm_table, (getattr(cvterm_table, entity_key_name) == getattr(chado_table, entity_key_name))).\
+                join(annotated_cvterm, (annotated_cvterm.cvterm_id == cvterm_table.cvterm_id)).\
+                join(Cv, (Cv.cv_id == annotated_cvterm.cv_id)).\
+                filter(*filters).\
+                distinct()
+        else:
+            cvterm_results = session.query(cvterm_table).\
+                select_from(chado_table).\
+                join(cvterm_table, (getattr(cvterm_table, entity_key_name) == getattr(chado_table, entity_key_name))).\
+                join(annotated_cvterm, (annotated_cvterm.cvterm_id == cvterm_table.cvterm_id)).\
+                join(Cv, (Cv.cv_id == annotated_cvterm.cv_id)).\
+                filter(*filters).\
+                distinct()
+        cvterm_annotation_dict = {}    # A temporary entity_cvterm_id-keyed dict of FBCVTermAnnotation objects.
+        counter = 0
+        for cvterm_result in cvterm_results:
+            cvt_anno_id = getattr(cvterm_result, f'{chado_type}_cvterm_id')
+            cvterm_annotation_dict[cvt_anno_id] = fb_datatypes.FBCVtermAnnotation(cvterm_result, f'{chado_type}_cvterm')
+            counter += 1
+        self.log.info(f'Found {counter} {chado_type}_cvterm annotations.')
+        # Phase 2. Get props for these CV term annotations.
+        if cvtermprop_table is None:
+            cvtermprop_results = []
+        elif self.datatype in self.feature_subtypes.keys():
+            cvtermprop_results = session.query(cvtermprop_table).\
+                select_from(chado_table).\
+                join(entity_type, (entity_type.cvterm_id == chado_table.type_id)).\
+                join(cvterm_table, (getattr(cvterm_table, entity_key_name) == getattr(chado_table, entity_key_name))).\
+                join(cvtermprop_table, (getattr(cvtermprop_table, f'{chado_type}_cvterm_id') == getattr(cvterm_table, f'{chado_type}_cvterm_id'))).\
+                filter(*filters).\
+                distinct()
+        else:
+            cvtermprop_results = session.query(cvtermprop_table).\
+                select_from(chado_table).\
+                join(cvterm_table, (getattr(cvterm_table, entity_key_name) == getattr(chado_table, entity_key_name))).\
+                join(cvtermprop_table, (getattr(cvtermprop_table, f'{chado_type}_cvterm_id') == getattr(cvterm_table, f'{chado_type}_cvterm_id'))).\
+                filter(*filters).\
+                distinct()
+        cvterm_prop_counter = 0
+        for cvtermprop_result in cvtermprop_results:
+            entity_cvterm_id = getattr(cvtermprop_result, f'{chado_type}_cvterm_id')
+            entity_prop_type_name = self.cvterm_lookup[cvtermprop_result.type_id]['name']
+            if entity_prop_type_name in cvterm_annotation_dict[entity_cvterm_id].props_by_type.keys():
+                cvterm_annotation_dict[entity_cvterm_id].props_by_type[entity_prop_type_name].append(fb_datatypes.FBProp(cvtermprop_result))
+                cvterm_prop_counter += 1
+            else:
+                cvterm_annotation_dict[entity_cvterm_id].props_by_type[entity_prop_type_name] = [fb_datatypes.FBProp(cvtermprop_result)]
+                cvterm_prop_counter += 1
+        self.log.info(f'Found {cvterm_prop_counter} {chado_type}_cvtermprops for {self.datatype}s.')
+        # Phase 3. Add rel info to entities.
+        assignment_counter = 0
+        # Assign the CVTermAnnotation to the appropriate entity.
+        for cvt_anno_id, cvt_anno in cvterm_annotation_dict.items():
+            # First, associate the relationship with the entity.
+            entity_id = getattr(cvt_anno.chado_obj, f'{chado_type}_id')
+            self.fb_data_entities[entity_id].cvt_annos_by_id[cvt_anno_id] = cvt_anno
+            # Second, sort the CVTermAnnotations by CV name.
+            cv_name = cvt_anno.cvterm.cv.name
+            if cv_name in self.fb_data_entities[entity_id].cvt_anno_ids_by_cv.keys():
+                self.fb_data_entities[entity_id].cvt_anno_ids_by_cv[cv_name].append(cvt_anno_id)
+            else:
+                self.fb_data_entities[entity_id].cvt_anno_ids_by_cv[cv_name] = [cvt_anno_id]
+            # Third, sort the CVTermAnnotations by CV term name.
+            cvt_anno_name = cvt_anno.cvterm.name
+            if cvt_anno_name in self.fb_data_entities[entity_id].cvt_anno_ids_by_term.keys():
+                self.fb_data_entities[entity_id].cvt_anno_ids_by_term[cvt_anno_name].append(cvt_anno_id)
+            else:
+                self.fb_data_entities[entity_id].cvt_anno_ids_by_term[cvt_anno_name] = [cvt_anno_id]
+            # Fourth, sort the CVTermAnnotations by prop type.
+            for prop_type_name in cvt_anno.props_by_type.keys():
+                if prop_type_name in self.fb_data_entities[entity_id].cvt_anno_ids_by_prop.keys():
+                    self.fb_data_entities[entity_id].cvt_anno_ids_by_prop[prop_type_name].append(cvt_anno_id)
+                else:
+                    self.fb_data_entities[entity_id].cvt_anno_ids_by_prop[prop_type_name] = [cvt_anno_id]
+            assignment_counter += 1
+        self.log.info(f'Indexed {assignment_counter} {chado_type}_cvterm annotations.')
         return
 
     def get_entityprops(self, session):

@@ -750,6 +750,7 @@ class AberrationHandler(MetaAlleleHandler):
         self.get_entities(session)
         self.get_entity_relationships(session, 'subject')
         self.get_entity_relationships(session, 'object')
+        self.get_entity_cvterms(session)
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)

@@ -87,14 +87,18 @@ class FBDataEntity(FBExportEntity):
         self.entity_desc = f'{self.name} ({self.uniquename})'
         # Primary FB chado data from direct db query results, no or minimal processing.
         # These attributes apply to various FlyBase entities: e.g., gene, strain, genotype, gene group, etc.
-        self.pub_associations = []       # Pub associations: e.g., FeaturePub, StrainPub.
-        self.synonyms = []               # Synonym associations: e.g., FeatureSynonym.
-        self.fb_sec_dbxrefs = []         # 2o/non-current FlyBase xref objects: e.g., FeatureDbxref.
-        self.dbxrefs = []                # Current xref objects: e.g., FeatureDbxref.
-        self.props_by_type = {}          # Lists of FBProp objects keyed by prop type name.
-        self.rels_by_id = {}             # Internal relationship_id-keyed dict of FBRelationship entities.
-        self.sbj_rel_ids_by_type = {}    # Lists of relationship_ids where this entity is the subject; keyed by relationship type name.
-        self.obj_rel_ids_by_type = {}    # Lists of relationship_ids where this entity is the object; keyed by relationship type name.
+        self.pub_associations = []        # Pub associations: e.g., FeaturePub, StrainPub.
+        self.synonyms = []                # Synonym associations: e.g., FeatureSynonym.
+        self.fb_sec_dbxrefs = []          # 2o/non-current FlyBase xref objects: e.g., FeatureDbxref.
+        self.dbxrefs = []                 # Current xref objects: e.g., FeatureDbxref.
+        self.props_by_type = {}           # Lists of FBProp objects keyed by prop type name.
+        self.cvt_annos_by_id = {}         # entity_cvterm_id-keyed dict of FBCVtermAnnotation objects.
+        self.cvt_anno_ids_by_cv = {}      # Cv.name-keyed lists of entity_cvterm_ids.
+        self.cvt_anno_ids_by_term = {}    # Cvterm.name-keyed lists of entity_cvterm_ids.
+        self.cvt_anno_ids_by_prop = {}    # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
+        self.rels_by_id = {}              # Internal relationship_id-keyed dict of FBRelationship entities.
+        self.sbj_rel_ids_by_type = {}     # Lists of relationship_ids where this entity is the subject; keyed by relationship type name.
+        self.obj_rel_ids_by_type = {}     # Lists of relationship_ids where this entity is the object; keyed by relationship type name.
         # Processed FB data - processed from primary FB chado data above.
         self.ncbi_taxon_id = None       # The NCBITaxon dbxref.accession (str).
         self.synonym_dict = {}          # Will be synonym_id-keyed dicts of processed synonym info.
@@ -361,13 +365,30 @@ class FBRelationship(FBExportEntity):
             table_name (str): The relationship table name for the relationship.
 
         """
-        # Note that this class has props_by_type attribute that applies to FeatureRelationships only.
         super().__init__()
         self.chado_obj = chado_obj
         self.db_primary_id = getattr(chado_obj, f'{table_name}_id')
         self.entity_desc = f'{table_name}_id={self.db_primary_id}'
         self.props_by_type = {}    # Lists of FBProp objects keyed by prop type name.
         self.pubs = []    # Will be list of Pub.pub_ids supporting the relationship.
+
+
+class FBCVTermAnnotation(FBExportEntity):
+    """FBCVTermAnnotation class."""
+    def __init__(self, chado_obj, table_name):
+        """Create a FBCVTermAnnotation object.
+
+        Args:
+            chado_obj (SQLAlchemy object): The Chado object representing the CV term annotation: e.g., FeatureCvterm, GrpCvterm.
+            table_name (str): The relationship table name for the relationship: e.g., feature_cvterm, strain_cvterm.
+
+        """
+        super().__init__()
+        self.chado_obj = chado_obj
+        self.db_primary_id = getattr(chado_obj, f'{table_name}_id')
+        self.entity_desc = f'{table_name}_id={self.db_primary_id}'
+        self.props_by_type = {}    # Lists of FBProp objects keyed by prop type name.
+        self.pub_id = self.chado_obj.pub_id
 
 
 # Second class annotations (submitted as part of other objects).
