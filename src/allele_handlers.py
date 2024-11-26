@@ -557,7 +557,7 @@ class AlleleHandler(MetaAlleleHandler):
                 rel_dto.obsolete = True
                 rel_dto.internal = True
             first_feat_rel.linkmldto = rel_dto
-            self.gene_allele_associations.append(first_feat_rel)
+            self.gene_metaallele_associations.append(first_feat_rel)
             counter += 1
         self.log.info(f'Generated {counter} allele-gene unique associations.')
         return
@@ -581,15 +581,15 @@ class AlleleHandler(MetaAlleleHandler):
         self.map_secondary_ids('allele_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
         self.map_gene_allele_associations()
-        self.flag_internal_fb_entities('gene_allele_associations')
+        self.flag_internal_fb_entities('gene_metaallele_associations')
         return
 
     # Elaborate on query_chado_and_export() for the AlleleHandler.
     def query_chado_and_export(self, session):
         """Elaborate on query_chado_and_export method for the AlleleHandler."""
         super().query_chado_and_export(session)
-        self.flag_unexportable_entities(self.gene_allele_associations, 'allele_gene_association_ingest_set')
-        self.generate_export_dict(self.gene_allele_associations, 'allele_gene_association_ingest_set')
+        self.flag_unexportable_entities(self.gene_metaallele_associations, 'allele_gene_association_ingest_set')
+        self.generate_export_dict(self.gene_metaallele_associations, 'allele_gene_association_ingest_set')
         return
 
 
@@ -676,7 +676,7 @@ class InsertionHandler(MetaAlleleHandler):
         return
 
     # Additional methods to be run by map_fb_data_to_alliance() below.
-    def map_gene_metaallele_associations(self):
+    def map_gene_insertion_associations(self):
         """Map gene-insertion associations to Alliance object."""
         self.log.info('Map gene-insertion associations to Alliance object.')
         # Placeholder.
@@ -699,7 +699,7 @@ class InsertionHandler(MetaAlleleHandler):
         self.map_timestamps()
         self.map_secondary_ids('allele_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
-        # self.map_gene_metaallele_associations()    # BOB
+        # self.map_gene_insertion_associations()    # BOB
         # self.flag_internal_fb_entities('gene_metaallele_associations')    # BOB
         return
 
