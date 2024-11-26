@@ -471,7 +471,7 @@ class PrimaryEntityHandler(DataHandler):
         counter = 0
         for cvterm_result in cvterm_results:
             cvt_anno_id = getattr(cvterm_result, f'{chado_type}_cvterm_id')
-            cvterm_annotation_dict[cvt_anno_id] = fb_datatypes.FBCVtermAnnotation(cvterm_result, f'{chado_type}_cvterm')
+            cvterm_annotation_dict[cvt_anno_id] = fb_datatypes.FBCVTermAnnotation(cvterm_result, f'{chado_type}_cvterm')
             counter += 1
         self.log.info(f'Found {counter} {chado_type}_cvterm annotations.')
         # Phase 2. Get props for these CV term annotations.
