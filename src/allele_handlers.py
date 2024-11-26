@@ -452,9 +452,9 @@ class AlleleHandler(MetaAlleleHandler):
                 gene_feature_id = gene_rel.chado_obj.object_id
                 allele_gene_key = (allele.db_primary_id, gene_feature_id)
                 try:
-                    self.gene_allele_rels[allele_gene_key].extend(gene_rel)
+                    self.gene_metaallele_rels[allele_gene_key].extend(gene_rel)
                 except KeyError:
-                    self.gene_allele_rels[allele_gene_key] = [gene_rel]
+                    self.gene_metaallele_rels[allele_gene_key] = [gene_rel]
                     gene_counter += 1
         self.log.info(f'Found {gene_counter} genes for {allele_counter} alleles.')
         return
@@ -541,7 +541,7 @@ class AlleleHandler(MetaAlleleHandler):
         ALLELE = 0
         GENE = 1
         counter = 0
-        for allele_gene_key, allele_gene_rels in self.gene_allele_rels.items():
+        for allele_gene_key, allele_gene_rels in self.gene_metaallele_rels.items():
             allele = self.fb_data_entities[allele_gene_key[ALLELE]]
             allele_curie = f'FB:{allele.uniquename}'
             gene = self.feature_lookup[allele_gene_key[GENE]]
