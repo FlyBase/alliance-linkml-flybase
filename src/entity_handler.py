@@ -511,13 +511,13 @@ class PrimaryEntityHandler(DataHandler):
             entity_id = getattr(cvt_anno.chado_obj, f'{chado_type}_id')
             self.fb_data_entities[entity_id].cvt_annos_by_id[cvt_anno_id] = cvt_anno
             # Second, sort the CVTermAnnotations by CV name.
-            cv_name = cvt_anno.cvterm.cv.name
+            cv_name = cvt_anno.chado_obj.cvterm.cv.name
             if cv_name in self.fb_data_entities[entity_id].cvt_anno_ids_by_cv.keys():
                 self.fb_data_entities[entity_id].cvt_anno_ids_by_cv[cv_name].append(cvt_anno_id)
             else:
                 self.fb_data_entities[entity_id].cvt_anno_ids_by_cv[cv_name] = [cvt_anno_id]
             # Third, sort the CVTermAnnotations by CV term name.
-            cvt_anno_name = cvt_anno.cvterm.name
+            cvt_anno_name = cvt_anno.chado_obj.cvterm.name
             if cvt_anno_name in self.fb_data_entities[entity_id].cvt_anno_ids_by_term.keys():
                 self.fb_data_entities[entity_id].cvt_anno_ids_by_term[cvt_anno_name].append(cvt_anno_id)
             else:
