@@ -189,7 +189,7 @@ class MetaAlleleHandler(FeatureHandler):
         return
 
 
-class AlleleHandler(FeatureHandler):
+class AlleleHandler(MetaAlleleHandler):
     """This object gets, synthesizes and filters allele data for export."""
     def __init__(self, log: Logger, testing: bool):
         """Create the AlleleHandler object."""
@@ -593,7 +593,7 @@ class AlleleHandler(FeatureHandler):
         return
 
 
-class InsertionHandler(FeatureHandler):
+class InsertionHandler(MetaAlleleHandler):
     """This object gets, synthesizes and filters insertion data for export."""
     def __init__(self, log: Logger, testing: bool):
         """Create the InsertionHandler object."""
@@ -712,7 +712,7 @@ class InsertionHandler(FeatureHandler):
         return
 
 
-class AberrationHandler(FeatureHandler):
+class AberrationHandler(MetaAlleleHandler):
     """This object gets, synthesizes and filters aberration data for export."""
     def __init__(self, log: Logger, testing: bool):
         """Create the AberrationHandler object."""
@@ -821,7 +821,7 @@ class AberrationHandler(FeatureHandler):
         return
 
 
-class BalancerHandler(FeatureHandler):
+class BalancerHandler(MetaAlleleHandler):
     """This object gets, synthesizes and filters balancer data for export."""
     def __init__(self, log: Logger, testing: bool):
         """Create the BalancerHandler object."""
