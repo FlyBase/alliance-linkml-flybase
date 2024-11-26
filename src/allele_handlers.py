@@ -877,8 +877,6 @@ class BalancerHandler(FeatureHandler):
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
-        self.synthesize_parent_genes()
-        self.synthesize_gene_balancers()
         return
 
     # Additional methods to be run by map_fb_data_to_alliance() below.
