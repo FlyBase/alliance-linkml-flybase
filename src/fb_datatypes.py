@@ -219,22 +219,29 @@ class FBDataEntity(FBExportEntity):
             A list of FBCVTermAnnotation objects that meet the specified criteria.
 
         """
-        if not kwargs:
-            log.error('Must give at least one keyword argument for recall_cvterm_annotations() method: cv_names, cvterm_names, or prop_type_names.')
-            raise ValueError
         anno_bin_types = {
             'cv_names': 'cvt_anno_ids_by_cv',
             'cvterm_names': 'cvt_anno_ids_by_term',
             'prop_type_names': 'cvt_anno_ids_by_prop',
         }
+        if not kwargs:
+            log.error(f'Must give at least one keyword argument for recall_cvterm_annotations() method: {anno_bin_types.keys()}.')
+            raise ValueError
+        unrecognized_kwargs = set(kwargs.keys()) - set(anno_bin_types.keys())
+        if unrecognized_kwargs:
+            log.error(f'Unrecognized keyword args were given: {unrecognized_kwargs}. Only these are accepted: {anno_bin_types.keys()}.')
+            raise ValueError
         anno_ids_of_interest = set(self.cvt_annos_by_id.keys())
+        log.info(f'BOB: Start with {len(anno_ids_of_interest)} annotations.')
         annos_of_interest = []
         for kwarg_name in anno_bin_types.keys():
             if kwarg_name not in kwargs.keys():
                 continue
             if type(kwargs[kwarg_name]) is str:
                 kwargs[kwarg_name] = [kwargs[kwarg_name]]
+            log.debug(f'BOB: Get annotations for {kwarg_name}={kwargs[kwarg_name]}')
             relevant_anno_dict = getattr(self, anno_bin_types[kwarg_name])
+            log.debug(f'BOB: Look for annotations in this bucket: {anno_bin_types[kwarg_name]}')
             relevant_anno_ids = []
             # Take union of all specified values for a given attribute.
             for anno_attr_name in kwargs[kwarg_name]:
@@ -242,6 +249,7 @@ class FBDataEntity(FBExportEntity):
             relevant_anno_ids = set(relevant_anno_ids)
             # Apply the filter.
             anno_ids_of_interest = anno_ids_of_interest.intersection(relevant_anno_ids)
+            log.info(f'BOB: Down to {len(anno_ids_of_interest)} annotations after {kwarg_name} filter.')
         for anno_id in anno_ids_of_interest:
             annos_of_interest.append(self.cvt_annos_by_id[anno_id])
         return annos_of_interest
