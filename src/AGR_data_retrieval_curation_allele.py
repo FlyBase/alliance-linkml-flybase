@@ -74,9 +74,9 @@ def main():
     aberration_handler = AberrationHandler(log, testing)
     balancer_handler = BalancerHandler(log, testing)
     db_query_transaction(session, log, aberration_handler)
-    db_query_transaction(session, log, insertion_handler)
-    db_query_transaction(session, log, balancer_handler)
-    db_query_transaction(session, log, allele_handler)
+    # db_query_transaction(session, log, insertion_handler)
+    # db_query_transaction(session, log, balancer_handler)
+    # db_query_transaction(session, log, allele_handler)
 
     # Export the data.
     export_dict = {

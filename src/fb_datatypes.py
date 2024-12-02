@@ -117,7 +117,10 @@ class FBDataEntity(FBExportEntity):
             entity_role (str): Indicate if entity is the subject or object in the relationship.
             rel_types (str, list): The CV term name(s) for the relationship of interest.
             rel_entity_types (str, list): The CV term name(s) for the related entity type; only useful for features.
-            One or both keyword arguments must be specified.
+            At least one keyword argument must be specified.
+
+        Raises:
+            Raises an error if no keyword argument is specified.
 
         Returns:
             A list of FBRelationship objects that meet the specified criteria.
@@ -196,6 +199,52 @@ class FBDataEntity(FBExportEntity):
         for rel_id in rel_ids_of_interest:
             rels_of_interest.append(self.rels_by_id[rel_id])
         return rels_of_interest
+
+    def recall_cvterm_annotations(self, log, **kwargs):
+        """Recall FBCVTermAnnotation objects with specified attributes from previous db queries for CV term annotations.
+
+        Args:
+            log (Logger): The logger for any messages.
+
+        Keyword Args:
+            cv_names (str, list): The CV name(s) for annotations of interest.
+            cvterm_names (str, list): The CV term name(s) for annotations of interest.
+            prop_type_names (str, list): The name of prop type(s) for annotations of interest.
+            One or both keyword arguments must be specified.
+
+        Raises:
+            Raises an error if no keyword argument is specified.
+
+        Returns:
+            A list of FBCVTermAnnotation objects that meet the specified criteria.
+
+        """
+        if not kwargs:
+            log.error('Must give at least one keyword argument for recall_cvterm_annotations() method: cv_names, cvterm_names, or prop_type_names.')
+            raise ValueError
+        anno_bin_types = {
+            'cv_names': 'cvt_anno_ids_by_cv',
+            'cvterm_names': 'cvt_anno_ids_by_term',
+            'prop_type_names': 'cvt_anno_ids_by_prop',
+        }
+        anno_ids_of_interest = set(self.cvt_annos_by_id.keys())
+        annos_of_interest = []
+        for kwarg_name in anno_bin_types.keys():
+            if kwarg_name not in kwargs.keys():
+                continue
+            if type(kwargs[kwarg_name]) is str:
+                kwargs[kwarg_name] = [kwargs[kwarg_name]]
+            relevant_anno_dict = getattr(self, anno_bin_types[kwarg_name])
+            relevant_anno_ids = []
+            # Take union of all specified values for a given attribute.
+            for anno_attr_name in kwargs[kwarg_name]:
+                relevant_anno_ids.extend(relevant_anno_dict[anno_attr_name])
+            relevant_anno_ids = set(relevant_anno_ids)
+            # Apply the filter.
+            anno_ids_of_interest = anno_ids_of_interest.intersection(relevant_anno_ids)
+        for anno_id in anno_ids_of_interest:
+            annos_of_interest.append(self.cvt_annos_by_id[anno_id])
+        return annos_of_interest
 
 
 class FBFeature(FBDataEntity):

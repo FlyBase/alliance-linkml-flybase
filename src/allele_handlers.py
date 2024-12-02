@@ -149,9 +149,9 @@ class MetaAlleleHandler(FeatureHandler):
                 metaallele.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
                 counter += 1
             elif metaallele.uniquename.startswith('FBab'):
-                # Placeholder.
+                metaallele.recall_cvterm_annotations(self.log)
+                # metaallele.recall_cvterm_annotations(self.log, cv_name='SO', prop_type_name='wt_class')
                 # BOB
-                pass
             elif metaallele.uniquename.startswith('FBal'):
                 mutation_types = {}    # Will be a dict of mutation type curies and supporting pub ids.
                 relevant_ins_rels = []
