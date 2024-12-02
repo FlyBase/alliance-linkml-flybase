@@ -242,7 +242,10 @@ class FBDataEntity(FBExportEntity):
             relevant_anno_ids = []
             # Take union of all specified values for a given attribute.
             for anno_attr_name in kwargs[kwarg_name]:
-                relevant_anno_ids.extend(relevant_anno_dict[anno_attr_name])
+                try:
+                    relevant_anno_ids.extend(relevant_anno_dict[anno_attr_name])
+                except KeyError:
+                    pass
             relevant_anno_ids = set(relevant_anno_ids)
             # Apply the filter.
             anno_ids_of_interest = anno_ids_of_interest.intersection(relevant_anno_ids)
