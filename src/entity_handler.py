@@ -433,8 +433,12 @@ class PrimaryEntityHandler(DataHandler):
         cvtermprop_table = self.chado_tables['cvtermprops'][chado_type]
         entity_type = aliased(Cvterm, name='entity_type')
         annotated_cvterm = aliased(Cvterm, name='annotated_cvterm')
-        excluded_cv_names = ['disease_ontology', 'cellular_component', 'biological_process', 'molecular_function']
-        # Phase 1: Get all CV term annotations, except for DO and GO (handled elsewhere).
+        # Phase 1: Get all CV term annotations, except for allele-DO and gene-GO (handled elsewhere).
+        excluded_cv_names = []
+        if self.datatype == 'allele':
+            excluded_cv_names.append('disease_ontology')
+        elif self.datatype == 'gene':
+            excluded_cv_names.extend(['cellular_component', 'biological_process', 'molecular_function'])
         filters = (
             Cv.name.not_in((excluded_cv_names)),
         )
@@ -482,6 +486,8 @@ class PrimaryEntityHandler(DataHandler):
                 select_from(chado_table).\
                 join(entity_type, (entity_type.cvterm_id == chado_table.type_id)).\
                 join(cvterm_table, (getattr(cvterm_table, entity_key_name) == getattr(chado_table, entity_key_name))).\
+                join(annotated_cvterm, (annotated_cvterm.cvterm_id == cvterm_table.cvterm_id)).\
+                join(Cv, (Cv.cv_id == annotated_cvterm.cv_id)).\
                 join(cvtermprop_table, (getattr(cvtermprop_table, f'{chado_type}_cvterm_id') == getattr(cvterm_table, f'{chado_type}_cvterm_id'))).\
                 filter(*filters).\
                 distinct()
@@ -489,6 +495,8 @@ class PrimaryEntityHandler(DataHandler):
             cvtermprop_results = session.query(cvtermprop_table).\
                 select_from(chado_table).\
                 join(cvterm_table, (getattr(cvterm_table, entity_key_name) == getattr(chado_table, entity_key_name))).\
+                join(annotated_cvterm, (annotated_cvterm.cvterm_id == cvterm_table.cvterm_id)).\
+                join(Cv, (Cv.cv_id == annotated_cvterm.cv_id)).\
                 join(cvtermprop_table, (getattr(cvtermprop_table, f'{chado_type}_cvterm_id') == getattr(cvterm_table, f'{chado_type}_cvterm_id'))).\
                 filter(*filters).\
                 distinct()
