@@ -149,10 +149,19 @@ class MetaAlleleHandler(FeatureHandler):
                 metaallele.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
                 counter += 1
             elif metaallele.uniquename.startswith('FBab'):
-                self.log.debug(f'BOB: Eval {metaallele} mutation types.')
+                mutation_types = {}    # curie-keyed dict of pub_ids.
                 mutation_type_annotations = metaallele.recall_cvterm_annotations(self.log, cv_names='SO', prop_type_names='wt_class')
-                for i in mutation_type_annotations:
-                    self.log.debug(f'BOB: {metaallele}: cvterm_name={i.chado_obj.cvterm.name}, fbrf={i.chado_obj.pub.uniquename}, miniref={i.chado_obj.pub.miniref}')
+                for mutation_type_annotation in mutation_type_annotations:
+                    mutation_type_curie = self.cvterm_lookup[mutation_type_annotation.chado_obj.cvterm_id]['curie']
+                    if mutation_type_curie in mutation_types.keys():
+                        mutation_types[mutation_type_curie].append(mutation_type_annotation.chado_obj.pub_id)
+                    else:
+                        mutation_types[mutation_type_curie] = [mutation_type_annotation.chado_obj.pub_id]
+                for mutation_type_curie, pub_ids in mutation_types.items():
+                    pub_curies = self.lookup_pub_curies(pub_ids)
+                    mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, pub_curies)
+                    metaallele.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
+                    counter += 1
             elif metaallele.uniquename.startswith('FBal'):
                 mutation_types = {}    # Will be a dict of mutation type curies and supporting pub ids.
                 relevant_ins_rels = []
