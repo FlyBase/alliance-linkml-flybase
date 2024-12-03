@@ -30,10 +30,6 @@ class MetaAlleleHandler(FeatureHandler):
         self.agr_export_type = agr_datatypes.AlleleDTO
         self.primary_export_set = 'allele_ingest_set'
 
-    # Additional export sets.
-    gene_metaallele_rels = {}            # Will be (aberration/allele/balancer/insertion feature_id, gene feature_id) tuples keying lists of FBRelationships.
-    gene_metaallele_associations = []    # Will be the final list of gene-allele FBRelationships to export.
-
     # Add methods to be run by map_fb_data_to_alliance() below.
     def map_metaallele_basic(self):
         """Map basic FlyBase metaallele data to the Alliance LinkML Allele object."""
@@ -224,6 +220,10 @@ class AlleleHandler(MetaAlleleHandler):
         'FBal0048226': 'Dmau_w[a23]',           # Non-Dmel allele related to non-Dmel insertion.
         'FBal0198528': 'CG33269[HMJ22303]'
     }
+
+    # Additional export sets.
+    gene_allele_rels = {}            # Will be (allele feature_id, gene feature_id) tuples keying lists of FBRelationships.
+    gene_allele_associations = []    # Will be the final list of gene-allele FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
 
     # Additional reference info.
     allele_class_terms = []          # A list of cvterm_ids for child terms of "allele_class" (FBcv:0000286).
@@ -464,9 +464,9 @@ class AlleleHandler(MetaAlleleHandler):
                 gene_feature_id = gene_rel.chado_obj.object_id
                 allele_gene_key = (allele.db_primary_id, gene_feature_id)
                 try:
-                    self.gene_metaallele_rels[allele_gene_key].extend(gene_rel)
+                    self.gene_allele_rels[allele_gene_key].extend(gene_rel)
                 except KeyError:
-                    self.gene_metaallele_rels[allele_gene_key] = [gene_rel]
+                    self.gene_allele_rels[allele_gene_key] = [gene_rel]
                     gene_counter += 1
         self.log.info(f'Found {gene_counter} genes for {allele_counter} alleles.')
         return
@@ -553,7 +553,7 @@ class AlleleHandler(MetaAlleleHandler):
         ALLELE = 0
         GENE = 1
         counter = 0
-        for allele_gene_key, allele_gene_rels in self.gene_metaallele_rels.items():
+        for allele_gene_key, allele_gene_rels in self.gene_allele_rels.items():
             allele = self.fb_data_entities[allele_gene_key[ALLELE]]
             allele_curie = f'FB:{allele.uniquename}'
             gene = self.feature_lookup[allele_gene_key[GENE]]
@@ -569,7 +569,7 @@ class AlleleHandler(MetaAlleleHandler):
                 rel_dto.obsolete = True
                 rel_dto.internal = True
             first_feat_rel.linkmldto = rel_dto
-            self.gene_metaallele_associations.append(first_feat_rel)
+            self.gene_allele_associations.append(first_feat_rel)
             counter += 1
         self.log.info(f'Generated {counter} allele-gene unique associations.')
         return
@@ -593,15 +593,15 @@ class AlleleHandler(MetaAlleleHandler):
         self.map_secondary_ids('allele_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
         self.map_gene_allele_associations()
-        self.flag_internal_fb_entities('gene_metaallele_associations')
+        self.flag_internal_fb_entities('gene_allele_associations')
         return
 
     # Elaborate on query_chado_and_export() for the AlleleHandler.
     def query_chado_and_export(self, session):
         """Elaborate on query_chado_and_export method for the AlleleHandler."""
         super().query_chado_and_export(session)
-        self.flag_unexportable_entities(self.gene_metaallele_associations, 'allele_gene_association_ingest_set')
-        self.generate_export_dict(self.gene_metaallele_associations, 'allele_gene_association_ingest_set')
+        self.flag_unexportable_entities(self.gene_allele_associations, 'allele_gene_association_ingest_set')
+        self.generate_export_dict(self.gene_allele_associations, 'allele_gene_association_ingest_set')
         return
 
 
@@ -636,8 +636,6 @@ class InsertionHandler(MetaAlleleHandler):
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
         self.build_ncbi_taxon_lookup(session)
-        self.build_feature_lookup(session, feature_types=['gene', 'allele', 'construct'])
-        self.build_allele_gene_lookup(session)
         return
 
     # Additional sub-methods for get_datatype_data().
@@ -664,17 +662,7 @@ class InsertionHandler(MetaAlleleHandler):
         return
 
     # Additional sub-methods to be run by synthesize_info() below.
-    def synthesize_parent_genes(self):
-        """Get insertion parent gene IDs."""
-        self.log.info('Get insertion parent gene IDs.')
-        # Placeholder.
-        return
-
-    def synthesize_gene_insertions(self):
-        """Synthesize gene-insertion relationships."""
-        self.log.info('Synthesize gene-insertion relationships.')
-        # Placeholder.
-        return
+    # Placeholder.
 
     # Elaborate on synthesize_info() for the InsertionHandler.
     def synthesize_info(self):
@@ -684,16 +672,10 @@ class InsertionHandler(MetaAlleleHandler):
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
-        self.synthesize_parent_genes()
-        self.synthesize_gene_insertions()
         return
 
     # Additional methods to be run by map_fb_data_to_alliance() below.
-    def map_gene_insertion_associations(self):
-        """Map gene-insertion associations to Alliance object."""
-        self.log.info('Map gene-insertion associations to Alliance object.')
-        # Placeholder.
-        return
+    # Placeholder.
 
     # Elaborate on map_fb_data_to_alliance() for the InsertionHandler.
     def map_fb_data_to_alliance(self):
@@ -712,16 +694,12 @@ class InsertionHandler(MetaAlleleHandler):
         self.map_timestamps()
         self.map_secondary_ids('allele_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
-        # self.map_gene_insertion_associations()    # BOB
-        # self.flag_internal_fb_entities('gene_metaallele_associations')    # BOB
         return
 
     # Elaborate on query_chado_and_export() for the InsertionHandler.
     def query_chado_and_export(self, session):
         """Elaborate on query_chado_and_export method for the InsertionHandler."""
         super().query_chado_and_export(session)
-        # self.flag_unexportable_entities(self.gene_metaallele_associations, 'allele_gene_association_ingest_set')
-        # self.generate_export_dict(self.gene_metaallele_associations, 'allele_gene_association_ingest_set')
         return
 
 
@@ -735,6 +713,7 @@ class AberrationHandler(MetaAlleleHandler):
 
     test_set = {
         'FBab0000001': 'Df(2R)03072',    # Random selection.
+        'FBab0000006': 'Df(3L)ZN47',     # Has many genes associated in many ways.
         'FBab0024587': 'Dp(1;f)8D',      # Unusual feature type: "free duplication".
         'FBab0005448': 'In(3LR)P88',     # Many distinct "wt_aberr" type CV term annotations.
     }
@@ -749,7 +728,7 @@ class AberrationHandler(MetaAlleleHandler):
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
         self.build_ncbi_taxon_lookup(session)
-        self.build_feature_lookup(session, feature_types=['gene', 'allele', 'construct', 'insertion'])
+        self.build_feature_lookup(session, feature_types=['gene'])
         self.build_allele_gene_lookup(session)
         return
 
@@ -774,17 +753,7 @@ class AberrationHandler(MetaAlleleHandler):
         return
 
     # Additional sub-methods to be run by synthesize_info() below.
-    def synthesize_parent_genes(self):
-        """Get aberration parent gene IDs."""
-        self.log.info('Get aberration parent gene IDs.')
-        # Placeholder.
-        return
-
-    def synthesize_gene_aberrations(self):
-        """Synthesize gene-aberration relationships."""
-        self.log.info('Synthesize gene-aberration relationships.')
-        # Placeholder.
-        return
+    # Placeholder.
 
     # Elaborate on synthesize_info() for the AberrationHandler.
     def synthesize_info(self):
@@ -794,16 +763,10 @@ class AberrationHandler(MetaAlleleHandler):
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
-        self.synthesize_parent_genes()
-        self.synthesize_gene_aberrations()
         return
 
     # Additional methods to be run by map_fb_data_to_alliance() below.
-    def map_gene_aberration_associations(self):
-        """Map gene-aberration associations to Alliance object."""
-        self.log.info('Map gene-aberration associations to Alliance object.')
-        # Placeholder.
-        return
+    # Placeholder.
 
     # Elaborate on map_fb_data_to_alliance() for the AberrationHandler.
     def map_fb_data_to_alliance(self):
@@ -822,8 +785,7 @@ class AberrationHandler(MetaAlleleHandler):
         self.map_timestamps()
         self.map_secondary_ids('allele_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
-        # self.map_gene_aberration_associations()    # BOB
-        # self.flag_internal_fb_entities('gene_aberration_associations')    # BOB
+        # self.flag_internal_fb_entities('gene_aberration_associations')
         return
 
     # Elaborate on query_chado_and_export() for the AberrationHandler.
@@ -844,7 +806,7 @@ class BalancerHandler(MetaAlleleHandler):
         self.fb_export_type = FBBalancer
 
     test_set = {
-        'FBba0000001': 'CyO-Df(2R)B80',    # Random selection.
+        'FBba0000001': 'CyO-Df(2R)B80',    # A random selection.
     }
 
     # Additional sub-methods for get_general_data().
@@ -857,8 +819,6 @@ class BalancerHandler(MetaAlleleHandler):
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
         self.build_ncbi_taxon_lookup(session)
-        self.build_feature_lookup(session, feature_types=['gene', 'allele', 'construct', 'insertion'])
-        self.build_allele_gene_lookup(session)
         return
 
     # Additional sub-methods for get_datatype_data().
@@ -920,6 +880,4 @@ class BalancerHandler(MetaAlleleHandler):
     def query_chado_and_export(self, session):
         """Elaborate on query_chado_and_export method for the BalancerHandler."""
         super().query_chado_and_export(session)
-        # self.flag_unexportable_entities(self.gene_balancer_associations, 'allele_gene_association_ingest_set')
-        # self.generate_export_dict(self.gene_balancer_associations, 'allele_gene_association_ingest_set')
         return
