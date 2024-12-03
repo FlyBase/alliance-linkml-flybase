@@ -155,10 +155,13 @@ class PrimaryEntityHandler(DataHandler):
         if self.datatype in self.feature_subtypes.keys():
             self.log.info(f'Filter main table by these feature_subtypes: {self.feature_subtypes[self.datatype]}')
             filters += (Cvterm.name.in_((self.feature_subtypes[self.datatype])), )
-        if self.testing and self.datatype != 'genotype':
+        if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
-            filters += (chado_table.uniquename.in_((self.test_set.keys())), )
-        if filters == ():
+            if self.datatype == 'genotype':
+                filters += (chado_table.genotype_id.in_((self.test_set.keys())), )
+            else:
+                filters += (chado_table.uniquename.in_((self.test_set.keys())), )
+        if filters == () and self.datatype != 'genotype':
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
         if self.datatype in self.feature_subtypes.keys():
@@ -448,10 +451,13 @@ class PrimaryEntityHandler(DataHandler):
         if self.datatype in self.feature_subtypes.keys():
             self.log.info(f'Filter main table for entities of these feature_subtypes: {self.feature_subtypes[self.datatype]}')
             filters += (entity_type.name.in_((self.feature_subtypes[self.datatype])), )
-        if self.testing and self.datatype != 'genotype':
+        if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
-            filters += (chado_table.uniquename.in_((self.test_set.keys())), )
-        if filters == ():
+            if self.datatype == 'genotype':
+                filters += (chado_table.genotype_id.in_((self.test_set.keys())), )
+            else:
+                filters += (chado_table.uniquename.in_((self.test_set.keys())), )
+        if filters == () and self.datatype != 'genotype':
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
         if self.datatype in self.feature_subtypes.keys():
@@ -560,10 +566,13 @@ class PrimaryEntityHandler(DataHandler):
         if self.datatype in self.feature_subtypes.keys():
             self.log.info(f'Filter main table by these feature_subtypes: {self.feature_subtypes[self.datatype]}')
             filters += (Cvterm.name.in_((self.feature_subtypes[self.datatype])), )
-        if self.testing and self.datatype != 'genotype':
+        if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
-            filters += (chado_table.uniquename.in_((self.test_set.keys())), )
-        if filters == ():
+            if self.datatype == 'genotype':
+                filters += (chado_table.genotype_id.in_((self.test_set.keys())), )
+            else:
+                filters += (chado_table.uniquename.in_((self.test_set.keys())), )
+        if filters == () and self.datatype != 'genotype':
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
         if self.datatype in self.feature_subtypes.keys():
