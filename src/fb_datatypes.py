@@ -366,7 +366,11 @@ class FBGenotype(FBDataEntity):
     def __init__(self, chado_obj):
         """Create the FBGenotype object."""
         super().__init__(chado_obj)
+        # Primary FB chado data.
         self.db_primary_id = chado_obj.genotype_id
+        # Processed FB data.
+        self.ncbi_taxon_id = 'NCBITaxon:7227'    # Default Dmel.
+        self.fb_curie = None
 
 
 # First class associations and annotations.

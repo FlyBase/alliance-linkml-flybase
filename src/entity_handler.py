@@ -149,13 +149,13 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Get {self.datatype} data entities from {chado_type} table.')
         chado_table = self.chado_tables['main_table'][chado_type]
         filters = ()
-        if self.datatype in self.regex.keys():
+        if self.datatype in self.regex.keys() and self.datatype != 'genotype':
             self.log.info(f'Use this regex: {self.regex[self.datatype]}')
             filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
         if self.datatype in self.feature_subtypes.keys():
             self.log.info(f'Filter main table by these feature_subtypes: {self.feature_subtypes[self.datatype]}')
             filters += (Cvterm.name.in_((self.feature_subtypes[self.datatype])), )
-        if self.testing:
+        if self.testing and self.datatype != 'genotype':
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             filters += (chado_table.uniquename.in_((self.test_set.keys())), )
         if filters == ():
@@ -448,7 +448,7 @@ class PrimaryEntityHandler(DataHandler):
         if self.datatype in self.feature_subtypes.keys():
             self.log.info(f'Filter main table for entities of these feature_subtypes: {self.feature_subtypes[self.datatype]}')
             filters += (entity_type.name.in_((self.feature_subtypes[self.datatype])), )
-        if self.testing:
+        if self.testing and self.datatype != 'genotype':
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             filters += (chado_table.uniquename.in_((self.test_set.keys())), )
         if filters == ():
@@ -560,7 +560,7 @@ class PrimaryEntityHandler(DataHandler):
         if self.datatype in self.feature_subtypes.keys():
             self.log.info(f'Filter main table by these feature_subtypes: {self.feature_subtypes[self.datatype]}')
             filters += (Cvterm.name.in_((self.feature_subtypes[self.datatype])), )
-        if self.testing:
+        if self.testing and self.datatype != 'genotype':
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             filters += (chado_table.uniquename.in_((self.test_set.keys())), )
         if filters == ():
@@ -933,10 +933,12 @@ class PrimaryEntityHandler(DataHandler):
     def map_xrefs(self):
         """Add a list of Alliance CrossReferenceDTO dicts to a FlyBase entity."""
         self.log.info('Map xrefs to Alliance object.')
+        # Resource descriptor page area conversions.
         page_area_conversion = {
             'aberration': 'allele',
             'balancer': 'allele',
             'insertion': 'allele',
+            'genotype': 'homepage',
         }
         for fb_data_entity in self.fb_data_entities.values():
             cross_reference_dtos = []

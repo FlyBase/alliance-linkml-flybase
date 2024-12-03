@@ -24,7 +24,9 @@ import argparse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
-from agm_handlers import StrainHandler
+from agm_handlers import (
+    StrainHandler, GenotypeHandler
+)
 from utils import db_query_transaction, generate_export_file
 
 # Data types handled by this script.
@@ -69,7 +71,9 @@ def main():
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Get the data and process it.
+    genotype_handler = GenotypeHandler(log, testing)
     strain_handler = StrainHandler(log, testing)
+    db_query_transaction(session, log, genotype_handler)
     db_query_transaction(session, log, strain_handler)
 
     # Export the data.
@@ -77,12 +81,8 @@ def main():
         'linkml_version': linkml_release,
         'alliance_member_release_version': database_release,
     }
-
-    # Export strains first.
-    export_dict[strain_handler.primary_export_set] = strain_handler.export_data[strain_handler.primary_export_set]
-
-    # Then add genotypes to export list.
-    # Future work.
+    export_dict[genotype_handler.primary_export_set] = genotype_handler.export_data[genotype_handler.primary_export_set]
+    export_dict[genotype_handler.primary_export_set].extend(strain_handler.export_data[strain_handler.primary_export_set])
 
     generate_export_file(export_dict, log, output_filename)
 

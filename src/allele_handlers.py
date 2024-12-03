@@ -30,7 +30,7 @@ class MetaAlleleHandler(FeatureHandler):
         self.agr_export_type = agr_datatypes.AlleleDTO
         self.primary_export_set = 'allele_ingest_set'
 
-    # Add methods to be run by map_fb_data_to_alliance() below.
+    # Additional sub-methods for map_fb_data_to_alliance().
     def map_metaallele_basic(self):
         """Map basic FlyBase metaallele data to the Alliance LinkML Allele object."""
         self.log.info('Map basic FlyBase metaallele data to the Alliance LinkML Allele object.')
