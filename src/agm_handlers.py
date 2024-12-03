@@ -172,7 +172,6 @@ class GenotypeHandler(PrimaryEntityHandler):
     def synthesize_info(self):
         """Extend the method for the GenotypeHandler."""
         super().synthesize_info()
-        self.synthesize_fb_curie()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
