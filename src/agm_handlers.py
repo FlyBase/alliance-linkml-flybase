@@ -75,7 +75,7 @@ class StrainHandler(PrimaryEntityHandler):
         for strain in self.fb_data_entities.values():
             agr_strain = self.agr_export_type()
             agr_strain.obsolete = strain.chado_obj.is_obsolete
-            agr_strain.mod_entity_id = f'FB:{strain.uniquename}'
+            agr_strain.primary_external_id = f'FB:{strain.uniquename}'
             agr_strain.mod_internal_id = str(strain.chado_obj.strain_id)
             agr_strain.taxon_curie = strain.ncbi_taxon_id
             agr_strain.name = strain.name

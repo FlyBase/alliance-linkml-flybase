@@ -37,7 +37,7 @@ class MetaAlleleHandler(FeatureHandler):
         for metaallele in self.fb_data_entities.values():
             agr_allele = self.agr_export_type()
             agr_allele.obsolete = metaallele.chado_obj.is_obsolete
-            agr_allele.mod_entity_id = f'FB:{metaallele.uniquename}'
+            agr_allele.primary_external_id = f'FB:{metaallele.uniquename}'
             agr_allele.mod_internal_id = str(metaallele.chado_obj.feature_id)
             agr_allele.taxon_curie = metaallele.ncbi_taxon_id
             metaallele.linkmldto = agr_allele
