@@ -933,13 +933,21 @@ class PrimaryEntityHandler(DataHandler):
     def map_xrefs(self):
         """Add a list of Alliance CrossReferenceDTO dicts to a FlyBase entity."""
         self.log.info('Map xrefs to Alliance object.')
+        page_area_conversion = {
+            'aberration': 'allele',
+            'balancer': 'allele',
+            'insertion': 'allele',
+        }
         for fb_data_entity in self.fb_data_entities.values():
             cross_reference_dtos = []
             # First, add FB xref (since FB xrefs in chado are not complete, just use the uniquename).
             if fb_data_entity.uniquename:
                 curie = f'FB:{fb_data_entity.uniquename}'
                 display_name = curie
-                page_area = self.datatype
+                if self.datatype in page_area_conversion.keys():
+                    page_area = page_area_conversion(self.datatype)
+                else:
+                    page_area = self.datatype
                 fb_xref_dto = agr_datatypes.CrossReferenceDTO('FB', curie, page_area, display_name).dict_export()
                 cross_reference_dtos.append(fb_xref_dto)
             # Second, add external xrefs.
@@ -950,7 +958,10 @@ class PrimaryEntityHandler(DataHandler):
                 try:
                     page_area = self.agr_page_area_dict[prefix]
                 except KeyError:
-                    page_area = self.datatype
+                    if self.datatype in page_area_conversion.keys():
+                        page_area = page_area_conversion(self.datatype)
+                    else:
+                        page_area = self.datatype
                 # Clean up cases where the db prefix is redundantly included at the start of the dbxref.accession.
                 redundant_prefix = f'{prefix}:'
                 if xref.dbxref.accession.startswith(redundant_prefix):
