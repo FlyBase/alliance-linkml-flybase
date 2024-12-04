@@ -131,7 +131,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.log.info('Get FlyBase curies for genotypes.')
         filters = (
             GenotypeDbxref.is_current.is_(True),
-            Dbxref.accession.op('~')(r'^FBgo[0-9]{7}$'),
+            Dbxref.accession.op('~')(self.regex['genotype']),
             Db.name == 'FlyBase',
         )
         if self.testing:
@@ -147,7 +147,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         pass_counter = 0
         for result in results:
             try:
-                self.fb_data_entities[result.GenotypeDbxref.dbxref_id].fb_curie = result.Dbxref.accession
+                self.fb_data_entities[result.GenotypeDbxref.genotype_id].fb_curie = result.Dbxref.accession
                 counter += 1
             except KeyError:
                 pass_counter += 1
