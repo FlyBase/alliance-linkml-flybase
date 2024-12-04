@@ -42,6 +42,14 @@ class PrimaryEntityHandler(DataHandler):
         """Create the generic PrimaryEntityHandler object."""
         super().__init__(log, testing)
 
+    # Conversion of FB datatype to "page_area".
+    page_area_conversion = {
+        'aberration': 'allele',
+        'balancer': 'allele',
+        'insertion': 'allele',
+        'genotype': 'homepage',
+    }
+
     # Mappings of main data types to chado tables with associated data like cvterms, props, synonyms, etc.
     chado_tables = {
         'main_table': {
@@ -906,11 +914,18 @@ class PrimaryEntityHandler(DataHandler):
         for fb_data_entity in self.fb_data_entities.values():
             if fb_data_entity.linkmldto is None:
                 continue
-            if fb_data_entity.curr_fb_symbol:
-                display_name = fb_data_entity.curr_fb_symbol
+            if self.datatype == 'genotype':
+                referenced_curie = f'FB:{fb_data_entity.fb_curie}'
+                page_area = self.page_area_conversion[self.datatype]
+                display_name = fb_data_entity.uniquename
             else:
-                display_name = fb_data_entity.name
-            dp_xref = agr_datatypes.CrossReferenceDTO('FB', f'FB:{fb_data_entity.uniquename}', self.datatype, display_name).dict_export()
+                referenced_curie = f'FB:{fb_data_entity.uniquename}'
+                page_area = self.datatype
+                if fb_data_entity.curr_fb_symbol:
+                    display_name = fb_data_entity.curr_fb_symbol
+                else:
+                    display_name = fb_data_entity.name
+            dp_xref = agr_datatypes.CrossReferenceDTO('FB', referenced_curie, page_area, display_name).dict_export()
             fb_data_entity.linkmldto.data_provider_dto = agr_datatypes.DataProviderDTO(dp_xref).dict_export()
         return
 
@@ -949,12 +964,6 @@ class PrimaryEntityHandler(DataHandler):
         """Add a list of Alliance CrossReferenceDTO dicts to a FlyBase entity."""
         self.log.info('Map xrefs to Alliance object.')
         # Resource descriptor page area conversions.
-        page_area_conversion = {
-            'aberration': 'allele',
-            'balancer': 'allele',
-            'insertion': 'allele',
-            'genotype': 'homepage',
-        }
         for fb_data_entity in self.fb_data_entities.values():
             if fb_data_entity.linkmldto is None:
                 continue
@@ -966,8 +975,8 @@ class PrimaryEntityHandler(DataHandler):
                 else:
                     curie = f'FB:{fb_data_entity.uniquename}'
                 display_name = curie
-                if self.datatype in page_area_conversion.keys():
-                    page_area = page_area_conversion[self.datatype]
+                if self.datatype in self.page_area_conversion.keys():
+                    page_area = self.page_area_conversion[self.datatype]
                 else:
                     page_area = self.datatype
                 fb_xref_dto = agr_datatypes.CrossReferenceDTO('FB', curie, page_area, display_name).dict_export()
@@ -980,8 +989,8 @@ class PrimaryEntityHandler(DataHandler):
                 try:
                     page_area = self.agr_page_area_dict[prefix]
                 except KeyError:
-                    if self.datatype in page_area_conversion.keys():
-                        page_area = page_area_conversion[self.datatype]
+                    if self.datatype in self.page_area_conversion.keys():
+                        page_area = self.page_area_conversion[self.datatype]
                     else:
                         page_area = self.datatype
                 # Clean up cases where the db prefix is redundantly included at the start of the dbxref.accession.
