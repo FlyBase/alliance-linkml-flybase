@@ -904,6 +904,8 @@ class PrimaryEntityHandler(DataHandler):
         # Note - this method is depends on previous determination of fb_data_entity.curr_fb_symbol by synthesize_synonyms(), if applicable.
         self.log.info('Map data provider to Alliance object.')
         for fb_data_entity in self.fb_data_entities.values():
+            if fb_data_entity.linkmldto is None:
+                continue
             if fb_data_entity.curr_fb_symbol:
                 display_name = fb_data_entity.curr_fb_symbol
             else:
@@ -928,6 +930,8 @@ class PrimaryEntityHandler(DataHandler):
         """Add pub curies to a FlyBase entity."""
         self.log.info('Map pubs to Alliance object.')
         for fb_data_entity in self.fb_data_entities.values():
+            if fb_data_entity.linkmldto is None:
+                continue
             for pub_id in fb_data_entity.all_pubs:
                 try:
                     fb_data_entity.linkmldto.reference_curies.append(self.bibliography[pub_id])
@@ -950,6 +954,8 @@ class PrimaryEntityHandler(DataHandler):
             'genotype': 'homepage',
         }
         for fb_data_entity in self.fb_data_entities.values():
+            if fb_data_entity.linkmldto is None:
+                continue
             cross_reference_dtos = []
             # First, add FB xref (since FB xrefs in chado are not complete, just use the uniquename).
             if fb_data_entity.uniquename:
