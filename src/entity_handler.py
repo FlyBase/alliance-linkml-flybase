@@ -961,7 +961,10 @@ class PrimaryEntityHandler(DataHandler):
             cross_reference_dtos = []
             # First, add FB xref (since FB xrefs in chado are not complete, just use the uniquename).
             if fb_data_entity.uniquename:
-                curie = f'FB:{fb_data_entity.uniquename}'
+                if self.datatype == 'genotype':
+                    curie = f'FB:{fb_data_entity.fb_curie}'
+                else:
+                    curie = f'FB:{fb_data_entity.uniquename}'
                 display_name = curie
                 if self.datatype in page_area_conversion.keys():
                     page_area = page_area_conversion[self.datatype]
