@@ -964,7 +964,7 @@ class PrimaryEntityHandler(DataHandler):
                 curie = f'FB:{fb_data_entity.uniquename}'
                 display_name = curie
                 if self.datatype in page_area_conversion.keys():
-                    page_area = page_area_conversion(self.datatype)
+                    page_area = page_area_conversion[self.datatype]
                 else:
                     page_area = self.datatype
                 fb_xref_dto = agr_datatypes.CrossReferenceDTO('FB', curie, page_area, display_name).dict_export()
@@ -978,7 +978,7 @@ class PrimaryEntityHandler(DataHandler):
                     page_area = self.agr_page_area_dict[prefix]
                 except KeyError:
                     if self.datatype in page_area_conversion.keys():
-                        page_area = page_area_conversion(self.datatype)
+                        page_area = page_area_conversion[self.datatype]
                     else:
                         page_area = self.datatype
                 # Clean up cases where the db prefix is redundantly included at the start of the dbxref.accession.
