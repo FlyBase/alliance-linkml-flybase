@@ -42,6 +42,7 @@ class StrainHandler(PrimaryEntityHandler):
         """Extend the method for the StrainHandler."""
         super().get_general_data(session)
         self.build_bibliography(session)
+        self.build_feature_lookup(session, feature_types=['aberration', 'allele', 'balancer', 'insertion', 'gene'])
         self.build_cvterm_lookup(session)
         self.build_ncbi_taxon_lookup(session)
         return
@@ -53,6 +54,7 @@ class StrainHandler(PrimaryEntityHandler):
         self.get_entities(session)
         self.get_entity_relationships(session, 'subject')
         self.get_entity_relationships(session, 'object')
+        self.get_entity_cvterms(session)
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
@@ -90,7 +92,7 @@ class StrainHandler(PrimaryEntityHandler):
         """Extend the method for the StrainHandler."""
         super().map_fb_data_to_alliance()
         self.map_strain_basic()
-        self.map_synonyms()
+        # self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
         self.map_pubs()
@@ -152,7 +154,6 @@ class GenotypeHandler(PrimaryEntityHandler):
             except KeyError:
                 pass_counter += 1
         self.log.info(f'Found {counter} FBgo IDs for {self.datatype}s.')
-        self.log.info(f'Ignored {pass_counter} irrelevant results.')
         return
 
     # Elaborate on get_datatype_data() for the GenotypeHandler.
@@ -161,6 +162,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         super().get_datatype_data(session)
         self.get_entities(session)
         self.get_genotype_fb_curies(session)
+        self.get_entity_cvterms(session)
         self.get_entityprops(session)
         self.get_entity_synonyms(session)
         self.get_entity_fb_xrefs(session)
@@ -202,7 +204,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         """Extend the method for the GenotypeHandler."""
         super().map_fb_data_to_alliance()
         self.map_genotype_basic()
-        self.map_synonyms()
+        # self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
         self.map_pubs()

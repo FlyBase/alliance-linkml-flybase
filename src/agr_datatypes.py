@@ -286,10 +286,11 @@ class AffectedGenomicModelComponentDTO(AuditedObjectDTO):
     def __init__(self, component_curie, zygosity):
         """Create AffectedGenomicModelComponentDTO for FlyBase object."""
         super().__init__()
-        self.allele_curie = component_curie
+        self.allele_identifier = component_curie
         self.zygosity_curie = self.zygosity_id[zygosity]
-        self.required_fields.extend(['primary_external_id'])
-    # Zygosity mapping.
+        self.required_fields.extend(['allele_identifier', 'zygosity_curie'])
+    # Zygosity mapping to GENO IDs.
+    # https://github.com/monarch-initiative/GENO-ontology/blob/develop/geno-base.obo
     zygosity_id = {
         'hemizygous': 'GENO:0000134',
         'heterozygous': 'GENO:0000135',

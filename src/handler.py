@@ -721,6 +721,8 @@ class DataHandler(object):
         elif type(input_data) is list:
             input_list = input_data
         for fb_data_entity in input_list:
+            if fb_data_entity.linkmldto is None:
+                continue
             try:
                 if fb_data_entity.linkmldto.obsolete is True:
                     fb_data_entity.linkmldto.internal = True
