@@ -918,6 +918,8 @@ class PrimaryEntityHandler(DataHandler):
         """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for a FlyBase entity."""
         self.log.info('Map secondary IDs to Alliance object.')
         for fb_data_entity in self.fb_data_entities.values():
+            if fb_data_entity.linkmldto is None:
+                continue
             secondary_id_dtos = []
             for secondary_id in fb_data_entity.alt_fb_ids:
                 sec_dto = agr_datatypes.SecondaryIdSlotAnnotationDTO(secondary_id, []).dict_export()
@@ -1017,6 +1019,8 @@ class PrimaryEntityHandler(DataHandler):
         else:
             self.log.info(f'Have these linkml name dto slots to fill in: {linkml_synonym_slots.values()}')
         for fb_data_entity in self.fb_data_entities.values():
+            if fb_data_entity.linkmldto is None:
+                continue
             linkml_synonym_bins = {
                 'symbol_bin': [],
                 'full_name_bin': [],
