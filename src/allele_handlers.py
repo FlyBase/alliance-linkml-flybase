@@ -126,75 +126,6 @@ class MetaAlleleHandler(FeatureHandler):
         self.log.info(f'Flagged {non_dmel_drosophilid_counter} non-Dmel Drosophilid alleles as internal.')
         return
 
-    def map_metaallele_mutation_types(self):
-        """Map mutation types."""
-        self.log.info('Map mutation types.')
-        mutation_type_conversion = {
-            'transposable_element_insertion_site': 'SO:0001218',    # transgenic_insertion
-            'transposable_element': 'SO:0001837',                   # mobile_element_insertion
-            'insertion_site': 'SO:0000667',                         # insertion
-            'chromosome_structure_variation': 'SO:0001784',         # complex_structural_alteration
-        }
-        counter = 0
-        for metaallele in self.fb_data_entities.values():
-            if metaallele.uniquename.startswith('FBba') or metaallele.uniquename.startswith('FBti'):
-                metaallele_type = self.cvterm_lookup[metaallele.type_id]['name']
-                mutation_type_curie = mutation_type_conversion[metaallele_type]
-                pub_curies = []
-                mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, pub_curies)
-                metaallele.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
-                counter += 1
-            elif metaallele.uniquename.startswith('FBab'):
-                mutation_types = {}    # curie-keyed dict of pub_ids.
-                mutation_type_annotations = metaallele.recall_cvterm_annotations(self.log, cv_names='SO', prop_type_names='wt_class')
-                for mutation_type_annotation in mutation_type_annotations:
-                    mutation_type_curie = self.cvterm_lookup[mutation_type_annotation.chado_obj.cvterm_id]['curie']
-                    if mutation_type_curie in mutation_types.keys():
-                        mutation_types[mutation_type_curie].append(mutation_type_annotation.chado_obj.pub_id)
-                    else:
-                        mutation_types[mutation_type_curie] = [mutation_type_annotation.chado_obj.pub_id]
-                for mutation_type_curie, pub_ids in mutation_types.items():
-                    pub_curies = self.lookup_pub_curies(pub_ids)
-                    mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, pub_curies)
-                    metaallele.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
-                    counter += 1
-            elif metaallele.uniquename.startswith('FBal'):
-                mutation_types = {}    # Will be a dict of mutation type curies and supporting pub ids.
-                relevant_ins_rels = []
-                relevant_ins_rels.extend(metaallele.dmel_ins_rels)
-                relevant_ins_rels.extend(metaallele.non_dmel_ins_rels)
-                for arg_rel in metaallele.arg_rels:
-                    mutation_type_curie = None
-                    fb_feat_type_id = arg_rel.chado_obj.subject.type_id
-                    fb_feat_type_name = self.cvterm_lookup[fb_feat_type_id]['name']
-                    if fb_feat_type_id in self.allele_mutant_type_terms:
-                        mutation_type_curie = self.cvterm_lookup[fb_feat_type_id]['curie']
-                    if mutation_type_curie is None:
-                        continue
-                    if mutation_type_curie in mutation_types.keys():
-                        mutation_types[mutation_type_curie].extend(arg_rel.pubs)
-                    else:
-                        mutation_types[mutation_type_curie] = arg_rel.pubs
-                for ins_rel in relevant_ins_rels:
-                    mutation_type_curie = None
-                    fb_feat_type_id = ins_rel.chado_obj.object.type_id
-                    fb_feat_type_name = self.cvterm_lookup[fb_feat_type_id]['name']
-                    if fb_feat_type_name in mutation_type_conversion.keys():
-                        mutation_type_curie = mutation_type_conversion[fb_feat_type_name]
-                    if mutation_type_curie is None:
-                        continue
-                    if mutation_type_curie in mutation_types.keys():
-                        mutation_types[mutation_type_curie].extend(ins_rel.pubs)
-                    else:
-                        mutation_types[mutation_type_curie] = ins_rel.pubs
-                for mutation_type_curie, pub_ids in mutation_types.items():
-                    pub_curies = self.lookup_pub_curies(pub_ids)
-                    mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, pub_curies)
-                    metaallele.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
-                    counter += 1
-        self.log.info(f'Mapped {counter} mutation type annotations.')
-        return
-
 
 class AlleleHandler(MetaAlleleHandler):
     """This object gets, synthesizes and filters allele data for export."""
@@ -487,6 +418,52 @@ class AlleleHandler(MetaAlleleHandler):
         return
 
     # Additional methods to be run by map_fb_data_to_alliance() below.
+    def map_allele_mutation_types(self):
+        """Map allele mutation types."""
+        self.log.info('Map allele mutation types.')
+        mutation_type_conversion = {
+            'transposable_element_insertion_site': 'SO:0001218',    # transgenic_insertion (from feature type)
+            'insertion_site': 'SO:0001218',                         # transgenic_insertion (from feature type)
+            'transposable_element': 'SO:0001837',                   # mobile_element_insertion (from feature type)
+        }
+        counter = 0
+        for allele in self.fb_data_entities.values():
+            mutation_types = {}    # Will be a dict of mutation type curies and supporting pub ids.
+            relevant_ins_rels = []
+            relevant_ins_rels.extend(allele.dmel_ins_rels)
+            relevant_ins_rels.extend(allele.non_dmel_ins_rels)
+            for arg_rel in allele.arg_rels:
+                mutation_type_curie = None
+                fb_feat_type_id = arg_rel.chado_obj.subject.type_id
+                fb_feat_type_name = self.cvterm_lookup[fb_feat_type_id]['name']
+                if fb_feat_type_id in self.allele_mutant_type_terms:
+                    mutation_type_curie = self.cvterm_lookup[fb_feat_type_id]['curie']
+                if mutation_type_curie is None:
+                    continue
+                if mutation_type_curie in mutation_types.keys():
+                    mutation_types[mutation_type_curie].extend(arg_rel.pubs)
+                else:
+                    mutation_types[mutation_type_curie] = arg_rel.pubs
+            for ins_rel in relevant_ins_rels:
+                mutation_type_curie = None
+                fb_feat_type_id = ins_rel.chado_obj.object.type_id
+                fb_feat_type_name = self.cvterm_lookup[fb_feat_type_id]['name']
+                if fb_feat_type_name in mutation_type_conversion.keys():
+                    mutation_type_curie = mutation_type_conversion[fb_feat_type_name]
+                if mutation_type_curie is None:
+                    continue
+                if mutation_type_curie in mutation_types.keys():
+                    mutation_types[mutation_type_curie].extend(ins_rel.pubs)
+                else:
+                    mutation_types[mutation_type_curie] = ins_rel.pubs
+            for mutation_type_curie, pub_ids in mutation_types.items():
+                pub_curies = self.lookup_pub_curies(pub_ids)
+                mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, pub_curies)
+                allele.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
+                counter += 1
+        self.log.info(f'Mapped {counter} mutation type annotations.')
+        return
+
     def map_inheritance_modes(self):
         """Map allele inheritance modes."""
         self.log.info('Map allele inheritance modes.')
@@ -581,7 +558,7 @@ class AlleleHandler(MetaAlleleHandler):
         self.map_metaallele_basic()
         self.map_metaallele_database_status()
         self.map_internal_metaallele_status()
-        self.map_metaallele_mutation_types()
+        self.map_allele_mutation_types()
         self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
@@ -624,6 +601,8 @@ class InsertionHandler(MetaAlleleHandler):
         'FBti0186374': 'P{TOE.GS00088}attP40',      # type=transposable_element_insertion_site. Related to TRiP-OE-VPR collection via FBtp0116301.
         'FBti0178263': 'TI{TI}Rab1[EYFP]',          # type=insertion_site. Related to YRab collection via FBal0314192.
         'FBti0164639': 'P{TRiP.HMJ22303}attP40',    # type=transposable_element_insertion_site. Related to TRiP-3 collection via FBtp0097015-FBsf0000443916.
+        'FBti0009227': 'P{PZ}Ubx[Ubx-Plac61]',      # type=transposable_element_insertion_site. Lacks TI_subtype annotation.
+        'FBti0248320': 'TI{TI}Sps2[V5]',            # type=insertion_site. Lacks TI_subtype annotation.
     }
 
     # Additional sub-methods for get_general_data().
@@ -675,7 +654,45 @@ class InsertionHandler(MetaAlleleHandler):
         return
 
     # Additional methods to be run by map_fb_data_to_alliance() below.
-    # Placeholder.
+    def map_insertion_mutation_types(self):
+        """Map insertion mutation types."""
+        self.log.info('Map insertion mutation types.')
+        mutation_type_conversion = {
+            'TI_insertion': 'SO:0001218',                           # transgenic_insertion (from cvterm annotation)
+            'synTE_insertion': 'SO:0001218',                        # transgenic_insertion (from cvterm annotation)
+            'natTE_isolate': 'SO:0001837',                          # mobile_element_insertion (from cvterm annotation)
+            'natTE_isolate_named': 'SO:0001837',                    # mobile_element_insertion (from cvterm annotation)
+            'natTE_partial_named': 'SO:0001837',                    # mobile_element_insertion (from cvterm annotation)
+            'natTE_sequenced_strain_1': 'SO:0001837',               # mobile_element_insertion (from cvterm annotation)
+            'transposable_element_insertion_site': 'SO:0001218',    # transgenic_insertion (from feature type)
+            'insertion_site': 'SO:0001218',                         # transgenic_insertion (from feature type)
+            'transposable_element': 'SO:0001837',                   # mobile_element_insertion (from feature type)
+        }
+        counter = 0
+        for insertion in self.fb_data_entities.values():
+            mutation_types = {}    # curie-keyed dict of pub_ids.
+            mutation_type_annotations = insertion.recall_cvterm_annotations(self.log, cv_names='TI_subtype')
+            for mutation_type_annotation in mutation_type_annotations:
+                fb_mutation_type_term = self.cvterm_lookup[mutation_type_annotation.chado_obj.cvterm_id]['name']
+                if fb_mutation_type_term not in mutation_type_conversion.keys():
+                    continue
+                mutation_type_curie = mutation_type_conversion[fb_mutation_type_term]
+                if mutation_type_curie in mutation_types.keys():
+                    mutation_types[mutation_type_curie].append(mutation_type_annotation.chado_obj.pub_id)
+                else:
+                    mutation_types[mutation_type_curie] = [mutation_type_annotation.chado_obj.pub_id]
+            # Catch ~50K cases where FBti lacks a "TI_subtype" CV term annotation.
+            if not mutation_types:
+                fb_mutation_type_term = self.cvterm_lookup[insertion.type_id]['name']
+                mutation_type_curie = mutation_type_conversion[fb_mutation_type_term]
+                mutation_types[mutation_type_curie] = []
+            for mutation_type_curie, pub_ids in mutation_types.items():
+                pub_curies = self.lookup_pub_curies(pub_ids)
+                mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, pub_curies)
+                insertion.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
+                counter += 1
+        self.log.info(f'Mapped {counter} mutation type annotations for insertions.')
+        return
 
     # Elaborate on map_fb_data_to_alliance() for the InsertionHandler.
     def map_fb_data_to_alliance(self):
@@ -684,7 +701,7 @@ class InsertionHandler(MetaAlleleHandler):
         self.map_metaallele_basic()
         self.map_metaallele_database_status()
         self.map_internal_metaallele_status()
-        self.map_metaallele_mutation_types()
+        self.map_insertion_mutation_types()
         self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
@@ -766,7 +783,26 @@ class AberrationHandler(MetaAlleleHandler):
         return
 
     # Additional methods to be run by map_fb_data_to_alliance() below.
-    # Placeholder.
+    def map_aberration_mutation_types(self):
+        """Map aberration mutation types."""
+        self.log.info('Map aberration mutation types.')
+        counter = 0
+        for aberration in self.fb_data_entities.values():
+            mutation_types = {}    # curie-keyed dict of pub_ids.
+            mutation_type_annotations = aberration.recall_cvterm_annotations(self.log, cv_names='SO', prop_type_names='wt_class')
+            for mutation_type_annotation in mutation_type_annotations:
+                mutation_type_curie = self.cvterm_lookup[mutation_type_annotation.chado_obj.cvterm_id]['curie']
+                if mutation_type_curie in mutation_types.keys():
+                    mutation_types[mutation_type_curie].append(mutation_type_annotation.chado_obj.pub_id)
+                else:
+                    mutation_types[mutation_type_curie] = [mutation_type_annotation.chado_obj.pub_id]
+            for mutation_type_curie, pub_ids in mutation_types.items():
+                pub_curies = self.lookup_pub_curies(pub_ids)
+                mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, pub_curies)
+                aberration.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
+                counter += 1
+        self.log.info(f'Mapped {counter} mutation type annotations for aberrations.')
+        return
 
     # Elaborate on map_fb_data_to_alliance() for the AberrationHandler.
     def map_fb_data_to_alliance(self):
@@ -775,7 +811,7 @@ class AberrationHandler(MetaAlleleHandler):
         self.map_metaallele_basic()
         self.map_metaallele_database_status()
         self.map_internal_metaallele_status()
-        self.map_metaallele_mutation_types()
+        self.map_aberration_mutation_types()
         self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
@@ -855,7 +891,18 @@ class BalancerHandler(MetaAlleleHandler):
         return
 
     # Additional methods to be run by map_fb_data_to_alliance() below.
-    # Placeholder.
+    def map_balancer_mutation_types(self):
+        """Map balancer mutation types."""
+        self.log.info('Map balancer mutation types.')
+        counter = 0
+        for balancer in self.fb_data_entities.values():
+            mutation_type_curie = 'SO:0002062'    # complex_chromosomal_rearrangement
+            pub_curies = []
+            mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, pub_curies)
+            balancer.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
+            counter += 1
+        self.log.info(f'Mapped {counter} mutation type annotations for balancers.')
+        return
 
     # Elaborate on map_fb_data_to_alliance() for the BalancerHandler.
     def map_fb_data_to_alliance(self):
@@ -864,7 +911,7 @@ class BalancerHandler(MetaAlleleHandler):
         self.map_metaallele_basic()
         self.map_metaallele_database_status()
         self.map_internal_metaallele_status()
-        self.map_metaallele_mutation_types()
+        self.map_balancer_mutation_types()
         self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
