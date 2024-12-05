@@ -42,6 +42,14 @@ class PrimaryEntityHandler(DataHandler):
         """Create the generic PrimaryEntityHandler object."""
         super().__init__(log, testing)
 
+    # Conversion of FB datatype to "page_area".
+    page_area_conversion = {
+        'aberration': 'allele',
+        'balancer': 'allele',
+        'insertion': 'allele',
+        'genotype': 'homepage',
+    }
+
     # Mappings of main data types to chado tables with associated data like cvterms, props, synonyms, etc.
     chado_tables = {
         'main_table': {
@@ -149,7 +157,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Get {self.datatype} data entities from {chado_type} table.')
         chado_table = self.chado_tables['main_table'][chado_type]
         filters = ()
-        if self.datatype in self.regex.keys():
+        if self.datatype in self.regex.keys() and self.datatype != 'genotype':
             self.log.info(f'Use this regex: {self.regex[self.datatype]}')
             filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
         if self.datatype in self.feature_subtypes.keys():
@@ -157,8 +165,11 @@ class PrimaryEntityHandler(DataHandler):
             filters += (Cvterm.name.in_((self.feature_subtypes[self.datatype])), )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
-            filters += (chado_table.uniquename.in_((self.test_set.keys())), )
-        if filters == ():
+            if self.datatype == 'genotype':
+                filters += (chado_table.genotype_id.in_((self.test_set.keys())), )
+            else:
+                filters += (chado_table.uniquename.in_((self.test_set.keys())), )
+        if filters == () and self.datatype != 'genotype':
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
         if self.datatype in self.feature_subtypes.keys():
@@ -450,8 +461,11 @@ class PrimaryEntityHandler(DataHandler):
             filters += (entity_type.name.in_((self.feature_subtypes[self.datatype])), )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
-            filters += (chado_table.uniquename.in_((self.test_set.keys())), )
-        if filters == ():
+            if self.datatype == 'genotype':
+                filters += (chado_table.genotype_id.in_((self.test_set.keys())), )
+            else:
+                filters += (chado_table.uniquename.in_((self.test_set.keys())), )
+        if filters == () and self.datatype != 'genotype':
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
         if self.datatype in self.feature_subtypes.keys():
@@ -562,8 +576,11 @@ class PrimaryEntityHandler(DataHandler):
             filters += (Cvterm.name.in_((self.feature_subtypes[self.datatype])), )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
-            filters += (chado_table.uniquename.in_((self.test_set.keys())), )
-        if filters == ():
+            if self.datatype == 'genotype':
+                filters += (chado_table.genotype_id.in_((self.test_set.keys())), )
+            else:
+                filters += (chado_table.uniquename.in_((self.test_set.keys())), )
+        if filters == () and self.datatype != 'genotype':
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
         if self.datatype in self.feature_subtypes.keys():
@@ -895,11 +912,20 @@ class PrimaryEntityHandler(DataHandler):
         # Note - this method is depends on previous determination of fb_data_entity.curr_fb_symbol by synthesize_synonyms(), if applicable.
         self.log.info('Map data provider to Alliance object.')
         for fb_data_entity in self.fb_data_entities.values():
-            if fb_data_entity.curr_fb_symbol:
-                display_name = fb_data_entity.curr_fb_symbol
+            if fb_data_entity.linkmldto is None:
+                continue
+            if self.datatype == 'genotype':
+                referenced_curie = f'FB:{fb_data_entity.fb_curie}'
+                page_area = self.page_area_conversion[self.datatype]
+                display_name = fb_data_entity.uniquename
             else:
-                display_name = fb_data_entity.name
-            dp_xref = agr_datatypes.CrossReferenceDTO('FB', f'FB:{fb_data_entity.uniquename}', self.datatype, display_name).dict_export()
+                referenced_curie = f'FB:{fb_data_entity.uniquename}'
+                page_area = self.datatype
+                if fb_data_entity.curr_fb_symbol:
+                    display_name = fb_data_entity.curr_fb_symbol
+                else:
+                    display_name = fb_data_entity.name
+            dp_xref = agr_datatypes.CrossReferenceDTO('FB', referenced_curie, page_area, display_name).dict_export()
             fb_data_entity.linkmldto.data_provider_dto = agr_datatypes.DataProviderDTO(dp_xref).dict_export()
         return
 
@@ -907,6 +933,8 @@ class PrimaryEntityHandler(DataHandler):
         """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for a FlyBase entity."""
         self.log.info('Map secondary IDs to Alliance object.')
         for fb_data_entity in self.fb_data_entities.values():
+            if fb_data_entity.linkmldto is None:
+                continue
             secondary_id_dtos = []
             for secondary_id in fb_data_entity.alt_fb_ids:
                 sec_dto = agr_datatypes.SecondaryIdSlotAnnotationDTO(secondary_id, []).dict_export()
@@ -919,6 +947,8 @@ class PrimaryEntityHandler(DataHandler):
         """Add pub curies to a FlyBase entity."""
         self.log.info('Map pubs to Alliance object.')
         for fb_data_entity in self.fb_data_entities.values():
+            if fb_data_entity.linkmldto is None:
+                continue
             for pub_id in fb_data_entity.all_pubs:
                 try:
                     fb_data_entity.linkmldto.reference_curies.append(self.bibliography[pub_id])
@@ -933,19 +963,20 @@ class PrimaryEntityHandler(DataHandler):
     def map_xrefs(self):
         """Add a list of Alliance CrossReferenceDTO dicts to a FlyBase entity."""
         self.log.info('Map xrefs to Alliance object.')
-        page_area_conversion = {
-            'aberration': 'allele',
-            'balancer': 'allele',
-            'insertion': 'allele',
-        }
+        # Resource descriptor page area conversions.
         for fb_data_entity in self.fb_data_entities.values():
+            if fb_data_entity.linkmldto is None:
+                continue
             cross_reference_dtos = []
             # First, add FB xref (since FB xrefs in chado are not complete, just use the uniquename).
             if fb_data_entity.uniquename:
-                curie = f'FB:{fb_data_entity.uniquename}'
+                if self.datatype == 'genotype':
+                    curie = f'FB:{fb_data_entity.fb_curie}'
+                else:
+                    curie = f'FB:{fb_data_entity.uniquename}'
                 display_name = curie
-                if self.datatype in page_area_conversion.keys():
-                    page_area = page_area_conversion(self.datatype)
+                if self.datatype in self.page_area_conversion.keys():
+                    page_area = self.page_area_conversion[self.datatype]
                 else:
                     page_area = self.datatype
                 fb_xref_dto = agr_datatypes.CrossReferenceDTO('FB', curie, page_area, display_name).dict_export()
@@ -958,8 +989,8 @@ class PrimaryEntityHandler(DataHandler):
                 try:
                     page_area = self.agr_page_area_dict[prefix]
                 except KeyError:
-                    if self.datatype in page_area_conversion.keys():
-                        page_area = page_area_conversion(self.datatype)
+                    if self.datatype in self.page_area_conversion.keys():
+                        page_area = self.page_area_conversion[self.datatype]
                     else:
                         page_area = self.datatype
                 # Clean up cases where the db prefix is redundantly included at the start of the dbxref.accession.
@@ -1000,6 +1031,8 @@ class PrimaryEntityHandler(DataHandler):
         else:
             self.log.info(f'Have these linkml name dto slots to fill in: {linkml_synonym_slots.values()}')
         for fb_data_entity in self.fb_data_entities.values():
+            if fb_data_entity.linkmldto is None:
+                continue
             linkml_synonym_bins = {
                 'symbol_bin': [],
                 'full_name_bin': [],
