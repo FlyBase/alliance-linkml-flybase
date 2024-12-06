@@ -115,6 +115,7 @@ class DataHandler(object):
         'gene': r'^FBgn[0-9]{7}$',
         'insertion': r'^FBti[0-9]{7}$',
         'seqfeat': r'^FBsf[0-9]{10}$',
+        'transposon': r'^FBte[0-9]{7}$',
         'tool': r'^FBto[0-9]{7}$',
         'genotype': r'^FBgo[0-9]{7}$',
         'strain': r'^FBsn[0-9]{7}$',
@@ -137,6 +138,7 @@ class DataHandler(object):
         'insertion': True,
         'seqfeat': False,
         'tool': False,
+        'transposon': False,
         'variation': True,
     }
 
@@ -151,6 +153,7 @@ class DataHandler(object):
         'insertion': ['insertion_site', 'transposable_element', 'transposable_element_insertion_site'],
         'seqfeat': None,    # The list is too long, so for this case let the code be flexible.
         'tool': ['engineered_region'],
+        'transposon': ['natural_transposable_element'],
         'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion', 'point_mutation', 'sequence_alteration', 'sequence_variant'],
     }
 
