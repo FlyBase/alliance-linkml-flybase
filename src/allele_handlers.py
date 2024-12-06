@@ -603,7 +603,7 @@ class InsertionHandler(MetaAlleleHandler):
         # 'FBti0164639': 'P{TRiP.HMJ22303}attP40',    # type=transposable_element_insertion_site. Related to TRiP-3 collection via FBtp0097015-FBsf0000443916.
         # Mutation type testing.
         'FBti0009227': 'P{PZ}Ubx[Ubx-Plac61]',      # type=transposable_element_insertion_site. Lacks TI_subtype, producedby FBtp0000210 (P{PZ}, no pubs).
-        'FBti0248320': 'TI{TI}Sps2[V5]',            # type=insertion_site. Lacks TI_subtype, producedby FBtp0099201 (TI{TI}).
+        'FBti0168248': 'TI{TI}sano[KO1]',           # type=insertion_site. Lacks TI_subtype, producedby FBtp0099201 (TI{TI}).
         'FBti0074148': 'blood{}cl[1]',              # type=transposable_element_insertion_site. Lacks TI_subtype, producedby FBte0000279 (blood).
         'FBti0018906': 'Doc2{}650',                 # type=transposable_element. Has synTE_insertion TI_subtype, producedby FBte0000103 (Doc2-element).
         'FBti0186554': 'gypsy{5}y-TDmh1',           # type=transposable_element_insertion_site, natTE_partial_named TI_subtype, producedby FBtp0012975 gypsy{5'}
