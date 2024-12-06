@@ -593,15 +593,14 @@ class InsertionHandler(MetaAlleleHandler):
     # Types: 228747 transposable_element_insertion_site; 7726 insertion_site; 5753 transposable element; 3573 match (internal).
     # Relationships: 234754 FBti(producedby)FBtp; 64920 FBal(associated_with)FBti.
     test_set = {
-        # 'FBti0000040': 'P{hsneo}Xrp1[142]',         # type=transposable_element_insertion_site. Location trap. FBal-(associated_with)->FBti-(producedby)->FBtp
-        # 'FBti0151770': 'P{UAS-stnB.M}vl',           # type=transposable_element_insertion_site. FBti-(producedby)->FBtp<-(associated_with)-FBal.
-        # 'FBti0167947': 'TI{TI}wg[GFP]',             # type=insertion_site. FBti-(producedby)->FBtp<-(associated_with)-FBal.
-        # 'FBti0018862': '17.6{}804',                 # type=17.6{}804; this insertion shares its uniquename with two internal "match" features.
-        # 'FBti0016979': 'P{PZ}Vha44[06072b]',        # type=transposable_element_insertion_site. Direct "associated_with" association to a gene.
-        # 'FBti0186374': 'P{TOE.GS00088}attP40',      # type=transposable_element_insertion_site. Related to TRiP-OE-VPR collection via FBtp0116301.
-        # 'FBti0178263': 'TI{TI}Rab1[EYFP]',          # type=insertion_site. Related to YRab collection via FBal0314192.
-        # 'FBti0164639': 'P{TRiP.HMJ22303}attP40',    # type=transposable_element_insertion_site. Related to TRiP-3 collection via FBtp0097015-FBsf0000443916.
-        # Mutation type testing.
+        'FBti0000040': 'P{hsneo}Xrp1[142]',         # type=transposable_element_insertion_site. Location trap. FBal-(associated_with)->FBti-(producedby)->FBtp
+        'FBti0151770': 'P{UAS-stnB.M}vl',           # type=transposable_element_insertion_site. FBti-(producedby)->FBtp<-(associated_with)-FBal.
+        'FBti0167947': 'TI{TI}wg[GFP]',             # type=insertion_site. FBti-(producedby)->FBtp<-(associated_with)-FBal.
+        'FBti0018862': '17.6{}804',                 # type=17.6{}804; this insertion shares its uniquename with two internal "match" features.
+        'FBti0016979': 'P{PZ}Vha44[06072b]',        # type=transposable_element_insertion_site. Direct "associated_with" association to a gene.
+        'FBti0186374': 'P{TOE.GS00088}attP40',      # type=transposable_element_insertion_site. Related to TRiP-OE-VPR collection via FBtp0116301.
+        'FBti0178263': 'TI{TI}Rab1[EYFP]',          # type=insertion_site. Related to YRab collection via FBal0314192.
+        'FBti0164639': 'P{TRiP.HMJ22303}attP40',    # type=transposable_element_insertion_site. Related to TRiP-3 collection via FBtp0097015-FBsf0000443916.
         'FBti0009227': 'P{PZ}Ubx[Ubx-Plac61]',      # type=transposable_element_insertion_site. Lacks TI_subtype, producedby FBtp0000210 (P{PZ}, no pubs).
         'FBti0168248': 'TI{TI}sano[KO1]',           # type=insertion_site. Lacks TI_subtype, producedby FBtp0099201 (TI{TI}).
         'FBti0074148': 'blood{}cl[1]',              # type=transposable_element_insertion_site. Lacks TI_subtype, producedby FBte0000279 (blood).
