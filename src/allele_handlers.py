@@ -607,6 +607,7 @@ class InsertionHandler(MetaAlleleHandler):
         'FBti0018906': 'Doc2{}650',                 # type=transposable_element. Has synTE_insertion TI_subtype, producedby FBte0000103 (Doc2-element).
         'FBti0186554': 'gypsy{5}y-TDmh1',           # type=transposable_element_insertion_site, natTE_partial_named TI_subtype, producedby FBtp0012975 gypsy{5'}
         'FBti0000005': 'P{hsneo}102',               # type=transposable_element_insertion_site. Has synTE_insertion subtype, producedby FBtp0000078 (P{hsneo}).
+        'FBti0145331': 'P{PTGAL}26',                # type=transposable_element_insertion_site. Has synTE_insertion TI_subtype, no current producedby.
     }
 
     # Additional sub-methods for get_general_data().
@@ -700,6 +701,9 @@ class InsertionHandler(MetaAlleleHandler):
                     te_pub_ids.append(mutation_type_annotation.chado_obj.pub_id)
                 else:
                     tp_pub_ids.append(mutation_type_annotation.chado_obj.pub_id)
+# BOB
+                    # if mutation_type_curie is None:
+                    #     mutation_type_curie = 'SO:0001218'    # transgenic_insertion
             # Pick the mutation type and relevant pubs.
             if mutation_type_curie is None and insertion.is_obsolete is False:
                 self.log.error(f'Could not determine mutation_type for {insertion}')
