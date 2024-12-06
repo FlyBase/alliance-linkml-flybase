@@ -608,6 +608,7 @@ class InsertionHandler(MetaAlleleHandler):
         'FBti0186554': 'gypsy{5}y-TDmh1',           # type=transposable_element_insertion_site, natTE_partial_named TI_subtype, producedby FBtp0012975 gypsy{5'}
         'FBti0000005': 'P{hsneo}102',               # type=transposable_element_insertion_site. Has synTE_insertion subtype, producedby FBtp0000078 (P{hsneo}).
         'FBti0145331': 'P{PTGAL}26',                # type=transposable_element_insertion_site. Has synTE_insertion TI_subtype, no current producedby.
+        'FBti0128384': 'FBti0128384',               # Had null mutation_type_curies bug.
     }
 
     # Additional sub-methods for get_general_data().
