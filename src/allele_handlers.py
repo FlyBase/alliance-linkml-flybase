@@ -701,9 +701,8 @@ class InsertionHandler(MetaAlleleHandler):
                     te_pub_ids.append(mutation_type_annotation.chado_obj.pub_id)
                 else:
                     tp_pub_ids.append(mutation_type_annotation.chado_obj.pub_id)
-# BOB
-                    # if mutation_type_curie is None:
-                    #     mutation_type_curie = 'SO:0001218'    # transgenic_insertion
+                    if mutation_type_curie is None:
+                        mutation_type_curie = 'SO:0001218'    # transgenic_insertion
             # Pick the mutation type and relevant pubs.
             if mutation_type_curie is None and insertion.is_obsolete is False:
                 self.log.error(f'Could not determine mutation_type for {insertion}')
