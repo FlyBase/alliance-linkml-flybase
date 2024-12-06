@@ -641,8 +641,8 @@ class InsertionHandler(MetaAlleleHandler):
         self.get_entity_timestamps(session)
         self.get_direct_reagent_collections(session)
         self.get_indirect_reagent_collections(session, 'object', 'associated_with', 'allele')
-        self.get_indirect_reagent_collections(session, 'subject', 'producedby', 'construct')
-        self.get_very_indirect_reagent_collections(session)
+        # self.get_indirect_reagent_collections(session, 'subject', 'producedby', 'construct')
+        # self.get_very_indirect_reagent_collections(session)    # Suppressed because it's slow and perhaps too indirect.
         return
 
     # Additional sub-methods to be run by synthesize_info() below.
