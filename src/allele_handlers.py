@@ -678,7 +678,11 @@ class InsertionHandler(MetaAlleleHandler):
             # First look at producedby relationships. Every FBti should have a single current FBtp or FBte associated in this way.
             inserted_element_rels = insertion.recall_relationships(self.log, entity_role='subject', rel_types='producedby')
             for inserted_element_rel in inserted_element_rels:
-                inserted_element = self.feature_lookup[inserted_element_rel.chado_obj.object_id]
+                inserted_element_id = inserted_element_rel.chado_obj.object_id
+                # Code for data quirks.
+                if inserted_element_id not in self.feature_lookup.keys():
+                    continue
+                inserted_element = self.feature_lookup[inserted_element_id]
                 if inserted_element['is_obsolete'] is True:
                     continue
                 if inserted_element['uniquename'].startswith('FBte'):
