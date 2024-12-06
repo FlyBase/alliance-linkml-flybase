@@ -615,6 +615,7 @@ class InsertionHandler(MetaAlleleHandler):
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
         self.build_ncbi_taxon_lookup(session)
+        self.build_feature_lookup(session, feature_types=['construct', 'transposon'])
         return
 
     # Additional sub-methods for get_datatype_data().
@@ -657,40 +658,51 @@ class InsertionHandler(MetaAlleleHandler):
     def map_insertion_mutation_types(self):
         """Map insertion mutation types."""
         self.log.info('Map insertion mutation types.')
-        mutation_type_conversion = {
-            'TI_insertion': 'SO:0001218',                           # transgenic_insertion (from cvterm annotation)
-            'synTE_insertion': 'SO:0001218',                        # transgenic_insertion (from cvterm annotation)
-            'natTE_isolate': 'SO:0001837',                          # mobile_element_insertion (from cvterm annotation)
-            'natTE_isolate_named': 'SO:0001837',                    # mobile_element_insertion (from cvterm annotation)
-            'natTE_partial_named': 'SO:0001837',                    # mobile_element_insertion (from cvterm annotation)
-            'natTE_sequenced_strain_1': 'SO:0001837',               # mobile_element_insertion (from cvterm annotation)
-            'transposable_element_insertion_site': 'SO:0001218',    # transgenic_insertion (from feature type)
-            'insertion_site': 'SO:0001218',                         # transgenic_insertion (from feature type)
-            'transposable_element': 'SO:0001837',                   # mobile_element_insertion (from feature type)
-        }
+        # Collect evidence for both types of possible values: mobile_element_insertion (SO:0001837) or transgenic_insertion (SO:0001218).
+        # Then, pick the best option and report relevant pubs.
         counter = 0
+        te_insertion_subtypes = [
+            'natTE_isolate',
+            'natTE_isolate_named',
+            'natTE_partial_named',
+            'natTE_sequenced_strain_1',
+        ]
         for insertion in self.fb_data_entities.values():
-            mutation_types = {}    # curie-keyed dict of pub_ids.
+            mutation_type_curie = None
+            te_pub_ids = []
+            tp_pub_ids = []
+            # First look at producedby relationships. Every FBti should have a single current FBtp or FBte associated in this way.
+            inserted_element_rels = insertion.recall_relationships(self.log, entity_role='subject', rel_types='producedby')
+            for inserted_element_rel in inserted_element_rels:
+                inserted_element = self.feature_lookup[inserted_element_rel.chado_obj.object_id]
+                if inserted_element['is_obsolete'] is True:
+                    continue
+                if inserted_element['uniquename'].startswith('FBte'):
+                    mutation_type_curie = 'SO:0001837'    # mobile_element_insertion
+                    te_pub_ids.extend(inserted_element_rel.pubs)
+                elif inserted_element['uniquename'].startswith('FBtp'):
+                    mutation_type_curie = 'SO:0001218'    # transgenic_insertion
+                    tp_pub_ids.extend(inserted_element_rel.pubs)
+            # Then look at TI_subtype annotations. Opportunity to change transgenic_insertion to mobile_element_insertion.
             mutation_type_annotations = insertion.recall_cvterm_annotations(self.log, cv_names='TI_subtype')
             for mutation_type_annotation in mutation_type_annotations:
-                fb_mutation_type_term = self.cvterm_lookup[mutation_type_annotation.chado_obj.cvterm_id]['name']
-                if fb_mutation_type_term not in mutation_type_conversion.keys():
-                    continue
-                mutation_type_curie = mutation_type_conversion[fb_mutation_type_term]
-                if mutation_type_curie in mutation_types.keys():
-                    mutation_types[mutation_type_curie].append(mutation_type_annotation.chado_obj.pub_id)
+                insertion_subtype_term = self.cvterm_lookup[mutation_type_annotation.chado_obj.cvterm_id]['name']
+                if insertion_subtype_term in te_insertion_subtypes:
+                    mutation_type_curie = 'SO:0001837'    # mobile_element_insertion
+                    te_pub_ids.extend(mutation_type_annotation.chado_obj.pub_id)
                 else:
-                    mutation_types[mutation_type_curie] = [mutation_type_annotation.chado_obj.pub_id]
-            # Catch ~50K cases where FBti lacks a "TI_subtype" CV term annotation.
-            if not mutation_types:
-                fb_mutation_type_term = self.cvterm_lookup[insertion.type_id]['name']
-                mutation_type_curie = mutation_type_conversion[fb_mutation_type_term]
-                mutation_types[mutation_type_curie] = []
-            for mutation_type_curie, pub_ids in mutation_types.items():
-                pub_curies = self.lookup_pub_curies(pub_ids)
-                mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, pub_curies)
-                insertion.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
-                counter += 1
+                    tp_pub_ids.extend(mutation_type_annotation.chado_obj.pub_id)
+            # Pick the mutation type and relevant pubs.
+            if mutation_type_curie is None:
+                self.log.error(f'Could not determine mutation_type for {insertion}')
+                continue
+            elif mutation_type_curie == 'SO:0001837':
+                pub_curies = self.lookup_pub_curies(te_pub_ids)
+            else:
+                pub_curies = self.lookup_pub_curies(tp_pub_ids)
+            mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, pub_curies)
+            insertion.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
+            counter += 1
         self.log.info(f'Mapped {counter} mutation type annotations for insertions.')
         return
 
