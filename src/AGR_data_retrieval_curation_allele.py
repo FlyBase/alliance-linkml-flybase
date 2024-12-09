@@ -74,9 +74,9 @@ def main():
     balancer_handler = BalancerHandler(log, testing)
     insertion_handler = InsertionHandler(log, testing)
     db_query_transaction(session, log, aberration_handler)
-    # db_query_transaction(session, log, allele_handler)
+    db_query_transaction(session, log, allele_handler)
     db_query_transaction(session, log, balancer_handler)
-    # db_query_transaction(session, log, insertion_handler)
+    db_query_transaction(session, log, insertion_handler)
 
     # Export the data.
     export_dict = {
@@ -99,7 +99,7 @@ def main():
     association_export_dict['allele_gene_association_ingest_set'] = []
     association_export_dict['allele_gene_association_ingest_set'].extend(allele_handler.export_data['allele_gene_association_ingest_set'])
     # association_export_dict['allele_gene_association_ingest_set'].extend(aberration_handler.export_data['allele_gene_association_ingest_set'])
-    # generate_export_file(association_export_dict, log, association_output_filename)
+    generate_export_file(association_export_dict, log, association_output_filename)
 
     log.info('Ended main function.\n')
 
