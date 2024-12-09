@@ -395,7 +395,7 @@ class AlleleHandler(MetaAlleleHandler):
                 gene_feature_id = gene_rel.chado_obj.object_id
                 allele_gene_key = (allele.db_primary_id, gene_feature_id)
                 try:
-                    self.allele_gene_rels[allele_gene_key].extend(gene_rel)
+                    self.allele_gene_rels[allele_gene_key].append(gene_rel)
                 except KeyError:
                     self.allele_gene_rels[allele_gene_key] = [gene_rel]
                     gene_counter += 1
@@ -812,14 +812,14 @@ class AberrationHandler(MetaAlleleHandler):
             for sbj_gene_rel in relevant_sbj_gene_rels:
                 rel_key = (aberration.db_primary_id, sbj_gene_rel.chado_obj.object_id, sbj_gene_rel.chado_obj.type_id)
                 try:
-                    self.aberration_gene_rels[rel_key].extend(sbj_gene_rel)
+                    self.aberration_gene_rels[rel_key].append(sbj_gene_rel)
                 except KeyError:
                     self.aberration_gene_rels[rel_key] = [sbj_gene_rel]
                     gene_rel_counter += 1
             for obj_gene_rel in relevant_obj_gene_rels:
                 rel_key = (aberration.db_primary_id, obj_gene_rel.chado_obj.subject_id, obj_gene_rel.chado_obj.type_id)
                 try:
-                    self.aberration_gene_rels[rel_key].extend(obj_gene_rel)
+                    self.aberration_gene_rels[rel_key].append(obj_gene_rel)
                 except KeyError:
                     self.aberration_gene_rels[rel_key] = [obj_gene_rel]
                     gene_rel_counter += 1
