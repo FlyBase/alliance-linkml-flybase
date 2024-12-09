@@ -920,7 +920,10 @@ class PrimaryEntityHandler(DataHandler):
                 display_name = fb_data_entity.uniquename
             else:
                 referenced_curie = f'FB:{fb_data_entity.uniquename}'
-                page_area = self.datatype
+                if self.datatype in self.page_area_conversion.keys():
+                    page_area = self.page_area_conversion[self.datatype]
+                else:
+                    page_area = self.datatype
                 if fb_data_entity.curr_fb_symbol:
                     display_name = fb_data_entity.curr_fb_symbol
                 else:
