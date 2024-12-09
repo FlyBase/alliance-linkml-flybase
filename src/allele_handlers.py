@@ -38,7 +38,7 @@ class MetaAlleleHandler(FeatureHandler):
             agr_allele = self.agr_export_type()
             agr_allele.obsolete = metaallele.chado_obj.is_obsolete
             agr_allele.mod_entity_id = f'FB:{metaallele.uniquename}'
-            agr_allele.mod_internal_id = str(metaallele.chado_obj.feature_id)
+            # agr_allele.mod_internal_id = f'FB.feature_id={metaallele.chado_obj.feature_id}'
             agr_allele.taxon_curie = metaallele.ncbi_taxon_id
             metaallele.linkmldto = agr_allele
         return
@@ -380,9 +380,9 @@ class AlleleHandler(MetaAlleleHandler):
         self.log.info(f'Adjusted organism to be "non-Dmel" for {counter} alleles.')
         return
 
-    def synthesize_gene_alleles(self):
-        """Synthesize gene allele relationships."""
-        self.log.info('Synthesize gene allele relationships.')
+    def synthesize_allele_gene_associations(self):
+        """Synthesize allele-to-gene associations."""
+        self.log.info('Synthesize allele-to-gene associations.')
         gene_counter = 0
         allele_counter = 0
         # Need to code for the rare possibility that gene-allele is represented by many feature_relationships.
@@ -414,7 +414,7 @@ class AlleleHandler(MetaAlleleHandler):
         self.flag_alleles_of_internal_genes()
         self.synthesize_related_features()
         self.adjust_allele_organism()
-        self.synthesize_gene_alleles()
+        self.synthesize_allele_gene_associations()
         return
 
     # Additional methods to be run by map_fb_data_to_alliance() below.
