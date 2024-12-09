@@ -836,7 +836,7 @@ class AberrationHandler(MetaAlleleHandler):
         self.map_metaallele_basic()
         self.map_metaallele_database_status()
         self.map_internal_metaallele_status()
-        self.map_aberration_mutation_types()
+        # self.map_aberration_mutation_types()    # TEMP SUPPRESS - CURATOR INPUT REQUIRED
         self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
@@ -936,7 +936,7 @@ class BalancerHandler(MetaAlleleHandler):
         self.map_metaallele_basic()
         self.map_metaallele_database_status()
         self.map_internal_metaallele_status()
-        self.map_balancer_mutation_types()
+        # self.map_balancer_mutation_types()    # TEMP SUPPRESS - CURATOR INPUT REQUIRED
         self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
