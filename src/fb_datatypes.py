@@ -347,8 +347,6 @@ class FBInsertion(FBFeature):
     def __init__(self, chado_obj):
         """Create the FBInsertion object."""
         super().__init__(chado_obj)
-        # Processed FB data.
-        self.parent_gene_ids = []                  # List of what? BOB
 
 
 class FBStrain(FBDataEntity):

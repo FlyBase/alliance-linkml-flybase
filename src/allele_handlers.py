@@ -153,8 +153,8 @@ class AlleleHandler(MetaAlleleHandler):
     }
 
     # Additional export sets.
-    gene_allele_rels = {}            # Will be (allele feature_id, gene feature_id) tuples keying lists of FBRelationships.
-    gene_allele_associations = []    # Will be the final list of gene-allele FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
+    allele_gene_rels = {}            # Will be (allele feature_id, gene feature_id) tuples keying lists of FBRelationships.
+    allele_gene_associations = []    # Will be the final list of gene-allele FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
 
     # Additional reference info.
     allele_class_terms = []          # A list of cvterm_ids for child terms of "allele_class" (FBcv:0000286).
@@ -395,9 +395,9 @@ class AlleleHandler(MetaAlleleHandler):
                 gene_feature_id = gene_rel.chado_obj.object_id
                 allele_gene_key = (allele.db_primary_id, gene_feature_id)
                 try:
-                    self.gene_allele_rels[allele_gene_key].extend(gene_rel)
+                    self.allele_gene_rels[allele_gene_key].extend(gene_rel)
                 except KeyError:
-                    self.gene_allele_rels[allele_gene_key] = [gene_rel]
+                    self.allele_gene_rels[allele_gene_key] = [gene_rel]
                     gene_counter += 1
         self.log.info(f'Found {gene_counter} genes for {allele_counter} alleles.')
         return
@@ -524,13 +524,13 @@ class AlleleHandler(MetaAlleleHandler):
                 allele.linkmldto.allele_inheritance_mode_dtos.append(agr_anno_dto.dict_export())
         return
 
-    def map_gene_allele_associations(self):
+    def map_allele_gene_associations(self):
         """Map gene-allele associations to Alliance object."""
         self.log.info('Map gene-allele associations to Alliance object.')
         ALLELE = 0
         GENE = 1
         counter = 0
-        for allele_gene_key, allele_gene_rels in self.gene_allele_rels.items():
+        for allele_gene_key, allele_gene_rels in self.allele_gene_rels.items():
             allele = self.fb_data_entities[allele_gene_key[ALLELE]]
             allele_curie = f'FB:{allele.uniquename}'
             gene = self.feature_lookup[allele_gene_key[GENE]]
@@ -546,7 +546,7 @@ class AlleleHandler(MetaAlleleHandler):
                 rel_dto.obsolete = True
                 rel_dto.internal = True
             first_feat_rel.linkmldto = rel_dto
-            self.gene_allele_associations.append(first_feat_rel)
+            self.allele_gene_associations.append(first_feat_rel)
             counter += 1
         self.log.info(f'Generated {counter} allele-gene unique associations.')
         return
@@ -569,16 +569,16 @@ class AlleleHandler(MetaAlleleHandler):
         self.map_timestamps()
         self.map_secondary_ids('allele_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
-        self.map_gene_allele_associations()
-        self.flag_internal_fb_entities('gene_allele_associations')
+        self.map_allele_gene_associations()
+        self.flag_internal_fb_entities('allele_gene_associations')
         return
 
     # Elaborate on query_chado_and_export() for the AlleleHandler.
     def query_chado_and_export(self, session):
         """Elaborate on query_chado_and_export method for the AlleleHandler."""
         super().query_chado_and_export(session)
-        self.flag_unexportable_entities(self.gene_allele_associations, 'allele_gene_association_ingest_set')
-        self.generate_export_dict(self.gene_allele_associations, 'allele_gene_association_ingest_set')
+        self.flag_unexportable_entities(self.allele_gene_associations, 'allele_gene_association_ingest_set')
+        self.generate_export_dict(self.allele_gene_associations, 'allele_gene_association_ingest_set')
         return
 
 
@@ -760,6 +760,10 @@ class AberrationHandler(MetaAlleleHandler):
         'FBab0005448': 'In(3LR)P88',     # Many distinct "wt_aberr" type CV term annotations.
     }
 
+    # Additional export sets.
+    aberration_gene_rels = {}            # Will be (aberration feature_id, gene feature_id, fr type_id) tuples keying lists of FBRelationships.
+    aberration_gene_associations = []    # Will be the final list of gene-aberration FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
+
     # Additional sub-methods for get_general_data().
     # Placeholder.
 
@@ -795,7 +799,32 @@ class AberrationHandler(MetaAlleleHandler):
         return
 
     # Additional sub-methods to be run by synthesize_info() below.
-    # Placeholder.
+    def synthesize_aberration_gene_associations(self):
+        """Synthesize aberration-to-gene associations."""
+        self.log.info('Synthesize aberration-to-gene associations.')
+        aberration_counter = 0
+        gene_rel_counter = 0
+        for aberration in self.fb_data_entities.values():
+            relevant_sbj_gene_rels = aberration.recall_relationships(self.log, entity_role='subject', rel_entity_types='gene')
+            relevant_obj_gene_rels = aberration.recall_relationships(self.log, entity_role='object', rel_entity_types='gene')
+            if relevant_sbj_gene_rels or relevant_obj_gene_rels:
+                aberration_counter += 1
+            for sbj_gene_rel in relevant_sbj_gene_rels:
+                rel_key = (aberration.db_primary_id, sbj_gene_rel.chado_obj.object_id, sbj_gene_rel.chado_obj.type_id)
+                try:
+                    self.aberration_gene_rels[rel_key].extend(sbj_gene_rel)
+                except KeyError:
+                    self.aberration_gene_rels[rel_key] = [sbj_gene_rel]
+                    gene_rel_counter += 1
+            for obj_gene_rel in relevant_obj_gene_rels:
+                rel_key = (aberration.db_primary_id, obj_gene_rel.chado_obj.subject_id, obj_gene_rel.chado_obj.type_id)
+                try:
+                    self.aberration_gene_rels[rel_key].extend(obj_gene_rel)
+                except KeyError:
+                    self.aberration_gene_rels[rel_key] = [obj_gene_rel]
+                    gene_rel_counter += 1
+        self.log.info(f'Found {gene_rel_counter} aberration-gene relationships for {aberration_counter} aberrations.')
+        return
 
     # Elaborate on synthesize_info() for the AberrationHandler.
     def synthesize_info(self):
@@ -805,6 +834,7 @@ class AberrationHandler(MetaAlleleHandler):
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
+        self.synthesize_aberration_gene_associations()
         return
 
     # Additional methods to be run by map_fb_data_to_alliance() below.
@@ -829,6 +859,54 @@ class AberrationHandler(MetaAlleleHandler):
         self.log.info(f'Mapped {counter} mutation type annotations for aberrations.')
         return
 
+    def map_aberration_gene_associations(self):
+        """Map aberration-gene associations to Alliance object."""
+        self.log.info('Map aberration-gene associations to Alliance object.')
+        ABERRATION = 0
+        GENE = 1
+        REL_TYPE = 2
+        fb_agr_aberr_rel_mapping = {
+            'deletes': 'full_deletion',
+            'molec_deletes': 'full_deletion',
+            'part_deletes': 'partial_deletion',
+            'molec_partdeletes': 'partial_deletion',
+            'nondeletes': 'mutation_does_not_delete',
+            'molec_nondeletes': 'mutation_does_not_delete',
+            'duplicates': 'full_duplication',
+            'molec_dups': 'full_duplication',
+            'part_duplicates': 'partial_duplication',
+            'molec_partdups': 'partial_duplication',
+            'nonduplicates': 'mutation_does_not_duplicate',
+            'molec_nondups': 'mutation_does_not_duplicate',
+            # 'derived_computed_affected_gene': 'contains',
+        }
+        counter = 0
+        for rel_key, aberration_gene_rels in self.aberration_gene_rels.items():
+            aberration = self.fb_data_entities[rel_key[ABERRATION]]
+            aberration_curie = f'FB:{aberration.uniquename}'
+            gene = self.feature_lookup[rel_key[GENE]]
+            gene_curie = f'FB:{gene["uniquename"]}'
+            fb_rel_type_name = self.cvterm_lookup[rel_key[REL_TYPE]]['name']
+            if fb_rel_type_name not in fb_agr_aberr_rel_mapping.keys():
+                continue
+            else:
+                agr_rel_type_name = fb_agr_aberr_rel_mapping[fb_rel_type_name]
+            first_feat_rel = aberration_gene_rels[0]
+            all_pub_ids = []
+            for aberration_gene_rel in aberration_gene_rels:
+                all_pub_ids.extend(aberration_gene_rel.pubs)
+            first_feat_rel.pubs = all_pub_ids
+            pub_curies = self.lookup_pub_curies(all_pub_ids)
+            rel_dto = agr_datatypes.AlleleGeneAssociationDTO(aberration_curie, fb_rel_type_name, gene_curie, pub_curies)
+            if aberration.is_obsolete is True or gene['is_obsolete'] is True:
+                rel_dto.obsolete = True
+                rel_dto.internal = True
+            first_feat_rel.linkmldto = rel_dto
+            self.aberration_gene_associations.append(first_feat_rel)
+            counter += 1
+        self.log.info(f'Generated {counter} aberration-gene unique associations.')
+        return
+
     # Elaborate on map_fb_data_to_alliance() for the AberrationHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the AberrationHandler."""
@@ -837,6 +915,7 @@ class AberrationHandler(MetaAlleleHandler):
         self.map_metaallele_database_status()
         self.map_internal_metaallele_status()
         # self.map_aberration_mutation_types()    # TEMP SUPPRESS - CURATOR INPUT REQUIRED
+        self.map_aberration_gene_associations()
         self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
@@ -853,8 +932,8 @@ class AberrationHandler(MetaAlleleHandler):
     def query_chado_and_export(self, session):
         """Elaborate on query_chado_and_export method for the AberrationHandler."""
         super().query_chado_and_export(session)
-        # self.flag_unexportable_entities(self.gene_aberration_associations, 'allele_gene_association_ingest_set')
-        # self.generate_export_dict(self.gene_aberration_associations, 'allele_gene_association_ingest_set')
+        self.flag_unexportable_entities(self.gene_aberration_associations, 'allele_gene_association_ingest_set')
+        self.generate_export_dict(self.gene_aberration_associations, 'allele_gene_association_ingest_set')
         return
 
 
