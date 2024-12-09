@@ -222,6 +222,7 @@ class ConstructGenomicEntityAssociationDTO(EvidenceAssociationDTO):
         # self.evidence_curies = evidence_curies
         self.note_dtos = []
         self.required_fields.extend(['construct_identifier', 'genomic_entity_relation_name', 'genomic_entity_identifier'])
+        self.internal_fields.extend(['evidence_curies'])    # TEMPORARILY SUPPRESS UNTIL LOAD SPEED IMPROVES
 
 
 class AnnotationDTO(SingleReferenceAssociationDTO):
