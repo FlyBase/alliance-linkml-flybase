@@ -925,15 +925,15 @@ class AberrationHandler(MetaAlleleHandler):
         self.map_timestamps()
         self.map_secondary_ids('allele_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
-        # self.flag_internal_fb_entities('gene_aberration_associations')
+        # self.flag_internal_fb_entities('aberration_gene_associations')
         return
 
     # Elaborate on query_chado_and_export() for the AberrationHandler.
     def query_chado_and_export(self, session):
         """Elaborate on query_chado_and_export method for the AberrationHandler."""
         super().query_chado_and_export(session)
-        self.flag_unexportable_entities(self.gene_aberration_associations, 'allele_gene_association_ingest_set')
-        self.generate_export_dict(self.gene_aberration_associations, 'allele_gene_association_ingest_set')
+        self.flag_unexportable_entities(self.aberration_gene_associations, 'allele_gene_association_ingest_set')
+        self.generate_export_dict(self.aberration_gene_associations, 'allele_gene_association_ingest_set')
         return
 
 
