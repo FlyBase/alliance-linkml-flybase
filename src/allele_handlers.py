@@ -921,7 +921,7 @@ class BalancerHandler(MetaAlleleHandler):
         self.log.info('Map balancer mutation types.')
         counter = 0
         for balancer in self.fb_data_entities.values():
-            mutation_type_curie = 'SO:0002062'    # complex_chromosomal_rearrangement
+            mutation_type_curie = 'SO:1000183'    # chromosome_structure_variation
             pub_curies = []
             mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, pub_curies)
             balancer.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
