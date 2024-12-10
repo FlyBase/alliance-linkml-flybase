@@ -878,7 +878,6 @@ class AberrationHandler(MetaAlleleHandler):
             'molec_partdups': 'partial_duplication',
             'nonduplicates': 'mutation_does_not_duplicate',
             'molec_nondups': 'mutation_does_not_duplicate',
-            # 'derived_computed_affected_gene': 'contains',
         }
         counter = 0
         for rel_key, aberration_gene_rels in self.aberration_gene_rels.items():
