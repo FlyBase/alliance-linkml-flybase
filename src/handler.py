@@ -703,9 +703,10 @@ class DataHandler(object):
         """Map timestamps to Alliance object."""
         self.log.info('Map timestamps to Alliance object.')
         for fb_data_entity in self.fb_data_entities.values():
-            if fb_data_entity.timestamps and fb_data_entity.linkmldto is not None:
+            if fb_data_entity.new_timestamps and fb_data_entity.linkmldto is not None:
                 fb_data_entity.linkmldto.date_created = strict_rfc3339.\
-                    timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(min(fb_data_entity.timestamps)))
+                    timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(min(fb_data_entity.new_timestamps)))
+            if fb_data_entity.timestamps and fb_data_entity.linkmldto is not None:
                 fb_data_entity.linkmldto.date_updated = strict_rfc3339.\
                     timestamp_to_rfc3339_localoffset(datetime.datetime.timestamp(max(fb_data_entity.timestamps)))
         return

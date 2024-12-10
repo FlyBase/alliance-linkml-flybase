@@ -30,7 +30,8 @@ class FBExportEntity(object):
         self.org_species = None       # Organism.species, if applicable.
         self.timeaccessioned = None   # FB timeaccessioned, if applicable.
         self.timelastmodified = None  # FB timelastmodified, if applicable.
-        self.timestamps = []          # FB timestamps.
+        self.new_timestamps = []      # FB timeaccessioned or audit_chado insert ("I") timestamps only.
+        self.timestamps = []          # FB audit_chado timestamps.
         self.linkmldto = None         # Alliance LinkML object for mapped data.
         self.for_export = True        # Made False to prevent Alliance export.
         self.internal_reasons = []    # Reasons an object was marked internal.

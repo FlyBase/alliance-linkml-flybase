@@ -788,16 +788,32 @@ class PrimaryEntityHandler(DataHandler):
         # Get distinct timestamps for each entity (do not distinguish by action, etc).
         for i in self.fb_data_entities.values():
             if i.timeaccessioned is not None:
+                i.new_timestamps.append(i.timeaccessioned)
                 i.timestamps.append(i.timeaccessioned)
-            if i.timelastmodified is not None:
-                i.timestamps.append(i.timelastmodified)
                 entity_table_counter += 1
-            if not i.timestamps:
+            else:
                 audit_query = f"""
                 SELECT DISTINCT record_pkey, transaction_timestamp
                 FROM audit_chado
                 WHERE audited_table = '{chado_type}'
-                AND record_pkey = {i.db_primary_id};
+                  AND audit_transaction = 'I'
+                  AND record_pkey = {i.db_primary_id};
+                """
+                TIMESTAMP = 1
+                audit_results = session.execute(audit_query).fetchall()
+                for row in audit_results:
+                    i.new_timestamps.append(row[TIMESTAMP])
+                    i.timestamps.append(row[TIMESTAMP])
+                    audit_chado_counter += 1
+            if i.timelastmodified is not None:
+                i.timestamps.append(i.timelastmodified)
+                entity_table_counter += 1
+            else:
+                audit_query = f"""
+                SELECT DISTINCT record_pkey, transaction_timestamp
+                FROM audit_chado
+                WHERE audited_table = '{chado_type}'
+                  AND record_pkey = {i.db_primary_id};
                 """
                 TIMESTAMP = 1
                 audit_results = session.execute(audit_query).fetchall()
