@@ -826,8 +826,8 @@ class AberrationHandler(MetaAlleleHandler):
                 for annotation in annotations:
                     cvterm_id = annotation.chado_obj.cvterm_id
                     if cvterm_id not in self.chr_str_var_terms:
-                        cvterm_name = self.cvterm_lookup['cvterm_id']['name']
-                        cvterm_curie = self.cvterm_lookup['cvterm_id']['curie']
+                        cvterm_name = self.cvterm_lookup[cvterm_id]['name']
+                        cvterm_curie = self.cvterm_lookup[cvterm_id]['curie']
                         pub_curie = annotation.chado_obj.pub.uniquename
                         in_seq_alt = False
                         if cvterm_id in self.seq_alt_terms:
