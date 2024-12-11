@@ -821,7 +821,7 @@ class AberrationHandler(MetaAlleleHandler):
         for aberration in self.fb_data_entities.values():
             # self.log.debug(f'BILLYBOB: Assess {aberration} mutation types.')
             for prop_type_name in prop_types:
-                annotations = aberration.recall_cvterm_annotations(prop_type_names=prop_type_name)
+                annotations = aberration.recall_cvterm_annotations(self.log, prop_type_names=prop_type_name)
                 # self.log.debug(f'BILLYBOB: Retrieved {len(annotations)} annotations with prop_type_name={prop_type_name}')
                 for annotation in annotations:
                     cvterm_id = annotation.chado_obj.cvterm_id
