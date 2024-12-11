@@ -764,8 +764,19 @@ class AberrationHandler(MetaAlleleHandler):
     aberration_gene_rels = {}            # Will be (aberration feature_id, gene feature_id, fr type_id) tuples keying lists of FBRelationships.
     aberration_gene_associations = []    # Will be the final list of gene-aberration FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
 
+    # Additional reference info.
+    chr_str_var_terms = []    # A list of cvterm_ids for child terms of "chromosome_structure_variation" (SO:0000240).
+    seq_alt_terms = []        # A list of cvterm_ids for child terms of "sequence_alteration" (SO:0001059).
+    str_var_terms = []        # A list of cvterm_ids for child terms of "structural_variant" (SO:0001537).
+
     # Additional sub-methods for get_general_data().
-    # Placeholder.
+    def get_key_cvterm_sets_for_aberrations(self, session):
+        """Get key CV term sets for aberrations from chado."""
+        self.log.info('Get key CV term sets for aberrations from chado.')
+        self.chr_str_var_terms.extend(self.get_child_cvterms(session, 'chromosome_structure_variation', 'SO'))
+        self.seq_alt_terms.extend(self.get_child_cvterms(session, 'sequence_alteration', 'SO'))
+        self.str_var_terms.extend(self.get_child_cvterms(session, 'structural_variant', 'SO'))
+        return
 
     # Elaborate on get_general_data() for the AberrationHandler.
     def get_general_data(self, session):
@@ -776,6 +787,7 @@ class AberrationHandler(MetaAlleleHandler):
         self.build_ncbi_taxon_lookup(session)
         self.build_feature_lookup(session, feature_types=['gene'])
         self.build_allele_gene_lookup(session)
+        self.get_key_cvterm_sets_for_aberrations(session)
         return
 
     # Additional sub-methods for get_datatype_data().
@@ -799,6 +811,33 @@ class AberrationHandler(MetaAlleleHandler):
         return
 
     # Additional sub-methods to be run by synthesize_info() below.
+    def qc_aberration_mutation_types(self):
+        """Run QC checks on aberration mutation type annotations."""
+        self.log.info('Run QC checks on aberration mutation type annotations.')
+        prop_types = ['wt_class', 'aberr_class']
+        for aberration in self.fb_data_entities.values():
+            # self.log.debug(f'BILLYBOB: Assess {aberration} mutation types.')
+            for prop_type_name in prop_types:
+                annotations = aberration.recall_cvterm_annotations(prop_type_names=prop_type_name)
+                # self.log.debug(f'BILLYBOB: Retrieved {len(annotations)} annotations with prop_type_name={prop_type_name}')
+                for annotation in annotations:
+                    cvterm_id = annotation.chado_obj.cvterm_id
+                    if cvterm_id not in self.chr_str_var_terms:
+                        cvterm_name = self.cvterm_lookup['cvterm_id']['name']
+                        cvterm_curie = self.cvterm_lookup['cvterm_id']['curie']
+                        pub_curie = annotation.chado_obj.pub.uniquename
+                        in_seq_alt = False
+                        if cvterm_id in self.seq_alt_terms:
+                            in_seq_alt = True
+                        in_str_var = False
+                        if cvterm_id in self.str_var_terms:
+                            in_str_var = True
+                        report_str = f'{aberration.uniquename}\t{aberration.name}\t{prop_type_name}'
+                        report_str += f'\tin_seq_alt={in_seq_alt}\tin_str_var={in_str_var}'
+                        report_str += f'\t{cvterm_name}\t{cvterm_curie}\t{pub_curie}'
+                        self.log.debug(f'QCCHK:{report_str}')
+        return
+
     def synthesize_aberration_gene_associations(self):
         """Synthesize aberration-to-gene associations."""
         self.log.info('Synthesize aberration-to-gene associations.')
@@ -835,6 +874,7 @@ class AberrationHandler(MetaAlleleHandler):
         self.synthesize_synonyms()
         self.synthesize_pubs()
         self.synthesize_aberration_gene_associations()
+        self.qc_aberration_mutation_types()
         return
 
     # Additional methods to be run by map_fb_data_to_alliance() below.

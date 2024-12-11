@@ -211,7 +211,7 @@ class FBDataEntity(FBExportEntity):
             cv_names (str, list): The CV name(s) for annotations of interest.
             cvterm_names (str, list): The CV term name(s) for annotations of interest.
             prop_type_names (str, list): The name of prop type(s) for annotations of interest.
-            One or both keyword arguments must be specified.
+            At least one keyword argument must be specified.
 
         Raises:
             Raises an error if no keyword argument is specified.
