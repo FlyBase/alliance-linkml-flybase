@@ -43,7 +43,8 @@ class GeneHandler(FeatureHandler):
         'FBgn0000154': 'Bar',               # Current unannotated gene.
         'FBgn0001200': 'His4',              # Current unannotated gene family.
         'FBgn0087003': 'tal',               # Current unannotated oddball.
-        'FBgn0015267': 'Mmus\\Abl1',        # Current mouse gene with MGI xref.
+        'FBgn0015267': 'Mmus\\Abl1',        # Current mouse gene, MGI:87859
+        'FBgn0026367': 'Scer\\GAL80',       # Current yeast gene, SGD:S000004515
     }
 
     # Additional reference info.
@@ -55,7 +56,7 @@ class GeneHandler(FeatureHandler):
         super().get_general_data(session)
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
-        self.build_ncbi_taxon_lookup(session)
+        self.build_organism_lookup(session)
         self.build_feature_lookup(session, feature_types=['gene', 'allele'])
         self.get_internal_genes(session)
         self.get_chr_info(session)

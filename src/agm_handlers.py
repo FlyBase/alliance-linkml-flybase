@@ -44,7 +44,7 @@ class StrainHandler(PrimaryEntityHandler):
         self.build_bibliography(session)
         self.build_feature_lookup(session, feature_types=['aberration', 'allele', 'balancer', 'insertion', 'gene'])
         self.build_cvterm_lookup(session)
-        self.build_ncbi_taxon_lookup(session)
+        self.build_organism_lookup(session)
         return
 
     # Elaborate on get_datatype_data() for the StrainHandler.
@@ -122,7 +122,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         super().get_general_data(session)
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
-        self.build_ncbi_taxon_lookup(session)
+        self.build_organism_lookup(session)
         return
 
     # Additional sub-methods for get_datatype_data().

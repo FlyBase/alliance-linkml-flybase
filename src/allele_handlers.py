@@ -181,9 +181,8 @@ class AlleleHandler(MetaAlleleHandler):
         super().get_general_data(session)
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
+        self.build_organism_lookup(session)
         self.get_key_cvterm_sets(session)
-        self.build_ncbi_taxon_lookup(session)
-        self.get_drosophilid_organisms(session)
         self.build_feature_lookup(session, feature_types=['construct', 'gene', 'insertion', 'variation'])
         self.get_internal_genes(session)
         return
@@ -370,7 +369,7 @@ class AlleleHandler(MetaAlleleHandler):
             if allele.non_dmel_ins_rels is True:
                 is_non_dmel_classical = True
             # If there is no indication that the allele is transgenic, we assume that it exists in a non-Dmel species.
-            elif allele.organism_id in self.drosophilid_list and allele.in_vitro is False:
+            elif self.organism_lookup[allele.organism_id]['is_drosophilid'] is True and allele.in_vitro is False:
                 is_non_dmel_classical = True
             # Make the adjustment.
             if is_non_dmel_classical is True:
@@ -620,7 +619,7 @@ class InsertionHandler(MetaAlleleHandler):
         super().get_general_data(session)
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
-        self.build_ncbi_taxon_lookup(session)
+        self.build_organism_lookup(session)
         self.build_feature_lookup(session, feature_types=['construct', 'transposon'])
         return
 
@@ -758,7 +757,7 @@ class AberrationHandler(MetaAlleleHandler):
         'FBab0000006': 'Df(3L)ZN47',            # Has many genes associated in many ways.
         'FBab0024587': 'Dp(1;f)8D',             # Unusual feature type: "free duplication".
         'FBab0005448': 'In(3LR)P88',            # Many distinct "wt_aberr" type CV term annotations.
-        'FBab0038557': 'Dmau\Int(3)46.22',      # Unusual annotation: introgressed_chromosome_region (SO:0000664).
+        'FBab0038557': 'Dmau_Int(3)46.22',      # Unusual annotation: introgressed_chromosome_region (SO:0000664).
         'FBab0047489': 'Dp(3;3)NA18',           # Unusual annotation: direct_tandem_duplication (SO:1000039).
         'FBab0010504': 'T(2;3)G16DTE35B-3P',    # Unusual annotation: assortment_derived_deficiency_plus_duplication (SO:0000801).
     }
@@ -787,7 +786,7 @@ class AberrationHandler(MetaAlleleHandler):
         super().get_general_data(session)
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
-        self.build_ncbi_taxon_lookup(session)
+        self.build_organism_lookup(session)
         self.build_feature_lookup(session, feature_types=['gene'])
         self.build_allele_gene_lookup(session)
         self.get_key_cvterm_sets_for_aberrations(session)
@@ -819,10 +818,10 @@ class AberrationHandler(MetaAlleleHandler):
         self.log.info('Run QC checks on aberration mutation type annotations.')
         prop_types = ['wt_class', 'aberr_class']
         for aberration in self.fb_data_entities.values():
-            # self.log.debug(f'BILLYBOB: Assess {aberration} mutation types.')
+            # self.log.debug(f'Assess {aberration} mutation types.')
             for prop_type_name in prop_types:
                 annotations = aberration.recall_cvterm_annotations(self.log, prop_type_names=prop_type_name)
-                # self.log.debug(f'BILLYBOB: Retrieved {len(annotations)} annotations with prop_type_name={prop_type_name}')
+                # self.log.debug(f'Retrieved {len(annotations)} annotations with prop_type_name={prop_type_name}')
                 for annotation in annotations:
                     cvterm_id = annotation.chado_obj.cvterm_id
                     if cvterm_id not in self.chr_str_var_terms:
@@ -931,15 +930,14 @@ class AberrationHandler(MetaAlleleHandler):
             fb_rel_type_name = self.cvterm_lookup[rel_key[REL_TYPE]]['name']
             if fb_rel_type_name not in fb_agr_aberr_rel_mapping.keys():
                 continue
-            else:
-                agr_rel_type_name = fb_agr_aberr_rel_mapping[fb_rel_type_name]
+            agr_rel_type_name = fb_agr_aberr_rel_mapping[fb_rel_type_name]
             first_feat_rel = aberration_gene_rels[0]
             all_pub_ids = []
             for aberration_gene_rel in aberration_gene_rels:
                 all_pub_ids.extend(aberration_gene_rel.pubs)
             first_feat_rel.pubs = all_pub_ids
             pub_curies = self.lookup_pub_curies(all_pub_ids)
-            rel_dto = agr_datatypes.AlleleGeneAssociationDTO(aberration_curie, fb_rel_type_name, gene_curie, pub_curies)
+            rel_dto = agr_datatypes.AlleleGeneAssociationDTO(aberration_curie, agr_rel_type_name, gene_curie, pub_curies)
             if aberration.is_obsolete is True or gene['is_obsolete'] is True:
                 rel_dto.obsolete = True
                 rel_dto.internal = True
@@ -1000,7 +998,7 @@ class BalancerHandler(MetaAlleleHandler):
         super().get_general_data(session)
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
-        self.build_ncbi_taxon_lookup(session)
+        self.build_organism_lookup(session)
         return
 
     # Additional sub-methods for get_datatype_data().

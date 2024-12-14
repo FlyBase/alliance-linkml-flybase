@@ -829,19 +829,17 @@ class PrimaryEntityHandler(DataHandler):
         """Determine the NCBITaxon ID for FB entities."""
         self.log.info('Determine the NCBITaxon ID for FB entities.')
         for fb_data_entity in self.fb_data_entities.values():
-            # Catch cases where the FB data entity has no organism_id.
+            # Catch cases where the FB data entity has no organism_id: e.g., genotype.
+            # These datatypes will have special handling in the datatype-specific handlers.
             try:
                 organism_id = fb_data_entity.chado_obj.organism_id
             except AttributeError:
                 self.log.warning(f'No organism_id for {fb_data_entity}.')
                 return
             # Catch cases where the FB data entity has no corresponding NCBITaxon ID.
-            try:
-                ncbi_taxon_id = self.ncbi_taxon_lookup[organism_id]
-            except KeyError:
-                self.log.warning(f'Use "unidentified" NCBITaxon ID for {fb_data_entity}')
-                ncbi_taxon_id = 'NCBITaxon:32644'
-            fb_data_entity.ncbi_taxon_id = ncbi_taxon_id
+            fb_data_entity.ncbi_taxon_id = self.organism_lookup[organism_id]['taxon_curie']
+            if fb_data_entity.ncbi_taxon_id == 'NCBITaxon:32644':
+                self.log.warning(f'{fb_data_entity} has "unidentified" NCBITaxon ID.')
         return
 
     def synthesize_secondary_ids(self):

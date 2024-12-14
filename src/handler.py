@@ -18,7 +18,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from harvdev_utils.char_conversions import sub_sup_sgml_to_html
 from harvdev_utils.production import (
     Cv, Cvterm, CvtermRelationship, Db, Dbxref, Feature, FeatureCvterm,
-    FeatureCvtermprop, FeatureRelationship,
+    FeatureCvtermprop, FeatureDbxref, FeatureRelationship,
     FeatureSynonym, Featureprop, Organism, OrganismDbxref,
     Organismprop, Pub, PubDbxref, Synonym
 )
@@ -57,10 +57,9 @@ class DataHandler(object):
         # General data bins.
         self.bibliography = {}                      # A pub_id-keyed dict of pub curies (PMID, or, FBrf if no PMID).
         self.cvterm_lookup = {}                     # A cvterm_id-keyed dict of dicts with these keys: 'name', 'cv_name', 'db_name', 'curie'.
-        self.ncbi_taxon_lookup = {}                 # An organism_id-keyed dict of f'NCBITaxon:{Dbxref.accession}' strings.
-        self.drosophilid_list = []                  # A list of organism_ids for Drosophilid species.
+        self.organism_lookup = {}                   # An organism_id-keyed dict of organism info.
         self.chr_dict = {}                          # Will be a feature_id-keyed dict of chr scaffold uniquenames.
-        self.feature_lookup = {}                    # feature_id-keyed dicts with these keys: uniquename, is_obsolete, name, symbol, exported, taxon_id, species
+        self.feature_lookup = {}                    # feature_id-keyed dict of uniquename, curie, is_obsolete, type, organism_id, name, symbol, exported.
         self.allele_gene_lookup = {}                # allele feature_id-keyed dict of related gene feature_id (current features only).
         self.seqfeat_gene_lookup = {}               # Will be seqfeat feature_id-keyed lists of gene feature_ids (current features only).
         self.gene_tool_lookup = {}                  # Will be gene feature_id-keyed lists of related FBto tools (current features only).
@@ -75,6 +74,10 @@ class DataHandler(object):
 
     # Sample set for faster testing: use uniquename-keyed names of objects, tailored for each handler.
     test_set = {}
+
+    # Alliance organism abbreviations and official dbs.
+    alliance_organisms = ['Scer', 'Cele', 'Dmel', 'Drer', 'Xlae', 'Xtro', 'Mmus', 'Rnor', 'Hsap']
+    mod_official_dbs = {}
 
     # Alliance db names should correspond to the contents of this file:
     # https://github.com/alliance-genome/agr_schemas/blob/master/resourceDescriptors.yaml
@@ -330,42 +333,77 @@ class DataHandler(object):
         cvterm_id_list.append(starting_cvterm.cvterm_id)
         return cvterm_id_list
 
-    def build_ncbi_taxon_lookup(self, session):
-        """Get FlyBase Organism-NCBITaxon ID correspondence."""
-        self.log.info('Get FlyBase Organism-NCBITaxon ID correspondence.')
+    def build_organism_lookup(self, session):
+        """Build organism lookup."""
+        self.log.info('Build organism lookup.')
+        # First, get basic organism table info.
+        organism_results = session.query(Organism).distinct()
+        counter = 0
+        for organism in organism_results:
+            org_dict = {
+                'organism_id': organism.organism_id,
+                'abbreviation': organism.abbreviation,
+                'genus': organism.genus,
+                'species': organism.species,
+                'full_species_name': f'{organism.genus} {organism.species}',
+                'common_name': organism.common_name,
+                'taxon_curie': 'NCBITaxon:32644',    # Default, equivalent to 'unidentified'.
+                'is_drosophilid': False,             # Default, changed to True as applicable below.
+                'official_db': None,                 # Default, changed to name of database (as in chado db table) as applicable below.
+                'is_alliance_organism': False,       # Default.
+            }
+            if org_dict['abbreviation'] in self.alliance_organisms:
+                org_dict['is_alliance_organism'] = True
+            self.organism_lookup[organism.organism_id] = org_dict
+            counter += 1
+        self.log.info(f'Found {counter} organisms in chado.')
+        # Second, get NCBITaxon info.
         filters = (
             OrganismDbxref.is_current.is_(True),
-            Db.name == 'NCBITaxon'
+            Db.name == 'NCBITaxon',
         )
         results = session.query(OrganismDbxref, Dbxref).\
             join(Dbxref, (Dbxref.dbxref_id == OrganismDbxref.dbxref_id)).\
             join(Db, (Db.db_id == Dbxref.db_id)).\
             filter(*filters).\
             distinct()
-        counter = 0
+        taxon_curie_counter = 0
         for result in results:
-            self.ncbi_taxon_lookup[result.OrganismDbxref.organism_id] = f'NCBITaxon:{result.Dbxref.accession}'
-            counter += 1
-        self.log.info(f'Found {counter} NCBITaxon IDs for FlyBase organisms.')
-        return
-
-    def get_drosophilid_organisms(self, session):
-        """Find Drosophilid species."""
-        self.log.info('Find Drosophilid species.')
+            self.organism_lookup[result.OrganismDbxref.organism_id]['taxon_curie'] = f'NCBITaxon:{result.Dbxref.accession}'
+            taxon_curie_counter += 1
+        self.log.info(f'Found {taxon_curie_counter} NCBITaxon IDs for chado organisms.')
+        # Third, flag drosophilid species.
         filters = (
             Cvterm.name == 'taxgroup',
-            Organismprop.value == 'drosophilid'
+            Organismprop.value == 'drosophilid',
         )
         drosophilid_results = session.query(Organism).\
             join(Organismprop, (Organismprop.organism_id == Organism.organism_id)).\
             join(Cvterm, (Cvterm.cvterm_id == Organismprop.type_id)).\
             filter(*filters).\
             distinct()
-        counter = 0
-        for drosophilid in drosophilid_results:
-            self.drosophilid_list.append(drosophilid.organism_id)
-            counter += 1
-        self.log.info(f'Found {counter} Drosophilid organisms in chado.')
+        dros_counter = 0
+        for result in drosophilid_results:
+            self.organism_lookup[result.organism_id]['is_drosophilid'] = True
+            dros_counter += 1
+        self.log.info(f'Flagged {dros_counter} organisms as being Drosophilid species.')
+        # Fourth, flag Alliance organisms as there will be special handling for associated entities.
+        filters = (
+            Cvterm.name == 'official_db',
+        )
+        db_results = session.query(Organism, Organismprop).\
+            select_from(Organism).\
+            join(Organismprop, (Organismprop.organism_id == Organism.organism_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == Organismprop.type_id)).\
+            filter(*filters).\
+            distinct()
+        official_db_counter = 0
+        for result in db_results:
+            self.organism_lookup[result.Organism.organism_id]['official_db'] = result.Organismprop.value
+            official_db_counter += 1
+            if result.Organism.abbreviation in self.alliance_organisms:
+                self.mod_official_dbs[result.Organism.abbreviation] = result.Organismprop.value
+        self.log.info(f'Added "official_db" for {official_db_counter} organisms.')
         return
 
     def build_feature_lookup(self, session, **kwargs):
@@ -378,7 +416,7 @@ class DataHandler(object):
             feature_types (str|list): A list of feature types to add to the lookup.
 
         """
-        # Note - depends on prior construction of self.ncbi_taxon_lookup and self.cvterm_lookup.
+        # Note - depends on prior construction of self.organism_lookup and self.cvterm_lookup.
         if 'feature_types' in kwargs.keys():
             if type(kwargs['feature_types']) is str:
                 kwargs['feature_types'] = [kwargs['feature_types']]
@@ -411,37 +449,34 @@ class DataHandler(object):
                 feat_filters += (
                     Feature.uniquename.op('~')(self.regex[feat_type]),
                 )
-            feat_results = session.query(Feature.feature_id, Feature.uniquename, Feature.is_obsolete,
-                                         Cvterm.name, Organism.organism_id, Organism.genus,
-                                         Organism.species, Feature.name).\
+            feat_results = session.query(Feature.feature_id,
+                                         Feature.is_obsolete,
+                                         Feature.uniquename,
+                                         Feature.name,
+                                         Cvterm.name,
+                                         Feature.organism_id).\
                 select_from(Feature).\
-                join(Organism, (Organism.organism_id == Feature.organism_id)).\
                 join(Cvterm, (Cvterm.cvterm_id == Feature.type_id)).\
                 filter(*feat_filters).\
                 distinct()
             FEATURE_ID = 0
-            UNIQUENAME = 1
-            OBSOLETE = 2
-            TYPE = 3
-            ORG_ID = 4
-            GENUS = 5
-            SPECIES = 6
-            NAME = 7
+            OBSOLETE = 1
+            UNIQUENAME = 2
+            NAME = 3
+            TYPE = 4
+            ORG_ID = 5
             feat_counter = 0
             for result in feat_results:
                 feat_dict = {
                     'uniquename': result[UNIQUENAME],
+                    'curie': f'FB:{result[UNIQUENAME]}',    # Replaced by MOD curies as applicable down below.
                     'is_obsolete': result[OBSOLETE],
                     'type': result[TYPE],
-                    'species': f'{result[GENUS]} {result[SPECIES]}',
+                    'organism_id': result[ORG_ID],
                     'name': result[NAME],
                     'symbol': result[NAME],
                     'exported': self.feat_type_export[feat_type],
                 }
-                try:
-                    feat_dict['taxon_id'] = self.ncbi_taxon_lookup[result[ORG_ID]]
-                except KeyError:
-                    feat_dict['taxon_id'] = 'NCBITaxon:32644'    # Unspecified taxon.
                 self.feature_lookup[result[FEATURE_ID]] = feat_dict
                 feat_counter += 1
             self.log.info(f'Added {feat_counter} {feat_type} features to the feature_lookup.')
@@ -482,6 +517,28 @@ class DataHandler(object):
                 except KeyError:
                     pass
             self.log.info(f'Found {syno_counter} symbol synonyms for {feat_counter} {feat_type} features.')
+            # Get MOD curies.
+            if feat_type == 'gene':
+                for org_abbr, mod_db_name in self.mod_official_dbs.items():
+                    filters = (
+                        Feature.uniquename.op('~')(self.regex['gene']),
+                        Organism.abbreviation == org_abbr,
+                        FeatureDbxref.is_current.is_(True),
+                        Db.name == mod_db_name,
+                    )
+                    results = session.query(FeatureDbxref, Dbxref).\
+                        select_from(Feature).\
+                        join(FeatureDbxref, (FeatureDbxref.feature_id == Feature.feature_id)).\
+                        join(Dbxref, (Dbxref.dbxref_id == FeatureDbxref.dbxref_id)).\
+                        join(Db, (Db.db_id == Dbxref.db_id)).\
+                        filter(*filters).\
+                        distinct()
+                    counter = 0
+                    db_prefix = self.fb_agr_db_dict[mod_db_name]
+                    for result in results:
+                        self.feature_lookup[result.FeatureDbxref.feature_id]['curie'] = f'{db_prefix}:{result.Dbxref.accession}'
+                        counter += 1
+                    self.log.info(f'Obtained {counter} MOD curies for {org_abbr} ({mod_db_name}).')
         return
 
     def get_internal_genes(self, session):

@@ -58,7 +58,7 @@ class ConstructHandler(FeatureHandler):
         super().get_general_data(session)
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
-        self.build_ncbi_taxon_lookup(session)
+        self.build_organism_lookup(session)
         self.build_feature_lookup(session)
         self.build_allele_gene_lookup(session)
         self.build_allele_class_lookup(session)
@@ -421,10 +421,12 @@ class ConstructHandler(FeatureHandler):
                         continue
                     elif slot_name == 'regulating_features' and feature_id in construct.regulating_tool_genes:
                         continue
-                    symbol = self.feature_lookup[feature_id]['symbol']
+                    feature = self.feature_lookup[feature_id]
+                    symbol = feature['symbol']
+                    organism_id = feature['organism_id']
                     pubs = self.lookup_pub_curies(pub_ids)
-                    taxon_text = self.feature_lookup[feature_id]['species']
-                    taxon_curie = self.feature_lookup[feature_id]['taxon_id']
+                    taxon_text = self.organism_lookup[organism_id]['full_species_name']
+                    taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
                     component_dto = agr_datatypes.ConstructComponentSlotAnnotationDTO(rel_type, symbol, taxon_curie, taxon_text, pubs).dict_export()
                     construct.linkmldto.construct_component_dtos.append(component_dto)
                     counter += 1
@@ -450,7 +452,7 @@ class ConstructHandler(FeatureHandler):
                     if self.feature_lookup[feature_id]['type'] != 'gene' or not self.feature_lookup[feature_id]['uniquename'].startswith('FBgn'):
                         continue
                     cons_curie = f'FB:{construct.uniquename}'
-                    obj_curie = f'FB:{self.feature_lookup[feature_id]["uniquename"]}'
+                    obj_curie = self.feature_lookup[feature_id]['curie']
                     pub_curies = self.lookup_pub_curies(pub_ids)
                     fb_rel = fb_datatypes.FBExportEntity()
                     rel_dto = agr_datatypes.ConstructGenomicEntityAssociationDTO(cons_curie, rel_type, obj_curie, pub_curies)
