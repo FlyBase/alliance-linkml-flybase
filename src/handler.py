@@ -92,7 +92,8 @@ class DataHandler(object):
         'Xenbase': 'Xenbase',
         'RGD': 'RGD',
         'MGD': 'MGI',
-        'MGI': 'MGI'
+        'MGI': 'MGI',
+        'HGNC': 'HGNC',
     }
 
     # Specify page_area for cross-references for specific external databases.
