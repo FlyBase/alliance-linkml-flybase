@@ -179,6 +179,18 @@ class GeneHandler(FeatureHandler):
             gene.linkmldto.cross_reference_dtos.append(xref_dto)
         return
 
+    def flag_unexportable_genes(self):
+        """Flag unexportable genes."""
+        self.log.info('Flag unexportable genes.')
+        counter = 0
+        for gene in self.fb_data_entities:
+            if self.organism_lookup[gene.organism_id]['is_drosophilid'] is False:
+                gene.for_export = False
+                gene.export_warnings.append('Non-Drosophilid gene')
+                counter += 1
+        self.log.info(f'Flagged {counter} genes as unexportable.')
+        return
+
     # Elaborate on map_fb_data_to_alliance() for the GeneHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the GeneHandler."""
@@ -195,6 +207,7 @@ class GeneHandler(FeatureHandler):
         self.map_gene_panther_xrefs()
         self.map_anno_ids_to_secondary_ids('gene_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
+        self.flag_unexportable_genes()
         return
 
     # Elaborate on query_chado_and_export() for the GeneHandler.
