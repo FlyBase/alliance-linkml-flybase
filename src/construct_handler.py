@@ -46,7 +46,14 @@ class ConstructHandler(FeatureHandler):
         'FBtp0051705': 'M{MtnBcDNA-MtnDcDNA.EGFP}',               # has_reg_region MtnB.
         'FBtp0080088': 'P{UAS-Brainbow}',                         # Expresses EBFP2, EGFP, mKO2, has_reg_region UAS; tagged_with HA, MYC, V5; carries lox.
         'FBtp0083738': 'P{GR}',                                   # Is regulated_by FBgn Act5C.
-        'FBtp0017594': 'P{UAS(-FRT)ptc.Deltaloop2}'               # Obsolete, has only a non-current symbol synonym - for testing feature lookup.
+        'FBtp0017594': 'P{UAS(-FRT)ptc.Deltaloop2}',              # Obsolete, has only a non-current symbol synonym - for testing feature lookup.
+        'FBtp0001701': 'P{hs-yCDC42.V12}',                        # Expresses Scer CDC42 (SGD:S000004219).
+        'FBtp0001650': 'P{UAS-Cele\ced-3.S}',                     # Expresses Cele ced-3 (WB:WBGene00000417).
+        'FBtp0010091': 'P{hs-Drer\nkx2.7.P}',                     # Expresses Drer nkx2.7 (ZFIN:ZDB-GENE-990415-179).
+        'FBtp0007421': 'P{hb-Xlh1}',                              # Expresses Xlae h (no XB ID in FB).
+        'FBtp0002652': 'P{UAS-mCD8::GFP.L}',                      # Expresses Mmus Cd8a (MGI:88346).
+        'FBtp0001429': 'P{UAS-MAP2.A}',                           # Expresses Rnor Map2 (RGD:3044).
+        'FBtp0000463': 'P{UAS-MAPT.A}',                           # Expresses Human MAPT (HGNC:6893).
     }
 
     # Additional set for export added to the handler.
