@@ -38,13 +38,13 @@ class GeneHandler(FeatureHandler):
         'FBgn0003884': 'alphaTub84B',       # Current annotated gene with non-ASCII char in symbol.
         'FBgn0263477': 'scaRNA:PsiU1-6',    # Current annotated gene needs systematic synonym dto generated from annotation ID.
         'FBgn0030179': 'CG12094',           # Obsolete unannotated gene, should not get systematic name but needs symbol.
-        'FBgn0108495': 'Dere\\GG16260',     # Current unannotated non-Dmel with systematic name.
+        'FBgn0108495': 'Dere_GG16260',      # Current unannotated non-Dmel with systematic name.
         'FBgn0031087': 'CG12656',           # Current withdrawn gene.
         'FBgn0000154': 'Bar',               # Current unannotated gene.
         'FBgn0001200': 'His4',              # Current unannotated gene family.
         'FBgn0087003': 'tal',               # Current unannotated oddball.
-        'FBgn0015267': 'Mmus\\Abl1',        # Current mouse gene, MGI:87859
-        'FBgn0026367': 'Scer\\GAL80',       # Current yeast gene, SGD:S000004515
+        'FBgn0015267': 'Mmus_Abl1',         # Current mouse gene, MGI:87859
+        'FBgn0026367': 'Scer_GAL80',        # Current yeast gene, SGD:S000004515
     }
 
     # Additional reference info.
