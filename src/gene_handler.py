@@ -183,7 +183,7 @@ class GeneHandler(FeatureHandler):
         """Flag unexportable genes."""
         self.log.info('Flag unexportable genes.')
         counter = 0
-        for gene in self.fb_data_entities:
+        for gene in self.fb_data_entities.values():
             if self.organism_lookup[gene.organism_id]['is_drosophilid'] is False:
                 gene.for_export = False
                 gene.export_warnings.append('Non-Drosophilid gene')
