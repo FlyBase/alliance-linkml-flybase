@@ -30,6 +30,7 @@ class GeneHandler(FeatureHandler):
     test_set = {
         'FBgn0284084': 'wg',                  # Current annotated nuclear protein_coding gene.
         'FBgn0004009': 'wg',                  # Obsolete annotated nuclear protein_coding gene.
+        'FBgn0044027': 'Ori66Dbeta',          # Current unannotated gene representing origin_of_replication.
         'FBgn0013687': 'mt:ori',              # Current localized but unannotated mitochondrial gene.
         'FBgn0013678': 'mt:Cyt-b',            # Current annotated mitochondrial protein_coding gene.
         'FBgn0019661': 'lncRNA:roX1',         # Current annotated nuclear ncRNA gene.
