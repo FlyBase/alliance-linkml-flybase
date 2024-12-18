@@ -76,13 +76,14 @@ class DataHandler(object):
     test_set = {}
 
     # Alliance organism abbreviations and official dbs.
-    alliance_organisms = ['Scer', 'Cele', 'Dmel', 'Drer', 'Xlae', 'Xtro', 'Mmus', 'Rnor', 'Hsap']
+    alliance_organisms = ['Scer', 'Cele', 'Dmel', 'Drer', 'Xlae', 'Xtro', 'Mmus', 'Rnor', 'Hsap', 'SARS-CoV-2']
     mod_official_dbs = {}
 
     # Alliance db names should correspond to the contents of this file:
     # https://github.com/alliance-genome/agr_schemas/blob/master/resourceDescriptors.yaml
     fb_agr_db_dict = {
         'EntrezGene': 'NCBI_Gene',
+        'REFSEQ': 'RefSeq',
         'RNAcentral': 'RNAcentral',
         'UniProt/Swiss-Prot': 'UniProtKB',
         'UniProt/TrEMBL': 'UniProtKB',

@@ -54,6 +54,7 @@ class ConstructHandler(FeatureHandler):
         'FBtp0002652': 'P{UAS-mCD8::GFP.L}',                      # Expresses Mmus Cd8a (MGI:88346).
         'FBtp0001429': 'P{UAS-MAP2.A}',                           # Expresses Rnor Map2 (RGD:3044).
         'FBtp0000463': 'P{UAS-MAPT.A}',                           # Expresses Human MAPT (HGNC:6893).
+        'FBtp0150381': 'PBac{UAS-SARS-CoV-2-nsp13.B}',            # Expresses SARS-CoV-2 nsp13 (REFSEQ:YP_009725308).
     }
 
     # Additional set for export added to the handler.
