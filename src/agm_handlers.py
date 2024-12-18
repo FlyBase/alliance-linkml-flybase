@@ -14,7 +14,7 @@ import agr_datatypes
 import fb_datatypes
 from entity_handler import PrimaryEntityHandler
 from harvdev_utils.production import (
-    Db, Dbxref, GenotypeDbxref
+    Db, Dbxref, FeatureGenotype, GenotypeDbxref
 )
 
 
@@ -113,23 +113,24 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.primary_export_set = 'agm_ingest_set'
 
     test_set = {
-        2: 'Ab(1)ZWD16 | FBab0027942',                                      # The first genotype in the table.
-        294012: 'P{CH1226-43A10} lz<up>L</up>',                             # Has FBal and FBtp associated.
-        223641: 'Dp1<up>EP2422</up> P{hsp26-pt-T}39C-12',                   # Has FBal and FBti associated.
-        452205: 'wg<up>1</up>/wg<up>GBM</up>',                              # Transheterozygous wg[1]/wg[GBM].
-        450391: 'wg<up>l-8</up>/wg<up>l-8</up>',                            # Homozygous wg[l-8] allele.
-        367896: 'Tak1<up>2</up>/Tak1<up>+</up>',                            # Heterozygous Tak1[2] over wt allele.
-        515567: 'Sdc<up>12</up>/Sdc<up>unspecified</up>',                   # Sdc[12]/Sdc[unspecified].
-        166899: 'Df(2R)173/PCNA<up>D-292</up>',                             # PCNA[D-292]/Df(2R)173.
-        168332: 'Df(3L)Ez7 hay<up>nc2.tMa</up>',                            # Df(3L)Ez7 + hay[nc2.tMa] (diff complementation groups).
-        166704: 'shi<up>EM33</up> shi<up>t15</up>',                         # shi[EM33] + shi[t15] (allele + rescue construct).
-        219912: 'dpp<up>s4</up> wg<up>l-17</up>',                           # dpp[s4], wg[l-17].
-        199449: 'Hsap\MAPT<up>UAS.cAa</up> Scer\GAL4<up>smid-C161</up>',    # GAL4 drives UAS human construct.
-        32369: 'Dmau\w<up>a23</up>',                                        # Single non-Dmel classical allele.
-        466842: 'Dsim\mir-983<up>KO</up>',                                  # Single non-Dmel classical allele.
-        340500: 'Dsim\Lhr<up>1</up> Dsim\Lhr<up>2+16aa.Tag:HA</up>',        # non-Dmel classical allele + transgene.
-        167097: 'Df(3R)CA3 Scer\GAL4<up>GMR.PF</up> pim<up>UAS.Tag:MYC</up>',    # Df, GAL4 and UAS.
+        2: 'Ab(1)ZWD16 | FBab0027942',                                           # The first genotype in the table.
+        294012: 'P{CH1226-43A10} lz<up>L</up>',                                  # Has FBal and FBtp associated.
+        223641: 'Dp1<up>EP2422</up> P{hsp26-pt-T}39C-12',                        # Has FBal and FBti associated.
+        452205: 'wg<up>1</up>/wg<up>GBM</up>',                                   # Transheterozygous wg[1]/wg[GBM].
+        450391: 'wg<up>l-8</up>/wg<up>l-8</up>',                                 # Homozygous wg[l-8] allele.
+        367896: 'Tak1<up>2</up>/Tak1<up>+</up>',                                 # Heterozygous Tak1[2] over wt allele.
+        515567: 'Sdc<up>12</up>/Sdc<up>unspecified</up>',                        # Sdc[12]/Sdc[unspecified].
+        166899: 'Df(2R)173/PCNA<up>D-292</up>',                                  # PCNA[D-292]/Df(2R)173.
+        168332: 'Df(3L)Ez7 hay<up>nc2.tMa</up>',                                 # Df(3L)Ez7 + hay[nc2.tMa] (diff complementation groups).
+        166704: 'shi<up>EM33</up> shi<up>t15</up>',                              # shi[EM33] + shi[t15] (allele + rescue construct).
+        219912: 'dpp<up>s4</up> wg<up>l-17</up>',                                # dpp[s4], wg[l-17].
+        199449: 'Hsap_MAPT<up>UAS.cAa</up> Scer_GAL4<up>smid-C161</up>',         # GAL4 drives UAS human construct.
+        32369: 'Dmau_w<up>a23</up>',                                             # Single non-Dmel classical allele.
+        466842: 'Dsim_mir-983<up>KO</up>',                                       # Single non-Dmel classical allele.
+        340500: 'Dsim_Lhr<up>1</up> Dsim_Lhr<up>2+16aa.Tag:HA</up>',             # non-Dmel classical allele + transgene.
+        167097: 'Df(3R)CA3 Scer_GAL4<up>GMR.PF</up> pim<up>UAS.Tag:MYC</up>',    # Df, GAL4 and UAS.
         171479: 'Df(1)52 P{w<up>+</up>4&Dgr;4.3} lncRNA:roX1<up>ex6</up> lncRNA:roX2<up>Hsp83.PH</up> | FBab0029971_FBal0099841_FBal0127187_FBtp0016778',
+        525357: 'w[*]; betaTub60D[2] Kr[If-1]|CyO',                              # Genotype from stock; genotype_id here is for FB2024_06 only.
     }
 
     # Elaborate on get_general_data() for the GenotypeHandler.
@@ -139,6 +140,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
         self.build_organism_lookup(session)
+        self.build_feature_lookup(session, feature_types=['aberration', 'allele', 'balancer', 'construct', 'insertion'])
         return
 
     # Additional sub-methods for get_datatype_data().
@@ -172,12 +174,30 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.log.info(f'Found {counter} FBgo IDs for {self.datatype}s.')
         return
 
+    def get_feature_genotypes(self, session):
+        """Get genotype components."""
+        self.log.info('Get genotype components.')
+        results = session.query(FeatureGenotype).distinct()
+        genotype_counter = 0
+        fg_counter = 0
+        for result in results:
+            if result.cgroup in self.fb_data_entities[result.genotype_id].feature_genotypes.keys():
+                self.fb_data_entities[result.genotype_id][result.cgroup].append(result)
+                fg_counter += 1
+            else:
+                self.fb_data_entities[result.genotype_id][result.cgroup] = [result]
+                fg_counter += 1
+                genotype_counter += 1
+        self.log.info(f'Found {fg_counter} components for {genotype_counter} genotypes.')
+        return
+
     # Elaborate on get_datatype_data() for the GenotypeHandler.
     def get_datatype_data(self, session):
         """Extend the method for the GenotypeHandler."""
         super().get_datatype_data(session)
         self.get_entities(session)
         self.get_genotype_fb_curies(session)
+        self.get_feature_genotypes(session)
         self.get_entity_cvterms(session)
         self.get_entityprops(session)
         self.get_entity_synonyms(session)
