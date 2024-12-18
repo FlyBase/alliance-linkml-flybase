@@ -38,7 +38,9 @@ class GeneHandler(FeatureHandler):
         'FBgn0003884': 'alphaTub84B',         # Current annotated gene with non-ASCII char in symbol.
         'FBgn0263477': 'scaRNA:PsiU1-6',      # Current annotated gene needs systematic synonym dto generated from annotation ID.
         'FBgn0030179': 'CG12094',             # Obsolete unannotated gene, should not get systematic name but needs symbol.
-        'FBgn0108495': 'Dere_GG16260',        # Current unannotated non-Dmel with systematic name.
+        'FBgn0066164': 'Dsim_Hmr',            # Current Dsim gene.
+        'FBgn0016335': 'Dsim_HeT-A_gag',      # Current Dsim gene for TE CDS.
+        'FBgn0108495': 'Dere_GG16260',        # Obsolete unannotated non-Dmel obsolete gene with systematic name.
         'FBgn0031087': 'CG12656',             # Current withdrawn gene.
         'FBgn0000154': 'Bar',                 # Current unannotated gene.
         'FBgn0001200': 'His4',                # Current unannotated gene family.
