@@ -194,6 +194,22 @@ class GeneHandler(FeatureHandler):
         self.log.info(f'Flagged {counter} genes as unexportable.')
         return
 
+    def flag_internal_genes(self):
+        """Flag internal genes."""
+        self.log.info('Flag internal genes.')
+        counter = 0
+        for gene in self.fb_data_entities.values():
+            if self.organism_lookup[gene.organism_id]['abbreviation'] != 'Dmel':
+                gene.linkmldto.internal = True
+                gene.internal_reasons.append('Non-Dmel')
+            if gene.uniquename in self.internal_gene_ids:
+                gene.linkmldto.internal = True
+                gene.internal_reasons.append('Internal gene type.')
+            if gene.linkmldto.internal is True:
+                counter += 1
+        self.log.info(f'Flagged {counter} genes as internal for gene-specific reasons.')
+        return
+
     # Elaborate on map_fb_data_to_alliance() for the GeneHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the GeneHandler."""
@@ -209,6 +225,7 @@ class GeneHandler(FeatureHandler):
         self.map_gene_type()
         self.map_gene_panther_xrefs()
         self.map_anno_ids_to_secondary_ids('gene_secondary_id_dtos')
+        self.flag_internal_genes()
         self.flag_internal_fb_entities('fb_data_entities')
         self.flag_unexportable_genes()
         return
