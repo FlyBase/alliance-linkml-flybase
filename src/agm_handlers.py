@@ -184,7 +184,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         )
         # if self.testing:
         #     filters += (FeatureGenotype.genotype_id.in_(self.test_set.keys()), )
-        results = session.query(FeatureGenotype).filters(*filters).distinct()
+        results = session.query(FeatureGenotype).filter(*filters).distinct()
         genotype_counter = 0
         fg_counter = 0
         for result in results:
