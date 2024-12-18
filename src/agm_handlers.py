@@ -191,10 +191,10 @@ class GenotypeHandler(PrimaryEntityHandler):
             if result.genotype_id not in self.fb_data_entities.keys():
                 continue
             if result.cgroup in self.fb_data_entities[result.genotype_id].feature_genotypes.keys():
-                self.fb_data_entities[result.genotype_id][result.cgroup].append(result)
+                self.fb_data_entities[result.genotype_id].feature_genotypes[result.cgroup].append(result)
                 fg_counter += 1
             else:
-                self.fb_data_entities[result.genotype_id][result.cgroup] = [result]
+                self.fb_data_entities[result.genotype_id].feature_genotypes[result.cgroup] = [result]
                 fg_counter += 1
                 genotype_counter += 1
         self.log.info(f'Found {fg_counter} components for {genotype_counter} genotypes.')
