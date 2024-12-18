@@ -129,6 +129,9 @@ class GenotypeHandler(PrimaryEntityHandler):
         466842: 'Dsim_mir-983<up>KO</up>',                                       # Single non-Dmel classical allele.
         340500: 'Dsim_Lhr<up>1</up> Dsim_Lhr<up>2+16aa.Tag:HA</up>',             # non-Dmel classical allele + transgene.
         167097: 'Df(3R)CA3 Scer_GAL4<up>GMR.PF</up> pim<up>UAS.Tag:MYC</up>',    # Df, GAL4 and UAS.
+        515875: 'Dp(1;Y)y<up>+</up>/tyn<up>1</up>',                              # tyn[1] / Dp(1:Y).
+        202134: 'Tp(3;1)P115/pad<up>1</up>',                                     # pad[1] / Tp(3;1)P115.
+        182943: 'Df(3L)emc/+',                                                   # Heterozygous deficiency.
         171479: 'Df(1)52 P{w<up>+</up>4&Dgr;4.3} lncRNA:roX1<up>ex6</up> lncRNA:roX2<up>Hsp83.PH</up> | FBab0029971_FBal0099841_FBal0127187_FBtp0016778',
         525357: 'w[*]; betaTub60D[2] Kr[If-1]|CyO',                              # Genotype from stock; genotype_id here is for FB2024_06 only.
     }
@@ -177,10 +180,16 @@ class GenotypeHandler(PrimaryEntityHandler):
     def get_feature_genotypes(self, session):
         """Get genotype components."""
         self.log.info('Get genotype components.')
-        results = session.query(FeatureGenotype).distinct()
+        filters = (
+        )
+        # if self.testing:
+        #     filters += (FeatureGenotype.genotype_id.in_(self.test_set.keys()), )
+        results = session.query(FeatureGenotype).filters(*filters).distinct()
         genotype_counter = 0
         fg_counter = 0
         for result in results:
+            if result.genotype_id not in self.fb_data_entities.keys():
+                continue
             if result.cgroup in self.fb_data_entities[result.genotype_id].feature_genotypes.keys():
                 self.fb_data_entities[result.genotype_id][result.cgroup].append(result)
                 fg_counter += 1
