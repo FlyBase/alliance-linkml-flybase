@@ -188,9 +188,6 @@ class GenotypeHandler(PrimaryEntityHandler):
         genotype_counter = 0
         fg_counter = 0
         for result in results:
-            # BOB DETRITUS
-            # if result.genotype_id not in self.fb_data_entities.keys():
-            #     continue
             if result.cgroup in self.fb_data_entities[result.genotype_id].feature_genotypes.keys():
                 self.fb_data_entities[result.genotype_id].feature_genotypes[result.cgroup].append(result)
                 fg_counter += 1
