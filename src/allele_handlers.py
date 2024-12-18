@@ -325,7 +325,7 @@ class AlleleHandler(MetaAlleleHandler):
             for ins_rel in relevant_ins_rels:
                 insertion = self.feature_lookup[ins_rel.chado_obj.object_id]
                 if insertion['is_obsolete'] is False and insertion['uniquename'].startswith('FBti'):
-                    if insertion['abbreviation'] == 'Dmel':
+                    if self.organism_lookup[insertion['organism_id']]['abbreviation'] == 'Dmel':
                         allele.dmel_ins_rels.append(ins_rel)
                         has_dmel_insertion_counter += 1
                     else:
