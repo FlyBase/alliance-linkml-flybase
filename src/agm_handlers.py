@@ -14,7 +14,7 @@ import agr_datatypes
 import fb_datatypes
 from entity_handler import PrimaryEntityHandler
 from harvdev_utils.reporting import (
-    Db, Dbxref, Feature, FeatureGenotype, Genotype, GenotypeDbxref
+    Db, Dbxref, Feature, FeatureGenotype, Genotype, GenotypeDbxref, Stock, StockGenotype
 )
 
 
@@ -133,6 +133,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         202134: 'Tp(3;1)P115/pad<up>1</up>',                                     # pad[1] / Tp(3;1)P115.
         182943: 'Df(3L)emc/+',                                                   # Heterozygous deficiency.
         334079: 'Dsim_Int(2L)D/+ Dsim_Int(2L)S/+ Nup160<up>EP372</up>',          # Dsim x Dmel hybrid (?).
+        1105: 'Df(2R)Dark2',                                                     # One of only four production genotypes associated with a stock: FBst0007156.
         171479: 'Df(1)52 P{w<up>+</up>4&Dgr;4.3} lncRNA:roX1<up>ex6</up> lncRNA:roX2<up>Hsp83.PH</up> | FBab0029971_FBal0099841_FBal0127187_FBtp0016778',
         525357: 'w[*]; betaTub60D[2] Kr[If-1]|CyO',                              # Genotype from stock; genotype_id here is for FB2024_06 only.
     }
@@ -205,6 +206,28 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.log.info(f'Found {fg_counter} feature_genotype entries for genotypes.')
         return
 
+    def get_related_stocks(self, session):
+        """Get genotype-associated stocks."""
+        self.log.info('Get genotype-associated stocks.')
+        filters = (
+            Genotype.is_obsolete.is_(False),
+        )
+        if self.testing:
+            filters += (Genotype.genotype_id.in_(self.test_set.keys()), )
+        results = session.query(StockGenotype, Stock).\
+            select_from(Genotype).\
+            join(StockGenotype, (StockGenotype.genotype_id == Genotype.genotype_id)).\
+            join(Stock, (Stock.stock_id == StockGenotype.stock_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            genotype_id = result.StockGenotype.genotype_id
+            self.fb_data_entities[genotype_id].stocks.append(result.Stock)
+            counter += 1
+        self.log.info(f'Found {counter} stocks for genotypes.')
+        return
+
     # Elaborate on get_datatype_data() for the GenotypeHandler.
     def get_datatype_data(self, session):
         """Extend the method for the GenotypeHandler."""
@@ -212,6 +235,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.get_entities(session)
         self.get_genotype_fb_curies(session)
         self.get_feature_genotypes(session)
+        self.get_related_stocks(session)
         self.get_entity_cvterms(session)
         self.get_entityprops(session)
         self.get_entity_synonyms(session)
@@ -325,7 +349,7 @@ class GenotypeHandler(PrimaryEntityHandler):
                 genotype.fb_curie = f'FB_internal_genotype_id={genotype.db_primary_id}'    # BOB: TEMP FOR STOCKS
             agr_genotype = self.agr_export_type()
             agr_genotype.obsolete = genotype.chado_obj.is_obsolete
-            agr_genotype.mod_internal_id = f'FB:{genotype.fb_curie}'
+            agr_genotype.mod_entity_id = f'FB:{genotype.fb_curie}'
             agr_genotype.taxon_curie = genotype.ncbi_taxon_id
             agr_genotype.name = genotype.uniquename
             agr_genotype.subtype_name = 'genotype'

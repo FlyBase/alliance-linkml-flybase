@@ -368,6 +368,7 @@ class FBGenotype(FBDataEntity):
         # Primary FB chado data.
         self.db_primary_id = chado_obj.genotype_id
         self.feature_genotypes = {}              # Will be cgroup-keyed lists of chado FeatureGenotype objects.
+        self.stocks = []                         # Will be a list of associated chado Stock objects.
         # Processed FB data.
         self.fb_curie = None
         self.component_features = {}             # Zygosity-name-keyed lists of feature_ids.
