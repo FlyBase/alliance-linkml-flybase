@@ -192,7 +192,8 @@ class GenotypeHandler(PrimaryEntityHandler):
             select_from(Genotype).\
             join(FeatureGenotype, (FeatureGenotype.genotype_id == Genotype.genotype_id)).\
             join(Feature, (Feature.feature_id == FeatureGenotype.feature_id)).\
-            joinfilter(*filters).distinct()
+            filter(*filters).\
+            distinct()
         genotype_counter = 0
         fg_counter = 0
         for result in results:
