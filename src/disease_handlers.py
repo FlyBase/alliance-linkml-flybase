@@ -11,7 +11,7 @@ Author(s):
 import re
 from logging import Logger
 from sqlalchemy.orm import aliased
-from harvdev_utils.production import (
+from harvdev_utils.reporting import (
     Cv, Cvterm, Db, Dbxref, Feature, FeatureCvterm, FeatureCvtermprop,
     FeatureDbxref, FeatureRelationship, Pub
 )

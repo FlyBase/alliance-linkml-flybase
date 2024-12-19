@@ -13,7 +13,7 @@ Author(s):
 
 from logging import Logger
 from sqlalchemy.orm import aliased
-from harvdev_utils.production import (
+from harvdev_utils.reporting import (
     Cvterm, Db, Dbxref, Featureloc, Feature, FeatureDbxref, FeatureRelationship,
     Library, LibraryFeature, LibraryFeatureprop
 )

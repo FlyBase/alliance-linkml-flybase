@@ -16,7 +16,7 @@ from fb_datatypes import (
     FBAberration, FBAllele, FBBalancer, FBInsertion
 )
 from feature_handler import FeatureHandler
-from harvdev_utils.production import (
+from harvdev_utils.reporting import (
     Cvterm, Feature, FeatureCvterm, FeatureGenotype, Genotype, Phenotype,
     PhenotypeCvterm, Phenstatement, Pub
 )

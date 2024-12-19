@@ -14,7 +14,7 @@ from sqlalchemy.orm import aliased
 import agr_datatypes
 import fb_datatypes
 from feature_handler import FeatureHandler
-from harvdev_utils.production import (
+from harvdev_utils.reporting import (
     Cvterm, Feature, FeatureRelationship, FeatureRelationshipPub
 )
 
