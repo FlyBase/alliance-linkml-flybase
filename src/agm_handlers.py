@@ -194,7 +194,6 @@ class GenotypeHandler(PrimaryEntityHandler):
             join(Feature, (Feature.feature_id == FeatureGenotype.feature_id)).\
             filter(*filters).\
             distinct()
-        genotype_counter = 0
         fg_counter = 0
         for result in results:
             if result.cgroup in self.fb_data_entities[result.genotype_id].feature_genotypes.keys():
@@ -203,8 +202,7 @@ class GenotypeHandler(PrimaryEntityHandler):
             else:
                 self.fb_data_entities[result.genotype_id].feature_genotypes[result.cgroup] = [result]
                 fg_counter += 1
-                genotype_counter += 1
-        self.log.info(f'Found {fg_counter} feature_genotype entries for {genotype_counter} genotypes.')
+        self.log.info(f'Found {fg_counter} feature_genotype entries for genotypes.')
         return
 
     # Elaborate on get_datatype_data() for the GenotypeHandler.
@@ -309,7 +307,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         """Map genotype components."""
         self.log.info('Map genotype components.')
         for genotype in self.fb_data_entities.values():
-            for zygosity, component_feature_id_list in genotype.component_features:
+            for zygosity, component_feature_id_list in genotype.component_features.items():
                 for feature_id in component_feature_id_list:
                     component_curie = self.feature_lookup[feature_id]['curie']
                     agm_component = agr_datatypes.AffectedGenomicModelComponentDTO(component_curie, zygosity)

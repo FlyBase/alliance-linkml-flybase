@@ -820,8 +820,8 @@ class PrimaryEntityHandler(DataHandler):
                 for row in audit_results:
                     i.timestamps.append(row[TIMESTAMP])
                 audit_chado_counter += 1
-        self.log.info(f'Obtained timestamps for {entity_table_counter} entities directly from the {chado_type} table.')
-        self.log.info(f'Obtained timestamps for {audit_chado_counter} entities directly from the audit_chado table.')
+        self.log.info(f'Obtained {entity_table_counter} timestamps directly from the {chado_type} table.')
+        self.log.info(f'Obtained {audit_chado_counter} timestamps directly from the audit_chado table.')
         return
 
     # Add methods to be run by synthesize_info() below.
