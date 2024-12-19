@@ -367,11 +367,12 @@ class FBGenotype(FBDataEntity):
         super().__init__(chado_obj)
         # Primary FB chado data.
         self.db_primary_id = chado_obj.genotype_id
-        self.feature_genotypes = {}    # Will be cgroup_id-keyed lists of chado FeatureGenotype objects.
+        self.feature_genotypes = {}              # Will be cgroup-keyed lists of chado FeatureGenotype objects.
         # Processed FB data.
+        self.fb_curie = None
+        self.component_features = {}             # Zygosity-name-keyed lists of feature_ids.
         self.ncbi_taxon_id = 'NCBITaxon:7227'    # Default Dmel.
         self.feature_organism_ids = []           # organism_ids for non-Dmel Drosophilid classical alleles, aberrations/balancers and insertions.
-        self.fb_curie = None
 
 
 # First class associations and annotations.

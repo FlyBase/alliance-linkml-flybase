@@ -14,7 +14,7 @@ import agr_datatypes
 import fb_datatypes
 from entity_handler import PrimaryEntityHandler
 from harvdev_utils.production import (
-    Db, Dbxref, FeatureGenotype, GenotypeDbxref
+    Db, Dbxref, Feature, FeatureGenotype, Genotype, GenotypeDbxref
 )
 
 
@@ -132,6 +132,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         515875: 'Dp(1;Y)y<up>+</up>/tyn<up>1</up>',                              # tyn[1] / Dp(1:Y).
         202134: 'Tp(3;1)P115/pad<up>1</up>',                                     # pad[1] / Tp(3;1)P115.
         182943: 'Df(3L)emc/+',                                                   # Heterozygous deficiency.
+        334079: 'Dsim_Int(2L)D/+ Dsim_Int(2L)S/+ Nup160<up>EP372</up>',          # Dsim x Dmel hybrid (?).
         171479: 'Df(1)52 P{w<up>+</up>4&Dgr;4.3} lncRNA:roX1<up>ex6</up> lncRNA:roX2<up>Hsp83.PH</up> | FBab0029971_FBal0099841_FBal0127187_FBtp0016778',
         525357: 'w[*]; betaTub60D[2] Kr[If-1]|CyO',                              # Genotype from stock; genotype_id here is for FB2024_06 only.
     }
@@ -180,11 +181,18 @@ class GenotypeHandler(PrimaryEntityHandler):
     def get_feature_genotypes(self, session):
         """Get genotype components."""
         self.log.info('Get genotype components.')
+        # Limit to only current genotypes and their current features.
         filters = (
+            Genotype.is_obsolete.is_(False),
+            Feature.is_obsolete.is_(False),
         )
         if self.testing:
-            filters += (FeatureGenotype.genotype_id.in_(self.test_set.keys()), )
-        results = session.query(FeatureGenotype).filter(*filters).distinct()
+            filters += (Genotype.genotype_id.in_(self.test_set.keys()), )
+        results = session.query(FeatureGenotype).\
+            select_from(Genotype).\
+            join(FeatureGenotype, (FeatureGenotype.genotype_id == Genotype.genotype_id)).\
+            join(Feature, (Feature.feature_id == FeatureGenotype.feature_id)).\
+            joinfilter(*filters).distinct()
         genotype_counter = 0
         fg_counter = 0
         for result in results:
@@ -195,7 +203,7 @@ class GenotypeHandler(PrimaryEntityHandler):
                 self.fb_data_entities[result.genotype_id].feature_genotypes[result.cgroup] = [result]
                 fg_counter += 1
                 genotype_counter += 1
-        self.log.info(f'Found {fg_counter} components for {genotype_counter} genotypes.')
+        self.log.info(f'Found {fg_counter} feature_genotype entries for {genotype_counter} genotypes.')
         return
 
     # Elaborate on get_datatype_data() for the GenotypeHandler.
@@ -213,28 +221,81 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.get_entity_timestamps(session)
         return
 
+    # Additional sub-methods for synthesize_info().
+    def synthesize_genotype_components(self):
+        """Determine genotype feature components to report and their zygosity."""
+        self.log.info('Determine genotype feature components to report and their zygosity.')
+        component_counter = 0
+        genotype_counter = 0
+        for genotype in self.fb_data_entities.values():
+            genotype.component_features = {
+                'unspecified zygosity': [],
+                'homozygous': [],
+                'heterozygous': [],
+                'hemizygous': [],
+            }
+            # Handle genotypes from production, which are properly structured.
+            if genotype.name is None:
+                for cgroup, fg_list in genotype.feature_genotypes.items():
+                    cgroup_feature_list = [i.feature_id for i in fg_list]
+                    if len(cgroup_feature_list) > 2:
+                        self.log.warning(f'{genotype}, cgroup={cgroup} has too many components!')
+                    cgroup_feature_set = set(cgroup_feature_list)
+                    if len(cgroup_feature_list) == 1:
+                        zygosity = 'unspecified zygosity'
+                    elif len(cgroup_feature_list) == 2 and len(cgroup_feature_set) == 1:
+                        zygosity = 'homozygous'
+                    elif len(cgroup_feature_list) == 2 and len(cgroup_feature_set) == 2:
+                        zygosity = 'heterozygous'
+                    for feature_id in cgroup_feature_set:
+                        # Filter out reporting of "bogus symbols" (internal feature placeholders for wild-type alleles).
+                        if feature_id in self.feature_lookup.keys():
+                            genotype.component_features[zygosity].append(feature_id)
+            # Handle stock-only genotypes, which are not properly structured (all feature_genotype associations have cgroup=0 and rank=0).
+            else:
+                feature_list = [i.feature_id for i in genotype.feature_genotypes[0]]
+                feature_count = {}
+                for feature_id in feature_list:
+                    if feature_id in feature_count.keys():
+                        feature_count[feature_id] += 1
+                    else:
+                        feature_count[feature_id] = 1
+                for feature_id, feature_count in feature_count.items():
+                    if feature_count == 1:
+                        zygosity = 'unspecified zygosity'
+                    else:
+                        zygosity = 'homozygous'
+                    # Filter out reporting of "bogus symbols" (internal feature placeholders for wild-type alleles).
+                    if feature_id in self.feature_lookup.keys():
+                        genotype.component_features[zygosity].append(feature_id)
+                        component_counter += 1
+            if genotype.component_features:
+                genotype_counter += 1
+        self.log.info(f'Found {component_counter} components for {genotype_counter} genotypes for export.')
+        return
+
     # Elaborate on synthesize_info() for the GenotypeHandler.
     def synthesize_info(self):
         """Extend the method for the GenotypeHandler."""
         super().synthesize_info()
+        self.synthesize_genotype_components(self)
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
         return
 
-    # Elaborate on map_fb_data_to_alliance() for the GenotypeHandler.
+    # Additional sub-methods for map_fb_data_to_alliance().
     def map_genotype_basic(self):
         """Map basic FlyBase genotype data to the Alliance object."""
         self.log.info('Map basic FlyBase genotype data to the Alliance object.')
         counter = 0
         for genotype in self.fb_data_entities.values():
-            # Skip genotypes associated with stock import for now.
+            # Skip genotypes associated with stock import for now (no FBgo, no description, but have name).
             if genotype.fb_curie is None:
-                continue
+                genotype.fb_curie = f'FB_internal_genotype_id={genotype.db_primary_id}'    # BOB: TEMP FOR STOCKS
             agr_genotype = self.agr_export_type()
             agr_genotype.obsolete = genotype.chado_obj.is_obsolete
-            agr_genotype.mod_entity_id = f'FB:{genotype.fb_curie}'
-            # agr_genotype.mod_internal_id = f'FB.genotype_id={genotype.db_primary_id}'
+            agr_genotype.mod_internal_id = f'FB:{genotype.fb_curie}'
             agr_genotype.taxon_curie = genotype.ncbi_taxon_id
             agr_genotype.name = genotype.uniquename
             agr_genotype.subtype_name = 'genotype'
@@ -243,10 +304,23 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.log.info(f'{counter} genotypes could be mapped to the Alliance LinkML model.')
         return
 
+    def map_genotype_components(self):
+        """Map genotype components."""
+        self.log.info('Map genotype components.')
+        for genotype in self.fb_data_entities.values():
+            for zygosity, component_feature_id_list in genotype.component_features:
+                for feature_id in component_feature_id_list:
+                    component_curie = self.feature_lookup[feature_id]['curie']
+                    agm_component = agr_datatypes.AffectedGenomicModelComponentDTO(component_curie, zygosity)
+                    genotype.component_dtos.append(agm_component.dict_export())
+        return
+
+    # Elaborate on map_fb_data_to_alliance() for the GenotypeHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the GenotypeHandler."""
         super().map_fb_data_to_alliance()
         self.map_genotype_basic()
+        self.map_genotype_components()
         # self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
