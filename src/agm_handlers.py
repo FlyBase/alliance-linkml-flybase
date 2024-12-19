@@ -279,29 +279,29 @@ class GenotypeHandler(PrimaryEntityHandler):
         # Need to handle many different cases.
         # 1. Genotypes with features - need to find Drosophilids (or hybrids of them).
         # 2. Genotypes for non-Dros stocks.
-        # for genotype in self.fb_data_entities.values():
-        #     feature_id_list = []
-        #     for cgroup_feature_genotype_list in genotype.feature_genotypes.values():
-        #         cgroup_feature_id_list = [i.feature_id for i in cgroup_feature_genotype_list]
-        #         feature_id_list.extend(cgroup_feature_id_list)
-        #     for feature_id in feature_id_list:
-        #         if feature_id in self.feature_lookup.keys():
-        #             feature = self.feature_lookup[feature_id]
-        #             organism = self.organism_lookup[feature['organism_id']]
-        #             if organism['abbreviation'] == 'Dmel':
-        #                 continue
-        #             if feature['uniquename'].startswith('FBti')
-        #     # Catch cases where the FB data entity has no organism_id: e.g., genotype.
-        #     # These datatypes will have special handling in the datatype-specific handlers.
-        #     try:
-        #         organism_id = fb_data_entity.chado_obj.organism_id
-        #     except AttributeError:
-        #         self.log.warning(f'No organism_id for {fb_data_entity}.')
-        #         return
-        #     # Catch cases where the FB data entity has no corresponding NCBITaxon ID.
-        #     fb_data_entity.ncbi_taxon_id = self.organism_lookup[organism_id]['taxon_curie']
-        #     if fb_data_entity.ncbi_taxon_id == 'NCBITaxon:32644':
-        #         self.log.warning(f'{fb_data_entity} has "unidentified" NCBITaxon ID.')
+        for genotype in self.fb_data_entities.values():
+            feature_id_list = []
+            for cgroup_feature_genotype_list in genotype.feature_genotypes.values():
+                cgroup_feature_id_list = [i.feature_id for i in cgroup_feature_genotype_list]
+                feature_id_list.extend(cgroup_feature_id_list)
+            for feature_id in feature_id_list:
+                if feature_id in self.feature_lookup.keys():
+                    feature = self.feature_lookup[feature_id]
+                    organism = self.organism_lookup[feature['organism_id']]
+                    if organism['abbreviation'] == 'Dmel':
+                        continue
+                    if feature['uniquename'].startswith('FBti')
+            # Catch cases where the FB data entity has no organism_id: e.g., genotype.
+            # These datatypes will have special handling in the datatype-specific handlers.
+            try:
+                organism_id = fb_data_entity.chado_obj.organism_id
+            except AttributeError:
+                self.log.warning(f'No organism_id for {fb_data_entity}.')
+                return
+            # Catch cases where the FB data entity has no corresponding NCBITaxon ID.
+            fb_data_entity.ncbi_taxon_id = self.organism_lookup[organism_id]['taxon_curie']
+            if fb_data_entity.ncbi_taxon_id == 'NCBITaxon:32644':
+                self.log.warning(f'{fb_data_entity} has "unidentified" NCBITaxon ID.')
         return
 
     # Elaborate on synthesize_info() for the GenotypeHandler.
@@ -342,7 +342,7 @@ class GenotypeHandler(PrimaryEntityHandler):
                 for feature_id in component_feature_id_list:
                     component_curie = self.feature_lookup[feature_id]['curie']
                     agm_component = agr_datatypes.AffectedGenomicModelComponentDTO(component_curie, zygosity)
-                    genotype.component_dtos.linkmldto.append(agm_component.dict_export())
+                    genotype.linkmldto.component_dtos.append(agm_component.dict_export())
         return
 
     # Elaborate on map_fb_data_to_alliance() for the GenotypeHandler.
