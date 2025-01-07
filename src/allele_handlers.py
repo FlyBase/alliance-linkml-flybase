@@ -407,14 +407,14 @@ class AlleleHandler(MetaAlleleHandler):
     def synthesize_info(self):
         """Extend the method for the AlleleHandler."""
         super().synthesize_info()
-        self.adjust_allele_organism()
-        self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
         self.synthesize_parent_genes()
         self.flag_alleles_of_internal_genes()
         self.synthesize_related_features()
+        self.adjust_allele_organism()
+        self.synthesize_ncbi_taxon_id()
         self.synthesize_allele_gene_associations()
         return
 
@@ -655,10 +655,10 @@ class InsertionHandler(MetaAlleleHandler):
     def synthesize_info(self):
         """Extend the method for the InsertionHandler."""
         super().synthesize_info()
-        self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
+        self.synthesize_ncbi_taxon_id()
         return
 
     # Additional methods to be run by map_fb_data_to_alliance() below.
@@ -886,11 +886,11 @@ class AberrationHandler(MetaAlleleHandler):
         """Extend the method for the AberrationHandler."""
         super().synthesize_info()
         self.adjust_aberration_organism()
-        self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
         self.synthesize_aberration_gene_associations()
+        self.synthesize_ncbi_taxon_id()
         self.qc_aberration_mutation_types()
         return
 
@@ -1043,10 +1043,10 @@ class BalancerHandler(MetaAlleleHandler):
     def synthesize_info(self):
         """Extend the method for the BalancerHandler."""
         super().synthesize_info()
-        self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
+        self.synthesize_ncbi_taxon_id()
         return
 
     # Additional methods to be run by map_fb_data_to_alliance() below.
