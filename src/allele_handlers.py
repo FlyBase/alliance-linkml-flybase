@@ -319,16 +319,16 @@ class AlleleHandler(MetaAlleleHandler):
                     has_construct_counter += 1
             # Assess relationships to current insertions.
             relevant_ins_rels = allele.recall_relationships(self.log, entity_role='subject', rel_entity_types=self.feature_subtypes['insertion'])
-            self.log.debug(f'BOB: For {allele}, found {len(relevant_ins_rels)} ins rels to review.')
+            # self.log.debug(f'For {allele}, found {len(relevant_ins_rels)} ins rels to review.')
             for ins_rel in relevant_ins_rels:
                 insertion = self.feature_lookup[ins_rel.chado_obj.object_id]
                 if insertion['is_obsolete'] is False and insertion['uniquename'].startswith('FBti'):
                     if self.organism_lookup[insertion['organism_id']]['abbreviation'] == 'Dmel':
-                        self.log.debug(f'BOB: {allele} has Dmel insertion.')
+                        # self.log.debug(f'{allele} has Dmel insertion.')
                         allele.dmel_ins_rels.append(ins_rel)
                         has_dmel_insertion_counter += 1
                     else:
-                        self.log.debug(f'BOB: {allele} has non-Dmel insertion.')
+                        # self.log.debug(f'{allele} has non-Dmel insertion.')
                         allele.non_dmel_ins_rels.append(ins_rel)
                         has_non_dmel_insertion_counter += 1
             # Assess relationships to ARGs.
