@@ -763,7 +763,8 @@ class AberrationHandler(MetaAlleleHandler):
         'FBab0000006': 'Df(3L)ZN47',            # Has many genes associated in many ways.
         'FBab0024587': 'Dp(1;f)8D',             # Unusual feature type: "free duplication".
         'FBab0005448': 'In(3LR)P88',            # Many distinct "wt_aberr" type CV term annotations.
-        'FBab0038557': 'Dmau_Int(3)46.22',      # Unusual annotation: introgressed_chromosome_region (SO:0000664). Should be unspecified taxon ID.
+        'FBab0038557': 'Dmau_Int(3)46.22',      # Unusual annotation: introgressed_chromosome_region (SO:0000664). Assign 'NCBITaxon:32644' (unidentified).
+        'FBab0038658': 'Dsim_Int(2L)S',         # Unusual annotation: introgressed_chromosome_region (SO:0000664). Assign 'NCBITaxon:32644' (unidentified).
         'FBab0047489': 'Dp(3;3)NA18',           # Unusual annotation: direct_tandem_duplication (SO:1000039).
         'FBab0010504': 'T(2;3)G16DTE35B-3P',    # Unusual annotation: assortment_derived_deficiency_plus_duplication (SO:0000801).
     }
