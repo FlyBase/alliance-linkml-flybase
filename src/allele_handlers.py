@@ -108,11 +108,12 @@ class MetaAlleleHandler(FeatureHandler):
         non_dmel_drosophilid_counter = 0
         for metaallele in self.fb_data_entities.values():
             if metaallele.uniquename.startswith('FBal'):
+                adj_org_abbr = self.organism_lookup[metaallele.adj_organism_id]['abbreviation']
                 if metaallele.allele_of_internal_gene is True:
                     metaallele.linkmldto.internal = True
                     metaallele.internal_reasons.append('Allele of internal type FB gene.')
                     internal_gene_counter += 1
-                if metaallele.adj_org_abbr != 'Dmel':
+                if adj_org_abbr != 'Dmel':
                     metaallele.linkmldto.internal = True
                     metaallele.internal_reasons.append('Non-Dmel')
                     non_dmel_drosophilid_counter += 1
@@ -351,9 +352,10 @@ class AlleleHandler(MetaAlleleHandler):
     def adjust_allele_organism(self):
         """Adjust organism for classical non-Dmel alleles."""
         self.log.info('Adjust organism for classical non-Dmel alleles.')
-        # The default allele.adj_org_abbr is Dmel. Change this if needed.
         counter = 0
         for allele in self.fb_data_entities.values():
+            # Reset all alleles to a default "Dmel" organism.
+            allele.organism_id = 1
             # Skip alleles that exist in Dmel (certainly or most likely).
             if allele.org_abbr == 'Dmel':
                 continue
@@ -374,10 +376,11 @@ class AlleleHandler(MetaAlleleHandler):
             # If there is no indication that the allele is transgenic, we assume that it exists in a non-Dmel species.
             elif self.organism_lookup[allele.organism_id]['is_drosophilid'] is True and allele.in_vitro is False:
                 is_non_dmel_classical = True
-            # Make the adjustment.
+            # For truly non-Dmel alleles, revert organism_id to that of the related allele chado object.
             if is_non_dmel_classical is True:
-                allele.adj_org_abbr = allele.org_abbr
-                self.log.debug(f'Non-Dmel allele: id={allele.uniquename}, name={allele.name}, org_abbr={allele.org_abbr}')
+                allele.organism_id = allele.chado_obj.organism_id
+                adj_org_abbr = self.organism_lookup[allele.adj_organism_id]['abbreviation']
+                self.log.debug(f'Non-Dmel allele: id={allele.uniquename}, name={allele.name}, org_abbr={adj_org_abbr}')
                 counter += 1
         self.log.info(f'Adjusted organism to be "non-Dmel" for {counter} alleles.')
         return
@@ -408,6 +411,7 @@ class AlleleHandler(MetaAlleleHandler):
     def synthesize_info(self):
         """Extend the method for the AlleleHandler."""
         super().synthesize_info()
+        self.adjust_allele_organism()
         self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
@@ -415,7 +419,6 @@ class AlleleHandler(MetaAlleleHandler):
         self.synthesize_parent_genes()
         self.flag_alleles_of_internal_genes()
         self.synthesize_related_features()
-        self.adjust_allele_organism()
         self.synthesize_allele_gene_associations()
         return
 
@@ -816,6 +819,17 @@ class AberrationHandler(MetaAlleleHandler):
         return
 
     # Additional sub-methods to be run by synthesize_info() below.
+    def adjust_aberration_organism(self):
+        """Adjust organism for aberrations, if needed."""
+        self.log.info('Adjust organism for aberrations, if needed.')
+        counter = 0
+        for aberration in self.fb_data_entities.values():
+            if 'introgressed_chromosome_region' in aberration.cvt_anno_ids_by_term.keys():
+                aberration.organism_id = 509   # Set organism_id corresponding to "Unknown".
+                counter += 1
+        self.log.info(f'Adjusted organism to be "unspecified" for {counter} aberrations.')
+        return
+
     def qc_aberration_mutation_types(self):
         """Run QC checks on aberration mutation type annotations."""
         self.log.info('Run QC checks on aberration mutation type annotations.')
@@ -874,8 +888,8 @@ class AberrationHandler(MetaAlleleHandler):
     def synthesize_info(self):
         """Extend the method for the AberrationHandler."""
         super().synthesize_info()
+        self.adjust_aberration_organism()
         self.synthesize_ncbi_taxon_id()
-        self.adjust_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
@@ -1032,7 +1046,7 @@ class BalancerHandler(MetaAlleleHandler):
     def synthesize_info(self):
         """Extend the method for the BalancerHandler."""
         super().synthesize_info()
-        # self.synthesize_ncbi_taxon_id()    # BOB
+        self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()

@@ -832,7 +832,7 @@ class PrimaryEntityHandler(DataHandler):
             # Catch cases where the FB data entity has no organism_id: e.g., genotype.
             # These datatypes will have special handling in the datatype-specific handlers.
             try:
-                organism_id = fb_data_entity.chado_obj.organism_id
+                organism_id = fb_data_entity.organism_id
             except AttributeError:
                 self.log.warning(f'No organism_id for {fb_data_entity}.')
                 return

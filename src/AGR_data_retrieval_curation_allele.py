@@ -69,11 +69,11 @@ def main():
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Get the data and process it.
-    # aberration_handler = AberrationHandler(log, testing)
+    aberration_handler = AberrationHandler(log, testing)
     allele_handler = AlleleHandler(log, testing)
     # balancer_handler = BalancerHandler(log, testing)
     # insertion_handler = InsertionHandler(log, testing)
-    # db_query_transaction(session, log, aberration_handler)
+    db_query_transaction(session, log, aberration_handler)
     db_query_transaction(session, log, allele_handler)
     # db_query_transaction(session, log, balancer_handler)
     # db_query_transaction(session, log, insertion_handler)
@@ -84,7 +84,7 @@ def main():
         'alliance_member_release_version': database_release,
     }
     export_dict['allele_ingest_set'] = []
-    # export_dict['allele_ingest_set'].extend(aberration_handler.export_data[aberration_handler.primary_export_set])
+    export_dict['allele_ingest_set'].extend(aberration_handler.export_data[aberration_handler.primary_export_set])
     export_dict['allele_ingest_set'].extend(allele_handler.export_data[allele_handler.primary_export_set])
     # export_dict['allele_ingest_set'].extend(balancer_handler.export_data[balancer_handler.primary_export_set])
     # export_dict['allele_ingest_set'].extend(insertion_handler.export_data[insertion_handler.primary_export_set])
