@@ -149,7 +149,10 @@ class AlleleHandler(MetaAlleleHandler):
         'FBal0198096': 'tal[1]',                # Allele of internal type gene tal (gene_with_polycistronic_transcript).
         'FBal0055793': 'wg[UAS.Tag:HA]',        # Allele is directly related to a construct.
         'FBal0048226': 'Dmau_w[a23]',           # Non-Dmel allele related to non-Dmel insertion.
-        'FBal0198528': 'CG33269[HMJ22303]'
+        'FBal0011649': 'Dsim_Lhr[1]',           # Non-Dmel classical allele.
+        'FBal0043132': 'Hsap_MAPT[UAS.cAa]',    # Dmel transgenic allele expressing human gene.
+        'FBal0062057': 'Scer_CDC42[V12.hs]',    # Dmel transgenic allele expressing yeast gene.
+        'FBal0198528': 'CG33269[HMJ22303]',
     }
 
     # Additional export sets.
@@ -757,7 +760,7 @@ class AberrationHandler(MetaAlleleHandler):
         'FBab0000006': 'Df(3L)ZN47',            # Has many genes associated in many ways.
         'FBab0024587': 'Dp(1;f)8D',             # Unusual feature type: "free duplication".
         'FBab0005448': 'In(3LR)P88',            # Many distinct "wt_aberr" type CV term annotations.
-        'FBab0038557': 'Dmau_Int(3)46.22',      # Unusual annotation: introgressed_chromosome_region (SO:0000664).
+        'FBab0038557': 'Dmau_Int(3)46.22',      # Unusual annotation: introgressed_chromosome_region (SO:0000664). Should be unspecified taxon ID.
         'FBab0047489': 'Dp(3;3)NA18',           # Unusual annotation: direct_tandem_duplication (SO:1000039).
         'FBab0010504': 'T(2;3)G16DTE35B-3P',    # Unusual annotation: assortment_derived_deficiency_plus_duplication (SO:0000801).
     }
@@ -872,12 +875,12 @@ class AberrationHandler(MetaAlleleHandler):
         """Extend the method for the AberrationHandler."""
         super().synthesize_info()
         self.synthesize_ncbi_taxon_id()
+        self.adjust_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
         self.synthesize_aberration_gene_associations()
         self.qc_aberration_mutation_types()
-        # self.adjust_aberration_org()    # BOB
         return
 
     # Additional methods to be run by map_fb_data_to_alliance() below.
@@ -1029,7 +1032,7 @@ class BalancerHandler(MetaAlleleHandler):
     def synthesize_info(self):
         """Extend the method for the BalancerHandler."""
         super().synthesize_info()
-        self.synthesize_ncbi_taxon_id()
+        # self.synthesize_ncbi_taxon_id()    # BOB
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
