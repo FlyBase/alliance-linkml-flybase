@@ -877,6 +877,7 @@ class AberrationHandler(MetaAlleleHandler):
         self.synthesize_pubs()
         self.synthesize_aberration_gene_associations()
         self.qc_aberration_mutation_types()
+        # self.adjust_aberration_org()    # BOB
         return
 
     # Additional methods to be run by map_fb_data_to_alliance() below.
