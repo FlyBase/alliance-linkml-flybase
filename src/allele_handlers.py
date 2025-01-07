@@ -107,21 +107,15 @@ class MetaAlleleHandler(FeatureHandler):
         internal_gene_counter = 0
         non_dmel_drosophilid_counter = 0
         for metaallele in self.fb_data_entities.values():
-            if metaallele.uniquename.startswith('FBal'):
-                adj_org_abbr = self.organism_lookup[metaallele.adj_organism_id]['abbreviation']
-                if metaallele.allele_of_internal_gene is True:
-                    metaallele.linkmldto.internal = True
-                    metaallele.internal_reasons.append('Allele of internal type FB gene.')
-                    internal_gene_counter += 1
-                if adj_org_abbr != 'Dmel':
-                    metaallele.linkmldto.internal = True
-                    metaallele.internal_reasons.append('Non-Dmel')
-                    non_dmel_drosophilid_counter += 1
-            else:
-                if metaallele.org_abbr != 'Dmel':
-                    metaallele.linkmldto.internal = True
-                    metaallele.internal_reasons.append('Non-Dmel')
-                    non_dmel_drosophilid_counter += 1
+            final_org_abbr = self.organism_lookup[metaallele.organism_id]['abbreviation']
+            if final_org_abbr != 'Dmel':
+                metaallele.linkmldto.internal = True
+                metaallele.internal_reasons.append('Non-Dmel')
+                non_dmel_drosophilid_counter += 1
+            if metaallele.uniquename.startswith('FBal') and metaallele.allele_of_internal_gene is True:
+                metaallele.linkmldto.internal = True
+                metaallele.internal_reasons.append('Allele of internal type FB gene.')
+                internal_gene_counter += 1
         if self.datatype == 'allele':
             self.log.info(f'Flagged {internal_gene_counter} alleles of internal-type genes as internal.')
         self.log.info(f'Flagged {non_dmel_drosophilid_counter} non-Dmel Drosophilid alleles as internal.')
@@ -354,7 +348,7 @@ class AlleleHandler(MetaAlleleHandler):
         self.log.info('Adjust organism for classical non-Dmel alleles.')
         counter = 0
         for allele in self.fb_data_entities.values():
-            # Reset all alleles to a default "Dmel" organism.
+            # SET ALL ALLELES TO HAVE DEFAULT "Dmel" ORGANISM.
             allele.organism_id = 1
             # Skip alleles that exist in Dmel (certainly or most likely).
             if allele.org_abbr == 'Dmel':
@@ -379,7 +373,7 @@ class AlleleHandler(MetaAlleleHandler):
             # For truly non-Dmel alleles, revert organism_id to that of the related allele chado object.
             if is_non_dmel_classical is True:
                 allele.organism_id = allele.chado_obj.organism_id
-                adj_org_abbr = self.organism_lookup[allele.adj_organism_id]['abbreviation']
+                adj_org_abbr = self.organism_lookup[allele.organism_id]['abbreviation']
                 self.log.debug(f'Non-Dmel allele: id={allele.uniquename}, name={allele.name}, org_abbr={adj_org_abbr}')
                 counter += 1
         self.log.info(f'Adjusted organism to be "non-Dmel" for {counter} alleles.')
