@@ -344,9 +344,9 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.log.info('Map basic FlyBase genotype data to the Alliance object.')
         counter = 0
         for genotype in self.fb_data_entities.values():
-            # Skip genotypes associated with stock import for now (no FBgo, no description, but have name).
+            # Skip genotypes associated only with stock import for now (these genotypes have no FBgo, no description, but have name).
             if genotype.fb_curie is None:
-                genotype.fb_curie = f'FB_internal_genotype_id={genotype.db_primary_id}'    # BOB: TEMP FOR STOCKS
+                continue
             agr_genotype = self.agr_export_type()
             agr_genotype.obsolete = genotype.chado_obj.is_obsolete
             agr_genotype.mod_entity_id = f'FB:{genotype.fb_curie}'
