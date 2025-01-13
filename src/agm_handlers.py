@@ -135,7 +135,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         334079: 'Dsim_Int(2L)D/+ Dsim_Int(2L)S/+ Nup160<up>EP372</up>',          # Dsim x Dmel hybrid (?).
         1105: 'Df(2R)Dark2',                                                     # One of only four production genotypes associated with a stock: FBst0007156.
         171479: 'Df(1)52 P{w<up>+</up>4&Dgr;4.3} lncRNA:roX1<up>ex6</up> lncRNA:roX2<up>Hsp83.PH</up> | FBab0029971_FBal0099841_FBal0127187_FBtp0016778',
-        525357: 'w[*]; betaTub60D[2] Kr[If-1]|CyO',                              # Genotype from stock; genotype_id here is for FB2024_06 only.
+        # 525357: 'w[*]; betaTub60D[2] Kr[If-1]|CyO',                              # Genotype from stock; genotype_id here is for FB2024_06 only.
     }
 
     # Elaborate on get_general_data() for the GenotypeHandler.
