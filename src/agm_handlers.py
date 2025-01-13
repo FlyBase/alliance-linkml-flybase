@@ -14,7 +14,7 @@ import agr_datatypes
 import fb_datatypes
 from entity_handler import PrimaryEntityHandler
 from harvdev_utils.reporting import (
-    Db, Dbxref, Feature, FeatureGenotype, Genotype, GenotypeDbxref, Stock, StockGenotype
+    Db, Dbxref, Feature, FeatureGenotype, Genotype, GenotypeDbxref
 )
 
 
@@ -206,28 +206,6 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.log.info(f'Found {fg_counter} feature_genotype entries for genotypes.')
         return
 
-    def get_related_stocks(self, session):
-        """Get genotype-associated stocks."""
-        self.log.info('Get genotype-associated stocks.')
-        filters = (
-            Genotype.is_obsolete.is_(False),
-        )
-        if self.testing:
-            filters += (Genotype.genotype_id.in_(self.test_set.keys()), )
-        results = session.query(StockGenotype, Stock).\
-            select_from(Genotype).\
-            join(StockGenotype, (StockGenotype.genotype_id == Genotype.genotype_id)).\
-            join(Stock, (Stock.stock_id == StockGenotype.stock_id)).\
-            filter(*filters).\
-            distinct()
-        counter = 0
-        for result in results:
-            genotype_id = result.StockGenotype.genotype_id
-            self.fb_data_entities[genotype_id].stocks.append(result.Stock)
-            counter += 1
-        self.log.info(f'Found {counter} stocks for genotypes.')
-        return
-
     # Elaborate on get_datatype_data() for the GenotypeHandler.
     def get_datatype_data(self, session):
         """Extend the method for the GenotypeHandler."""
@@ -235,7 +213,6 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.get_entities(session)
         self.get_genotype_fb_curies(session)
         self.get_feature_genotypes(session)
-        self.get_related_stocks(session)
         self.get_entity_cvterms(session)
         self.get_entityprops(session)
         self.get_entity_synonyms(session)
@@ -245,6 +222,20 @@ class GenotypeHandler(PrimaryEntityHandler):
         return
 
     # Additional sub-methods for synthesize_info().
+    def prune_stock_only_genotypes(self):
+        """Prune genotypes related only to fly stocks."""
+        self.log.info('Prune genotypes related only to fly stocks.')
+        # Skip genotypes associated only with fly stocks (these genotypes have no FBgo, no description, but have name).
+        # Fly stocks and related genotype info will be exported by some other means.
+        stock_only_genotype_ids = []
+        for genotype in self.fb_data_entities.values():
+            if genotype.fb_curie is None:
+                stock_only_genotype_ids.append(genotype.db_primary_id)
+        for genotype_id in stock_only_genotype_ids:
+            del(self.fb_data_entities[genotype_id])
+        self.log.info(f'Pruned {len(stock_only_genotype_ids)} stock-only genotypes from the dataset.')
+        return
+
     def synthesize_genotype_components(self):
         """Determine genotype feature components to report and their zygosity."""
         self.log.info('Determine genotype feature components to report and their zygosity.')
@@ -332,6 +323,7 @@ class GenotypeHandler(PrimaryEntityHandler):
     def synthesize_info(self):
         """Extend the method for the GenotypeHandler."""
         super().synthesize_info()
+        self.prune_stock_only_genotypes()
         self.synthesize_genotype_components()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
@@ -344,9 +336,6 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.log.info('Map basic FlyBase genotype data to the Alliance object.')
         counter = 0
         for genotype in self.fb_data_entities.values():
-            # Skip genotypes associated only with stock import for now (these genotypes have no FBgo, no description, but have name).
-            if genotype.fb_curie is None:
-                continue
             agr_genotype = self.agr_export_type()
             agr_genotype.obsolete = genotype.chado_obj.is_obsolete
             agr_genotype.mod_entity_id = f'FB:{genotype.fb_curie}'
