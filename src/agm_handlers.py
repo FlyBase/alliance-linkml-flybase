@@ -440,7 +440,7 @@ class GenotypeHandler(PrimaryEntityHandler):
             # If we have confidence only in non-Dmel features present, remove any features that might have been mistyped as Dmel.
             if genotype_has_bona_fide_non_dmel_feature is True and genotype_has_bona_fide_dmel_feature is False:
                 try:
-                    organism_id_list = organism_id_list.remove(1)
+                    organism_id_list.remove(1)
                 except ValueError:
                     pass
                 self.log.debug(f'ZILLYBOB: genotype {genotype} has non-Dmel classical allele.')
