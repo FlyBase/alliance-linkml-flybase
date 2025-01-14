@@ -142,7 +142,8 @@ class GenotypeHandler(PrimaryEntityHandler):
         365273: 'Dsim_Cyp6g1[UAS.cHa] Scer_GAL4[Cyp6g1.HR]',       # Genotype carrying one allele of UAS Dsim gene plus GAL4 (in Dmel).
         371290: 'Hsap_MAPT[UAS.cAa] Scer_GAL4[GMR.PU]',            # Genotype of GAL4-driven Hsap construct (in Dmel).
         525097: 'Dvir_tra[tra.WT]',                                # Genotype where Dvir tra replaces Dmel tra in Dmel; Dvir allele related to Dmel FBti.
-        171479: 'Df(1)52 P{w[+]4&Dgr;4.3} lncRNA:roX1[ex6] lncRNA:roX2[Hsp83.PH] | FBab0029971_FBal0099841_FBal0127187_FBtp0016778',
+        171479: 'Df(1)52 P{w[+]4&Dgr;4.3} lncRNA:roX1[ex6] lncRNA:roX2[Hsp83.PH] | FBab0029971_FBal0099841_FBal0127187_FBtp0016778',    # Has FBtp - no export.
+        169272: 'P{wA}4-4 brm[2]',                                 # Has FBti directly related - no export.
         # 525357: 'w[*]; betaTub60D[2] Kr[If-1]|CyO',                              # Genotype from stock; genotype_id here is for FB2024_06 only.
     }
 
