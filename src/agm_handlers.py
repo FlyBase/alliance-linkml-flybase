@@ -13,6 +13,9 @@ from logging import Logger
 import agr_datatypes
 import fb_datatypes
 from entity_handler import PrimaryEntityHandler
+from harvdev_utils.char_conversions import (
+    sgml_to_plain_text, sub_sup_sgml_to_plain_text
+)
 from harvdev_utils.reporting import (
     Cvterm, Db, Dbxref, Feature, FeatureCvterm, FeatureGenotype,
     FeatureRelationship, Genotype, GenotypeDbxref, Organism
@@ -118,8 +121,8 @@ class GenotypeHandler(PrimaryEntityHandler):
 
     test_set = {
         2: 'Ab(1)ZWD16 | FBab0027942',                             # The first genotype in the table.
-        294012: 'P{CH1226-43A10} lz[L]',                           # Has FBal and FBtp associated.
-        223641: 'Dp1[EP2422] P{hsp26-pt-T}39C-12',                 # Has FBal and FBti associated.
+        294012: 'P{CH1226-43A10} lz[L]',                           # Has FBal and FBtp associated - no export.
+        223641: 'Dp1[EP2422] P{hsp26-pt-T}39C-12',                 # Has FBal and FBti associated - no export.
         452205: 'wg[1]/wg[GBM]',                                   # Transheterozygous wg[1]/wg[GBM].
         450391: 'wg[l-8]/wg[l-8]',                                 # Homozygous wg[l-8] allele.
         367896: 'Tak1[2]/Tak1[+]',                                 # Heterozygous Tak1[2] over wt allele.
@@ -129,9 +132,10 @@ class GenotypeHandler(PrimaryEntityHandler):
         166704: 'shi[EM33] shi[t15]',                              # shi[EM33] + shi[t15] (allele + rescue construct).
         219912: 'dpp[s4] wg[l-17]',                                # dpp[s4], wg[l-17].
         199449: 'Hsap_MAPT[UAS.cAa] Scer_GAL4[smid-C161]',         # GAL4 drives UAS human construct.
-        32369: 'Dmau_w[a23]',                                      # Single non-Dmel classical allele.
-        466842: 'Dsim_mir-983[KO]',                                # Single non-Dmel classical allele.
-        340500: 'Dsim_Lhr[1] Dsim_Lhr[2+16aa.Tag:HA]',             # non-Dmel classical allele + transgene.
+        32369: 'Dmau_w[a23]',                                      # Single non-Dmel classical allele -> non-Dmel genotype.
+        466842: 'Dsim_mir-983[KO]',                                # Single non-Dmel classical allele -> non-Dmel genotype.
+        340500: 'Dsim_Lhr[1] Dsim_Lhr[2+16aa.Tag:HA]',             # non-Dmel classical allele + transgene -> non-Dmel genotype.
+        525097: 'Dvir_tra[tra.WT]',                                # Genotype where Dvir tra replaces Dmel tra in Dmel; Dvir allele related to Dmel FBti.
         167097: 'Df(3R)CA3 Scer_GAL4[GMR.PF] pim[UAS.Tag:MYC]',    # Df, GAL4 and UAS.
         515875: 'Dp(1;Y)y[+]/tyn[1]',                              # tyn[1] / Dp(1:Y).
         202134: 'Tp(3;1)P115/pad[1]',                              # pad[1] / Tp(3;1)P115.
@@ -141,7 +145,6 @@ class GenotypeHandler(PrimaryEntityHandler):
         365272: 'Dsim_Cyp6g1[UAS.cHa]',                            # Genotype carrying one allele of UAS Dsim gene (in Dmel).
         365273: 'Dsim_Cyp6g1[UAS.cHa] Scer_GAL4[Cyp6g1.HR]',       # Genotype carrying one allele of UAS Dsim gene plus GAL4 (in Dmel).
         371290: 'Hsap_MAPT[UAS.cAa] Scer_GAL4[GMR.PU]',            # Genotype of GAL4-driven Hsap construct (in Dmel).
-        525097: 'Dvir_tra[tra.WT]',                                # Genotype where Dvir tra replaces Dmel tra in Dmel; Dvir allele related to Dmel FBti.
         171479: 'Df(1)52 P{w[+]4&Dgr;4.3} lncRNA:roX1[ex6] lncRNA:roX2[Hsp83.PH] | FBab0029971_FBal0099841_FBal0127187_FBtp0016778',    # Has FBtp - no export.
         169272: 'P{wA}4-4 brm[2]',                                 # Has FBti directly related - no export.
         # 525357: 'w[*]; betaTub60D[2] Kr[If-1]|CyO',                              # Genotype from stock; genotype_id here is for FB2024_06 only.
@@ -327,12 +330,21 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.log.info(f'Pruned {len(stock_only_genotype_ids)} stock-only genotypes from the dataset.')
         return
 
+    def clean_up_genotype_name(self):
+        """Clean up genotype name."""
+        self.log.info('Clean up genotype name.')
+        for genotype in self.fb_data_entities.values():
+            genotype.name = sub_sup_sgml_to_plain_text(genotype.name)
+            genotype.name = sgml_to_plain_text(genotype.name)
+        return
+
     def synthesize_genotype_ncbi_taxon_id(self):
         """Determine the NCBITaxon ID for FB genotypes."""
         self.log.info('Determine the NCBITaxon ID for FB genotypes.')
         non_dmel_genotype_counter = 0
         unspecified_species_genotype_counter = 0
         for genotype in self.fb_data_entities.values():
+            has_non_dmel_classical_allele = False
             feature_id_list = []
             organism_id_list = []
             for cgroup_feature_genotype_list in genotype.feature_genotypes.values():
@@ -382,6 +394,7 @@ class GenotypeHandler(PrimaryEntityHandler):
                     # At this point, any remaining alleles are, by process of elimination, classical non-Dmel Drosophilid alleles.
                     else:
                         feature_is_non_dmel = True
+                        has_non_dmel_classical_allele = True
                         self.log.debug(f"BILLYBOB: Found classical non-Dmel allele associated with genotype: {feature['name']} ({feature['uniquename']}).")
                 # Record appropriate organism_id of the feature.
                 if feature_is_non_dmel is False:
@@ -390,6 +403,10 @@ class GenotypeHandler(PrimaryEntityHandler):
                     organism_id_list.append(org_id)
             # Analyze the set of organism_ids left.
             organism_id_list = list(set(organism_id_list))
+            # If any non-Dmel classical alleles are present, remove any Dmel organism_ids (due to mistyping of transgenic allele organism: e.g., FBal0280199).
+            if has_non_dmel_classical_allele is True:
+                organism_id_list = organism_id_list.remove(1)
+                self.log.debug(f'ZILLYBOB: genotype {genotype} has non-Dmel classical allele.')
             # The presence of any Dmel features makes it a Dmel genotype. Leave the default genotype.ncbi_taxon_id = 'NCBITaxon:7227'.
             if 1 in organism_id_list:
                 pass    # The default , corresponding to Dmel.
@@ -451,6 +468,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         """Extend the method for the GenotypeHandler."""
         super().synthesize_info()
         self.prune_stock_only_genotypes()
+        self.clean_up_genotype_name()
         self.synthesize_genotype_ncbi_taxon_id()
         self.synthesize_genotype_components()
         self.synthesize_secondary_ids()
@@ -468,7 +486,7 @@ class GenotypeHandler(PrimaryEntityHandler):
             agr_genotype.obsolete = genotype.chado_obj.is_obsolete
             agr_genotype.mod_entity_id = f'FB:{genotype.fb_curie}'
             agr_genotype.taxon_curie = genotype.ncbi_taxon_id
-            agr_genotype.name = genotype.uniquename
+            agr_genotype.name = genotype.name
             agr_genotype.subtype_name = 'genotype'
             if genotype.ncbi_taxon_id != 'NCBITaxon:7227':
                 agr_genotype.internal = True
