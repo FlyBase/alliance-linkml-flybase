@@ -154,6 +154,7 @@ class GenotypeHandler(PrimaryEntityHandler):
     dmel_insertion_allele_ids = []    # feature_ids for alleles related to FBti insertions (associated_with/progenitor).
     transgenic_allele_ids = []        # feature_ids for alleles related to FBtp constructs (derived_tp_assoc_alleles).
     in_vitro_allele_ids = []          # feature_ids for alleles having "in vitro construct" CV term annotations.
+    introgressed_aberr_ids = []       # feature_ids for aberrations of type "introgressed_chromosome".
 
     # Additional sub-methods for get_general_data().
     def get_dmel_insertion_allele_ids(self, session):
@@ -229,6 +230,26 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.log.info(f'Found {len(self.in_vitro_allele_ids)} alleles annotated as "in vitro construct".')
         return
 
+    def get_introgressed_aberration_ids(self, session):
+        """Get feature_ids for introgressed_chromosome aberrations."""
+        self.log.info('Get feature_ids for introgressed_chromosome aberrations.')
+        filters = (
+            Feature.is_obsolete.is_(False),
+            Feature.uniquename.op('~')(self.regex['aberration']),
+            Cvterm.name == 'introgressed_chromosome_region',
+        )
+        results = session.query(Feature).\
+            select_from(Feature).\
+            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
+            filter(*filters).\
+            distinct()
+        for result in results:
+            self.introgressed_aberr_ids.append(result.feature_id)
+        self.introgressed_aberr_ids = list(set(self.introgressed_aberr_ids))
+        self.log.info(f'Found {len(self.introgressed_aberr_ids)} aberrations annotated as "introgressed_chromosome_region".')
+        return
+
     # Elaborate on get_general_data() for the GenotypeHandler.
     def get_general_data(self, session):
         """Extend the method for the GenotypeHandler."""
@@ -240,6 +261,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.get_dmel_insertion_allele_ids(session)
         self.get_transgenic_allele_ids(session)
         self.get_in_vitro_allele_ids(session)
+        self.get_introgressed_aberration_ids(session)
         return
 
     # Additional sub-methods for get_datatype_data().
@@ -344,7 +366,8 @@ class GenotypeHandler(PrimaryEntityHandler):
         non_dmel_genotype_counter = 0
         unspecified_species_genotype_counter = 0
         for genotype in self.fb_data_entities.values():
-            has_non_dmel_classical_allele = False
+            genotype_has_bona_fide_dmel_feature = False
+            genotype_has_bona_fide_non_dmel_feature = False
             feature_id_list = []
             organism_id_list = []
             for cgroup_feature_genotype_list in genotype.feature_genotypes.values():
@@ -367,24 +390,33 @@ class GenotypeHandler(PrimaryEntityHandler):
                     genotype.has_fbtp_component = True
                 elif feature['uniquename'].startswith('FBti'):
                     genotype.has_fbti_component = True
-                    if org_abbr != 'Dmel':
+                    if org_abbr == 'Dmel':
+                        genotype_has_bona_fide_dmel_feature = True
+                    else:
                         feature_is_non_dmel = True
+                        genotype_has_bona_fide_non_dmel_feature = True
                 elif feature['uniquename'].startswith('FBab'):
-                    if org_abbr != 'Dmel':
+                    if org_abbr == 'Dmel':
+                        genotype_has_bona_fide_dmel_feature = True
+                    elif feature_id not in self.introgressed_aberr_ids:
                         feature_is_non_dmel = True
+                        genotype_has_bona_fide_non_dmel_feature = True
                 elif feature['uniquename'].startswith('FBba'):
-                    if org_abbr != 'Dmel':
+                    if org_abbr == 'Dmel':
+                        genotype_has_bona_fide_dmel_feature = True
+                    else:
                         feature_is_non_dmel = True
+                        genotype_has_bona_fide_non_dmel_feature = True
                 elif feature['uniquename'].startswith('FBal'):
                     # Skip Dmel alleles.
                     if org_abbr == 'Dmel':
-                        pass
+                        genotype_has_bona_fide_dmel_feature = True
                     # Skip non-Drosophilid alleles.
                     elif is_of_drosophilid is False:
                         pass
                     # Skip alleles related to Dmel insertions.
                     elif feature_id in self.dmel_insertion_allele_ids:
-                        pass
+                        genotype_has_bona_fide_dmel_feature = True
                     # Skip alleles related to FBtp constructs.
                     elif feature_id in self.transgenic_allele_ids:
                         pass
@@ -394,7 +426,7 @@ class GenotypeHandler(PrimaryEntityHandler):
                     # At this point, any remaining alleles are, by process of elimination, classical non-Dmel Drosophilid alleles.
                     else:
                         feature_is_non_dmel = True
-                        has_non_dmel_classical_allele = True
+                        genotype_has_bona_fide_non_dmel_feature = True
                         self.log.debug(f"BILLYBOB: Found classical non-Dmel allele associated with genotype: {feature['name']} ({feature['uniquename']}).")
                 # Record appropriate organism_id of the feature.
                 if feature_is_non_dmel is False:
@@ -403,9 +435,12 @@ class GenotypeHandler(PrimaryEntityHandler):
                     organism_id_list.append(org_id)
             # Analyze the set of organism_ids left.
             organism_id_list = list(set(organism_id_list))
-            # If any non-Dmel classical alleles are present, remove any Dmel organism_ids (due to mistyping of transgenic allele organism: e.g., FBal0280199).
-            if has_non_dmel_classical_allele is True:
-                organism_id_list = organism_id_list.remove(1)
+            # If we have confidence only in non-Dmel features present, remove any features that might have been mistyped as Dmel.
+            if genotype_has_bona_fide_non_dmel_feature is True and genotype_has_bona_fide_dmel_feature is False:
+                try:
+                    organism_id_list = organism_id_list.remove(1)
+                except KeyError:
+                    pass
                 self.log.debug(f'ZILLYBOB: genotype {genotype} has non-Dmel classical allele.')
             # The presence of any Dmel features makes it a Dmel genotype. Leave the default genotype.ncbi_taxon_id = 'NCBITaxon:7227'.
             if 1 in organism_id_list:
