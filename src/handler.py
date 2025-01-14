@@ -815,6 +815,7 @@ class DataHandler(object):
         input_counter = 0
         no_linkml_mapping_counter = 0
         missing_required_info_counter = 0
+        no_export_counter = 0
         for i in input_list:
             input_counter += 1
             # for attr in self.required_fields[output_set_name]:
@@ -823,19 +824,25 @@ class DataHandler(object):
                 i.export_warnings.append('Not mappable to LinkML at all')
                 no_linkml_mapping_counter += 1
                 continue
+            missing_info = False
             for attr in i.linkmldto.required_fields:
                 if attr not in i.linkmldto.__dict__.keys():
                     i.for_export = False
                     i.export_warnings.append(f'Missing "{attr}" attribute')
+                    missing_info = True
                 elif getattr(i.linkmldto, attr) is None:
                     i.for_export = False
                     i.export_warnings.append(f'Missing value "{attr}" attribute')
+                    missing_info = True
+            if missing_info is True:
+                missing_required_info_counter += 1
             if i.for_export is False:
                 self.log.debug(f'DO NOT EXPORT {i}: {i.export_warnings}')
-                missing_required_info_counter += 1
+                no_export_counter += 1
         self.log.info(f'Assessed {input_counter} objects for exportability.')
         self.log.info(f'Found {no_linkml_mapping_counter} objects with no LinkML mapping at all.')
         self.log.info(f'Found {missing_required_info_counter} objects missing required LinkML info.')
+        self.log.info(f'Found {no_export_counter} objects that cannot be exported for some reason.')
         return
 
     def generate_export_dict(self, input_list: list, output_set_name: str):
