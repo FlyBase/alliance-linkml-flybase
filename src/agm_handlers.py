@@ -437,7 +437,7 @@ class GenotypeHandler(PrimaryEntityHandler):
                     organism_id_list.append(org_id)
             # Analyze the set of organism_ids left.
             organism_id_list = list(set(organism_id_list))
-            # If we have confidence only in non-Dmel features present, remove any features that might have been mistyped as Dmel.
+            # If we have confidence only in the organism for non-Dmel features present, remove transgenic allele organism_ids from consideration.
             if genotype_has_bona_fide_non_dmel_feature is True and genotype_has_bona_fide_dmel_feature is False:
                 try:
                     organism_id_list.remove(1)
