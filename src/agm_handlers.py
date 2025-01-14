@@ -439,7 +439,7 @@ class GenotypeHandler(PrimaryEntityHandler):
             if genotype_has_bona_fide_non_dmel_feature is True and genotype_has_bona_fide_dmel_feature is False:
                 try:
                     organism_id_list = organism_id_list.remove(1)
-                except KeyError:
+                except ValueError:
                     pass
                 self.log.debug(f'ZILLYBOB: genotype {genotype} has non-Dmel classical allele.')
             # The presence of any Dmel features makes it a Dmel genotype. Leave the default genotype.ncbi_taxon_id = 'NCBITaxon:7227'.
