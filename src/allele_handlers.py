@@ -114,7 +114,7 @@ class MetaAlleleHandler(FeatureHandler):
                 non_dmel_drosophilid_counter += 1
             if metaallele.uniquename.startswith('FBal') and metaallele.allele_of_internal_gene is True:
                 metaallele.linkmldto.internal = True
-                metaallele.internal_reasons.append('Allele of internal type FB gene.')
+                metaallele.internal_reasons.append('Allele of internal type FB gene')
                 internal_gene_counter += 1
         if self.datatype == 'allele':
             self.log.info(f'Flagged {internal_gene_counter} alleles of internal-type genes as internal.')

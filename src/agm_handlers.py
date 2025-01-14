@@ -14,8 +14,10 @@ import agr_datatypes
 import fb_datatypes
 from entity_handler import PrimaryEntityHandler
 from harvdev_utils.reporting import (
-    Db, Dbxref, Feature, FeatureGenotype, Genotype, GenotypeDbxref
+    Cvterm, Db, Dbxref, Feature, FeatureCvterm, FeatureGenotype,
+    FeatureRelationship, Genotype, GenotypeDbxref, Organism
 )
+from sqlalchemy.orm import aliased
 
 
 class StrainHandler(PrimaryEntityHandler):
@@ -81,10 +83,12 @@ class StrainHandler(PrimaryEntityHandler):
             agr_strain = self.agr_export_type()
             agr_strain.obsolete = strain.chado_obj.is_obsolete
             agr_strain.mod_entity_id = f'FB:{strain.uniquename}'
-            # agr_strain.mod_internal_id = f'FB.strain_id={strain.db_primary_id}'
             agr_strain.taxon_curie = strain.ncbi_taxon_id
             agr_strain.name = strain.name
             agr_strain.subtype_name = 'strain'
+            if strain.ncbi_taxon_id != 'NCBITaxon:7227':
+                agr_strain.internal = True
+                strain.internal_reasons.append('Non-Dmel')
             strain.linkmldto = agr_strain
         return
 
@@ -113,30 +117,113 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.primary_export_set = 'agm_ingest_set'
 
     test_set = {
-        2: 'Ab(1)ZWD16 | FBab0027942',                                           # The first genotype in the table.
-        294012: 'P{CH1226-43A10} lz<up>L</up>',                                  # Has FBal and FBtp associated.
-        223641: 'Dp1<up>EP2422</up> P{hsp26-pt-T}39C-12',                        # Has FBal and FBti associated.
-        452205: 'wg<up>1</up>/wg<up>GBM</up>',                                   # Transheterozygous wg[1]/wg[GBM].
-        450391: 'wg<up>l-8</up>/wg<up>l-8</up>',                                 # Homozygous wg[l-8] allele.
-        367896: 'Tak1<up>2</up>/Tak1<up>+</up>',                                 # Heterozygous Tak1[2] over wt allele.
-        515567: 'Sdc<up>12</up>/Sdc<up>unspecified</up>',                        # Sdc[12]/Sdc[unspecified].
-        166899: 'Df(2R)173/PCNA<up>D-292</up>',                                  # PCNA[D-292]/Df(2R)173.
-        168332: 'Df(3L)Ez7 hay<up>nc2.tMa</up>',                                 # Df(3L)Ez7 + hay[nc2.tMa] (diff complementation groups).
-        166704: 'shi<up>EM33</up> shi<up>t15</up>',                              # shi[EM33] + shi[t15] (allele + rescue construct).
-        219912: 'dpp<up>s4</up> wg<up>l-17</up>',                                # dpp[s4], wg[l-17].
-        199449: 'Hsap_MAPT<up>UAS.cAa</up> Scer_GAL4<up>smid-C161</up>',         # GAL4 drives UAS human construct.
-        32369: 'Dmau_w<up>a23</up>',                                             # Single non-Dmel classical allele.
-        466842: 'Dsim_mir-983<up>KO</up>',                                       # Single non-Dmel classical allele.
-        340500: 'Dsim_Lhr<up>1</up> Dsim_Lhr<up>2+16aa.Tag:HA</up>',             # non-Dmel classical allele + transgene.
-        167097: 'Df(3R)CA3 Scer_GAL4<up>GMR.PF</up> pim<up>UAS.Tag:MYC</up>',    # Df, GAL4 and UAS.
-        515875: 'Dp(1;Y)y<up>+</up>/tyn<up>1</up>',                              # tyn[1] / Dp(1:Y).
-        202134: 'Tp(3;1)P115/pad<up>1</up>',                                     # pad[1] / Tp(3;1)P115.
-        182943: 'Df(3L)emc/+',                                                   # Heterozygous deficiency.
-        334079: 'Dsim_Int(2L)D/+ Dsim_Int(2L)S/+ Nup160<up>EP372</up>',          # Dsim x Dmel hybrid (?).
-        1105: 'Df(2R)Dark2',                                                     # One of only four production genotypes associated with a stock: FBst0007156.
-        171479: 'Df(1)52 P{w<up>+</up>4&Dgr;4.3} lncRNA:roX1<up>ex6</up> lncRNA:roX2<up>Hsp83.PH</up> | FBab0029971_FBal0099841_FBal0127187_FBtp0016778',
+        2: 'Ab(1)ZWD16 | FBab0027942',                             # The first genotype in the table.
+        294012: 'P{CH1226-43A10} lz[L]',                           # Has FBal and FBtp associated.
+        223641: 'Dp1[EP2422] P{hsp26-pt-T}39C-12',                 # Has FBal and FBti associated.
+        452205: 'wg[1]/wg[GBM]',                                   # Transheterozygous wg[1]/wg[GBM].
+        450391: 'wg[l-8]/wg[l-8]',                                 # Homozygous wg[l-8] allele.
+        367896: 'Tak1[2]/Tak1[+]',                                 # Heterozygous Tak1[2] over wt allele.
+        515567: 'Sdc[12]/Sdc[unspecified]',                        # Sdc[12]/Sdc[unspecified].
+        166899: 'Df(2R)173/PCNA[D-292]',                           # PCNA[D-292]/Df(2R)173.
+        168332: 'Df(3L)Ez7 hay[nc2.tMa]',                          # Df(3L)Ez7 + hay[nc2.tMa] (diff complementation groups).
+        166704: 'shi[EM33] shi[t15]',                              # shi[EM33] + shi[t15] (allele + rescue construct).
+        219912: 'dpp[s4] wg[l-17]',                                # dpp[s4], wg[l-17].
+        199449: 'Hsap_MAPT[UAS.cAa] Scer_GAL4[smid-C161]',         # GAL4 drives UAS human construct.
+        32369: 'Dmau_w[a23]',                                      # Single non-Dmel classical allele.
+        466842: 'Dsim_mir-983[KO]',                                # Single non-Dmel classical allele.
+        340500: 'Dsim_Lhr[1] Dsim_Lhr[2+16aa.Tag:HA]',             # non-Dmel classical allele + transgene.
+        167097: 'Df(3R)CA3 Scer_GAL4[GMR.PF] pim[UAS.Tag:MYC]',    # Df, GAL4 and UAS.
+        515875: 'Dp(1;Y)y[+]/tyn[1]',                              # tyn[1] / Dp(1:Y).
+        202134: 'Tp(3;1)P115/pad[1]',                              # pad[1] / Tp(3;1)P115.
+        182943: 'Df(3L)emc/+',                                     # Heterozygous deficiency.
+        334079: 'Dsim_Int(2L)D/+ Dsim_Int(2L)S/+ Nup160[EP372]',   # Dsim FBabs that are actually Dsim chr parts introgressed into Dmel.
+        1105: 'Df(2R)Dark2',                                       # One of only four production genotypes associated with a stock: FBst0007156.
+        365272: 'Dsim_Cyp6g1[UAS.cHa]',                            # Genotype carrying one allele of UAS Dsim gene (in Dmel).
+        365273: 'Dsim_Cyp6g1[UAS.cHa] Scer_GAL4[Cyp6g1.HR]',       # Genotype carrying one allele of UAS Dsim gene plus GAL4 (in Dmel).
+        371290: 'Hsap_MAPT[UAS.cAa] Scer_GAL4[GMR.PU]',            # Genotype of GAL4-driven Hsap construct (in Dmel).
+        525097: 'Dvir_tra[tra.WT]',                                # Genotype where Dvir tra replaces Dmel tra in Dmel; Dvir allele related to Dmel FBti.
+        171479: 'Df(1)52 P{w[+]4&Dgr;4.3} lncRNA:roX1[ex6] lncRNA:roX2[Hsp83.PH] | FBab0029971_FBal0099841_FBal0127187_FBtp0016778',
         # 525357: 'w[*]; betaTub60D[2] Kr[If-1]|CyO',                              # Genotype from stock; genotype_id here is for FB2024_06 only.
     }
+
+    # Additional reference info.
+    dmel_insertion_allele_ids = []    # feature_ids for alleles related to FBti insertions (associated_with/progenitor).
+    transgenic_allele_ids = []        # feature_ids for alleles related to FBtp constructs (derived_tp_assoc_alleles).
+    in_vitro_allele_ids = []          # feature_ids for alleles having "in vitro construct" CV term annotations.
+
+    # Additional sub-methods for get_general_data().
+    def get_dmel_insertion_allele_ids(self, session):
+        """Get feature_ids for alleles related to Dmel FBti insertions."""
+        self.log.info('Get feature_ids for alleles related to Dmel FBti insertions.')
+        insertion = aliased(Feature, name='insertion')
+        allele = aliased(Feature, name='allele')
+        fr_types = ['associated_with', 'progenitor']
+        filters = (
+            insertion.is_obsolete.is_(False),
+            insertion.uniquename.op('~')(self.regex['insertion']),
+            Organism.abbreviation == 'Dmel',
+            allele.is_obsolete.is_(False),
+            allele.uniquename.op('~')(self.regex['allele']),
+            Cvterm.name.in_((fr_types)),
+        )
+        results = session.query(allele).\
+            select_from(allele).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
+            join(insertion, (insertion.feature_id == FeatureRelationship.object_id)).\
+            join(Organism, (Organism.organism_id == insertion.organism_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+        for result in results:
+            self.dmel_insertion_allele_ids.append(result.feature_id)
+        self.dmel_insertion_allele_ids = list(set(self.dmel_insertion_allele_ids))
+        self.log.info(f'Found {len(self.dmel_insertion_allele_ids)} alleles related to Dmel FBti insertions.')
+        return
+
+    def get_transgenic_allele_ids(self, session):
+        """Get feature_ids for alleles related to FBtp constructs."""
+        self.log.info('Get feature_ids for alleles related to FBtp constructs.')
+        construct = aliased(Feature, name='construct')
+        allele = aliased(Feature, name='allele')
+        filters = (
+            construct.is_obsolete.is_(False),
+            construct.uniquename.op('~')(self.regex['construct']),
+            allele.is_obsolete.is_(False),
+            allele.uniquename.op('~')(self.regex['allele']),
+            Cvterm.name == 'derived_tp_assoc_alleles',
+        )
+        results = session.query(allele).\
+            select_from(allele).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
+            join(construct, (construct.feature_id == FeatureRelationship.object_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+        for result in results:
+            self.transgenic_allele_ids.append(result.feature_id)
+        self.transgenic_allele_ids = list(set(self.transgenic_allele_ids))
+        self.log.info(f'Found {len(self.transgenic_allele_ids)} alleles related to FBtp constructs.')
+        return
+
+    def get_in_vitro_allele_ids(self, session):
+        """Get feature_ids for alleles having "in vitro construct" annotations."""
+        self.log.info('Get feature_ids for alleles having "in vitro construct" annotations.')
+        filters = (
+            Feature.is_obsolete.is_(False),
+            Feature.uniquename.op('~')(self.regex['allele']),
+            Cvterm.name == 'in vitro construct',
+        )
+        results = session.query(Feature).\
+            select_from(Feature).\
+            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
+            filter(*filters).\
+            distinct()
+        for result in results:
+            self.in_vitro_allele_ids.append(result.feature_id)
+        self.in_vitro_allele_ids = list(set(self.in_vitro_allele_ids))
+        self.log.info(f'Found {len(self.in_vitro_allele_ids)} alleles annotated as "in vitro construct".')
+        return
 
     # Elaborate on get_general_data() for the GenotypeHandler.
     def get_general_data(self, session):
@@ -146,11 +233,14 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.build_cvterm_lookup(session)
         self.build_organism_lookup(session)
         self.build_feature_lookup(session, feature_types=['aberration', 'allele', 'balancer', 'construct', 'insertion'])
+        self.get_dmel_insertion_allele_ids(session)
+        self.get_transgenic_allele_ids(session)
+        self.get_in_vitro_allele_ids(session)
         return
 
     # Additional sub-methods for get_datatype_data().
-    # Note that for genotypes, the "uniquename" is not the FBgo accession, so need to get these another way.
-    # Also note that the FBgo IDs are currently internal.
+    # Note that for genotypes, the "uniquename" is not the FBgo accession, so need to get these from genotype_dbxref table.
+    # Also note that the FBgo IDs are currently internal (not exposed publicly).
     def get_genotype_fb_curies(self, session):
         """Get FlyBase curies for genotypes."""
         self.log.info('Get FlyBase curies for genotypes.')
@@ -236,6 +326,90 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.log.info(f'Pruned {len(stock_only_genotype_ids)} stock-only genotypes from the dataset.')
         return
 
+    def synthesize_genotype_ncbi_taxon_id(self):
+        """Determine the NCBITaxon ID for FB genotypes."""
+        self.log.info('Determine the NCBITaxon ID for FB genotypes.')
+        non_dmel_genotype_counter = 0
+        unspecified_species_genotype_counter = 0
+        for genotype in self.fb_data_entities.values():
+            feature_id_list = []
+            organism_id_list = []
+            for cgroup_feature_genotype_list in genotype.feature_genotypes.values():
+                cgroup_feature_id_list = [i.feature_id for i in cgroup_feature_genotype_list]
+                feature_id_list.extend(cgroup_feature_id_list)
+            feature_id_set = set(feature_id_list)
+            # For each feature, determine the relevant organism.
+            for feature_id in feature_id_set:
+                # Skip bogus symbols (relevant features should be in the feature_lookup dict).
+                if feature_id not in self.feature_lookup.keys():
+                    continue
+                feature_is_non_dmel = False
+                feature = self.feature_lookup[feature_id] 
+                org_id = self.feature_lookup[feature_id]['organism_id']
+                org_abbr = self.organism_lookup[org_id]['abbreviation']
+                is_of_drosophilid = self.organism_lookup[org_id]['is_drosophilid']
+                # Key goal - find classical non-Dmel alleles.
+                # Also, flag genotypes directly related to FBtp and FBti when encountered.
+                if feature['uniquename'].startswith('FBtp'):
+                    genotype.has_fbtp_component = True
+                elif feature['uniquename'].startswith('FBti'):
+                    genotype.has_fbti_component = True
+                    if org_abbr != 'Dmel':
+                        feature_is_non_dmel = True
+                elif feature['uniquename'].startswith('FBab'):
+                    if org_abbr != 'Dmel':
+                        feature_is_non_dmel = True
+                elif feature['uniquename'].startswith('FBba'):
+                    if org_abbr != 'Dmel':
+                        feature_is_non_dmel = True
+                elif feature['uniquename'].startswith('FBal'):
+                    # Skip Dmel alleles.
+                    if org_abbr == 'Dmel':
+                        pass
+                    # Skip non-Drosophilid alleles.
+                    elif is_of_drosophilid is False:
+                        pass
+                    # Skip alleles related to Dmel insertions.
+                    elif feature_id in self.dmel_insertion_allele_ids:
+                        pass
+                    # Skip alleles related to FBtp constructs.
+                    elif feature_id in self.transgenic_allele_ids:
+                        pass
+                    # Skip alleles annotated as "in vitro".
+                    elif feature_id in self.in_vitro_allele_ids:
+                        pass
+                    # At this point, any remaining alleles are, by process of elimination, classical non-Dmel Drosophilid alleles.
+                    else:
+                        feature_is_non_dmel = True
+                        self.log.debug(f'BILLYBOB: Found classical non-Dmel allele associated with genotype: {feature['name']} ({feature['uniquename']}).')
+                # Record appropriate organism_id of the feature.
+                if feature_is_non_dmel is False:
+                    organism_id_list.append(1)    # i.e., the Dmel organism_id=1.
+                else:
+                    organism_id_list.append(org_id)
+            # Analyze the set of organism_ids left.
+            organism_id_list = list(set(organism_id_list))
+            # The presence of any Dmel features makes it a Dmel genotype. Leave the default genotype.ncbi_taxon_id = 'NCBITaxon:7227'.
+            if 1 in organism_id_list:
+                pass    # The default , corresponding to Dmel.
+            # If a genotype has no components (e.g., "+/+"), assume it's Dmel. Leave the default genotype.ncbi_taxon_id = 'NCBITaxon:7227'.
+            elif len(organism_id_list) == 0:
+                pass    # The default.
+            # Identify non-Dmel genotypes with components from a single non-Dmel species.
+            elif len(organism_id_list) == 1:
+                org_id = organism_id_list[0]
+                genotype.ncbi_taxon_id = self.organism_lookup[org_id]['taxon_curie']
+                self.log.debug(f'GILLYBOB: genotype_id={genotype.db_primary_id} is non-Dmel.')
+                non_dmel_genotype_counter += 1
+            # If there are components from many species (none of which are Dmel), taxon is given to be "unidentified".
+            else:
+                genotype.ncbi_taxon_id = 'NCBITaxon:32644'
+                self.log.debug(f'JILLYBOB: genotype_id={genotype.db_primary_id} has UNSPECIFIED taxon.')
+                unspecified_species_genotype_counter += 1
+        self.log.info(f'Found {non_dmel_genotype_counter} non-Dmel Drosophilid genotypes.')
+        self.log.info(f'For {unspecified_species_genotype_counter} genotypes, taxon is unidentified.')
+        return
+
     def synthesize_genotype_components(self):
         """Determine genotype feature components to report and their zygosity."""
         self.log.info('Determine genotype feature components to report and their zygosity.')
@@ -271,42 +445,12 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.log.info(f'Found {component_counter} components for {genotype_counter} genotypes for export.')
         return
 
-    def synthesize_genotype_ncbi_taxon_id(self):
-        """Determine the NCBITaxon ID for FB genotypes."""
-        self.log.info('Determine the NCBITaxon ID for FB genotypes.')
-        # Need to handle many different cases.
-        # 1. Genotypes with features - need to find Drosophilids (or hybrids of them).
-        # 2. Genotypes for non-Dros stocks.
-        # for genotype in self.fb_data_entities.values():
-        #     feature_id_list = []
-        #     for cgroup_feature_genotype_list in genotype.feature_genotypes.values():
-        #         cgroup_feature_id_list = [i.feature_id for i in cgroup_feature_genotype_list]
-        #         feature_id_list.extend(cgroup_feature_id_list)
-        #     for feature_id in feature_id_list:
-        #         if feature_id in self.feature_lookup.keys():
-        #             feature = self.feature_lookup[feature_id]
-        #             organism = self.organism_lookup[feature['organism_id']]
-        #             if organism['abbreviation'] == 'Dmel':
-        #                 continue
-        #             if feature['uniquename'].startswith('FBti')
-        #     # Catch cases where the FB data entity has no organism_id: e.g., genotype.
-        #     # These datatypes will have special handling in the datatype-specific handlers.
-        #     try:
-        #         organism_id = fb_data_entity.chado_obj.organism_id
-        #     except AttributeError:
-        #         self.log.warning(f'No organism_id for {fb_data_entity}.')
-        #         return
-        #     # Catch cases where the FB data entity has no corresponding NCBITaxon ID.
-        #     fb_data_entity.ncbi_taxon_id = self.organism_lookup[organism_id]['taxon_curie']
-        #     if fb_data_entity.ncbi_taxon_id == 'NCBITaxon:32644':
-        #         self.log.warning(f'{fb_data_entity} has "unidentified" NCBITaxon ID.')
-        return
-
     # Elaborate on synthesize_info() for the GenotypeHandler.
     def synthesize_info(self):
         """Extend the method for the GenotypeHandler."""
         super().synthesize_info()
         self.prune_stock_only_genotypes()
+        self.synthesize_genotype_ncbi_taxon_id()
         self.synthesize_genotype_components()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
@@ -325,6 +469,9 @@ class GenotypeHandler(PrimaryEntityHandler):
             agr_genotype.taxon_curie = genotype.ncbi_taxon_id
             agr_genotype.name = genotype.uniquename
             agr_genotype.subtype_name = 'genotype'
+            if genotype.ncbi_taxon_id != 'NCBITaxon:7227':
+                agr_genotype.internal = True
+                genotype.internal_reasons.append('Non-Dmel')
             genotype.linkmldto = agr_genotype
             counter += 1
         self.log.info(f'{counter} genotypes could be mapped to the Alliance LinkML model.')
@@ -341,6 +488,24 @@ class GenotypeHandler(PrimaryEntityHandler):
                     genotype.linkmldto.component_dtos.append(agm_component.dict_export())
         return
 
+    def flag_unexportable_genotypes(self):
+        """Flag unexportable genotypes."""
+        self.log.info(f'Flag unexportable genotypes.')
+        fbtp_counter = 0
+        fbti_counter = 0
+        for genotype in self.fb_data_entities.values():
+            if genotype.has_fbtp_component is True:
+                genotype.for_export = False
+                genotype.export_warnings.append('Directly related to FBtp construct feature')
+                fbtp_counter += 1
+            if genotype.has_fbti_component is True:
+                genotype.for_export = False
+                genotype.export_warnings.append('Directly related to FBti insertion feature')
+                fbti_counter += 1
+        self.log.info(f'Marked {fbtp_counter} genotype as unexportable due to direct association with an FBtp construct feature.')
+        self.log.info(f'Marked {fbti_counter} genotype as unexportable due to direct association with an FBti insertion feature.')
+        return
+
     # Elaborate on map_fb_data_to_alliance() for the GenotypeHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the GenotypeHandler."""
@@ -354,4 +519,5 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.map_timestamps()
         self.map_secondary_ids('agm_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
+        self.flag_unexportable_genotypes()
         return

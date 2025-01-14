@@ -455,7 +455,7 @@ class AlleleDiseaseHandler(DataHandler):
                     if db_primary_id != first_db_id:
                         self.fb_data_entities[db_primary_id].is_redundant = True
                         self.fb_data_entities[db_primary_id].for_export = False
-                        self.fb_data_entities[db_primary_id].export_warnings.append('Annotation is redundant.')
+                        self.fb_data_entities[db_primary_id].export_warnings.append('Annotation is redundant')
                         redundant_counter += 1
         self.log.info(f'A further {redundant_counter} redundant annotations blocked from export.')
         return

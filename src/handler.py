@@ -354,6 +354,9 @@ class DataHandler(object):
                 'official_db': None,                 # Default, changed to name of database (as in chado db table) as applicable below.
                 'is_alliance_organism': False,       # Default.
             }
+            # Since not all Drosophila organisms have the taxgroup=drosophilid organismprop, add the step below.
+            if org_dict['genus'] == 'Drosophila':
+                org_dict['is_drosophilid'] = True
             if org_dict['abbreviation'] in self.alliance_organisms:
                 org_dict['is_alliance_organism'] = True
             self.organism_lookup[organism.organism_id] = org_dict
@@ -374,7 +377,7 @@ class DataHandler(object):
             self.organism_lookup[result.OrganismDbxref.organism_id]['taxon_curie'] = f'NCBITaxon:{result.Dbxref.accession}'
             taxon_curie_counter += 1
         self.log.info(f'Found {taxon_curie_counter} NCBITaxon IDs for chado organisms.')
-        # Third, flag drosophilid species.
+        # Third, flag drosophilid species based on organismprop. This catches Drosophilids with non-Drosophila genus values.
         filters = (
             Cvterm.name == 'taxgroup',
             Organismprop.value == 'drosophilid',
@@ -817,16 +820,16 @@ class DataHandler(object):
             # for attr in self.required_fields[output_set_name]:
             if i.linkmldto is None:
                 i.for_export = False
-                i.export_warnings.append('Not mappable to LinkML at all.')
+                i.export_warnings.append('Not mappable to LinkML at all')
                 no_linkml_mapping_counter += 1
                 continue
             for attr in i.linkmldto.required_fields:
                 if attr not in i.linkmldto.__dict__.keys():
                     i.for_export = False
-                    i.export_warnings.append(f'Missing "{attr}" attribute.')
+                    i.export_warnings.append(f'Missing "{attr}" attribute')
                 elif getattr(i.linkmldto, attr) is None:
                     i.for_export = False
-                    i.export_warnings.append(f'Missing value "{attr}" attribute.')
+                    i.export_warnings.append(f'Missing value "{attr}" attribute')
             if i.for_export is False:
                 self.log.debug(f'DO NOT EXPORT {i}: {i.export_warnings}')
                 missing_required_info_counter += 1

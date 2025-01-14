@@ -208,7 +208,7 @@ class GeneHandler(FeatureHandler):
                 gene.internal_reasons.append('Internal gene type.')
             if gene.linkmldto.internal is True:
                 counter += 1
-        self.log.info(f'Flagged {counter} genes as internal for gene-specific reasons.')
+        self.log.info(f'Flagged {counter} genes as internal for gene-specific reasons')
         return
 
     # Elaborate on map_fb_data_to_alliance() for the GeneHandler.
