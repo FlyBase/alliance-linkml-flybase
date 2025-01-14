@@ -358,6 +358,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         for genotype in self.fb_data_entities.values():
             genotype.name = sub_sup_sgml_to_plain_text(genotype.name)
             genotype.name = sgml_to_plain_text(genotype.name)
+            genotype.entity_desc = f'{genotype.name} ({genotype.fb_curie})'
         return
 
     def synthesize_genotype_ncbi_taxon_id(self):
@@ -366,6 +367,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         non_dmel_genotype_counter = 0
         unspecified_species_genotype_counter = 0
         for genotype in self.fb_data_entities.values():
+            self.log.debug(f'Assess genotype {genotype}.')
             genotype_has_bona_fide_dmel_feature = False
             genotype_has_bona_fide_non_dmel_feature = False
             feature_id_list = []
@@ -442,12 +444,12 @@ class GenotypeHandler(PrimaryEntityHandler):
                 except ValueError:
                     pass
                 self.log.debug(f'ZILLYBOB: genotype {genotype} has non-Dmel classical allele.')
-            # The presence of any Dmel features makes it a Dmel genotype. Leave the default genotype.ncbi_taxon_id = 'NCBITaxon:7227'.
-            if 1 in organism_id_list:
-                pass    # The default , corresponding to Dmel.
             # If a genotype has no components (e.g., "+/+"), assume it's Dmel. Leave the default genotype.ncbi_taxon_id = 'NCBITaxon:7227'.
-            elif len(organism_id_list) == 0:
+            if len(organism_id_list) == 0:
                 pass    # The default.
+            # The presence of any Dmel features makes it a Dmel genotype. Leave the default genotype.ncbi_taxon_id = 'NCBITaxon:7227'.
+            elif 1 in organism_id_list:
+                pass    # The default , corresponding to Dmel.
             # Identify non-Dmel genotypes with components from a single non-Dmel species.
             elif len(organism_id_list) == 1:
                 org_id = organism_id_list[0]
