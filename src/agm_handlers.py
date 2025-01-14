@@ -367,7 +367,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         non_dmel_genotype_counter = 0
         unspecified_species_genotype_counter = 0
         for genotype in self.fb_data_entities.values():
-            self.log.debug(f'Assess genotype {genotype}.')
+            # self.log.debug(f'Assess genotype {genotype}.')
             genotype_has_bona_fide_dmel_feature = False
             genotype_has_bona_fide_non_dmel_feature = False
             feature_id_list = []
@@ -429,7 +429,7 @@ class GenotypeHandler(PrimaryEntityHandler):
                     else:
                         feature_is_non_dmel = True
                         genotype_has_bona_fide_non_dmel_feature = True
-                        self.log.debug(f"BOB: Found classical non-Dmel allele associated with genotype: {feature['name']} ({feature['uniquename']}).")
+                        # self.log.debug(f"Found classical non-Dmel allele associated with genotype: {feature['name']} ({feature['uniquename']}).")
                 # Record appropriate organism_id of the feature.
                 if feature_is_non_dmel is False:
                     organism_id_list.append(1)    # i.e., the Dmel organism_id=1.
@@ -443,7 +443,7 @@ class GenotypeHandler(PrimaryEntityHandler):
                     organism_id_list.remove(1)
                 except ValueError:
                     pass
-                self.log.debug(f'BOB: genotype {genotype} has non-Dmel classical allele.')
+                # self.log.debug(f'Genotype {genotype} has non-Dmel classical allele.')
             # If a genotype has no components (e.g., "+/+"), assume it's Dmel. Leave the default genotype.ncbi_taxon_id = 'NCBITaxon:7227'.
             if len(organism_id_list) == 0:
                 pass    # The default.
@@ -454,12 +454,12 @@ class GenotypeHandler(PrimaryEntityHandler):
             elif len(organism_id_list) == 1:
                 org_id = organism_id_list[0]
                 genotype.ncbi_taxon_id = self.organism_lookup[org_id]['taxon_curie']
-                self.log.debug(f'BOB: genotype {genotype} is non-Dmel.')
+                # self.log.debug(f'Genotype {genotype} is non-Dmel.')
                 non_dmel_genotype_counter += 1
             # If there are components from many species (none of which are Dmel), taxon is given to be "unidentified".
             else:
                 genotype.ncbi_taxon_id = 'NCBITaxon:32644'
-                self.log.debug(f'BOB: genotype {genotype} has taxon UNIDENTIFIED.')
+                # self.log.debug(f'Genotype {genotype} has taxon UNIDENTIFIED.')
                 unspecified_species_genotype_counter += 1
         self.log.info(f'Found {non_dmel_genotype_counter} non-Dmel Drosophilid genotypes.')
         self.log.info(f'For {unspecified_species_genotype_counter} genotypes, taxon is unidentified.')
