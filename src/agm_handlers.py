@@ -345,7 +345,7 @@ class GenotypeHandler(PrimaryEntityHandler):
                 if feature_id not in self.feature_lookup.keys():
                     continue
                 feature_is_non_dmel = False
-                feature = self.feature_lookup[feature_id] 
+                feature = self.feature_lookup[feature_id]
                 org_id = self.feature_lookup[feature_id]['organism_id']
                 org_abbr = self.organism_lookup[org_id]['abbreviation']
                 is_of_drosophilid = self.organism_lookup[org_id]['is_drosophilid']
@@ -382,7 +382,7 @@ class GenotypeHandler(PrimaryEntityHandler):
                     # At this point, any remaining alleles are, by process of elimination, classical non-Dmel Drosophilid alleles.
                     else:
                         feature_is_non_dmel = True
-                        self.log.debug(f'BILLYBOB: Found classical non-Dmel allele associated with genotype: {feature['name']} ({feature['uniquename']}).')
+                        self.log.debug(f"BILLYBOB: Found classical non-Dmel allele associated with genotype: {feature['name']} ({feature['uniquename']}).")
                 # Record appropriate organism_id of the feature.
                 if feature_is_non_dmel is False:
                     organism_id_list.append(1)    # i.e., the Dmel organism_id=1.
@@ -491,7 +491,7 @@ class GenotypeHandler(PrimaryEntityHandler):
 
     def flag_unexportable_genotypes(self):
         """Flag unexportable genotypes."""
-        self.log.info(f'Flag unexportable genotypes.')
+        self.log.info('Flag unexportable genotypes.')
         fbtp_counter = 0
         fbti_counter = 0
         for genotype in self.fb_data_entities.values():
