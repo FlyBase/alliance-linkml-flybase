@@ -121,8 +121,6 @@ class GenotypeHandler(PrimaryEntityHandler):
 
     test_set = {
         2: 'Ab(1)ZWD16 | FBab0027942',                             # The first genotype in the table.
-        294012: 'P{CH1226-43A10} lz[L]',                           # Has FBal and FBtp associated - no export.
-        223641: 'Dp1[EP2422] P{hsp26-pt-T}39C-12',                 # Has FBal and FBti associated - no export.
         452205: 'wg[1]/wg[GBM]',                                   # Transheterozygous wg[1]/wg[GBM].
         450391: 'wg[l-8]/wg[l-8]',                                 # Homozygous wg[l-8] allele.
         367896: 'Tak1[2]/Tak1[+]',                                 # Heterozygous Tak1[2] over wt allele.
@@ -146,6 +144,8 @@ class GenotypeHandler(PrimaryEntityHandler):
         365273: 'Dsim_Cyp6g1[UAS.cHa] Scer_GAL4[Cyp6g1.HR]',       # Genotype carrying one allele of UAS Dsim gene plus GAL4 (in Dmel).
         371290: 'Hsap_MAPT[UAS.cAa] Scer_GAL4[GMR.PU]',            # Genotype of GAL4-driven Hsap construct (in Dmel).
         171479: 'Df(1)52 P{w[+]4&Dgr;4.3} lncRNA:roX1[ex6] lncRNA:roX2[Hsp83.PH] | FBab0029971_FBal0099841_FBal0127187_FBtp0016778',    # Has FBtp - no export.
+        294012: 'P{CH1226-43A10} lz[L]',                           # Has FBal and FBtp associated - no export.
+        223641: 'Dp1[EP2422] P{hsp26-pt-T}39C-12',                 # Has FBal and FBti associated - no export.
         169272: 'P{wA}4-4 brm[2]',                                 # Has FBti directly related - no export.
         # 525357: 'w[*]; betaTub60D[2] Kr[If-1]|CyO',                              # Genotype from stock; genotype_id here is for FB2024_06 only.
     }
@@ -558,8 +558,8 @@ class GenotypeHandler(PrimaryEntityHandler):
                 genotype.for_export = False
                 genotype.export_warnings.append('Directly related to FBti insertion feature')
                 fbti_counter += 1
-        self.log.info(f'Marked {fbtp_counter} genotype as unexportable due to direct association with an FBtp construct feature.')
-        self.log.info(f'Marked {fbti_counter} genotype as unexportable due to direct association with an FBti insertion feature.')
+        self.log.info(f'Marked {fbtp_counter} genotypes as unexportable due to direct association with an FBtp construct feature.')
+        self.log.info(f'Marked {fbti_counter} genotypes as unexportable due to direct association with an FBti insertion feature.')
         return
 
     # Elaborate on map_fb_data_to_alliance() for the GenotypeHandler.
