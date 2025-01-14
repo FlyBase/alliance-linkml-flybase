@@ -242,49 +242,32 @@ class GenotypeHandler(PrimaryEntityHandler):
         component_counter = 0
         genotype_counter = 0
         for genotype in self.fb_data_entities.values():
+            # Fail-safe filter against processing stock-only genotypes.
+            if genotype.fb_curie is None:
+                continue
+            genotype_counter += 1
             genotype.component_features = {
                 'unspecified zygosity': [],
                 'homozygous': [],
                 'heterozygous': [],
                 'hemizygous': [],
             }
-            # Handle genotypes from production, which are properly structured.
-            if genotype.name is None:
-                for cgroup, fg_list in genotype.feature_genotypes.items():
-                    cgroup_feature_list = [i.feature_id for i in fg_list]
-                    if len(cgroup_feature_list) > 2:
-                        self.log.warning(f'{genotype}, cgroup={cgroup} has too many components!')
-                    cgroup_feature_set = set(cgroup_feature_list)
-                    if len(cgroup_feature_list) == 1:
-                        zygosity = 'unspecified zygosity'
-                    elif len(cgroup_feature_list) == 2 and len(cgroup_feature_set) == 1:
-                        zygosity = 'homozygous'
-                    elif len(cgroup_feature_list) == 2 and len(cgroup_feature_set) == 2:
-                        zygosity = 'heterozygous'
-                    for feature_id in cgroup_feature_set:
-                        # Filter out reporting of "bogus symbols" (internal feature placeholders for wild-type alleles).
-                        if feature_id in self.feature_lookup.keys():
-                            genotype.component_features[zygosity].append(feature_id)
-            # Handle stock-only genotypes, which are not properly structured (all feature_genotype associations have cgroup=0 and rank=0).
-            else:
-                feature_list = [i.feature_id for i in genotype.feature_genotypes[0]]
-                feature_count = {}
-                for feature_id in feature_list:
-                    if feature_id in feature_count.keys():
-                        feature_count[feature_id] += 1
-                    else:
-                        feature_count[feature_id] = 1
-                for feature_id, feature_count in feature_count.items():
-                    if feature_count == 1:
-                        zygosity = 'unspecified zygosity'
-                    else:
-                        zygosity = 'homozygous'
+            for cgroup, fg_list in genotype.feature_genotypes.items():
+                cgroup_feature_list = [i.feature_id for i in fg_list]
+                if len(cgroup_feature_list) > 2:
+                    self.log.warning(f'{genotype}, cgroup={cgroup} has too many components!')
+                cgroup_feature_set = set(cgroup_feature_list)
+                if len(cgroup_feature_list) == 1:
+                    zygosity = 'unspecified zygosity'
+                elif len(cgroup_feature_list) == 2 and len(cgroup_feature_set) == 1:
+                    zygosity = 'homozygous'
+                elif len(cgroup_feature_list) == 2 and len(cgroup_feature_set) == 2:
+                    zygosity = 'heterozygous'
+                for feature_id in cgroup_feature_set:
                     # Filter out reporting of "bogus symbols" (internal feature placeholders for wild-type alleles).
                     if feature_id in self.feature_lookup.keys():
                         genotype.component_features[zygosity].append(feature_id)
                         component_counter += 1
-            if genotype.component_features:
-                genotype_counter += 1
         self.log.info(f'Found {component_counter} components for {genotype_counter} genotypes for export.')
         return
 
