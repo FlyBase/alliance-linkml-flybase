@@ -931,7 +931,7 @@ class PrimaryEntityHandler(DataHandler):
             if self.datatype == 'genotype':
                 referenced_curie = f'FB:{fb_data_entity.fb_curie}'
                 page_area = self.page_area_conversion[self.datatype]
-                display_name = fb_data_entity.uniquename
+                display_name = fb_data_entity.name
             else:
                 referenced_curie = f'FB:{fb_data_entity.uniquename}'
                 if self.datatype in self.page_area_conversion.keys():

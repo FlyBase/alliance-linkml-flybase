@@ -366,6 +366,7 @@ class FBGenotype(FBDataEntity):
         super().__init__(chado_obj)
         # Primary FB chado data.
         self.db_primary_id = chado_obj.genotype_id
+        self.name = chado_obj.uniquename
         self.feature_genotypes = {}              # Will be cgroup-keyed lists of chado FeatureGenotype objects.
         self.stocks = []                         # Will be a list of associated chado Stock objects.
         # Processed FB data.
