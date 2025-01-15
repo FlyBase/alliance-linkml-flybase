@@ -72,9 +72,9 @@ def main():
 
     # Get the data and process it.
     genotype_handler = GenotypeHandler(log, testing)
-    strain_handler = StrainHandler(log, testing)
+    # strain_handler = StrainHandler(log, testing)
     db_query_transaction(session, log, genotype_handler)
-    db_query_transaction(session, log, strain_handler)
+    # db_query_transaction(session, log, strain_handler)
 
     # Export the data.
     export_dict = {
@@ -83,7 +83,7 @@ def main():
     }
     export_dict['agm_ingest_set'] = []
     export_dict['agm_ingest_set'].extend(genotype_handler.export_data[genotype_handler.primary_export_set])
-    export_dict['agm_ingest_set'].extend(strain_handler.export_data[strain_handler.primary_export_set])
+    # export_dict['agm_ingest_set'].extend(strain_handler.export_data[strain_handler.primary_export_set])
 
     generate_export_file(export_dict, log, output_filename)
 

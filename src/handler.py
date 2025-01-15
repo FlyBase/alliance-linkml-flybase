@@ -145,6 +145,7 @@ class DataHandler(object):
         'tool': False,
         'transposon': False,
         'variation': True,
+        'bogus symbol': False,
     }
 
     # CVterms used to define a fb_data_type within a larger chado table.
@@ -160,6 +161,7 @@ class DataHandler(object):
         'tool': ['engineered_region'],
         'transposon': ['natural_transposable_element'],
         'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion', 'point_mutation', 'sequence_alteration', 'sequence_variant'],
+        'bogus symbol': ['bogus symbol'],
     }
 
     # Methods

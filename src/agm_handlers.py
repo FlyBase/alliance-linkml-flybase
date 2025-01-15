@@ -121,9 +121,9 @@ class GenotypeHandler(PrimaryEntityHandler):
 
     test_set = {
         2: 'Ab(1)ZWD16 | FBab0027942',                             # The first genotype in the table.
-        452205: 'wg[1]/wg[GBM]',                                   # Transheterozygous wg[1]/wg[GBM].
+        452205: 'wg[1]/wg[GBM]',                                   # Compound heterozygous wg[1]/wg[GBM].
         450391: 'wg[l-8]/wg[l-8]',                                 # Homozygous wg[l-8] allele.
-        367896: 'Tak1[2]/Tak1[+]',                                 # Heterozygous Tak1[2] over wt allele.
+        367896: 'Tak1[2]/Tak1[+]',                                 # Simple heterozygous Tak1[2] over wt allele.
         515567: 'Sdc[12]/Sdc[unspecified]',                        # Sdc[12]/Sdc[unspecified].
         166899: 'Df(2R)173/PCNA[D-292]',                           # PCNA[D-292]/Df(2R)173.
         168332: 'Df(3L)Ez7 hay[nc2.tMa]',                          # Df(3L)Ez7 + hay[nc2.tMa] (diff complementation groups).
@@ -257,7 +257,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
         self.build_organism_lookup(session)
-        self.build_feature_lookup(session, feature_types=['aberration', 'allele', 'balancer', 'construct', 'insertion'])
+        self.build_feature_lookup(session, feature_types=['aberration', 'allele', 'balancer', 'construct', 'insertion', 'bogus symbol'])
         self.get_dmel_insertion_allele_ids(session)
         self.get_transgenic_allele_ids(session)
         self.get_in_vitro_allele_ids(session)
@@ -478,8 +478,9 @@ class GenotypeHandler(PrimaryEntityHandler):
             genotype.component_features = {
                 'unspecified zygosity': [],
                 'homozygous': [],
-                'heterozygous': [],
-                'hemizygous': [],
+                'simple heterozygous': [],
+                'compound heterozygous': [],
+                # 'hemizygous': [],
             }
             for cgroup, fg_list in genotype.feature_genotypes.items():
                 cgroup_feature_list = [i.feature_id for i in fg_list]
@@ -491,7 +492,10 @@ class GenotypeHandler(PrimaryEntityHandler):
                 elif len(cgroup_feature_list) == 2 and len(cgroup_feature_set) == 1:
                     zygosity = 'homozygous'
                 elif len(cgroup_feature_list) == 2 and len(cgroup_feature_set) == 2:
-                    zygosity = 'heterozygous'
+                    zygosity = 'compound heterozygous'
+                    for feature_id in self.cgroup_feature_set:
+                        if self.feature_lookup[feature_id]['type'] == 'bogus symbol' and '+' in self.feature_lookup[feature_id]['name']:
+                            zygosity = 'simple heterozygous'
                 for feature_id in cgroup_feature_set:
                     # Filter out reporting of "bogus symbols" (internal feature placeholders for wild-type alleles).
                     if feature_id in self.feature_lookup.keys():
