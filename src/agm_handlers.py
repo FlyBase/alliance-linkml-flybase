@@ -493,7 +493,7 @@ class GenotypeHandler(PrimaryEntityHandler):
                     zygosity = 'homozygous'
                 elif len(cgroup_feature_list) == 2 and len(cgroup_feature_set) == 2:
                     zygosity = 'compound heterozygous'
-                    for feature_id in self.cgroup_feature_set:
+                    for feature_id in cgroup_feature_set:
                         if self.feature_lookup[feature_id]['type'] == 'bogus symbol' and '+' in self.feature_lookup[feature_id]['name']:
                             zygosity = 'simple heterozygous'
                 for feature_id in cgroup_feature_set:
