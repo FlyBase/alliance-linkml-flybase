@@ -25,8 +25,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
 from agm_handlers import (
-    # StrainHandler, GenotypeHandler
-    GenotypeHandler
+    StrainHandler, GenotypeHandler
 )
 from utils import db_query_transaction, generate_export_file
 
@@ -73,9 +72,9 @@ def main():
 
     # Get the data and process it.
     genotype_handler = GenotypeHandler(log, testing)
-    # strain_handler = StrainHandler(log, testing)
+    strain_handler = StrainHandler(log, testing)
     db_query_transaction(session, log, genotype_handler)
-    # db_query_transaction(session, log, strain_handler)
+    db_query_transaction(session, log, strain_handler)
 
     # Export the data.
     export_dict = {
@@ -83,7 +82,7 @@ def main():
         'alliance_member_release_version': database_release,
     }
     export_dict[genotype_handler.primary_export_set] = genotype_handler.export_data[genotype_handler.primary_export_set]
-    # export_dict[genotype_handler.primary_export_set].extend(strain_handler.export_data[strain_handler.primary_export_set])
+    export_dict[genotype_handler.primary_export_set].extend(strain_handler.export_data[strain_handler.primary_export_set])
 
     generate_export_file(export_dict, log, output_filename)
 
