@@ -367,9 +367,6 @@ class GenotypeHandler(PrimaryEntityHandler):
         non_dmel_genotype_counter = 0
         unspecified_species_genotype_counter = 0
         for genotype in self.fb_data_entities.values():
-            # self.log.debug(f'Assess genotype {genotype}.')
-            genotype_has_bona_fide_dmel_feature = False
-            genotype_has_bona_fide_non_dmel_feature = False
             feature_id_list = []
             organism_id_list = []
             for cgroup_feature_genotype_list in genotype.feature_genotypes.values():
@@ -378,88 +375,59 @@ class GenotypeHandler(PrimaryEntityHandler):
             feature_id_set = set(feature_id_list)
             # For each feature, determine the relevant organism.
             for feature_id in feature_id_set:
-                # Skip bogus symbols (relevant features should be in the feature_lookup dict).
-                if feature_id not in self.feature_lookup.keys():
-                    continue
-                feature_is_non_dmel = False
                 feature = self.feature_lookup[feature_id]
                 org_id = self.feature_lookup[feature_id]['organism_id']
-                org_abbr = self.organism_lookup[org_id]['abbreviation']
                 is_of_drosophilid = self.organism_lookup[org_id]['is_drosophilid']
-                # Key goal - find classical non-Dmel alleles.
-                # Also, flag genotypes directly related to FBtp and FBti when encountered.
-                if feature['uniquename'].startswith('FBtp'):
+                # Skip bogus symbols (relevant features should be in the feature_lookup dict).
+                if feature_id not in self.feature_lookup.keys() or self.feature_lookup[feature_id]['type'] == 'bogus symbol':
+                    continue
+                # Skip transgenic constructs.
+                elif feature['uniquename'].startswith('FBtp'):
                     genotype.has_fbtp_component = True
+                    continue
+                # Record FBti organism.
                 elif feature['uniquename'].startswith('FBti'):
                     genotype.has_fbti_component = True
-                    if org_abbr == 'Dmel':
-                        genotype_has_bona_fide_dmel_feature = True
-                    else:
-                        feature_is_non_dmel = True
-                        genotype_has_bona_fide_non_dmel_feature = True
+                    organism_id_list.append(org_id)
+                # Record FBab organism (unless introgressed).
                 elif feature['uniquename'].startswith('FBab'):
-                    if org_abbr == 'Dmel':
-                        genotype_has_bona_fide_dmel_feature = True
-                    elif feature_id not in self.introgressed_aberr_ids:
-                        feature_is_non_dmel = True
-                        genotype_has_bona_fide_non_dmel_feature = True
-                elif feature['uniquename'].startswith('FBba'):
-                    if org_abbr == 'Dmel':
-                        genotype_has_bona_fide_dmel_feature = True
+                    if feature_id not in self.introgressed_aberr_ids:
+                        continue
                     else:
-                        feature_is_non_dmel = True
-                        genotype_has_bona_fide_non_dmel_feature = True
+                        organism_id_list.append(org_id)
+                # Record FBba organism.
+                elif feature['uniquename'].startswith('FBba'):
+                    organism_id_list.append(org_id)
+                # Process alleles.
                 elif feature['uniquename'].startswith('FBal'):
-                    # Skip Dmel alleles.
-                    if org_abbr == 'Dmel':
-                        genotype_has_bona_fide_dmel_feature = True
+                    # Skip transgenic alleles: related to FBtp constructs.
+                    if feature_id in self.transgenic_allele_ids:
+                        continue
+                    # Skip transgenic alleles: annotated as "in vitro construct".
+                    elif feature_id in self.in_vitro_allele_ids:
+                        continue
                     # Skip non-Drosophilid alleles.
                     elif is_of_drosophilid is False:
-                        pass
-                    # Skip alleles related to Dmel insertions.
+                        continue
+                    # Record Dmel for Dmel insertions.
                     elif feature_id in self.dmel_insertion_allele_ids:
-                        genotype_has_bona_fide_dmel_feature = True
-                    # Skip alleles related to FBtp constructs.
-                    elif feature_id in self.transgenic_allele_ids:
-                        pass
-                    # Skip alleles annotated as "in vitro".
-                    elif feature_id in self.in_vitro_allele_ids:
-                        pass
-                    # At this point, any remaining alleles are, by process of elimination, classical non-Dmel Drosophilid alleles.
+                        organism_id_list.append(1)    # i.e., append organism_id=1 (represents Dmel).
+                    # Record allele organism: by process of elimination, allele must be non-Dmel Drosophilid classical/insertional.
                     else:
-                        feature_is_non_dmel = True
-                        genotype_has_bona_fide_non_dmel_feature = True
-                        # self.log.debug(f"Found classical non-Dmel allele associated with genotype: {feature['name']} ({feature['uniquename']}).")
-                # Record appropriate organism_id of the feature.
-                if feature_is_non_dmel is False:
-                    organism_id_list.append(1)    # i.e., the Dmel organism_id=1.
-                else:
-                    organism_id_list.append(org_id)
+                        organism_id_list.append(org_id)
             # Analyze the set of organism_ids left.
             organism_id_list = list(set(organism_id_list))
-            # If we have confidence only in the organism for non-Dmel features present, remove transgenic allele organism_ids from consideration.
-            if genotype_has_bona_fide_non_dmel_feature is True and genotype_has_bona_fide_dmel_feature is False:
-                try:
-                    organism_id_list.remove(1)
-                except ValueError:
-                    pass
-                # self.log.debug(f'Genotype {genotype} has non-Dmel classical allele.')
-            # If a genotype has no components (e.g., "+/+"), assume it's Dmel. Leave the default genotype.ncbi_taxon_id = 'NCBITaxon:7227'.
+            # If there are no components that provide definitive organism info, the default Dmel persists.
             if len(organism_id_list) == 0:
                 pass    # The default.
-            # The presence of any Dmel features makes it a Dmel genotype. Leave the default genotype.ncbi_taxon_id = 'NCBITaxon:7227'.
-            elif 1 in organism_id_list:
-                pass    # The default , corresponding to Dmel.
-            # Identify non-Dmel genotypes with components from a single non-Dmel species.
+            # If there is non-ambiguous definitive organism info, use that for the genotype taxon.
             elif len(organism_id_list) == 1:
                 org_id = organism_id_list[0]
                 genotype.ncbi_taxon_id = self.organism_lookup[org_id]['taxon_curie']
-                # self.log.debug(f'Genotype {genotype} is non-Dmel.')
                 non_dmel_genotype_counter += 1
-            # If there are components from many species (none of which are Dmel), taxon is given to be "unidentified".
+            # If organism info is ambiguous, the taxon is given as "unidentified".
             else:
                 genotype.ncbi_taxon_id = 'NCBITaxon:32644'
-                # self.log.debug(f'Genotype {genotype} has taxon UNIDENTIFIED.')
                 unspecified_species_genotype_counter += 1
         self.log.info(f'Found {non_dmel_genotype_counter} non-Dmel Drosophilid genotypes.')
         self.log.info(f'For {unspecified_species_genotype_counter} genotypes, taxon is unidentified.')

@@ -255,7 +255,7 @@ class PrimaryEntityHandler(DataHandler):
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             filters += (primary_entity.uniquename.in_((self.test_set.keys())), )
         if 'rel_type' in kwargs.keys():
-            if type(kwargs['rel_type']) != list:
+            if type(kwargs['rel_type']) is not list:
                 kwargs['rel_type'] = [kwargs['rel_type']]
             filters += (rel_type.name.in_((kwargs['rel_type'])), )
         if 'entity_type' in kwargs.keys():
