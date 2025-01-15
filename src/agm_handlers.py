@@ -498,7 +498,7 @@ class GenotypeHandler(PrimaryEntityHandler):
                             zygosity = 'simple heterozygous'
                 for feature_id in cgroup_feature_set:
                     # Filter out reporting of "bogus symbols" (internal feature placeholders for wild-type alleles).
-                    if feature_id in self.feature_lookup.keys():
+                    if feature_id in self.feature_lookup.keys() and self.feature_lookup[feature_id]['type'] != 'bogus symbol':
                         genotype.component_features[zygosity].append(feature_id)
                         component_counter += 1
         self.log.info(f'Found {component_counter} components for {genotype_counter} genotypes for export.')
