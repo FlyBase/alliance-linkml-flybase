@@ -295,13 +295,17 @@ class AffectedGenomicModelComponentDTO(AuditedObjectDTO):
     zygosity_id = {
         'hemizygous': 'GENO:0000134',
         'heterozygous': 'GENO:0000135',
+        # 'simple heterozygous': 'GENO:0000135',      # Use until specific terms are allowed.
+        # 'compound heterozygous': 'GENO:0000135',    # Use until specific terms are allowed.
+        'simple heterozygous': 'GENO:0000458',
+        'compound heterozygous': 'GENO:0000402',
         'homozygous': 'GENO:0000136',
         'unspecified zygosity': 'GENO:0000137',
-        'homoplasmic': 'GENO:0000602',
-        'heteroplasmic': 'GENO:0000603',
-        'hemizygous X-linked': 'GENO:0000604',
-        'hemizygous Y-linked': 'GENO:0000605',
-        'hemizygous insertion-linked': 'GENO:0000606'
+        # 'homoplasmic': 'GENO:0000602',
+        # 'heteroplasmic': 'GENO:0000603',
+        # 'hemizygous X-linked': 'GENO:0000604',
+        # 'hemizygous Y-linked': 'GENO:0000605',
+        # 'hemizygous insertion-linked': 'GENO:0000606'
     }
 
 
