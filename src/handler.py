@@ -230,6 +230,14 @@ class DataHandler(object):
         self.log.info(f'Found {pmid_counter} PMID IDs for {pub_counter} current FB publications.')
         return
 
+    def lookup_single_pub_curie(self, pub_id):
+        """Return a single pub curie given a single internal chado pub_id."""
+        try:
+            pub_curie = self.bibliography[pub_id]
+        except KeyError:
+            pub_curie = None
+        return pub_curie
+
     def lookup_pub_curies(self, pub_id_list):
         """Return a list of curies from a list of internal chado pub_ids."""
         if type(pub_id_list) is not list:
