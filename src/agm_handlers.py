@@ -391,7 +391,7 @@ class GenotypeHandler(PrimaryEntityHandler):
                     organism_id_list.append(org_id)
                 # Record FBab organism (unless introgressed).
                 elif feature['uniquename'].startswith('FBab'):
-                    if feature_id not in self.introgressed_aberr_ids:
+                    if feature_id in self.introgressed_aberr_ids:
                         continue
                     else:
                         organism_id_list.append(org_id)
