@@ -348,7 +348,7 @@ class GenotypeHandler(PrimaryEntityHandler):
             if genotype.fb_curie is None:
                 stock_only_genotype_ids.append(genotype.db_primary_id)
         for genotype_id in stock_only_genotype_ids:
-            del(self.fb_data_entities[genotype_id])
+            del self.fb_data_entities[genotype_id]
         self.log.info(f'Pruned {len(stock_only_genotype_ids)} stock-only genotypes from the dataset.')
         return
 
