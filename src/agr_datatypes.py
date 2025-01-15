@@ -293,12 +293,12 @@ class AffectedGenomicModelComponentDTO(AuditedObjectDTO):
     # Zygosity mapping to GENO IDs.
     # https://github.com/monarch-initiative/GENO-ontology/blob/develop/geno-base.obo
     zygosity_id = {
-        'hemizygous': 'GENO:0000134_hemizygous',
-        # 'heterozygous': 'GENO:0000135',
-        # 'simple heterozygous': 'GENO:0000135',      # Use until specific terms are allowed.
-        # 'compound heterozygous': 'GENO:0000135',    # Use until specific terms are allowed.
-        'simple heterozygous': 'GENO:0000458_simple_heterozygous',        # Not yet allowed at Alliance.
-        'compound heterozygous': 'GENO:0000402_compound_heterozygous',      # Not yet allowed at Alliance.
+        # 'hemizygous': 'GENO:0000134_hemizygous',                          # Not yet implemented in FB code.
+        # 'heterozygous': 'GENO:0000135',                                   # Retire use of generic parent term.
+        'simple heterozygous': 'GENO:0000135',                              # Map specific term to ID of generic parent term for now.
+        'compound heterozygous': 'GENO:0000135',                            # Map specific term to ID of generic parent term for now.
+        # 'simple heterozygous': 'GENO:0000458_simple_heterozygous',        # Implement this only when this GENOTerm is allowed at the Alliance.
+        # 'compound heterozygous': 'GENO:0000402_compound_heterozygous',    # Implement this only when this GENOTerm is allowed at the Alliance.
         'homozygous': 'GENO:0000136_homozygous',
         'unspecified zygosity': 'GENO:0000137_unspecified_zygosity',
         # 'homoplasmic': 'GENO:0000602',
