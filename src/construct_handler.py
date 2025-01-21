@@ -14,7 +14,7 @@ from sqlalchemy.orm import aliased
 import agr_datatypes
 import fb_datatypes
 from feature_handler import FeatureHandler
-from harvdev_utils.production import (
+from harvdev_utils.reporting import (
     Cvterm, Feature, FeatureRelationship, FeatureRelationshipPub
 )
 
@@ -46,7 +46,15 @@ class ConstructHandler(FeatureHandler):
         'FBtp0051705': 'M{MtnBcDNA-MtnDcDNA.EGFP}',               # has_reg_region MtnB.
         'FBtp0080088': 'P{UAS-Brainbow}',                         # Expresses EBFP2, EGFP, mKO2, has_reg_region UAS; tagged_with HA, MYC, V5; carries lox.
         'FBtp0083738': 'P{GR}',                                   # Is regulated_by FBgn Act5C.
-        'FBtp0017594': 'P{UAS(-FRT)ptc.Deltaloop2}'               # Obsolete, has only a non-current symbol synonym - for testing feature lookup.
+        'FBtp0017594': 'P{UAS(-FRT)ptc.Deltaloop2}',              # Obsolete, has only a non-current symbol synonym - for testing feature lookup.
+        'FBtp0001701': 'P{hs-yCDC42.V12}',                        # Expresses Scer CDC42 (SGD:S000004219).
+        'FBtp0001650': 'P{UAS-Cele_ced-3.S}',                     # Expresses Cele ced-3 (WB:WBGene00000417).
+        'FBtp0010091': 'P{hs-Drer_nkx2.7.P}',                     # Expresses Drer nkx2.7 (ZFIN:ZDB-GENE-990415-179).
+        'FBtp0007421': 'P{hb-Xlh1}',                              # Expresses Xlae h (no XB ID in FB).
+        'FBtp0002652': 'P{UAS-mCD8::GFP.L}',                      # Expresses Mmus Cd8a (MGI:88346).
+        'FBtp0001429': 'P{UAS-MAP2.A}',                           # Expresses Rnor Map2 (RGD:3044).
+        'FBtp0000463': 'P{UAS-MAPT.A}',                           # Expresses Human MAPT (HGNC:6893).
+        'FBtp0150381': 'PBac{UAS-SARS-CoV-2-nsp13.B}',            # Expresses SARS-CoV-2 nsp13 (REFSEQ:YP_009725308).
     }
 
     # Additional set for export added to the handler.
@@ -58,7 +66,7 @@ class ConstructHandler(FeatureHandler):
         super().get_general_data(session)
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
-        self.build_ncbi_taxon_lookup(session)
+        self.build_organism_lookup(session)
         self.build_feature_lookup(session)
         self.build_allele_gene_lookup(session)
         self.build_allele_class_lookup(session)
@@ -394,7 +402,7 @@ class ConstructHandler(FeatureHandler):
             agr_construct = self.agr_export_type()
             agr_construct.obsolete = construct.chado_obj.is_obsolete
             agr_construct.mod_entity_id = f'FB:{construct.uniquename}'
-            agr_construct.mod_internal_id = str(construct.chado_obj.feature_id)
+            # agr_construct.mod_internal_id = f'FB.feature_id={construct.chado_obj.feature_id}'
             construct.linkmldto = agr_construct
         return
 
@@ -421,10 +429,12 @@ class ConstructHandler(FeatureHandler):
                         continue
                     elif slot_name == 'regulating_features' and feature_id in construct.regulating_tool_genes:
                         continue
-                    symbol = self.feature_lookup[feature_id]['symbol']
+                    feature = self.feature_lookup[feature_id]
+                    symbol = feature['symbol']
+                    organism_id = feature['organism_id']
                     pubs = self.lookup_pub_curies(pub_ids)
-                    taxon_text = self.feature_lookup[feature_id]['species']
-                    taxon_curie = self.feature_lookup[feature_id]['taxon_id']
+                    taxon_text = self.organism_lookup[organism_id]['full_species_name']
+                    taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
                     component_dto = agr_datatypes.ConstructComponentSlotAnnotationDTO(rel_type, symbol, taxon_curie, taxon_text, pubs).dict_export()
                     construct.linkmldto.construct_component_dtos.append(component_dto)
                     counter += 1
@@ -450,7 +460,7 @@ class ConstructHandler(FeatureHandler):
                     if self.feature_lookup[feature_id]['type'] != 'gene' or not self.feature_lookup[feature_id]['uniquename'].startswith('FBgn'):
                         continue
                     cons_curie = f'FB:{construct.uniquename}'
-                    obj_curie = f'FB:{self.feature_lookup[feature_id]["uniquename"]}'
+                    obj_curie = self.feature_lookup[feature_id]['curie']
                     pub_curies = self.lookup_pub_curies(pub_ids)
                     fb_rel = fb_datatypes.FBExportEntity()
                     rel_dto = agr_datatypes.ConstructGenomicEntityAssociationDTO(cons_curie, rel_type, obj_curie, pub_curies)

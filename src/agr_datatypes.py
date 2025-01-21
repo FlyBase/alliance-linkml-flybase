@@ -222,6 +222,7 @@ class ConstructGenomicEntityAssociationDTO(EvidenceAssociationDTO):
         # self.evidence_curies = evidence_curies
         self.note_dtos = []
         self.required_fields.extend(['construct_identifier', 'genomic_entity_relation_name', 'genomic_entity_identifier'])
+        self.internal_fields.extend(['evidence_curies'])    # TEMPORARILY SUPPRESS UNTIL LOAD SPEED IMPROVES
 
 
 class AnnotationDTO(SingleReferenceAssociationDTO):
@@ -286,20 +287,25 @@ class AffectedGenomicModelComponentDTO(AuditedObjectDTO):
     def __init__(self, component_curie, zygosity):
         """Create AffectedGenomicModelComponentDTO for FlyBase object."""
         super().__init__()
-        self.allele_curie = component_curie
+        self.allele_identifier = component_curie
         self.zygosity_curie = self.zygosity_id[zygosity]
-        self.required_fields.extend(['mod_entity_id'])
-    # Zygosity mapping.
+        self.required_fields.extend(['allele_identifier', 'zygosity_curie'])
+    # Zygosity mapping to GENO IDs.
+    # https://github.com/monarch-initiative/GENO-ontology/blob/develop/geno-base.obo
     zygosity_id = {
-        'hemizygous': 'GENO:0000134',
-        'heterozygous': 'GENO:0000135',
-        'homozygous': 'GENO:0000136',
-        'unspecified zygosity': 'GENO:0000137',
-        'homoplasmic': 'GENO:0000602',
-        'heteroplasmic': 'GENO:0000603',
-        'hemizygous X-linked': 'GENO:0000604',
-        'hemizygous Y-linked': 'GENO:0000605',
-        'hemizygous insertion-linked': 'GENO:0000606'
+        # 'hemizygous': 'GENO:0000134_hemizygous',                          # Not yet implemented in FB code.
+        # 'heterozygous': 'GENO:0000135',                                   # Retire use of generic parent term.
+        'simple heterozygous': 'GENO:0000135',                              # Map specific term to ID of generic parent term for now.
+        'compound heterozygous': 'GENO:0000135',                            # Map specific term to ID of generic parent term for now.
+        # 'simple heterozygous': 'GENO:0000458_simple_heterozygous',        # Implement this only when this GENOTerm is allowed at the Alliance.
+        # 'compound heterozygous': 'GENO:0000402_compound_heterozygous',    # Implement this only when this GENOTerm is allowed at the Alliance.
+        'homozygous': 'GENO:0000136_homozygous',
+        'unspecified zygosity': 'GENO:0000137_unspecified_zygosity',
+        # 'homoplasmic': 'GENO:0000602',
+        # 'heteroplasmic': 'GENO:0000603',
+        # 'hemizygous X-linked': 'GENO:0000604',
+        # 'hemizygous Y-linked': 'GENO:0000605',
+        # 'hemizygous insertion-linked': 'GENO:0000606'
     }
 
 

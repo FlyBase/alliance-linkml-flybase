@@ -11,7 +11,7 @@ Author(s):
 import re
 from logging import Logger
 from sqlalchemy.orm import aliased
-from harvdev_utils.production import (
+from harvdev_utils.reporting import (
     Cv, Cvterm, Db, Dbxref, Feature, FeatureCvterm, FeatureCvtermprop,
     FeatureDbxref, FeatureRelationship, Pub
 )
@@ -383,7 +383,7 @@ class AlleleDiseaseHandler(DataHandler):
                 continue
             allele_curie = f'FB:{dis_anno.feature_cvterm.feature.uniquename}'
             do_curie = f'DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}'
-            pub_curie = self.lookup_pub_curies(dis_anno.feature_cvterm.pub_id)
+            pub_curie = self.lookup_single_pub_curie(dis_anno.feature_cvterm.pub_id)
             agr_dis_anno = self.agr_export_type(allele_curie, do_curie, pub_curie)
             if dis_anno.qualifier.value == 'DOES NOT model':
                 agr_dis_anno.negated = True
@@ -455,7 +455,7 @@ class AlleleDiseaseHandler(DataHandler):
                     if db_primary_id != first_db_id:
                         self.fb_data_entities[db_primary_id].is_redundant = True
                         self.fb_data_entities[db_primary_id].for_export = False
-                        self.fb_data_entities[db_primary_id].export_warnings.append('Annotation is redundant.')
+                        self.fb_data_entities[db_primary_id].export_warnings.append('Annotation is redundant')
                         redundant_counter += 1
         self.log.info(f'A further {redundant_counter} redundant annotations blocked from export.')
         return

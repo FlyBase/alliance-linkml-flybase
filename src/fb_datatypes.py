@@ -30,7 +30,8 @@ class FBExportEntity(object):
         self.org_species = None       # Organism.species, if applicable.
         self.timeaccessioned = None   # FB timeaccessioned, if applicable.
         self.timelastmodified = None  # FB timelastmodified, if applicable.
-        self.timestamps = []          # FB timestamps.
+        self.new_timestamps = []      # FB timeaccessioned or audit_chado insert ("I") timestamps only.
+        self.timestamps = []          # FB audit_chado timestamps.
         self.linkmldto = None         # Alliance LinkML object for mapped data.
         self.for_export = True        # Made False to prevent Alliance export.
         self.internal_reasons = []    # Reasons an object was marked internal.
@@ -87,14 +88,18 @@ class FBDataEntity(FBExportEntity):
         self.entity_desc = f'{self.name} ({self.uniquename})'
         # Primary FB chado data from direct db query results, no or minimal processing.
         # These attributes apply to various FlyBase entities: e.g., gene, strain, genotype, gene group, etc.
-        self.pub_associations = []       # Pub associations: e.g., FeaturePub, StrainPub.
-        self.synonyms = []               # Synonym associations: e.g., FeatureSynonym.
-        self.fb_sec_dbxrefs = []         # 2o/non-current FlyBase xref objects: e.g., FeatureDbxref.
-        self.dbxrefs = []                # Current xref objects: e.g., FeatureDbxref.
-        self.props_by_type = {}          # Lists of FBProp objects keyed by prop type name.
-        self.rels_by_id = {}             # Internal relationship_id-keyed dict of FBRelationship entities.
-        self.sbj_rel_ids_by_type = {}    # Lists of relationship_ids where this entity is the subject; keyed by relationship type name.
-        self.obj_rel_ids_by_type = {}    # Lists of relationship_ids where this entity is the object; keyed by relationship type name.
+        self.pub_associations = []        # Pub associations: e.g., FeaturePub, StrainPub.
+        self.synonyms = []                # Synonym associations: e.g., FeatureSynonym.
+        self.fb_sec_dbxrefs = []          # 2o/non-current FlyBase xref objects: e.g., FeatureDbxref.
+        self.dbxrefs = []                 # Current xref objects: e.g., FeatureDbxref.
+        self.props_by_type = {}           # Lists of FBProp objects keyed by prop type name.
+        self.cvt_annos_by_id = {}         # entity_cvterm_id-keyed dict of FBCVtermAnnotation objects.
+        self.cvt_anno_ids_by_cv = {}      # Cv.name-keyed lists of entity_cvterm_ids.
+        self.cvt_anno_ids_by_term = {}    # Cvterm.name-keyed lists of entity_cvterm_ids.
+        self.cvt_anno_ids_by_prop = {}    # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
+        self.rels_by_id = {}              # Internal relationship_id-keyed dict of FBRelationship entities.
+        self.sbj_rel_ids_by_type = {}     # Lists of relationship_ids where this entity is the subject; keyed by relationship type name.
+        self.obj_rel_ids_by_type = {}     # Lists of relationship_ids where this entity is the object; keyed by relationship type name.
         # Processed FB data - processed from primary FB chado data above.
         self.ncbi_taxon_id = None       # The NCBITaxon dbxref.accession (str).
         self.synonym_dict = {}          # Will be synonym_id-keyed dicts of processed synonym info.
@@ -113,7 +118,10 @@ class FBDataEntity(FBExportEntity):
             entity_role (str): Indicate if entity is the subject or object in the relationship.
             rel_types (str, list): The CV term name(s) for the relationship of interest.
             rel_entity_types (str, list): The CV term name(s) for the related entity type; only useful for features.
-            One or both keyword arguments must be specified.
+            At least one keyword argument must be specified.
+
+        Raises:
+            Raises an error if no keyword argument is specified.
 
         Returns:
             A list of FBRelationship objects that meet the specified criteria.
@@ -193,9 +201,62 @@ class FBDataEntity(FBExportEntity):
             rels_of_interest.append(self.rels_by_id[rel_id])
         return rels_of_interest
 
+    def recall_cvterm_annotations(self, log, **kwargs):
+        """Recall FBCVTermAnnotation objects with specified attributes from previous db queries for CV term annotations.
+
+        Args:
+            log (Logger): The logger for any messages.
+
+        Keyword Args:
+            cv_names (str, list): The CV name(s) for annotations of interest.
+            cvterm_names (str, list): The CV term name(s) for annotations of interest.
+            prop_type_names (str, list): The name of prop type(s) for annotations of interest.
+            At least one keyword argument must be specified.
+
+        Raises:
+            Raises an error if no keyword argument is specified.
+
+        Returns:
+            A list of FBCVTermAnnotation objects that meet the specified criteria.
+
+        """
+        anno_bin_types = {
+            'cv_names': 'cvt_anno_ids_by_cv',
+            'cvterm_names': 'cvt_anno_ids_by_term',
+            'prop_type_names': 'cvt_anno_ids_by_prop',
+        }
+        if not kwargs:
+            log.error(f'Must give at least one keyword argument for recall_cvterm_annotations() method: {anno_bin_types.keys()}.')
+            raise ValueError
+        unrecognized_kwargs = set(kwargs.keys()) - set(anno_bin_types.keys())
+        if unrecognized_kwargs:
+            log.error(f'Unrecognized keyword args were given: {unrecognized_kwargs}. Only these are accepted: {anno_bin_types.keys()}.')
+            raise ValueError
+        anno_ids_of_interest = set(self.cvt_annos_by_id.keys())
+        annos_of_interest = []
+        for kwarg_name in anno_bin_types.keys():
+            if kwarg_name not in kwargs.keys():
+                continue
+            if type(kwargs[kwarg_name]) is str:
+                kwargs[kwarg_name] = [kwargs[kwarg_name]]
+            relevant_anno_dict = getattr(self, anno_bin_types[kwarg_name])
+            relevant_anno_ids = []
+            # Take union of all specified values for a given attribute.
+            for anno_attr_name in kwargs[kwarg_name]:
+                try:
+                    relevant_anno_ids.extend(relevant_anno_dict[anno_attr_name])
+                except KeyError:
+                    pass
+            relevant_anno_ids = set(relevant_anno_ids)
+            # Apply the filter.
+            anno_ids_of_interest = anno_ids_of_interest.intersection(relevant_anno_ids)
+        for anno_id in anno_ids_of_interest:
+            annos_of_interest.append(self.cvt_annos_by_id[anno_id])
+        return annos_of_interest
+
 
 class FBFeature(FBDataEntity):
-    """An abstract, generic FlyBase Feature entity with all its related data."""
+    """An abstract, generic FlyBase feature entity with all its related data."""
     def __init__(self, chado_obj):
         """Create the FBGene object."""
         super().__init__(chado_obj)
@@ -205,31 +266,29 @@ class FBFeature(FBDataEntity):
         self.fb_anno_dbxrefs = []            # Will be "FlyBase Annotation IDs" FeatureDbxref objects.
         self.sbj_rel_ids_by_obj_type = {}    # Lists of relationship_ids where this entity is the subject; keyed by object feature type.
         self.obj_rel_ids_by_sbj_type = {}    # Lists of relationship_ids where this entity is the object; keyed by subject feature type.
+        self.reagent_colls = []              # List of reagent collections (Library objects) directly associated with the feature.
+        self.al_reagent_colls = []           # List of reagent collections (Library objects) indirectly associated with the feature via an FBal allele.
+        self.ti_reagent_colls = []           # List of reagent collections (Library objects) indirectly associated with the feature via an FBti insertion.
+        self.tp_reagent_colls = []           # List of reagent collections (Library objects) indirectly associated with the feature via an FBtp construct.
+        self.sf_reagent_colls = []           # List of reagent collections (Library objects) indirectly associated with the feature via an FBsf feature.
         # Processed FB data.
         self.curr_anno_id = None     # Will be current annotation ID for the gene, transcript or protein (str).
         self.alt_anno_ids = []       # Will be list of non-current annotation IDs for the gene, transcript or protein (str).
 
 
-class FBGene(FBFeature):
-    """A FlyBase Gene entity with all its related data."""
+class FBAberration(FBFeature):
+    """A FlyBase aberration entity with all its related data."""
     def __init__(self, chado_obj):
-        """Create the FBGene object."""
+        """Create the FBAberration object."""
         super().__init__(chado_obj)
-        # Processed FB data.
-        self.gene_type_name = 'gene'        # Update this default gene to SO term name from "promoted_gene_type" Featureprop, if available.
-        self.gene_type_id = 'SO:0000704'    # Update this default gene ID to SO term ID from "promoted_gene_type" Featureprop, if available.
 
 
 class FBAllele(FBFeature):
-    """A FlyBase Allele entity with all its related data."""
+    """A FlyBase allele entity with all its related data."""
     def __init__(self, chado_obj):
         """Create the FBAllele object."""
         super().__init__(chado_obj)
         # Primary FB chado data.
-        self.direct_colls = []                  # List of collections (Library objects) directly associated with the allele.
-        self.ins_colls = []                     # List of collections (Library objects) indirectly associated with the allele via an FBti insertion.
-        self.cons_colls = []                    # List of collections (Library objects) indirectly associated with the allele via an FBtp construct.
-        self.sf_colls = []                      # List of collections (Library objects) indirectly associated with the allele via an FBsf feature.
         self.phenstatements = []                # List of SQLAlchemy (Feature, Genotype, Phenotype, Cvterm, Pub) results from Phenstatements.
         # Processed FB data.
         self.parent_gene_id = None              # The FBgn ID for the allele's parent gene.
@@ -237,13 +296,19 @@ class FBAllele(FBFeature):
         self.dmel_ins_rels = []                 # List of current Dmel FBti FBRelationships.
         self.non_dmel_ins_rels = []             # List of current non-Dmel FBti FBRelationships.
         self.arg_rels = []                      # List of current ARG FBRelationships.
-        self.adj_org_abbr = 'Dmel'              # Assume allele is Dmel (classical/transgenic) unless it can be shown to be a non-Dmel classical allele.
         self.in_vitro = False                   # Change to True if the allele is associated with an "in vitro%" term.
         self.allele_of_internal_gene = False    # Change to True if the allele is related to an internal-type gene (e.g., origin of replication).
 
 
+class FBBalancer(FBFeature):
+    """A FlyBase balancer entity with all its related data."""
+    def __init__(self, chado_obj):
+        """Create the FBBalancer object."""
+        super().__init__(chado_obj)
+
+
 class FBConstruct(FBFeature):
-    """A FlyBase Construct entity with all its related data."""
+    """A FlyBase construct entity with all its related data."""
     def __init__(self, chado_obj):
         """Create the FBConstruct object."""
         super().__init__(chado_obj)
@@ -267,8 +332,25 @@ class FBConstruct(FBFeature):
         self.regulating_tool_genes = []   # Will be list of feature_ids for genes for which related tools are also associated in construct.targeted_features.
 
 
+class FBGene(FBFeature):
+    """A FlyBase gene entity with all its related data."""
+    def __init__(self, chado_obj):
+        """Create the FBGene object."""
+        super().__init__(chado_obj)
+        # Processed FB data.
+        self.gene_type_name = 'gene'        # Update this default gene to SO term name from "promoted_gene_type" Featureprop, if available.
+        self.gene_type_id = 'SO:0000704'    # Update this default gene ID to SO term ID from "promoted_gene_type" Featureprop, if available.
+
+
+class FBInsertion(FBFeature):
+    """A FlyBase insertion entity with all its related data."""
+    def __init__(self, chado_obj):
+        """Create the FBInsertion object."""
+        super().__init__(chado_obj)
+
+
 class FBStrain(FBDataEntity):
-    """A FlyBase Strain entity with all its related data."""
+    """A FlyBase strain entity with all its related data."""
     def __init__(self, chado_obj):
         """Create the FBStrain object."""
         super().__init__(chado_obj)
@@ -278,11 +360,21 @@ class FBStrain(FBDataEntity):
 
 
 class FBGenotype(FBDataEntity):
-    """A FlyBase Genotype entity with all its related data."""
+    """A FlyBase genotype entity with all its related data."""
     def __init__(self, chado_obj):
         """Create the FBGenotype object."""
         super().__init__(chado_obj)
+        # Primary FB chado data.
         self.db_primary_id = chado_obj.genotype_id
+        self.name = chado_obj.uniquename
+        self.feature_genotypes = {}              # Will be cgroup-keyed lists of chado FeatureGenotype objects.
+        self.stocks = []                         # Will be a list of associated chado Stock objects.
+        # Processed FB data.
+        self.fb_curie = None
+        self.has_fbtp_component = False          # True if genotype is directly related to an FBtp feature.
+        self.has_fbti_component = False          # True if genotype is directly related to an FBti feature.
+        self.component_features = {}             # Zygosity-name-keyed lists of feature_ids.
+        self.ncbi_taxon_id = 'NCBITaxon:7227'    # Default Dmel, adjusted later if needed.
 
 
 # First class associations and annotations.
@@ -337,13 +429,30 @@ class FBRelationship(FBExportEntity):
             table_name (str): The relationship table name for the relationship.
 
         """
-        # Note that this class has props_by_type attribute that applies to FeatureRelationships only.
         super().__init__()
         self.chado_obj = chado_obj
         self.db_primary_id = getattr(chado_obj, f'{table_name}_id')
         self.entity_desc = f'{table_name}_id={self.db_primary_id}'
         self.props_by_type = {}    # Lists of FBProp objects keyed by prop type name.
         self.pubs = []    # Will be list of Pub.pub_ids supporting the relationship.
+
+
+class FBCVTermAnnotation(FBExportEntity):
+    """FBCVTermAnnotation class."""
+    def __init__(self, chado_obj, table_name):
+        """Create a FBCVTermAnnotation object.
+
+        Args:
+            chado_obj (SQLAlchemy object): The Chado object representing the CV term annotation: e.g., FeatureCvterm, GrpCvterm.
+            table_name (str): The relationship table name for the relationship: e.g., feature_cvterm, strain_cvterm.
+
+        """
+        super().__init__()
+        self.chado_obj = chado_obj
+        self.db_primary_id = getattr(chado_obj, f'{table_name}_id')
+        self.entity_desc = f'{table_name}_id={self.db_primary_id}'
+        self.props_by_type = {}    # Lists of FBProp objects keyed by prop type name.
+        self.pub_id = self.chado_obj.pub_id
 
 
 # Second class annotations (submitted as part of other objects).

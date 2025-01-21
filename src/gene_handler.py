@@ -28,27 +28,30 @@ class GeneHandler(FeatureHandler):
         self.primary_export_set = 'gene_ingest_set'
 
     test_set = {
-        'FBgn0284084': 'wg',                # Current annotated nuclear protein_coding gene.
-        'FBgn0004009': 'wg',                # Obsolete annotated nuclear protein_coding gene.
-        'FBgn0013687': 'mt:ori',            # Current localized but unannotated mitochondrial gene.
-        'FBgn0013678': 'mt:Cyt-b',          # Current annotated mitochondrial protein_coding gene.
-        'FBgn0019661': 'lncRNA:roX1',       # Current annotated nuclear ncRNA gene.
-        'FBgn0262451': 'mir-ban',           # Current annotated nuclear miRNA gene.
-        'FBgn0034365': 'CG5335',            # Current annotated gene with CG symbol.
-        'FBgn0003884': 'alphaTub84B',       # Current annotated gene with non-ASCII char in symbol.
-        'FBgn0263477': 'scaRNA:PsiU1-6',    # Current annotated gene needs systematic synonym dto generated from annotation ID.
-        'FBgn0030179': 'CG12094',           # Obsolete unannotated gene, should not get systematic name but needs symbol.
-        'FBgn0108495': 'Dere\\GG16260',     # Current unannotated non-Dmel with systematic name.
-        'FBgn0031087': 'CG12656',           # Current withdrawn gene.
-        'FBgn0000154': 'Bar',               # Current unannotated gene.
-        'FBgn0001200': 'His4',              # Current unannotated gene family.
-        'FBgn0087003': 'tal',               # Current unannotated oddball.
-        'FBgn0015267': 'Mmus\\Abl1',        # Current mouse gene with MGI xref.
+        'FBgn0284084': 'wg',                  # Current annotated nuclear protein_coding gene.
+        'FBgn0004009': 'wg',                  # Obsolete annotated nuclear protein_coding gene.
+        'FBgn0044027': 'Ori66Dbeta',          # Current unannotated gene representing origin_of_replication.
+        'FBgn0013687': 'mt:ori',              # Current localized but unannotated mitochondrial gene.
+        'FBgn0013678': 'mt:Cyt-b',            # Current annotated mitochondrial protein_coding gene.
+        'FBgn0019661': 'lncRNA:roX1',         # Current annotated nuclear ncRNA gene.
+        'FBgn0262451': 'mir-ban',             # Current annotated nuclear miRNA gene.
+        'FBgn0034365': 'CG5335',              # Current annotated gene with CG symbol.
+        'FBgn0003884': 'alphaTub84B',         # Current annotated gene with non-ASCII char in symbol.
+        'FBgn0263477': 'scaRNA:PsiU1-6',      # Current annotated gene needs systematic synonym dto generated from annotation ID.
+        'FBgn0030179': 'CG12094',             # Obsolete unannotated gene, should not get systematic name but needs symbol.
+        'FBgn0066164': 'Dsim_Hmr',            # Current Dsim gene.
+        'FBgn0016335': 'Dsim_HeT-A_gag',      # Current Dsim gene for TE CDS.
+        'FBgn0108495': 'Dere_GG16260',        # Obsolete unannotated non-Dmel obsolete gene with systematic name.
+        'FBgn0031087': 'CG12656',             # Current withdrawn gene.
+        'FBgn0000154': 'Bar',                 # Current unannotated gene.
+        'FBgn0001200': 'His4',                # Current unannotated gene family.
+        'FBgn0087003': 'tal',                 # Current unannotated oddball.
+        'FBgn0015267': 'Mmus_Abl1',           # Current mouse gene, MGI:87859.
+        'FBgn0026367': 'Scer_GAL80',          # Current yeast gene, SGD:S000004515.
+        'FBgn0287889': 'SARS-CoV-2_ORF3a',    # Current SARS-CoV2 gene, REFSEQ:YP_009724391.
     }
 
     # Additional reference info.
-    gene_allele_rels = {}            # Will be (allele feature_id, gene feature_id) tuples keying lists of FBRelationships.
-    gene_allele_associations = []    # Will be the final list of gene-allele FBRelationships to export.
     pthr_dict = {}                   # Will be an 1:1 FBgn_ID-PTHR xref dict.
 
     # Elaborate on get_general_data() for the GeneHandler.
@@ -57,7 +60,7 @@ class GeneHandler(FeatureHandler):
         super().get_general_data(session)
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
-        self.build_ncbi_taxon_lookup(session)
+        self.build_organism_lookup(session)
         self.build_feature_lookup(session, feature_types=['gene', 'allele'])
         self.get_internal_genes(session)
         self.get_chr_info(session)
@@ -116,28 +119,6 @@ class GeneHandler(FeatureHandler):
                 self.log.warning(f'{gene} has many promoted gene types.')
         return
 
-    def synthesize_gene_alleles(self):
-        """Synthesize gene allele relationships."""
-        self.log.info('Synthesize gene allele relationships.')
-        gene_counter = 0
-        allele_counter = 0
-        # Need to code for the rare possibility that gene-allele is represented by many feature_relationships.
-        for gene in self.fb_data_entities.values():
-            relevant_allele_rels = gene.recall_relationships(self.log, entity_role='object', rel_types='alleleof', rel_entity_types='allele')
-            if relevant_allele_rels:
-                gene_counter += 1
-            # self.log.debug(f'For {gene}, found {len(relevant_allele_rels)} allele rels to review.')
-            for allele_rel in relevant_allele_rels:
-                allele_feature_id = allele_rel.chado_obj.subject_id
-                allele_gene_key = (allele_feature_id, gene.db_primary_id)
-                try:
-                    self.gene_allele_rels[allele_gene_key].extend(allele_rel)
-                except KeyError:
-                    self.gene_allele_rels[allele_gene_key] = [allele_rel]
-                    allele_counter += 1
-        self.log.info(f'Found {allele_counter} alleles for {gene_counter} genes.')
-        return
-
     # Elaborate on synthesize_info() for the GeneHandler.
     def synthesize_info(self):
         """Extend the method for the GeneHandler."""
@@ -148,7 +129,6 @@ class GeneHandler(FeatureHandler):
         self.synthesize_pubs()
         self.synthesize_gene_type()
         self.synthesize_anno_ids()
-        self.synthesize_gene_alleles()
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
@@ -159,7 +139,7 @@ class GeneHandler(FeatureHandler):
             agr_gene = self.agr_export_type()
             agr_gene.obsolete = gene.chado_obj.is_obsolete
             agr_gene.mod_entity_id = f'FB:{gene.uniquename}'
-            agr_gene.mod_internal_id = str(gene.chado_obj.feature_id)
+            # agr_gene.mod_internal_id = f'FB.feature_id={gene.db_primary_id}'
             agr_gene.taxon_curie = gene.ncbi_taxon_id
             gene.linkmldto = agr_gene
         return
@@ -203,32 +183,32 @@ class GeneHandler(FeatureHandler):
             gene.linkmldto.cross_reference_dtos.append(xref_dto)
         return
 
-    def map_gene_allele_associations(self):
-        """Map gene-allele associations to Alliance object."""
-        self.log.info('Map gene-allele associations to Alliance object.')
-        ALLELE = 0
-        GENE = 1
+    def flag_unexportable_genes(self):
+        """Flag unexportable genes."""
+        self.log.info('Flag unexportable genes.')
         counter = 0
-        for allele_gene_key, allele_gene_rels in self.gene_allele_rels.items():
-            allele_curie = f'FB:{self.feature_lookup[allele_gene_key[ALLELE]]["uniquename"]}'
-            gene_curie = f'FB:{self.feature_lookup[allele_gene_key[GENE]]["uniquename"]}'
-            first_feat_rel = allele_gene_rels[0]
-            if not allele_curie.startswith('FB:FBal'):
-                first_feat_rel.for_export = False
-                first_feat_rel.export_warnings.append('"alleleof" relationship includes non-allele')
-            all_pub_ids = []
-            for allele_gene_rel in allele_gene_rels:
-                all_pub_ids.extend(allele_gene_rel.pubs)
-            first_feat_rel.pubs = all_pub_ids
-            pub_curies = self.lookup_pub_curies(all_pub_ids)
-            rel_dto = agr_datatypes.AlleleGeneAssociationDTO(allele_curie, 'is_allele_of', gene_curie, pub_curies)
-            if self.feature_lookup[allele_gene_key[ALLELE]]['is_obsolete'] is True or self.feature_lookup[allele_gene_key[GENE]]['is_obsolete'] is True:
-                rel_dto.obsolete = True
-                rel_dto.internal = True
-            first_feat_rel.linkmldto = rel_dto
-            self.gene_allele_associations.append(first_feat_rel)
-            counter += 1
-        self.log.info(f'Generated {counter} allele-gene unique associations.')
+        for gene in self.fb_data_entities.values():
+            if self.organism_lookup[gene.organism_id]['is_drosophilid'] is False:
+                gene.for_export = False
+                gene.export_warnings.append('Non-Drosophilid gene')
+                counter += 1
+        self.log.info(f'Flagged {counter} genes as unexportable.')
+        return
+
+    def flag_internal_genes(self):
+        """Flag internal genes."""
+        self.log.info('Flag internal genes.')
+        counter = 0
+        for gene in self.fb_data_entities.values():
+            if self.organism_lookup[gene.organism_id]['abbreviation'] != 'Dmel':
+                gene.linkmldto.internal = True
+                gene.internal_reasons.append('Non-Dmel')
+            if gene.uniquename in self.internal_gene_ids:
+                gene.linkmldto.internal = True
+                gene.internal_reasons.append('Internal gene type.')
+            if gene.linkmldto.internal is True:
+                counter += 1
+        self.log.info(f'Flagged {counter} genes as internal for gene-specific reasons')
         return
 
     # Elaborate on map_fb_data_to_alliance() for the GeneHandler.
@@ -246,15 +226,13 @@ class GeneHandler(FeatureHandler):
         self.map_gene_type()
         self.map_gene_panther_xrefs()
         self.map_anno_ids_to_secondary_ids('gene_secondary_id_dtos')
+        self.flag_internal_genes()
         self.flag_internal_fb_entities('fb_data_entities')
-        self.map_gene_allele_associations()
-        self.flag_internal_fb_entities('gene_allele_associations')
+        self.flag_unexportable_genes()
         return
 
     # Elaborate on query_chado_and_export() for the GeneHandler.
     def query_chado_and_export(self, session):
         """Elaborate on query_chado_and_export method for the GeneHandler."""
         super().query_chado_and_export(session)
-        self.flag_unexportable_entities(self.gene_allele_associations, 'allele_gene_association_ingest_set')
-        self.generate_export_dict(self.gene_allele_associations, 'allele_gene_association_ingest_set')
         return

@@ -13,8 +13,9 @@ Author(s):
 
 from logging import Logger
 from sqlalchemy.orm import aliased
-from harvdev_utils.production import (
-    Cvterm, Db, Dbxref, Featureloc, Feature, FeatureDbxref, Featureprop,
+from harvdev_utils.reporting import (
+    Cvterm, Db, Dbxref, Featureloc, Feature, FeatureDbxref, FeatureRelationship,
+    Library, LibraryFeature, LibraryFeatureprop
 )
 import agr_datatypes
 from entity_handler import PrimaryEntityHandler
@@ -27,6 +28,7 @@ class FeatureHandler(PrimaryEntityHandler):
         super().__init__(log, testing)
 
     # Add methods to be run by get_general_data() below.
+    # Placeholder.
 
     # Add methods to be run by get_datatype_data() below.
     def get_annotation_ids(self, session):
@@ -97,31 +99,179 @@ class FeatureHandler(PrimaryEntityHandler):
         self.log.info(f'Ignored {pass_counter} chromosomal featurelocs for {self.datatype} entities.')
         return
 
-    def get_featureprops_by_type(self, session, fprop_type):
-        """Return a list of featureprops of a given type."""
-        self.log.info(f'Get featureprops of type {fprop_type} for {self.datatype} entities.')
-        feat_type = aliased(Cvterm, name='feat_type')
-        prop_type = aliased(Cvterm, name='prop_type')
+    def get_direct_reagent_collections(self, session):
+        """Find reagent collections directly related to primary features."""
+        self.log.info('Find reagent collections directly related to primary features.')
+        libtype = aliased(Cvterm, name='libtype')
+        libfeattype = aliased(Cvterm, name='libfeattype')
         filters = (
-            Feature.is_analysis.is_(False),
-            prop_type.name == fprop_type
+            Feature.uniquename.op('~')(self.regex[self.datatype]),
+            Library.is_obsolete.is_(False),
+            Library.uniquename.op('~')(self.regex['library']),
+            libtype.name == 'reagent collection',
+            libfeattype.name == 'member_of_reagent_collection'
         )
-        if self.datatype in self.regex.keys():
-            self.log.info(f'Use this regex: {self.regex[self.datatype]}')
-            filters += (Feature.uniquename.op('~')(self.regex[self.datatype]), )
-        if self.datatype in self.feature_subtypes.keys():
-            self.log.info(f'Filter main table by these feature_subtypes: {self.feature_subtypes[self.datatype]}')
-            filters += (feat_type.name.in_((self.feature_subtypes[self.datatype])), )
         if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             filters += (Feature.uniquename.in_((self.test_set.keys())), )
-        results = session.query(Featureprop).\
+        collections = session.query(Feature, Library).\
             select_from(Feature).\
-            join(feat_type, (feat_type.cvterm_id == Feature.type_id)).\
-            join(Featureprop, (Featureprop.feature_id == Feature.feature_id)).\
-            join(prop_type, (prop_type.cvterm_id == Featureprop.type_id)).\
+            join(LibraryFeature, (LibraryFeature.feature_id == Feature.feature_id)).\
+            join(Library, (Library.library_id == LibraryFeature.library_id)).\
+            join(LibraryFeatureprop, (LibraryFeatureprop.library_feature_id == LibraryFeature.library_feature_id)).\
+            join(libtype, (libtype.cvterm_id == Library.type_id)).\
+            join(libfeattype, (libfeattype.cvterm_id == LibraryFeatureprop.type_id)).\
             filter(*filters).\
             distinct()
-        return results
+        counter = 0
+        for result in collections:
+            self.fb_data_entities[result.Feature.feature_id].reagent_colls.append(result.Library)
+            counter += 1
+        self.log.info(f'Found {counter} direct allele-collection associations.')
+        return
+
+    def get_indirect_reagent_collections(self, session, entity_role, rel_types, rel_entity_type):
+        """Find reagent collections indirectly related through some feature_relationship.
+
+        Args:
+            session (SQLAlchemy session): The session for the query.
+            entity_role (str): Role of primary feature in the feature_relationship: must be "subject" or "object".
+            rel_types (str|list): Types of feature_relationships to use for the query.
+            rel_entity_type (str): Type of features to use in getting indirectly related collections.
+
+        """
+        parameter_str = f'entity_role={entity_role}, rel_entity_type={rel_entity_type}, rel_types={rel_types}'
+        self.log.info(f'Look for indirect reagent collections for {self.datatype}s using these parameters: {parameter_str}')
+        if entity_role not in ['subject', 'object']:
+            self.log.error(f'Unknown entity_role "{entity_role}" given to get_indirect_reagent_collections(): must be "subject" or "object".')
+            raise ValueError
+        if type(rel_types) is str:
+            rel_types = [rel_types]
+        indirect_collection_bins = {
+            'allele': 'al_reagent_colls',
+            'construct': 'tp_reagent_colls',
+            'insertion': 'ti_reagent_colls',
+            'seqfeat': 'sf_reagent_colls',
+        }
+        if rel_entity_type not in indirect_collection_bins.keys():
+            self.log.error(f'Unknown rel_entity_type given to get_indirect_reagent_collections(). Must be in this list: {indirect_collection_bins.keys()}.')
+            raise ValueError
+        subject = aliased(Feature, name='subject')
+        object = aliased(Feature, name='object')
+        libtype = aliased(Cvterm, name='libtype')
+        libfeattype = aliased(Cvterm, name='libfeattype')
+        featreltype = aliased(Cvterm, name='featreltype')
+        filters = (
+            featreltype.name.in_((rel_types)),
+            Library.is_obsolete.is_(False),
+            Library.uniquename.op('~')(self.regex['library']),
+            libtype.name == 'reagent collection',
+            libfeattype.name == 'member_of_reagent_collection',
+        )
+        if entity_role == 'subject':
+            filters += (
+                subject.uniquename.op('~')(self.regex[self.datatype]),
+                object.uniquename.op('~')(self.regex[rel_entity_type]),
+                object.is_obsolete.is_(False),
+            )
+            if self.testing:
+                filters += (subject.uniquename.in_((self.test_set.keys())), )
+                self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            indirect_collections = session.query(subject, Library).\
+                select_from(subject).\
+                join(FeatureRelationship, (FeatureRelationship.subject_id == subject.feature_id)).\
+                join(featreltype, (featreltype.cvterm_id == FeatureRelationship.type_id)).\
+                join(object, (object.feature_id == FeatureRelationship.object_id)).\
+                join(LibraryFeature, (LibraryFeature.feature_id == object.feature_id)).\
+                join(Library, (Library.library_id == LibraryFeature.library_id)).\
+                join(LibraryFeatureprop, (LibraryFeatureprop.library_feature_id == LibraryFeature.library_feature_id)).\
+                join(libtype, (libtype.cvterm_id == Library.type_id)).\
+                join(libfeattype, (libfeattype.cvterm_id == LibraryFeatureprop.type_id)).\
+                filter(*filters).\
+                distinct()
+        else:
+            filters += (
+                object.uniquename.op('~')(self.regex[self.datatype]),
+                subject.uniquename.op('~')(self.regex[rel_entity_type]),
+                subject.is_obsolete.is_(False),
+            )
+            if self.testing:
+                filters += (object.uniquename.in_((self.test_set.keys())), )
+                self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            indirect_collections = session.query(object, Library).\
+                select_from(subject).\
+                join(FeatureRelationship, (FeatureRelationship.subject_id == subject.feature_id)).\
+                join(featreltype, (featreltype.cvterm_id == FeatureRelationship.type_id)).\
+                join(object, (object.feature_id == FeatureRelationship.object_id)).\
+                join(LibraryFeature, (LibraryFeature.feature_id == subject.feature_id)).\
+                join(Library, (Library.library_id == LibraryFeature.library_id)).\
+                join(LibraryFeatureprop, (LibraryFeatureprop.library_feature_id == LibraryFeature.library_feature_id)).\
+                join(libtype, (libtype.cvterm_id == Library.type_id)).\
+                join(libfeattype, (libfeattype.cvterm_id == LibraryFeatureprop.type_id)).\
+                filter(*filters).\
+                distinct()
+        counter = 0
+        for result in indirect_collections:
+            if entity_role == 'subject':
+                entity_id = result.subject.feature_id
+            else:
+                entity_id = result.object.feature_id
+            try:
+                key_entity = self.fb_data_entities[entity_id]
+                coll_list = getattr(key_entity, indirect_collection_bins[rel_entity_type])
+                coll_list.append(result.Library)
+                counter += 1
+            except KeyError:
+                pass
+        self.log.info(f'Found {counter} indirect reagent collections for {self.datatype}s using these parameters: {parameter_str}')
+        return
+
+    def get_very_indirect_reagent_collections(self, session):
+        """Find reagent collections indirectly related to primary features via FBtp-FBsf chains."""
+        self.log.info('Find reagent collections indirectly related to primary features via FBtp-FBsf chains.')
+        subject = aliased(Feature, name='subject')
+        construct = aliased(Feature, name='construct')
+        seqfeat = aliased(Feature, name='seqfeat')
+        libtype = aliased(Cvterm, name='libtype')
+        libfeattype = aliased(Cvterm, name='libfeattype')
+        featreltype = aliased(Cvterm, name='featreltype')
+        subject_construct = aliased(FeatureRelationship, name='subject_construct')
+        seqfeat_construct = aliased(FeatureRelationship, name='seqfeat_construct')
+        filters = (
+            subject.uniquename.op('~')(self.regex[self.datatype]),
+            construct.uniquename.op('~')(self.regex['construct']),
+            seqfeat.uniquename.op('~')(self.regex['seqfeat']),
+            construct.is_obsolete.is_(False),
+            seqfeat.is_obsolete.is_(False),
+            Library.is_obsolete.is_(False),
+            Library.uniquename.op('~')(self.regex['library']),
+            libtype.name == 'reagent collection',
+            libfeattype.name == 'member_of_reagent_collection',
+            featreltype.name == 'producedby',
+        )
+        if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            filters += (subject.uniquename.in_((self.test_set.keys())), )
+        sf_collections = session.query(subject, Library).\
+            select_from(subject).\
+            join(subject_construct, (subject_construct.subject_id == subject.feature_id)).\
+            join(construct, (construct.feature_id == subject_construct.object_id)).\
+            join(featreltype, (featreltype.cvterm_id == subject_construct.type_id)).\
+            join(seqfeat_construct, (seqfeat_construct.object_id == construct.feature_id)).\
+            join(seqfeat, (seqfeat.feature_id == seqfeat_construct.subject_id)).\
+            join(LibraryFeature, (LibraryFeature.feature_id == seqfeat.feature_id)).\
+            join(Library, (Library.library_id == LibraryFeature.library_id)).\
+            join(LibraryFeatureprop, (LibraryFeatureprop.library_feature_id == LibraryFeature.library_feature_id)).\
+            join(libtype, (libtype.cvterm_id == Library.type_id)).\
+            join(libfeattype, (libfeattype.cvterm_id == LibraryFeatureprop.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in sf_collections:
+            self.fb_data_entities[result.subject.feature_id].sf_reagent_colls.append(result.Library)
+            counter += 1
+        self.log.info(f'Found {counter} reagent collection associations via FBtp-FBsf chains.')
+        return
 
     # Add methods to be run by synthesize_info() below.
     def synthesize_anno_ids(self):

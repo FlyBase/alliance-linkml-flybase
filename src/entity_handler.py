@@ -14,8 +14,8 @@ import re
 from logging import Logger
 from sqlalchemy.orm import aliased
 from harvdev_utils.char_conversions import sub_sup_sgml_to_html
-from harvdev_utils.production import (
-    Cvterm, Db, Dbxref, CellLine, CellLineCvterm, CellLineCvtermprop, CellLineDbxref, CellLineprop, CellLinepropPub, CellLinePub, CellLineRelationship,
+from harvdev_utils.reporting import (
+    Cv, Cvterm, Db, Dbxref, CellLine, CellLineCvterm, CellLineCvtermprop, CellLineDbxref, CellLineprop, CellLinepropPub, CellLinePub, CellLineRelationship,
     CellLineSynonym, Feature, FeatureCvterm, FeatureCvtermprop, FeatureDbxref, Featureprop, FeaturepropPub, FeaturePub, FeatureRelationship,
     FeatureRelationshipPub, FeatureRelationshipprop, FeatureRelationshippropPub, FeatureSynonym, Genotype, GenotypeCvterm, GenotypeCvtermprop, GenotypeDbxref,
     Genotypeprop, GenotypepropPub, GenotypePub, GenotypeSynonym, Grp, GrpCvterm, GrpDbxref, Grpprop, GrppropPub, GrpPub, GrpRelationship, GrpRelationshipPub,
@@ -41,6 +41,14 @@ class PrimaryEntityHandler(DataHandler):
     def __init__(self, log: Logger, testing: bool):
         """Create the generic PrimaryEntityHandler object."""
         super().__init__(log, testing)
+
+    # Conversion of FB datatype to "page_area".
+    page_area_conversion = {
+        'aberration': 'allele',
+        'balancer': 'allele',
+        'insertion': 'allele',
+        'genotype': 'homepage',
+    }
 
     # Mappings of main data types to chado tables with associated data like cvterms, props, synonyms, etc.
     chado_tables = {
@@ -149,7 +157,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Get {self.datatype} data entities from {chado_type} table.')
         chado_table = self.chado_tables['main_table'][chado_type]
         filters = ()
-        if self.datatype in self.regex.keys():
+        if self.datatype in self.regex.keys() and self.datatype != 'genotype':
             self.log.info(f'Use this regex: {self.regex[self.datatype]}')
             filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
         if self.datatype in self.feature_subtypes.keys():
@@ -157,8 +165,11 @@ class PrimaryEntityHandler(DataHandler):
             filters += (Cvterm.name.in_((self.feature_subtypes[self.datatype])), )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
-            filters += (chado_table.uniquename.in_((self.test_set.keys())), )
-        if filters == ():
+            if self.datatype == 'genotype':
+                filters += (chado_table.genotype_id.in_((self.test_set.keys())), )
+            else:
+                filters += (chado_table.uniquename.in_((self.test_set.keys())), )
+        if filters == () and self.datatype != 'genotype':
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
         if self.datatype in self.feature_subtypes.keys():
@@ -244,7 +255,7 @@ class PrimaryEntityHandler(DataHandler):
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             filters += (primary_entity.uniquename.in_((self.test_set.keys())), )
         if 'rel_type' in kwargs.keys():
-            if type(kwargs['rel_type']) != list:
+            if type(kwargs['rel_type']) is not list:
                 kwargs['rel_type'] = [kwargs['rel_type']]
             filters += (rel_type.name.in_((kwargs['rel_type'])), )
         if 'entity_type' in kwargs.keys():
@@ -385,7 +396,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Found these types of {chado_type}_relationship types where the {self.datatype} is the {role}:')
         ordered_rel_types = sorted(list(rel_type_tally.keys()))
         for rel_type in ordered_rel_types:
-            self.log.debug(f'table={chado_type}_relationship, rel_type={rel_type}, count={rel_type_tally[rel_type]}.')
+            self.log.debug(f'table={chado_type}_relationship, role={role}, rel_type={rel_type}, count={rel_type_tally[rel_type]}.')
         if chado_type != 'feature':
             return
         # For features only, also sort relationships by type of related entity.
@@ -420,6 +431,129 @@ class PrimaryEntityHandler(DataHandler):
             self.log.debug(f'table={chado_type}_relationship, feat_type={feat_type}, count={feature_type_tally[feat_type]}.')
         return
 
+    def get_entity_cvterms(self, session):
+        """Get CV term annotations for FlyBase entities."""
+        if self.datatype in self.feat_type_export.keys():
+            chado_type = 'feature'
+        else:
+            chado_type = self.datatype
+        self.log.info(f'Get CV term annotations from the {chado_type}_cvterm table for {self.datatype} entities.')
+        chado_table = self.chado_tables['main_table'][chado_type]
+        entity_key_name = f'{chado_type}_id'
+        cvterm_table = self.chado_tables['cvterms'][chado_type]
+        cvtermprop_table = self.chado_tables['cvtermprops'][chado_type]
+        entity_type = aliased(Cvterm, name='entity_type')
+        annotated_cvterm = aliased(Cvterm, name='annotated_cvterm')
+        # Phase 1: Get all CV term annotations, except for allele-DO and gene-GO (handled elsewhere).
+        excluded_cv_names = []
+        if self.datatype == 'allele':
+            excluded_cv_names.append('disease_ontology')
+        elif self.datatype == 'gene':
+            excluded_cv_names.extend(['cellular_component', 'biological_process', 'molecular_function'])
+        filters = (
+            Cv.name.not_in((excluded_cv_names)),
+        )
+        if self.datatype in self.regex.keys():
+            self.log.info(f'Use this regex for primary entities: {self.regex[self.datatype]}')
+            filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
+        if self.datatype in self.feature_subtypes.keys():
+            self.log.info(f'Filter main table for entities of these feature_subtypes: {self.feature_subtypes[self.datatype]}')
+            filters += (entity_type.name.in_((self.feature_subtypes[self.datatype])), )
+        if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            if self.datatype == 'genotype':
+                filters += (chado_table.genotype_id.in_((self.test_set.keys())), )
+            else:
+                filters += (chado_table.uniquename.in_((self.test_set.keys())), )
+        if filters == () and self.datatype != 'genotype':
+            self.log.warning('Have no filters for the main FlyBase entity driver query.')
+            raise
+        if self.datatype in self.feature_subtypes.keys():
+            cvterm_results = session.query(cvterm_table).\
+                select_from(chado_table).\
+                join(entity_type, (entity_type.cvterm_id == chado_table.type_id)).\
+                join(cvterm_table, (getattr(cvterm_table, entity_key_name) == getattr(chado_table, entity_key_name))).\
+                join(annotated_cvterm, (annotated_cvterm.cvterm_id == cvterm_table.cvterm_id)).\
+                join(Cv, (Cv.cv_id == annotated_cvterm.cv_id)).\
+                filter(*filters).\
+                distinct()
+        else:
+            cvterm_results = session.query(cvterm_table).\
+                select_from(chado_table).\
+                join(cvterm_table, (getattr(cvterm_table, entity_key_name) == getattr(chado_table, entity_key_name))).\
+                join(annotated_cvterm, (annotated_cvterm.cvterm_id == cvterm_table.cvterm_id)).\
+                join(Cv, (Cv.cv_id == annotated_cvterm.cv_id)).\
+                filter(*filters).\
+                distinct()
+        cvterm_annotation_dict = {}    # A temporary entity_cvterm_id-keyed dict of FBCVTermAnnotation objects.
+        counter = 0
+        for cvterm_result in cvterm_results:
+            cvt_anno_id = getattr(cvterm_result, f'{chado_type}_cvterm_id')
+            cvterm_annotation_dict[cvt_anno_id] = fb_datatypes.FBCVTermAnnotation(cvterm_result, f'{chado_type}_cvterm')
+            counter += 1
+        self.log.info(f'Found {counter} {chado_type}_cvterm annotations.')
+        # Phase 2. Get props for these CV term annotations.
+        if cvtermprop_table is None:
+            cvtermprop_results = []
+        elif self.datatype in self.feature_subtypes.keys():
+            cvtermprop_results = session.query(cvtermprop_table).\
+                select_from(chado_table).\
+                join(entity_type, (entity_type.cvterm_id == chado_table.type_id)).\
+                join(cvterm_table, (getattr(cvterm_table, entity_key_name) == getattr(chado_table, entity_key_name))).\
+                join(annotated_cvterm, (annotated_cvterm.cvterm_id == cvterm_table.cvterm_id)).\
+                join(Cv, (Cv.cv_id == annotated_cvterm.cv_id)).\
+                join(cvtermprop_table, (getattr(cvtermprop_table, f'{chado_type}_cvterm_id') == getattr(cvterm_table, f'{chado_type}_cvterm_id'))).\
+                filter(*filters).\
+                distinct()
+        else:
+            cvtermprop_results = session.query(cvtermprop_table).\
+                select_from(chado_table).\
+                join(cvterm_table, (getattr(cvterm_table, entity_key_name) == getattr(chado_table, entity_key_name))).\
+                join(annotated_cvterm, (annotated_cvterm.cvterm_id == cvterm_table.cvterm_id)).\
+                join(Cv, (Cv.cv_id == annotated_cvterm.cv_id)).\
+                join(cvtermprop_table, (getattr(cvtermprop_table, f'{chado_type}_cvterm_id') == getattr(cvterm_table, f'{chado_type}_cvterm_id'))).\
+                filter(*filters).\
+                distinct()
+        cvterm_prop_counter = 0
+        for cvtermprop_result in cvtermprop_results:
+            entity_cvterm_id = getattr(cvtermprop_result, f'{chado_type}_cvterm_id')
+            entity_prop_type_name = self.cvterm_lookup[cvtermprop_result.type_id]['name']
+            if entity_prop_type_name in cvterm_annotation_dict[entity_cvterm_id].props_by_type.keys():
+                cvterm_annotation_dict[entity_cvterm_id].props_by_type[entity_prop_type_name].append(fb_datatypes.FBProp(cvtermprop_result))
+                cvterm_prop_counter += 1
+            else:
+                cvterm_annotation_dict[entity_cvterm_id].props_by_type[entity_prop_type_name] = [fb_datatypes.FBProp(cvtermprop_result)]
+                cvterm_prop_counter += 1
+        self.log.info(f'Found {cvterm_prop_counter} {chado_type}_cvtermprops for {self.datatype}s.')
+        # Phase 3. Add rel info to entities.
+        assignment_counter = 0
+        # Assign the CVTermAnnotation to the appropriate entity.
+        for cvt_anno_id, cvt_anno in cvterm_annotation_dict.items():
+            # First, associate the relationship with the entity.
+            entity_id = getattr(cvt_anno.chado_obj, f'{chado_type}_id')
+            self.fb_data_entities[entity_id].cvt_annos_by_id[cvt_anno_id] = cvt_anno
+            # Second, sort the CVTermAnnotations by CV name.
+            cv_name = cvt_anno.chado_obj.cvterm.cv.name
+            if cv_name in self.fb_data_entities[entity_id].cvt_anno_ids_by_cv.keys():
+                self.fb_data_entities[entity_id].cvt_anno_ids_by_cv[cv_name].append(cvt_anno_id)
+            else:
+                self.fb_data_entities[entity_id].cvt_anno_ids_by_cv[cv_name] = [cvt_anno_id]
+            # Third, sort the CVTermAnnotations by CV term name.
+            cvt_anno_name = cvt_anno.chado_obj.cvterm.name
+            if cvt_anno_name in self.fb_data_entities[entity_id].cvt_anno_ids_by_term.keys():
+                self.fb_data_entities[entity_id].cvt_anno_ids_by_term[cvt_anno_name].append(cvt_anno_id)
+            else:
+                self.fb_data_entities[entity_id].cvt_anno_ids_by_term[cvt_anno_name] = [cvt_anno_id]
+            # Fourth, sort the CVTermAnnotations by prop type.
+            for prop_type_name in cvt_anno.props_by_type.keys():
+                if prop_type_name in self.fb_data_entities[entity_id].cvt_anno_ids_by_prop.keys():
+                    self.fb_data_entities[entity_id].cvt_anno_ids_by_prop[prop_type_name].append(cvt_anno_id)
+                else:
+                    self.fb_data_entities[entity_id].cvt_anno_ids_by_prop[prop_type_name] = [cvt_anno_id]
+            assignment_counter += 1
+        self.log.info(f'Indexed {assignment_counter} {chado_type}_cvterm annotations.')
+        return
+
     def get_entityprops(self, session):
         """Get primary FlyBase data entity props."""
         self.log.info('Get primary FlyBase data entity props.')
@@ -442,8 +576,11 @@ class PrimaryEntityHandler(DataHandler):
             filters += (Cvterm.name.in_((self.feature_subtypes[self.datatype])), )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
-            filters += (chado_table.uniquename.in_((self.test_set.keys())), )
-        if filters == ():
+            if self.datatype == 'genotype':
+                filters += (chado_table.genotype_id.in_((self.test_set.keys())), )
+            else:
+                filters += (chado_table.uniquename.in_((self.test_set.keys())), )
+        if filters == () and self.datatype != 'genotype':
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
         if self.datatype in self.feature_subtypes.keys():
@@ -651,24 +788,40 @@ class PrimaryEntityHandler(DataHandler):
         # Get distinct timestamps for each entity (do not distinguish by action, etc).
         for i in self.fb_data_entities.values():
             if i.timeaccessioned is not None:
+                i.new_timestamps.append(i.timeaccessioned)
                 i.timestamps.append(i.timeaccessioned)
-            if i.timelastmodified is not None:
-                i.timestamps.append(i.timelastmodified)
                 entity_table_counter += 1
-            if not i.timestamps:
+            else:
                 audit_query = f"""
                 SELECT DISTINCT record_pkey, transaction_timestamp
                 FROM audit_chado
                 WHERE audited_table = '{chado_type}'
-                AND record_pkey = {i.db_primary_id};
+                  AND audit_transaction = 'I'
+                  AND record_pkey = {i.db_primary_id};
+                """
+                TIMESTAMP = 1
+                audit_results = session.execute(audit_query).fetchall()
+                for row in audit_results:
+                    i.new_timestamps.append(row[TIMESTAMP])
+                    i.timestamps.append(row[TIMESTAMP])
+                    audit_chado_counter += 1
+            if i.timelastmodified is not None:
+                i.timestamps.append(i.timelastmodified)
+                entity_table_counter += 1
+            else:
+                audit_query = f"""
+                SELECT DISTINCT record_pkey, transaction_timestamp
+                FROM audit_chado
+                WHERE audited_table = '{chado_type}'
+                  AND record_pkey = {i.db_primary_id};
                 """
                 TIMESTAMP = 1
                 audit_results = session.execute(audit_query).fetchall()
                 for row in audit_results:
                     i.timestamps.append(row[TIMESTAMP])
                 audit_chado_counter += 1
-        self.log.info(f'Obtained timestamps for {entity_table_counter} entities directly from the {chado_type} table.')
-        self.log.info(f'Obtained timestamps for {audit_chado_counter} entities directly from the audit_chado table.')
+        self.log.info(f'Obtained {entity_table_counter} timestamps directly from the {chado_type} table.')
+        self.log.info(f'Obtained {audit_chado_counter} timestamps directly from the audit_chado table.')
         return
 
     # Add methods to be run by synthesize_info() below.
@@ -676,19 +829,17 @@ class PrimaryEntityHandler(DataHandler):
         """Determine the NCBITaxon ID for FB entities."""
         self.log.info('Determine the NCBITaxon ID for FB entities.')
         for fb_data_entity in self.fb_data_entities.values():
-            # Catch cases where the FB data entity has no organism_id.
+            # Catch cases where the FB data entity has no organism_id: e.g., genotype.
+            # These datatypes will have special handling in the datatype-specific handlers.
             try:
-                organism_id = fb_data_entity.chado_obj.organism_id
+                organism_id = fb_data_entity.organism_id
             except AttributeError:
                 self.log.warning(f'No organism_id for {fb_data_entity}.')
                 return
             # Catch cases where the FB data entity has no corresponding NCBITaxon ID.
-            try:
-                ncbi_taxon_id = self.ncbi_taxon_lookup[organism_id]
-            except KeyError:
-                self.log.warning(f'Use "unidentified" NCBITaxon ID for {fb_data_entity}')
-                ncbi_taxon_id = 'NCBITaxon:32644'
-            fb_data_entity.ncbi_taxon_id = ncbi_taxon_id
+            fb_data_entity.ncbi_taxon_id = self.organism_lookup[organism_id]['taxon_curie']
+            if fb_data_entity.ncbi_taxon_id == 'NCBITaxon:32644':
+                self.log.warning(f'{fb_data_entity} has "unidentified" NCBITaxon ID.')
         return
 
     def synthesize_secondary_ids(self):
@@ -775,11 +926,23 @@ class PrimaryEntityHandler(DataHandler):
         # Note - this method is depends on previous determination of fb_data_entity.curr_fb_symbol by synthesize_synonyms(), if applicable.
         self.log.info('Map data provider to Alliance object.')
         for fb_data_entity in self.fb_data_entities.values():
-            if fb_data_entity.curr_fb_symbol:
-                display_name = fb_data_entity.curr_fb_symbol
-            else:
+            if fb_data_entity.linkmldto is None:
+                continue
+            if self.datatype == 'genotype':
+                referenced_curie = f'FB:{fb_data_entity.fb_curie}'
+                page_area = self.page_area_conversion[self.datatype]
                 display_name = fb_data_entity.name
-            dp_xref = agr_datatypes.CrossReferenceDTO('FB', f'FB:{fb_data_entity.uniquename}', self.datatype, display_name).dict_export()
+            else:
+                referenced_curie = f'FB:{fb_data_entity.uniquename}'
+                if self.datatype in self.page_area_conversion.keys():
+                    page_area = self.page_area_conversion[self.datatype]
+                else:
+                    page_area = self.datatype
+                if fb_data_entity.curr_fb_symbol:
+                    display_name = fb_data_entity.curr_fb_symbol
+                else:
+                    display_name = fb_data_entity.name
+            dp_xref = agr_datatypes.CrossReferenceDTO('FB', referenced_curie, page_area, display_name).dict_export()
             fb_data_entity.linkmldto.data_provider_dto = agr_datatypes.DataProviderDTO(dp_xref).dict_export()
         return
 
@@ -787,6 +950,8 @@ class PrimaryEntityHandler(DataHandler):
         """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for a FlyBase entity."""
         self.log.info('Map secondary IDs to Alliance object.')
         for fb_data_entity in self.fb_data_entities.values():
+            if fb_data_entity.linkmldto is None:
+                continue
             secondary_id_dtos = []
             for secondary_id in fb_data_entity.alt_fb_ids:
                 sec_dto = agr_datatypes.SecondaryIdSlotAnnotationDTO(secondary_id, []).dict_export()
@@ -799,6 +964,8 @@ class PrimaryEntityHandler(DataHandler):
         """Add pub curies to a FlyBase entity."""
         self.log.info('Map pubs to Alliance object.')
         for fb_data_entity in self.fb_data_entities.values():
+            if fb_data_entity.linkmldto is None:
+                continue
             for pub_id in fb_data_entity.all_pubs:
                 try:
                     fb_data_entity.linkmldto.reference_curies.append(self.bibliography[pub_id])
@@ -813,13 +980,22 @@ class PrimaryEntityHandler(DataHandler):
     def map_xrefs(self):
         """Add a list of Alliance CrossReferenceDTO dicts to a FlyBase entity."""
         self.log.info('Map xrefs to Alliance object.')
+        # Resource descriptor page area conversions.
         for fb_data_entity in self.fb_data_entities.values():
+            if fb_data_entity.linkmldto is None:
+                continue
             cross_reference_dtos = []
             # First, add FB xref (since FB xrefs in chado are not complete, just use the uniquename).
             if fb_data_entity.uniquename:
-                curie = f'FB:{fb_data_entity.uniquename}'
+                if self.datatype == 'genotype':
+                    curie = f'FB:{fb_data_entity.fb_curie}'
+                else:
+                    curie = f'FB:{fb_data_entity.uniquename}'
                 display_name = curie
-                page_area = self.datatype
+                if self.datatype in self.page_area_conversion.keys():
+                    page_area = self.page_area_conversion[self.datatype]
+                else:
+                    page_area = self.datatype
                 fb_xref_dto = agr_datatypes.CrossReferenceDTO('FB', curie, page_area, display_name).dict_export()
                 cross_reference_dtos.append(fb_xref_dto)
             # Second, add external xrefs.
@@ -830,7 +1006,10 @@ class PrimaryEntityHandler(DataHandler):
                 try:
                     page_area = self.agr_page_area_dict[prefix]
                 except KeyError:
-                    page_area = self.datatype
+                    if self.datatype in self.page_area_conversion.keys():
+                        page_area = self.page_area_conversion[self.datatype]
+                    else:
+                        page_area = self.datatype
                 # Clean up cases where the db prefix is redundantly included at the start of the dbxref.accession.
                 redundant_prefix = f'{prefix}:'
                 if xref.dbxref.accession.startswith(redundant_prefix):
@@ -869,6 +1048,8 @@ class PrimaryEntityHandler(DataHandler):
         else:
             self.log.info(f'Have these linkml name dto slots to fill in: {linkml_synonym_slots.values()}')
         for fb_data_entity in self.fb_data_entities.values():
+            if fb_data_entity.linkmldto is None:
+                continue
             linkml_synonym_bins = {
                 'symbol_bin': [],
                 'full_name_bin': [],
