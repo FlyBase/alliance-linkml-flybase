@@ -125,6 +125,9 @@ class GenotypeHandler(PrimaryEntityHandler):
         450391: 'wg[l-8]/wg[l-8]',                                 # Homozygous wg[l-8] allele.
         367896: 'Tak1[2]/Tak1[+]',                                 # Simple heterozygous Tak1[2] over wt allele.
         515567: 'Sdc[12]/Sdc[unspecified]',                        # Sdc[12]/Sdc[unspecified].
+        167742: 'Psn[-]',                                          # A single unknown mutant allele represented by a bogus symbol; has pheno_comp data.
+        416752: 'crb[Y10A]/crb[-]',                                # crb allele with unknown mutant crb (bogus symbol); has pheno_comp data.
+        169086: 'dl<up>-</up> dl<up>S70A</up>',                    # A transgenic dl (FBal0095462) with unknown mutant dl (bogus symbol); has pheno_comp data.
         166899: 'Df(2R)173/PCNA[D-292]',                           # PCNA[D-292]/Df(2R)173.
         168332: 'Df(3L)Ez7 hay[nc2.tMa]',                          # Df(3L)Ez7 + hay[nc2.tMa] (diff complementation groups).
         166704: 'shi[EM33] shi[t15]',                              # shi[EM33] + shi[t15] (allele + rescue construct).
