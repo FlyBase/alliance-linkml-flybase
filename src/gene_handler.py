@@ -231,8 +231,8 @@ class GeneHandler(FeatureHandler):
         self.flag_unexportable_genes()
         return
 
-    # Elaborate on query_chado_and_export() for the GeneHandler.
-    def query_chado_and_export(self, session):
-        """Elaborate on query_chado_and_export method for the GeneHandler."""
-        super().query_chado_and_export(session)
+    # Elaborate on query_chado_and_full_export() for the GeneHandler.
+    def query_chado_and_full_export(self, session):
+        """Elaborate on query_chado_and_full_export method for the GeneHandler."""
+        super().query_chado_and_full_export(session)
         return

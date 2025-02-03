@@ -25,7 +25,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
 from disease_handlers import AlleleDiseaseHandler
-from utils import db_query_transaction, generate_export_file
+from utils import export_chado_data, generate_export_file
 
 # Data types handled by this script.
 REPORT_LABEL = 'disease_curation'
@@ -70,7 +70,7 @@ def main():
 
     # Get the data and process it.
     disease_handler = AlleleDiseaseHandler(log, testing)
-    db_query_transaction(session, log, disease_handler)
+    export_chado_data(session, log, disease_handler)
 
     # Export the data.
     export_dict = {

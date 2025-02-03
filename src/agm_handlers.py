@@ -155,7 +155,7 @@ class GenotypeHandler(PrimaryEntityHandler):
 
     # Additional reference info.
     dmel_insertion_allele_ids = []    # feature_ids for alleles related to FBti insertions (associated_with/progenitor).
-    transgenic_allele_ids = []        # feature_ids for alleles related to FBtp constructs (derived_tp_assoc_alleles).
+    transgenic_allele_ids = []        # feature_ids for alleles related to FBtp constructs.
     in_vitro_allele_ids = []          # feature_ids for alleles having "in vitro construct" CV term annotations.
     introgressed_aberr_ids = []       # feature_ids for aberrations of type "introgressed_chromosome".
 
@@ -193,12 +193,13 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.log.info('Get feature_ids for alleles related to FBtp constructs.')
         construct = aliased(Feature, name='construct')
         allele = aliased(Feature, name='allele')
+        fr_types = ['derived_tp_assoc_alleles', 'associated_with', 'gets_expression_data_from']
         filters = (
             construct.is_obsolete.is_(False),
             construct.uniquename.op('~')(self.regex['construct']),
             allele.is_obsolete.is_(False),
             allele.uniquename.op('~')(self.regex['allele']),
-            Cvterm.name == 'derived_tp_assoc_alleles',
+            Cvterm.name.in_((fr_types)),
         )
         results = session.query(allele).\
             select_from(allele).\

@@ -27,7 +27,7 @@ from harvdev_utils.psycopg_functions import set_up_db_reading
 from agm_handlers import (
     StrainHandler, GenotypeHandler
 )
-from utils import db_query_transaction, generate_export_file
+from utils import export_chado_data, generate_export_file
 
 # Data types handled by this script.
 REPORT_LABEL = 'agm_curation'
@@ -73,8 +73,8 @@ def main():
     # Get the data and process it.
     genotype_handler = GenotypeHandler(log, testing)
     strain_handler = StrainHandler(log, testing)
-    db_query_transaction(session, log, genotype_handler)
-    db_query_transaction(session, log, strain_handler)
+    export_chado_data(session, log, genotype_handler)
+    export_chado_data(session, log, strain_handler)
 
     # Export the data.
     export_dict = {

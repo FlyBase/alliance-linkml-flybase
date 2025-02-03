@@ -900,8 +900,8 @@ class DataHandler(object):
         self.log.info(f'{self.internal_count} of {self.export_count} exported entities are INTERNAL.')
         return
 
-    # The query_chado_and_export() wrapper that runs sub-methods - same order of steps for every DataHandler type.
-    def query_chado_and_export(self, session):
+    # The query_chado_and_full_export() wrapper that runs sub-methods - same order of steps for every DataHandler type.
+    def query_chado_and_full_export(self, session):
         """Wrapper that runs all methods within an SQLAlchemy session."""
         self.log.info(f'RUN MAIN {type(self)} QUERY_CHADO_AND_EXPORT() METHOD.')
         self.get_general_data(session)

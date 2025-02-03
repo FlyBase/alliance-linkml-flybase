@@ -25,7 +25,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
 from allele_handlers import AlleleHandler, AberrationHandler, BalancerHandler
-from utils import db_query_transaction, generate_export_file
+from utils import export_chado_data, generate_export_file
 
 # Data types handled by this script.
 REPORT_LABEL = 'allele_curation'
@@ -73,10 +73,10 @@ def main():
     allele_handler = AlleleHandler(log, testing)
     balancer_handler = BalancerHandler(log, testing)
     # insertion_handler = InsertionHandler(log, testing)
-    db_query_transaction(session, log, aberration_handler)
-    db_query_transaction(session, log, allele_handler)
-    db_query_transaction(session, log, balancer_handler)
-    # db_query_transaction(session, log, insertion_handler)
+    export_chado_data(session, log, aberration_handler)
+    export_chado_data(session, log, allele_handler)
+    export_chado_data(session, log, balancer_handler)
+    # export_chado_data(session, log, insertion_handler)
 
     # Export the data.
     export_dict = {
