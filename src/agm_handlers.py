@@ -151,6 +151,8 @@ class GenotypeHandler(PrimaryEntityHandler):
         294012: 'P{CH1226-43A10} lz[L]',                           # Has FBal and FBtp associated - no export.
         223641: 'Dp1[EP2422] P{hsp26-pt-T}39C-12',                 # Has FBal and FBti associated - no export.
         169272: 'P{wA}4-4 brm[2]',                                 # Has FBti directly related - no export.
+        526093: 'daw[d05680]',                                     # A genotype new to FB2025_01 (not in FB2024_06 reference) - test incremental export.
+
         # 525357: 'w[*]; betaTub60D[2] Kr[If-1]|CyO',                              # Genotype from stock; genotype_id here is for FB2024_06 only.
     }
 
