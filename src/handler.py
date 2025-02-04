@@ -900,7 +900,7 @@ class DataHandler(object):
             elif i.is_new_addition is True or i.is_new_obsolete is True:
                 self.export_data[output_set_name].append(export_agr_dict)
                 incremental_count += 1
-                self.log.debug('BILLYBOB: BOB: TESTING LINE 902')
+                self.log.debug(f'BILLYBOB: BOB: TESTING LINE 902: incremental_count={incremental_count}')
         public_count = self.export_count - self.internal_count
         self.log.info(f'SUMMARY FOR EXPORT OF {output_set_name}'.upper())
         self.log.info(f'Have {self.export_count} of {self.input_count} entities for export.')
