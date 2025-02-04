@@ -17,26 +17,28 @@ class FBExportEntity(object):
     """A base, generic FlyBase data export entity."""
     def __init__(self):
         """Create a FBExportEntity object with bins for Alliance mapping."""
-        self.db_primary_id = None     # Table primary key (or concatenation of keys).
-        self.uniq_key = None          # Uniquely identifying string.
-        self.uniquename = None        # FB uniquename, if applicable.
-        self.name = None              # FB name, if applicable.
-        self.type_id = None           # FB type_id, if applicable.
-        self.is_obsolete = None       # FB is_obsolete, if applicable.
-        self.is_analysis = None       # FB is_analysis, if applicable.
-        self.organism_id = None       # FB organism_id, if applicable.
-        self.org_abbr = None          # Organism.abbreviation, if applicable.
-        self.org_genus = None         # Organism.genus, if applicable.
-        self.org_species = None       # Organism.species, if applicable.
-        self.timeaccessioned = None   # FB timeaccessioned, if applicable.
-        self.timelastmodified = None  # FB timelastmodified, if applicable.
-        self.new_timestamps = []      # FB timeaccessioned or audit_chado insert ("I") timestamps only.
-        self.timestamps = []          # FB audit_chado timestamps.
-        self.linkmldto = None         # Alliance LinkML object for mapped data.
-        self.for_export = True        # Made False to prevent Alliance export.
-        self.internal_reasons = []    # Reasons an object was marked internal.
-        self.export_warnings = []     # Reasons an object was not exported.
-        self.entity_desc = ''         # A succinct description for this entity.
+        self.db_primary_id = None       # Table primary key (or concatenation of keys).
+        self.uniq_key = None            # Uniquely identifying string.
+        self.uniquename = None          # FB uniquename, if applicable.
+        self.name = None                # FB name, if applicable.
+        self.type_id = None             # FB type_id, if applicable.
+        self.is_obsolete = None         # FB is_obsolete, if applicable.
+        self.is_analysis = None         # FB is_analysis, if applicable.
+        self.organism_id = None         # FB organism_id, if applicable.
+        self.org_abbr = None            # Organism.abbreviation, if applicable.
+        self.org_genus = None           # Organism.genus, if applicable.
+        self.org_species = None         # Organism.species, if applicable.
+        self.timeaccessioned = None     # FB timeaccessioned, if applicable.
+        self.timelastmodified = None    # FB timelastmodified, if applicable.
+        self.new_timestamps = []        # FB timeaccessioned or audit_chado insert ("I") timestamps only.
+        self.timestamps = []            # FB audit_chado timestamps.
+        self.is_new_addition = False    # If True, will be included in incremental exports; not relevant for full exports.
+        self.is_new_obsolete = False    # If True, will be included in incremental exports; not relevant for full exports.
+        self.linkmldto = None           # Alliance LinkML object for mapped data.
+        self.for_export = True          # Made False to prevent Alliance export.
+        self.internal_reasons = []      # Reasons an object was marked internal.
+        self.export_warnings = []       # Reasons an object was not exported.
+        self.entity_desc = ''           # A succinct description for this entity.
 
     def __str__(self):
         """Basic descriptive info for the object."""

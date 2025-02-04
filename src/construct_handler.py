@@ -493,10 +493,10 @@ class ConstructHandler(FeatureHandler):
         self.flag_internal_fb_entities('construct_associations')
         return
 
-    # Elaborate on query_chado_and_full_export() for the ConstructHandler.
-    def query_chado_and_full_export(self, session):
-        """Elaborate on query_chado_and_full_export method for the ConstructHandler."""
-        super().query_chado_and_full_export(session)
+    # Elaborate on query_chado_and_export() for the ConstructHandler.
+    def query_chado_and_export(self, session):
+        """Elaborate on query_chado_and_export method for the ConstructHandler."""
+        super().query_chado_and_export(session)
         self.flag_unexportable_entities(self.construct_associations, 'construct_genomic_entity_association_ingest_set')
         self.generate_export_dict(self.construct_associations, 'construct_genomic_entity_association_ingest_set')
         return

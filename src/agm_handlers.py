@@ -72,6 +72,7 @@ class StrainHandler(PrimaryEntityHandler):
     def synthesize_info(self):
         """Extend the method for the StrainHandler."""
         super().synthesize_info()
+        self.flag_new_additions_and_obsoletes()
         self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
@@ -481,6 +482,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         """Extend the method for the GenotypeHandler."""
         super().synthesize_info()
         self.prune_stock_only_genotypes()
+        self.flag_new_additions_and_obsoletes()
         self.clean_up_genotype_name()
         self.synthesize_genotype_ncbi_taxon_id()
         self.synthesize_genotype_components()

@@ -148,8 +148,21 @@ class PrimaryEntityHandler(DataHandler):
     # Placeholder.
 
     # Add methods to be run by get_datatype_data() below.
-    def get_entities(self, session):
-        """Get primary FlyBase data entities."""
+    def get_entities(self, session, **kwargs):
+        """Get primary FlyBase data entities.
+
+        Args:
+            session (Session): SQLAlchemy session for the query.
+
+        Kwargs:
+            reference (bool): If True, retrieves only non-obsolete objects from
+                              a previous reference database; for incremental
+                              updates.
+
+        """
+        if 'reference' in kwargs.keys() and kwargs['reference'] is True:
+            reference_set = True
+            self.incremental_update = True
         if self.datatype in self.feat_type_export.keys():
             chado_type = 'feature'
         else:
@@ -172,6 +185,15 @@ class PrimaryEntityHandler(DataHandler):
         if filters == () and self.datatype != 'genotype':
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
+        if reference_set is True:
+            # Get only current entitites from a reference db.
+            # The cell_line table, oddly, has no "is_obsolete" column.
+            if self.datatype != 'cell_line':
+                filters += (chado_table.is_obsolete.is_(False), )
+            # For genotypes, need to filter out old stock-only genotypes at this step.
+            # The genotype.description is only used for FB genotypes in production.
+            if self.datatype == 'genotype':
+                filters += (chado_table.description.isnot(None), )
         if self.datatype in self.feature_subtypes.keys():
             results = session.query(chado_table).\
                 select_from(chado_table).\
@@ -187,9 +209,15 @@ class PrimaryEntityHandler(DataHandler):
         counter = 0
         for result in results:
             pkey_id = getattr(result, pkey_name)
-            self.fb_data_entities[pkey_id] = self.fb_export_type(result)
+            if reference_set is True:
+                self.fb_reference_entity_ids.append(pkey_id)
+            else:
+                self.fb_data_entities[pkey_id] = self.fb_export_type(result)
             counter += 1
-        self.log.info(f'Found {counter} FlyBase {self.datatype} entities in chado.')
+        if reference_set is True:
+            self.log.info(f'Found {counter} FlyBase {self.datatype} entities in reference chado instance.')
+        else:
+            self.log.info(f'Found {counter} FlyBase {self.datatype} entities in chado.')
         return
 
     def get_entity_relationships(self, session, role, **kwargs):
@@ -825,6 +853,24 @@ class PrimaryEntityHandler(DataHandler):
         return
 
     # Add methods to be run by synthesize_info() below.
+    def flag_new_additions_and_obsoletes(self):
+        """Flag entities that are new additions or new obsoletes, if applicable."""
+        if self.incremental_update is False:
+            return
+        self.log.info('Flag new additions and new obsoletes in chado relative to the reference db.')
+        new_addition_counter = 0
+        new_obsolete_counter = 0
+        for fb_data_entity in self.fb_data_entities.values():
+            if fb_data_entity.db_primary_id not in self.fb_reference_entity_ids:
+                fb_data_entity.is_new_addition = True
+                new_addition_counter += 1
+            elif self.datatype != 'cell_line' and fb_data_entity.is_obsolete is True:
+                fb_data_entity.is_new_obsolete = True
+                new_obsolete_counter += 1
+        self.log.info(f'Found {new_addition_counter} new entities in chado relative to the reference db.')
+        self.log.info(f'Found {new_obsolete_counter} newly obsoleted entities in chado relative to the reference db.')
+        return
+
     def synthesize_ncbi_taxon_id(self):
         """Determine the NCBITaxon ID for FB entities."""
         self.log.info('Determine the NCBITaxon ID for FB entities.')

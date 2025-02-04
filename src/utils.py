@@ -15,24 +15,34 @@ from sqlalchemy.orm import Session
 from handler import DataHandler
 
 
-def export_chado_data(session: Session, log: Logger, object_to_execute: DataHandler):
-    """Query the chado database given an object that has a "query_chado_and_full_export()" method.
+def export_chado_data(session: Session, log: Logger, object_to_execute: DataHandler, **kwargs):
+    """Query the chado database given an object that has a "query_chado_and_export()" method.
 
     Args:
-        session (Session): SQLAlchemy session for db queries.
+        session (Session): SQLAlchemy session for the database from which to query and export.
         log (Logger): The global Logger object in the script using the DataHandler.
-        object_to_execute (DataHandler): An object having a query_chado_and_full_export() method.
+        object_to_execute (DataHandler): An object having a query_chado_and_export() method.
+
+    Kwargs:
+        reference_session (Session|None): SQLAlchemy session for an earlier reference database (for incremental export).
 
     Raises:
         Raises a RuntimeError if there are problems with executing the query.
 
     """
+    if 'reference_session' in kwargs.keys():
+        try:
+            object_to_execute.get_entities(kwargs['reference_session'], reference=True)
+        except RuntimeError:
+            kwargs['reference_session'].rollback()
+            log.critical('Critical transaction error occurred during reference db chado query; rolling back and exiting.')
+            raise
     try:
-        object_to_execute.query_chado_and_full_export(session)
+        object_to_execute.query_chado_and_export(session)
         session.flush()
     except RuntimeError:
         session.rollback()
-        log.critical('Critical transaction error occurred during chado query; rolling back and exiting.')
+        log.critical('Critical transaction error occurred during main chado query; rolling back and exiting.')
         raise
     return
 

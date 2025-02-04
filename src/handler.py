@@ -47,12 +47,14 @@ class DataHandler(object):
         """
         self.log = log
         self.testing = testing
+        self.incremental_update = False             # If True, will export only new additions and obsoletes in chado relative to a reference db.
         self.datatype = None                        # A single word describing the datatype: e.g., 'gene'. Define for more specific handlers.
         self.fb_export_type = None                  # Will be the relevant FBExportEntity object: e.g., FBGene. Define for more specific handlers.
         self.agr_export_type = None                 # Will be the LinkML object to export to: e.g., GeneDTO. Define for more specific handlers.
         self.primary_agr_ingest_type = None         # Will be name of the Alliance ingest set: e.g., 'gene_ingest_set'.
         # Datatype bins.
         self.fb_data_entities = {}                  # db_primary_id-keyed dict of chado objects to export.
+        self.fb_reference_entity_ids = []           # A list of db_primary_ids for current entities in a previous reference db (for incremental updates).
         self.export_data = {}                       # agr_ingest_set_name-keyed lists of data objects for export.
         # General data bins.
         self.bibliography = {}                      # A pub_id-keyed dict of pub curies (PMID, or, FBrf if no PMID).
@@ -869,6 +871,7 @@ class DataHandler(object):
         self.input_count = 0
         self.export_count = 0
         self.internal_count = 0
+        incremental_count = 0
         for i in input_list:
             self.input_count += 1
             if i.for_export is False:
@@ -892,16 +895,22 @@ class DataHandler(object):
                 else:
                     # self.log.debug(f'Empty value for this attr: {attr}')
                     pass
-            self.export_data[output_set_name].append(export_agr_dict)
+            if self.incremental_update is False:
+                self.export_data[output_set_name].append(export_agr_dict)
+            elif i.is_new_addition is True or i.is_new_obsolete is True:
+                self.export_data[output_set_name].append(export_agr_dict)
+                incremental_count += 1
         public_count = self.export_count - self.internal_count
         self.log.info(f'SUMMARY FOR EXPORT OF {output_set_name}'.upper())
         self.log.info(f'Exported {self.export_count} of {self.input_count} entities.')
         self.log.info(f'{public_count} of {self.export_count} exported entities are PUBLIC.')
         self.log.info(f'{self.internal_count} of {self.export_count} exported entities are INTERNAL.')
+        if self.incremental_update is True:
+            self.log.info(f'Since this is an incremental update, only exporting {incremental_count} objects that are new or newly obsoleted.')
         return
 
-    # The query_chado_and_full_export() wrapper that runs sub-methods - same order of steps for every DataHandler type.
-    def query_chado_and_full_export(self, session):
+    # The query_chado_and_export() wrapper that runs sub-methods - same order of steps for every DataHandler type.
+    def query_chado_and_export(self, session):
         """Wrapper that runs all methods within an SQLAlchemy session."""
         self.log.info(f'RUN MAIN {type(self)} QUERY_CHADO_AND_EXPORT() METHOD.')
         self.get_general_data(session)
