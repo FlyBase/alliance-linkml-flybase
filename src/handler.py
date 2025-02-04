@@ -902,9 +902,9 @@ class DataHandler(object):
                 incremental_count += 1
         public_count = self.export_count - self.internal_count
         self.log.info(f'SUMMARY FOR EXPORT OF {output_set_name}'.upper())
-        self.log.info(f'Exported {self.export_count} of {self.input_count} entities.')
-        self.log.info(f'{public_count} of {self.export_count} exported entities are PUBLIC.')
-        self.log.info(f'{self.internal_count} of {self.export_count} exported entities are INTERNAL.')
+        self.log.info(f'Have {self.export_count} of {self.input_count} entities for export.')
+        self.log.info(f'{public_count} of {self.export_count} exportable entities are PUBLIC.')
+        self.log.info(f'{self.internal_count} of {self.export_count} exportable entities are INTERNAL.')
         if self.incremental_update is True:
             self.log.info(f'Since this is an incremental update, only exporting {incremental_count} objects that are new or newly obsoleted.')
         return
