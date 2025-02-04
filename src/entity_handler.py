@@ -160,6 +160,7 @@ class PrimaryEntityHandler(DataHandler):
                               updates.
 
         """
+        reference_set = False
         if 'reference' in kwargs.keys() and kwargs['reference'] is True:
             reference_set = True
             self.incremental_update = True
