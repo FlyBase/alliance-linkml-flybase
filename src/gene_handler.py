@@ -123,6 +123,7 @@ class GeneHandler(FeatureHandler):
     def synthesize_info(self):
         """Extend the method for the GeneHandler."""
         super().synthesize_info()
+        self.flag_new_additions_and_obsoletes()
         self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()

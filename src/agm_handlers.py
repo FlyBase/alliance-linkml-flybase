@@ -116,7 +116,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         """Create the GenotypeHandler object."""
         super().__init__(log, testing)
         self.datatype = 'genotype'
-        self.fb_export_type = fb_datatypes.FBGenotype
+        self.fb_export_type = fb_datatypes.FBGenotypedef
         self.agr_export_type = agr_datatypes.AffectedGenomicModelDTO
         self.primary_export_set = 'agm_ingest_set'
 

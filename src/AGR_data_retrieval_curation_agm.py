@@ -6,12 +6,15 @@ Author(s):
     Gil dos Santos dossantos@morgan.harvard.edu
 
 Usage:
-    AGR_data_retrieval_curation_agm.py [-h]
-    [-l LINKML_RELEASE] [-v VERBOSE] [-c CONFIG] [-t TESTING]
-
+    AGR_data_retrieval_curation_agm.py [-h] [-v VERBOSE] [-c CONFIG] [-t TESTING]
+    [-l LINKML_RELEASE] 
+    [-r REFERENCE_DB] (OPTIONAL)
+    
 Example:
-    python AGR_data_retrieval_curation_agm.py -v -r 2023_05 -l v1.1.2
-    -c /path/to/config.cfg
+    python AGR_data_retrieval_curation_agm.py -v -t -c /path/to/config.cfg
+    -l v1.1.2
+    -r fb_2024_06_reporting
+    
 
 Notes:
     This script exports FlyBase AGM data as a JSON file conforming to the

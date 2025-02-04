@@ -408,6 +408,7 @@ class AlleleHandler(MetaAlleleHandler):
     def synthesize_info(self):
         """Extend the method for the AlleleHandler."""
         super().synthesize_info()
+        self.flag_new_additions_and_obsoletes()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
@@ -656,6 +657,7 @@ class InsertionHandler(MetaAlleleHandler):
     def synthesize_info(self):
         """Extend the method for the InsertionHandler."""
         super().synthesize_info()
+        self.flag_new_additions_and_obsoletes()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
@@ -886,6 +888,7 @@ class AberrationHandler(MetaAlleleHandler):
     def synthesize_info(self):
         """Extend the method for the AberrationHandler."""
         super().synthesize_info()
+        self.flag_new_additions_and_obsoletes()
         self.adjust_aberration_organism()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
@@ -1044,6 +1047,7 @@ class BalancerHandler(MetaAlleleHandler):
     def synthesize_info(self):
         """Extend the method for the BalancerHandler."""
         super().synthesize_info()
+        self.flag_new_additions_and_obsoletes()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
