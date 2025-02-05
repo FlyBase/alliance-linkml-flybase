@@ -87,19 +87,19 @@ command += f'-e USER={user} '
 command += f'-e PGPASSWORD={pg_pwd} '
 command += '-e RELEASE=production '
 command += '--entrypoint /usr/bin/python3 test_export_to_linkml '    # BOB: change bulk_update docker image for prod
-command += f'bulk-update/src/retrieve_genotypes.py -p {fbrf_pub_id} '
+command += f'/src/retrieve_genotypes.py -p {fbrf_pub_id} '
 if genotype_input_file:
     command += f'-f /src/input/{genotype_input_file} '
 else:
     command += f'-i \"{genotype_input}\" '
 
 # For debugging.
-# print(command)
-# subprocess.run(["bash", "-c", command])
+print(command)
+subprocess.run(["bash", "-c", command])
 
 # Using devnull to suppress confusing matplotlib and bioservices warnings that I can't resolve.
-with open(os.devnull, 'w') as devnull:
-    subprocess.run(["bash", "-c", command], stdout=devnull, stderr=devnull)
+# with open(os.devnull, 'w') as devnull:
+#     subprocess.run(["bash", "-c", command], stdout=devnull, stderr=devnull)
 
 report = open('./genotypes_retrieved.report', 'r')
 for line in report:
