@@ -273,7 +273,7 @@ class GenotypeHandler(object):
             # log.debug(f'Got this JSON response: {json_data}')
             if response.status_code == 200:
                 try:
-                    mod_entity_id = response.json['entity']['modEntityId']
+                    mod_entity_id = response.json()['entity']['modEntityId']
                     log.debug(f'SUCCESS: Found {mod_entity_id} at the Alliance.')
                 except ValueError:
                     log.debug(f'FAILURE: Could not find {geno_anno.curie} at the Alliance.')
