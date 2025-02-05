@@ -267,6 +267,8 @@ class GenotypeHandler(object):
             }
             response = requests.get(url, headers=headers)
             log.debug(f'Got this raw response: {response.text}')
+            log.debug(f'Got this JSON: {response.json}')
+            log.debug(f'Got these keys: {response.json.keys()}')
             json_data = json.dumps(response.json(), indent=4)
             log.debug(f'Got this JSON response: {json_data}')
             if response.status_code == 200:
