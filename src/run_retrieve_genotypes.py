@@ -100,7 +100,9 @@ else:
 # Using devnull to suppress confusing matplotlib and bioservices warnings that I can't resolve.
 with open(os.devnull, 'w') as devnull:
     subprocess.run(["bash", "-c", command], stdout=devnull, stderr=devnull)
-
-report = open('./genotypes_retrieved.report', 'r')
-for line in report:
-    print(line.rstrip())
+try:
+    report = open('./genotypes_retrieved.report', 'r')
+    for line in report:
+        print(line.rstrip())
+except FileNotFoundError:
+    print('ERROR: Expected script output was not found. Check the log file to see why the script failed.')
