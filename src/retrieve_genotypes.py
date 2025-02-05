@@ -270,9 +270,13 @@ class GenotypeHandler(object):
             json_data = json.dumps(response.json(), indent=4)
             log.debug(f'Got this JSON response: {json_data}')
             if response.status_code == 200:
-                log.debug('SUCCESS')
+                try:
+                    mod_entity_id = json_data['entity']['modEntityId']
+                    log.debug(f'SUCCESS: Found {mod_entity_id} at the Alliance.')
+                except KeyError:
+                    log.debug(f'FAILURE: Could not find {geno_anno.curie} at the Alliance.')
             else:
-                log.debug('FAILURE')
+                log.error('FAILURE: Did not get a response from the Alliance API.')
         return
 
     def print_curator_genotype_report(self):
