@@ -271,7 +271,7 @@ class GenotypeHandler(object):
                 try:
                     mod_entity_id = response.json()['entity']['modEntityId']
                     log.debug(f'SUCCESS: Found {mod_entity_id} at the Alliance.')
-                except ValueError:
+                except KeyError:
                     log.debug(f'FAILURE: Could not find {geno_anno.curie} at the Alliance.')
             else:
                 log.error('FAILURE: Did not get a response from the Alliance API.')
