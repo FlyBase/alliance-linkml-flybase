@@ -42,7 +42,6 @@ Notes:
 
 import argparse
 # import datetime
-import json
 import os
 import requests
 import sys
@@ -257,10 +256,10 @@ class GenotypeHandler(object):
 
     def sync_with_alliance(self):
         """Synchronize genotypes at the Alliance."""
-        log.info(f'Synchronize genotypes at the Alliance.')
+        log.info('Synchronize genotypes at the Alliance.')
         for geno_anno in self.uname_genotype_annotations.values():
             log.debug(f'Check Alliance for {geno_anno.curie}: {geno_anno}')
-            curie = 'FB:FBsn0000001'
+            curie = geno_anno.curie
             url = f'https://curation.alliancegenome.org/api/agm/{curie}'
             headers = {
                 'accept': 'application/json',
@@ -268,9 +267,6 @@ class GenotypeHandler(object):
             }
             response = requests.get(url, headers=headers)
             log.debug(f'Got this raw response: {response.text}')
-            log.debug(f'Got this JSON: {response.json()}')
-            # json_data = json.dumps(response.json(), indent=4)
-            # log.debug(f'Got this JSON response: {json_data}')
             if response.status_code == 200:
                 try:
                     mod_entity_id = response.json()['entity']['modEntityId']
