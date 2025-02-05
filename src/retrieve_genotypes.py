@@ -7,7 +7,7 @@ Author(s):
 
 Usage:
     retrieve_genotypes.py [-h] [-v VERBOSE] [-t TESTING] [-c CONFIG]
-    [-p PUB] [-i GENOTYPE_INPUT] [-f GENOTYPES_FILE]
+    [-p PUB] [-i GENOTYPE_INPUT] [-f GENOTYPES_FILE] [-w AGR_TOKEN]
 
 Example:
     python retrieve_genotypes.py -v -t
@@ -77,6 +77,8 @@ run_mode = parser.add_mutually_exclusive_group(required=True)
 run_mode.add_argument('-i', '--genotype_input', help='The genotype name to get or create.', required=False)
 run_mode.add_argument('-f', '--genotypes_file', help='A file of genotype names to get or create.', required=False)
 parser.add_argument('-p', '--pub_id', help='The FBrf ID for the publication.', required=True)
+parser.add_argument('-w', '--agr_token', help='Alliance API token for persistent store interaction.', required=True)
+
 
 # Use parse_known_args(), not parse_args(), to handle args specific to this script (outside of set_up_db_reading()).
 try:
@@ -85,8 +87,9 @@ try:
     GENOTYPE_INPUT = args.genotype_input
     GENOTYPE_FILE = args.genotypes_file
     FBRF_PUB_ID = args.pub_id
+    AGR_TOKEN = args.agr_token
 except SystemExit as e:
-    log.error('ERROR: Must supply two arguments: -p/--pub (FBrf ID), and one of -i/--genotype_input or -f/--genotypes_file.')
+    log.error('ERROR: Must supply three arguments: -p/--pub (FBrf ID), -w/--agr_token, and one of -i/--genotype_input or -f/--genotypes_file.')
     sys.exit(e.code)
 
 
@@ -95,7 +98,8 @@ def main():
     """Run the steps for checking and updating genotypes."""
     global GENOTYPE_INPUT
     global GENOTYPE_FILE
-    global PUB_ID
+    global FBRF_PUB_ID
+    global AGR_TOKEN
     log.info('Running script "{}"'.format(__file__))
     log.info('STARTED MAIN FUNCTION.\n')
     if GENOTYPE_INPUT:
@@ -107,19 +111,20 @@ def main():
         except FileNotFoundError:
             log.error(f'Cannot open "{GENOTYPE_FILE}". Make sure the file is in directory mounted to docker /src/input/')
             raise FileNotFoundError
-    genotype_handler_instance = GenotypeHandler(genotype_input_list, FBRF_PUB_ID)
+    genotype_handler_instance = GenotypeHandler(genotype_input_list, FBRF_PUB_ID, AGR_TOKEN)
     db_transaction(genotype_handler_instance)
     log.info('ENDED MAIN FUNCTION.\n')
 
 
 class GenotypeHandler(object):
     """This object processes genotype name inputs and gets or creates chado genotypes."""
-    def __init__(self, genotype_input_list, fbrf_pub_id):
+    def __init__(self, genotype_input_list, fbrf_pub_id, agr_token):
         """Create the GenotypeHandler object.
 
         Args:
             genotype_input_list (list): A list of genotype names (allele SGML symbols).
-            pub_id (str): The FBrf ID for the genotype.
+            fbrf_pub_id (str): The FBrf ID for the genotype.
+            agr_token (str): The Alliance API token required for interacting with the persistent store.
 
         Returns:
             A GenotypeHandler object.
@@ -131,6 +136,7 @@ class GenotypeHandler(object):
         self.pub_associated_feature_ids = []    # List of current and public features having FB IDs associated with this pub.
         self.genotype_annotations = []          # List of GenotypeAnnotation objects generated from the input list.
         self.uname_genotype_annotations = {}    # uniquename-keyed GenotypeAnnotations (for grouping redundant entries).
+        self.agr_token = agr_token
 
     def get_pub_id(self, session):
         """Get pub.pub_id for given FBrf ID."""
@@ -246,6 +252,11 @@ class GenotypeHandler(object):
             log.error(f'Found {unclassified_counter} UNCLASSIFIED genotypes.')
         return
 
+    def sync_with_alliance(self):
+        """Synchronize genotypes at the Alliance."""
+        log.debug(f'Use this: {self.agr_token}')
+        return
+
     def print_curator_genotype_report(self):
         """Print out genotype report."""
         log.info('Print out genotype report.')
@@ -287,6 +298,7 @@ class GenotypeHandler(object):
         self.find_redundant_genotype_entries()
         self.report_errors()
         self.get_or_create_genotypes(session)
+        self.sync_with_alliance(session)
         self.print_curator_genotype_report()
         return
 

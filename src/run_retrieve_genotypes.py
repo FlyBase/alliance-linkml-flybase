@@ -87,7 +87,7 @@ command += f'-e USER={user} '
 command += f'-e PGPASSWORD={pg_pwd} '
 command += '-e RELEASE=production '
 command += '--entrypoint /usr/bin/python3 test_export_to_linkml '    # BOB: change bulk_update docker image for prod
-command += f'/src/retrieve_genotypes.py -p {fbrf_pub_id} '
+command += f'/src/retrieve_genotypes.py -p {fbrf_pub_id} -w {agr_token}'
 if genotype_input_file:
     command += f'-f /src/input/{genotype_input_file} '
 else:
