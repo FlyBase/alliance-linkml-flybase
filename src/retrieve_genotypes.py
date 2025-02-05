@@ -101,8 +101,12 @@ def main():
     if GENOTYPE_INPUT:
         genotype_input_list = [GENOTYPE_INPUT]
     else:
-        genotype_file_contents = open(GENOTYPE_FILE, 'r')
-        genotype_input_list = [i.strip() for i in genotype_file_contents if i.strip() != '']
+        try:
+            genotype_file_contents = open(GENOTYPE_FILE, 'r')
+            genotype_input_list = [i.strip() for i in genotype_file_contents if i.strip() != '']
+        except FileNotFoundError:
+            log.error(f'Cannot open "{GENOTYPE_FILE}". Make sure the file is in directory mounted to docker /src/input/')
+            raise FileNotFoundError
     genotype_handler_instance = GenotypeHandler(genotype_input_list, FBRF_PUB_ID)
     db_transaction(genotype_handler_instance)
     log.info('ENDED MAIN FUNCTION.\n')
