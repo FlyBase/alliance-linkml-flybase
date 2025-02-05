@@ -42,7 +42,9 @@ Notes:
 
 import argparse
 # import datetime
+import json
 import os
+import requests
 import sys
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
@@ -255,7 +257,24 @@ class GenotypeHandler(object):
 
     def sync_with_alliance(self):
         """Synchronize genotypes at the Alliance."""
-        log.debug(f'Use this: {self.agr_token}')
+        log.info(f'Synchronize genotypes at the Alliance.')
+        for geno_anno in self.uname_genotype_annotations.values():
+            curie = 'FB:FBsn0000001'    # BOB
+            # log.debug(f'Check Alliance for {geno_anno.curie}: {geno_anno}')
+            log.debug(f'Check Alliance for {curie}')
+            url = f'https://curation.alliancegenome.org/api/agm/{curie}'
+            headers = {
+                'accept': 'application/json',
+                'Authorization': f'Bearer {self.agr_token}',
+            }
+            response = requests.get(url, headers=headers)
+            log.debug(f'Got this raw response: {response.text}')
+            json_data = json.dumps(response.json(), indent=4)
+            log.debug(f'Got this JSON response: {json_data}')
+            if response.status_code == 200:
+                log.debug('SUCCESS')
+            else:
+                log.debug('FAILURE')
         return
 
     def print_curator_genotype_report(self):
