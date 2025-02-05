@@ -260,7 +260,8 @@ class GenotypeHandler(object):
         log.info(f'Synchronize genotypes at the Alliance.')
         for geno_anno in self.uname_genotype_annotations.values():
             log.debug(f'Check Alliance for {geno_anno.curie}: {geno_anno}')
-            url = f'https://curation.alliancegenome.org/api/agm/{geno_anno.curie}'
+            curie = 'FB:FBsn0000001'
+            url = f'https://curation.alliancegenome.org/api/agm/{curie}'
             headers = {
                 'accept': 'application/json',
                 'Authorization': f'Bearer {self.agr_token}',
@@ -268,14 +269,13 @@ class GenotypeHandler(object):
             response = requests.get(url, headers=headers)
             log.debug(f'Got this raw response: {response.text}')
             log.debug(f'Got this JSON: {response.json}')
-            log.debug(f'Got these keys: {response.json.keys()}')
-            json_data = json.dumps(response.json(), indent=4)
-            log.debug(f'Got this JSON response: {json_data}')
+            # json_data = json.dumps(response.json(), indent=4)
+            # log.debug(f'Got this JSON response: {json_data}')
             if response.status_code == 200:
                 try:
                     mod_entity_id = response.json['entity']['modEntityId']
                     log.debug(f'SUCCESS: Found {mod_entity_id} at the Alliance.')
-                except KeyError:
+                except ValueError:
                     log.debug(f'FAILURE: Could not find {geno_anno.curie} at the Alliance.')
             else:
                 log.error('FAILURE: Did not get a response from the Alliance API.')
