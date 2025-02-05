@@ -105,4 +105,4 @@ try:
     for line in report:
         print(line.rstrip())
 except FileNotFoundError:
-    print('ERROR: Expected script output was not found. Check the log file to see why the script failed.')
+    print('\nERROR: Expected script output was not found. Check the log file to see why the script failed.\n')
