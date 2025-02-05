@@ -259,10 +259,8 @@ class GenotypeHandler(object):
         """Synchronize genotypes at the Alliance."""
         log.info(f'Synchronize genotypes at the Alliance.')
         for geno_anno in self.uname_genotype_annotations.values():
-            curie = 'FB:FBsn0000001'    # BOB
-            # log.debug(f'Check Alliance for {geno_anno.curie}: {geno_anno}')
-            log.debug(f'Check Alliance for {curie}')
-            url = f'https://curation.alliancegenome.org/api/agm/{curie}'
+            log.debug(f'Check Alliance for {geno_anno.curie}: {geno_anno}')
+            url = f'https://curation.alliancegenome.org/api/agm/{geno_anno.curie}'
             headers = {
                 'accept': 'application/json',
                 'Authorization': f'Bearer {self.agr_token}',
