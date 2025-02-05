@@ -7,7 +7,7 @@ Author(s):
 
 Usage:
     retrieve_genotypes.py [-h] [-v VERBOSE] [-t TESTING] [-c CONFIG]
-    [-p PUB] [-i GENOTYPE_INPUT] [-f GENOTYPES_FILE] [-w AGR_TOKEN]
+    [-p PUB] [-i GENOTYPE_INPUT] [-f GENOTYPES_FILE]
 
 Example:
     python retrieve_genotypes.py -v -t
@@ -42,6 +42,7 @@ Notes:
 
 import argparse
 # import datetime
+import os
 import sys
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
@@ -65,6 +66,8 @@ output_dir = set_up_dict['output_dir']
 genotype_report_filename = f'{output_dir}{report_label}.report'
 log = set_up_dict['log']
 TESTING = set_up_dict['testing']
+AGR_TOKEN = os.environ['ALLIANCETOKEN']
+
 
 # Create SQL Alchemy engines from environmental variables.
 engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server + '/' + database
@@ -77,7 +80,6 @@ run_mode = parser.add_mutually_exclusive_group(required=True)
 run_mode.add_argument('-i', '--genotype_input', help='The genotype name to get or create.', required=False)
 run_mode.add_argument('-f', '--genotypes_file', help='A file of genotype names to get or create.', required=False)
 parser.add_argument('-p', '--pub_id', help='The FBrf ID for the publication.', required=True)
-parser.add_argument('-w', '--agr_token', help='Alliance API token for persistent store interaction.', required=True)
 
 
 # Use parse_known_args(), not parse_args(), to handle args specific to this script (outside of set_up_db_reading()).
@@ -87,9 +89,8 @@ try:
     GENOTYPE_INPUT = args.genotype_input
     GENOTYPE_FILE = args.genotypes_file
     FBRF_PUB_ID = args.pub_id
-    AGR_TOKEN = args.agr_token
 except SystemExit as e:
-    log.error('ERROR: Must supply three arguments: -p/--pub (FBrf ID), -w/--agr_token, and one of -i/--genotype_input or -f/--genotypes_file.')
+    log.error('ERROR: Must supply two arguments: -p/--pub (FBrf ID), and one of -i/--genotype_input or -f/--genotypes_file.')
     sys.exit(e.code)
 
 
