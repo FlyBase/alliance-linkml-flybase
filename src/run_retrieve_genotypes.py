@@ -94,12 +94,12 @@ else:
     command += f'-i \"{genotype_input}\" '
 
 # For debugging.
-print(command)
-subprocess.run(["bash", "-c", command])
+# print(command)
+# subprocess.run(["bash", "-c", command])
 
 # Using devnull to suppress confusing matplotlib and bioservices warnings that I can't resolve.
-# with open(os.devnull, 'w') as devnull:
-#     subprocess.run(["bash", "-c", command], stdout=devnull, stderr=devnull)
+with open(os.devnull, 'w') as devnull:
+    subprocess.run(["bash", "-c", command], stdout=devnull, stderr=devnull)
 
 report = open('./genotypes_retrieved.report', 'r')
 for line in report:
