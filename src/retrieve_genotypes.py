@@ -261,7 +261,7 @@ class GenotypeHandler(object):
             log.debug(f'Check Alliance for {geno_anno.curie}: {geno_anno}')
             curie = geno_anno.curie
             curie = 'FB:FBsn0000001'
-            url = f'https://curation.alliancegenome.org/api/agm/{curie}'
+            url = f'https://beta-curation.alliancegenome.org/api/agm/{curie}'
             headers = {
                 'accept': 'application/json',
                 'Authorization': f'Bearer {self.agr_token}',
