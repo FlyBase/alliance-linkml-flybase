@@ -317,7 +317,7 @@ class GenotypeHandler(object):
                 log.debug(f'Have this LinkML AGM genotype JSON:\n{linkml_genotype}')
                 post_url = 'https://beta-curation.alliancegenome.org/api/agm/'
                 post_headers = {
-                    # 'Content-Type': 'application/json',
+                    'Content-Type': 'application/json',
                     'accept': 'application/json',
                     'Authorization': f'Bearer {self.agr_token}',
                 }
