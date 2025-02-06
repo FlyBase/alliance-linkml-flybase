@@ -32,13 +32,9 @@ Notes:
 
 import argparse
 import configparser
-from datetime import datetime
 import os
 import subprocess
 import sys
-
-now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-print(f'BOB1: {now}')
 
 # Process input parameters.
 parser = argparse.ArgumentParser(
@@ -60,9 +56,6 @@ run_mode = parser.add_mutually_exclusive_group(required=True)
 run_mode.add_argument('-i', '--genotype_input', help='The genotype name to get or create.', required=False)
 run_mode.add_argument('-f', '--genotypes_file', help='A file of genotype names to get or create.', required=False)
 
-now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-print(f'BOB2: {now}')
-
 try:
     args = parser.parse_args()
     genotype_input = args.genotype_input
@@ -71,9 +64,6 @@ try:
 except SystemExit as e:
     print('ERROR: Must supply two arguments: -p/--pub (FBrf ID), and one of -i/--genotype_input or -f/--genotypes_file.')
     sys.exit(e.code)
-
-now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-print(f'BOB3: {now}')
 
 # Open config for chado communication.
 config = configparser.ConfigParser()
@@ -104,9 +94,6 @@ if genotype_input_file:
 else:
     command += f'-i \"{genotype_input}\" '
 
-now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-print(f'BOB4: {now}')
-
 # For debugging.
 # print(command)
 # subprocess.run(["bash", "-c", command])
@@ -114,15 +101,9 @@ print(f'BOB4: {now}')
 with open(os.devnull, 'w') as devnull:
     subprocess.run(["bash", "-c", command], stdout=devnull, stderr=devnull)
 
-now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-print(f'BOB5: {now}')
-
 try:
     report = open('./genotypes_retrieved.report', 'r')
     for line in report:
         print(line.rstrip())
 except FileNotFoundError:
     print('\nERROR: Expected script output was not found. Check the log file to see why the script failed.\n')
-
-now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-print(f'BOB6: {now}')
