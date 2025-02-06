@@ -40,6 +40,7 @@ Notes:
 
 """
 
+import agr_datatypes
 import argparse
 # import datetime
 import os
@@ -259,8 +260,8 @@ class GenotypeHandler(object):
         log.info('Synchronize genotypes at the Alliance.')
         for geno_anno in self.uname_genotype_annotations.values():
             log.debug(f'Check Alliance for {geno_anno.curie}: {geno_anno}')
+            genotype_at_alliance = False
             curie = geno_anno.curie
-            curie = 'FB:FBsn0000001'
             url = f'https://beta-curation.alliancegenome.org/api/agm/{curie}'
             headers = {
                 'accept': 'application/json',
@@ -274,16 +275,34 @@ class GenotypeHandler(object):
                     if 'primaryExternalId' in data['entity']:
                         mod_entity_id = response.json()['entity']['primaryExternalId']
                         log.debug(f'SUCCESS: Found {mod_entity_id} at the Alliance.')
+                        genotype_at_alliance = True
                     elif 'modEntityId' in data['entity']:
                         mod_entity_id = response.json()['entity']['modEntityId']
                         log.debug(f'SUCCESS: Found {mod_entity_id} at the Alliance.')
+                        genotype_at_alliance = True
                     else:
-                        log.debug('FAILURE: Got a response but could not find ID attribute.')
-
+                        log.error('FAILURE: Got a response but could not find ID attribute.')
+                        raise
                 except KeyError:
                     log.debug(f'FAILURE: Could not find {geno_anno.curie} at the Alliance.')
             else:
                 log.error('FAILURE: Did not get a response from the Alliance API.')
+                raise
+            if genotype_at_alliance is False:
+                linkml_genotype = agr_datatypes.AffectedGenomicModelDTO()
+                linkml_genotype.obsolete = False
+                linkml_genotype.internal = True
+                linkml_genotype.primary_external_id = curie
+                linkml_genotype.subtype_name = 'genotype'
+                linkml_genotype.taxon_curie = 'NCBITaxon:7227'
+                linkml_genotype.name = geno_anno.uniquename
+                linkml_genotype_json = linkml_genotype.dict_export()
+                response = requests.post(url, headers=headers, data=linkml_genotype_json)
+                log.debug(f'Got this raw response: {response.text}')
+                if response.status_code == 200:
+                    log.debug('SUCCESS IN POSTING AGM.')
+                else:
+                    log.error('FAILURE TO POST AGM.')
         return
 
     def print_curator_genotype_report(self):
