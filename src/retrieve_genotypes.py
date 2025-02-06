@@ -313,7 +313,7 @@ class GenotypeHandler(object):
                         'internal': False,
                         'curie': 'NCBITaxon:7227'
                     },
-                    'name': geno_anno.uniquename
+                    'name': geno_anno.uniquename    # BOB - replace Greek and superscript SGML with ascii
                 }
                 log.debug(f'Have this LinkML AGM genotype:\n{linkml_genotype}')
                 json_data = json.dumps(linkml_genotype)
