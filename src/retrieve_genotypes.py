@@ -260,6 +260,7 @@ class GenotypeHandler(object):
         for geno_anno in self.uname_genotype_annotations.values():
             log.debug(f'Check Alliance for {geno_anno.curie}: {geno_anno}')
             curie = geno_anno.curie
+            curie = 'FB:FBsn0000001'
             url = f'https://curation.alliancegenome.org/api/agm/{curie}'
             headers = {
                 'accept': 'application/json',
