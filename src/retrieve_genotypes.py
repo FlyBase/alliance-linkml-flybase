@@ -322,6 +322,7 @@ class GenotypeHandler(object):
                 if response.status_code == 200:
                     log.debug('SUCCESS IN POSTING AGM.')
                 else:
+                    log.debug(f'Status code = {response.status_code}')
                     log.error('FAILURE TO POST AGM.')
         return
 
