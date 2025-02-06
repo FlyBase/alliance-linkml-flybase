@@ -40,7 +40,6 @@ Notes:
 
 """
 
-import agr_datatypes
 import argparse
 # import datetime
 import os
@@ -261,8 +260,7 @@ class GenotypeHandler(object):
         for geno_anno in self.uname_genotype_annotations.values():
             log.debug(f'Check Alliance for {geno_anno.curie}: {geno_anno}')
             genotype_at_alliance = False
-            curie = geno_anno.curie
-            url = f'https://beta-curation.alliancegenome.org/api/agm/{curie}'
+            url = f'https://beta-curation.alliancegenome.org/api/agm/{geno_anno.curie}'
             headers = {
                 'accept': 'application/json',
                 'Authorization': f'Bearer {self.agr_token}',
@@ -289,17 +287,36 @@ class GenotypeHandler(object):
                 log.error('FAILURE: Did not get a response from the Alliance API.')
                 raise
             if genotype_at_alliance is False:
-                linkml_genotype = agr_datatypes.AffectedGenomicModelDTO()
-                linkml_genotype.obsolete = False
-                linkml_genotype.internal = True
-                linkml_genotype.primary_external_id = curie
-                linkml_genotype.subtype_name = 'genotype'
-                linkml_genotype.taxon_curie = 'NCBITaxon:7227'
-                linkml_genotype.name = geno_anno.uniquename
-                linkml_genotype_json = linkml_genotype.dict_export()
-                log.debug(f'Have this LinkML AGM genotype JSON:\n{linkml_genotype_json}')
+                linkml_genotype = {
+                    'type': 'AffectedGenomicModel',
+                    'createdBy': {
+                        'obsolete': False,
+                        'internal': False,
+                        'uniqueId': 'FB:FB_curator',
+                    },
+                    'obsolete': False,
+                    'internal': True,
+                    'primaryExternalId': geno_anno.curie,
+                    'dataProvider': {
+                        'obsolete': False,
+                        'internal': False,
+                        'abbreviation': 'FB',
+                    },
+                    'subtype': {
+                        'obsolete': False,
+                        'internal': False,
+                        'name': 'genotype',
+                    },
+                    'taxon': {
+                        'obsolete': False,
+                        'internal': False,
+                        'curie': 'NCBITaxon:7227',
+                    },
+                    'name': geno_anno.uniquename,
+                }
+                log.debug(f'Have this LinkML AGM genotype JSON:\n{linkml_genotype}')
                 url = f'https://beta-curation.alliancegenome.org/api/agm/'
-                response = requests.post(url, headers=headers, data=linkml_genotype_json)
+                response = requests.post(url, headers=headers, data=linkml_genotype)
                 log.debug(f'Got this raw response: {response.text}')
                 if response.status_code == 200:
                     log.debug('SUCCESS IN POSTING AGM.')
