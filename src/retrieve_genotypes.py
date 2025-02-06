@@ -42,6 +42,7 @@ Notes:
 
 import argparse
 # import datetime
+import json
 import os
 import requests
 import sys
@@ -292,7 +293,7 @@ class GenotypeHandler(object):
                     'createdBy': {
                         'obsolete': False,
                         'internal': False,
-                        'uniqueId': 'FB:FB_curator',
+                        'uniqueId': 'FB:FB_curator'
                     },
                     'obsolete': False,
                     'internal': True,
@@ -300,28 +301,30 @@ class GenotypeHandler(object):
                     'dataProvider': {
                         'obsolete': False,
                         'internal': False,
-                        'abbreviation': 'FB',
+                        'abbreviation': 'FB'
                     },
                     'subtype': {
                         'obsolete': False,
                         'internal': False,
-                        'name': 'genotype',
+                        'name': 'genotype'
                     },
                     'taxon': {
                         'obsolete': False,
                         'internal': False,
-                        'curie': 'NCBITaxon:7227',
+                        'curie': 'NCBITaxon:7227'
                     },
-                    'name': geno_anno.uniquename,
+                    'name': geno_anno.uniquename
                 }
-                log.debug(f'Have this LinkML AGM genotype JSON:\n{linkml_genotype}')
+                log.debug(f'Have this LinkML AGM genotype:\n{linkml_genotype}')
+                json_data = json.dumps(linkml_genotype)
+                log.debug(f'Have this LinkML AGM genotype JSON:\n{json_data}')
                 post_url = 'https://beta-curation.alliancegenome.org/api/agm/'
                 post_headers = {
                     'Content-Type': 'application/json',
                     'accept': 'application/json',
                     'Authorization': f'Bearer {self.agr_token}',
                 }
-                response = requests.post(post_url, headers=post_headers, data=linkml_genotype)
+                response = requests.post(post_url, headers=post_headers, data=json_data)
                 log.debug(f'Got this raw response: {response.text}')
                 if response.status_code == 200:
                     log.debug('SUCCESS IN POSTING AGM.')
