@@ -297,7 +297,7 @@ class GenotypeHandler(object):
                     },
                     'obsolete': False,
                     'internal': True,
-                    'primaryExternalId': geno_anno.curie,
+                    'primaryExternalId': f'FB:{geno_anno.curie}',
                     'dataProvider': {
                         'obsolete': False,
                         'internal': False,
