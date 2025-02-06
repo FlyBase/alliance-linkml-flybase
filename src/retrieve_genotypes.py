@@ -270,8 +270,16 @@ class GenotypeHandler(object):
             log.debug(f'Got this raw response: {response.text}')
             if response.status_code == 200:
                 try:
-                    mod_entity_id = response.json()['entity']['modEntityId']
-                    log.debug(f'SUCCESS: Found {mod_entity_id} at the Alliance.')
+                    data = response.json()
+                    if 'primaryExternalId' in data['entity']:
+                        mod_entity_id = response.json()['entity']['primaryExternalId']
+                        log.debug(f'SUCCESS: Found {mod_entity_id} at the Alliance.')
+                    elif 'modEntityId' in data['entity']:
+                        mod_entity_id = response.json()['entity']['modEntityId']
+                        log.debug(f'SUCCESS: Found {mod_entity_id} at the Alliance.')
+                    else:
+                        log.debug(f'FAILURE: Got a response but could not find ID attribute.')
+
                 except KeyError:
                     log.debug(f'FAILURE: Could not find {geno_anno.curie} at the Alliance.')
             else:
