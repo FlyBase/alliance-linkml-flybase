@@ -297,6 +297,8 @@ class GenotypeHandler(object):
                 linkml_genotype.taxon_curie = 'NCBITaxon:7227'
                 linkml_genotype.name = geno_anno.uniquename
                 linkml_genotype_json = linkml_genotype.dict_export()
+                log.debug(f'Have this LinkML AGM genotype JSON:\n{linkml_genotype_json}')
+                url = f'https://beta-curation.alliancegenome.org/api/agm/'
                 response = requests.post(url, headers=headers, data=linkml_genotype_json)
                 log.debug(f'Got this raw response: {response.text}')
                 if response.status_code == 200:
