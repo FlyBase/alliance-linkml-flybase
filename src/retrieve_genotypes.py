@@ -315,8 +315,9 @@ class GenotypeHandler(object):
                     'name': geno_anno.uniquename,
                 }
                 log.debug(f'Have this LinkML AGM genotype JSON:\n{linkml_genotype}')
-                url = f'https://beta-curation.alliancegenome.org/api/agm/'
-                response = requests.post(url, headers=headers, data=linkml_genotype)
+                post_url = 'https://beta-curation.alliancegenome.org/api/agm/'
+                post_headers = {'Content-Type': 'application/json'}
+                response = requests.post(post_url, headers=post_headers, data=linkml_genotype)
                 log.debug(f'Got this raw response: {response.text}')
                 if response.status_code == 200:
                     log.debug('SUCCESS IN POSTING AGM.')
