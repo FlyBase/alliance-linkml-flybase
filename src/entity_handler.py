@@ -876,8 +876,8 @@ class PrimaryEntityHandler(DataHandler):
                 elif fb_data_entity.is_obsolete is True and fb_data_entity.db_primary_id in self.fb_reference_entity_ids:
                     fb_data_entity.is_new_obsolete = True
                     new_obsolete_counter += 1
-        self.log.info(f'Found {new_addition_counter} new entities in chado relative to the reference db.')
-        self.log.info(f'Found {new_obsolete_counter} newly obsoleted entities in chado relative to the reference db.')
+        self.log.info(f'Found {new_addition_counter} new {self.datatype} entities in chado relative to the reference db.')
+        self.log.info(f'Found {new_obsolete_counter} newly obsoleted {self.datatype} entities in chado relative to the reference db.')
         return
 
     def synthesize_ncbi_taxon_id(self):
