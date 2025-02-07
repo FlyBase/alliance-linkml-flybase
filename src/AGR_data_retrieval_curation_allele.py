@@ -109,16 +109,17 @@ def main():
     # export_dict['allele_ingest_set'].extend(insertion_handler.export_data[insertion_handler.primary_export_set])
     generate_export_file(export_dict, log, output_filename)
 
-    # Export the gene-allele associations to a separate file.
-    association_output_filename = output_filename.replace('allele', 'allele_gene_association')
-    association_export_dict = {
-        'linkml_version': linkml_release,
-        'alliance_member_release_version': database_release,
-    }
-    association_export_dict['allele_gene_association_ingest_set'] = []
-    association_export_dict['allele_gene_association_ingest_set'].extend(allele_handler.export_data['allele_gene_association_ingest_set'])
-    # association_export_dict['allele_gene_association_ingest_set'].extend(aberration_handler.export_data['allele_gene_association_ingest_set'])
-    generate_export_file(association_export_dict, log, association_output_filename)
+    if not reference_session:
+        # Export the gene-allele associations to a separate file.
+        association_output_filename = output_filename.replace('allele', 'allele_gene_association')
+        association_export_dict = {
+            'linkml_version': linkml_release,
+            'alliance_member_release_version': database_release,
+        }
+        association_export_dict['allele_gene_association_ingest_set'] = []
+        association_export_dict['allele_gene_association_ingest_set'].extend(allele_handler.export_data['allele_gene_association_ingest_set'])
+        # association_export_dict['allele_gene_association_ingest_set'].extend(aberration_handler.export_data['allele_gene_association_ingest_set'])
+        generate_export_file(association_export_dict, log, association_output_filename)
 
     log.info('Ended main function.\n')
 

@@ -96,14 +96,15 @@ def main():
     export_dict['construct_ingest_set'] = cons_handler.export_data['construct_ingest_set']
     generate_export_file(export_dict, log, output_filename)
 
-    # Export the construct associations to a separate file.
-    association_output_filename = output_filename.replace('construct', 'construct_association')
-    association_export_dict = {
-        'linkml_version': linkml_release,
-        'alliance_member_release_version': database_release,
-    }
-    association_export_dict['construct_genomic_entity_association_ingest_set'] = cons_handler.export_data['construct_genomic_entity_association_ingest_set']
-    generate_export_file(association_export_dict, log, association_output_filename)
+    if not reference_session:
+        # Export the construct associations to a separate file.
+        association_output_filename = output_filename.replace('construct', 'construct_association')
+        association_export_dict = {
+            'linkml_version': linkml_release,
+            'alliance_member_release_version': database_release,
+        }
+        association_export_dict['construct_genomic_entity_association_ingest_set'] = cons_handler.export_data['construct_genomic_entity_association_ingest_set']
+        generate_export_file(association_export_dict, log, association_output_filename)
 
     log.info('Ended main function.\n')
 
