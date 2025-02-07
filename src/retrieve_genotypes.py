@@ -53,6 +53,9 @@ from harvdev_utils.production import (
     Feature, FeaturePub, Pub
 )
 from harvdev_utils.genotype_utilities import GenotypeAnnotation
+from harvdev_utils.char_conversions import (
+    sgml_to_plain_text, sub_sup_sgml_to_plain_text
+)
 from harvdev_utils.psycopg_functions import set_up_db_reading
 
 # Important label for output files.
@@ -236,6 +239,8 @@ class GenotypeHandler(object):
         unclassified_counter = 0
         newly_created_counter = 0
         for geno_anno in self.uname_genotype_annotations.values():
+            if geno_anno.errors:
+                continue
             geno_anno.get_known_or_create_new_genotype(session)
             if geno_anno.is_new is True:
                 new_counter += 1
@@ -259,24 +264,27 @@ class GenotypeHandler(object):
         """Synchronize genotypes at the Alliance."""
         log.info('Synchronize genotypes at the Alliance.')
         for geno_anno in self.uname_genotype_annotations.values():
-            log.debug(f'Check Alliance for {geno_anno.curie}: {geno_anno}')
+            if geno_anno.errors:
+                continue
+            agr_curie = f'FB:{geno_anno.curie}'
+            log.debug(f'Check Alliance for {agr_curie}: {geno_anno}')
             genotype_at_alliance = False
-            url = f'https://beta-curation.alliancegenome.org/api/agm/{geno_anno.curie}'
+            get_url = f'https://beta-curation.alliancegenome.org/api/agm/{agr_curie}'
             headers = {
                 'accept': 'application/json',
                 'Authorization': f'Bearer {self.agr_token}',
             }
-            response = requests.get(url, headers=headers)
-            log.debug(f'Got this raw response: {response.text}')
-            if response.status_code == 200:
+            get_response = requests.get(get_url, headers=headers)
+            log.debug(f'Got this raw response looking for {agr_curie} at the Alliance:\n{get_response.text}')
+            if get_response.status_code == 200:
                 try:
-                    data = response.json()
+                    data = get_response.json()
                     if 'primaryExternalId' in data['entity']:
-                        mod_entity_id = response.json()['entity']['primaryExternalId']
+                        mod_entity_id = get_response.json()['entity']['primaryExternalId']
                         log.debug(f'SUCCESS: Found {mod_entity_id} at the Alliance.')
                         genotype_at_alliance = True
                     elif 'modEntityId' in data['entity']:
-                        mod_entity_id = response.json()['entity']['modEntityId']
+                        mod_entity_id = get_response.json()['entity']['modEntityId']
                         log.debug(f'SUCCESS: Found {mod_entity_id} at the Alliance.')
                         genotype_at_alliance = True
                     else:
@@ -285,24 +293,14 @@ class GenotypeHandler(object):
                 except KeyError:
                     log.debug(f'FAILURE: Could not find {geno_anno.curie} at the Alliance.')
             else:
-                log.error('FAILURE: Did not get a response from the Alliance API.')
+                log.error(f'FAILURE: Lookup of {agr_curie} did not return any response from the Alliance API.')
                 raise
             if genotype_at_alliance is False:
+                genotype_display_name = sub_sup_sgml_to_plain_text(geno_anno.uniquename)
+                genotype_display_name = sgml_to_plain_text(geno_anno.uniquename)
+                log.debug(f'Load {geno_anno} into the Alliance using this name: {genotype_display_name}')
                 linkml_genotype = {
                     'type': 'AffectedGenomicModel',
-                    'createdBy': {
-                        'obsolete': False,
-                        'internal': False,
-                        'uniqueId': 'FB:FB_curator'
-                    },
-                    'obsolete': False,
-                    'internal': True,
-                    'primaryExternalId': f'FB:{geno_anno.curie}',
-                    'dataProvider': {
-                        'obsolete': False,
-                        'internal': False,
-                        'abbreviation': 'FB'
-                    },
                     'subtype': {
                         'obsolete': False,
                         'internal': False,
@@ -313,9 +311,21 @@ class GenotypeHandler(object):
                         'internal': False,
                         'curie': 'NCBITaxon:7227'
                     },
-                    'name': geno_anno.uniquename    # BOB - replace Greek and superscript SGML with ascii
+                    'primaryExternalId': agr_curie,
+                    'name': genotype_display_name,
+                    'createdBy': {
+                        'obsolete': False,
+                        'internal': False,
+                        'uniqueId': 'FB:FB_curator'
+                    },
+                    'obsolete': False,
+                    'internal': True,
+                    'dataProvider': {
+                        'obsolete': False,
+                        'internal': False,
+                        'abbreviation': 'FB'
+                    }
                 }
-                log.debug(f'Have this LinkML AGM genotype:\n{linkml_genotype}')
                 json_data = json.dumps(linkml_genotype)
                 log.debug(f'Have this LinkML AGM genotype JSON:\n{json_data}')
                 post_url = 'https://beta-curation.alliancegenome.org/api/agm/'
@@ -324,12 +334,12 @@ class GenotypeHandler(object):
                     'accept': 'application/json',
                     'Authorization': f'Bearer {self.agr_token}',
                 }
-                response = requests.post(post_url, headers=post_headers, data=json_data)
-                log.debug(f'Got this raw response: {response.text}')
-                if response.status_code == 200:
+                post_response = requests.post(post_url, headers=post_headers, data=json_data)
+                log.debug(f'Got this raw response posting {agr_curie} at the Alliance:\n{post_response.text}')
+                if post_response.status_code == 200:
                     log.debug('SUCCESS IN POSTING AGM.')
                 else:
-                    log.debug(f'Status code = {response.status_code}')
+                    log.debug(f'Status code = {post_response.status_code}')
                     log.error('FAILURE TO POST AGM.')
         return
 
