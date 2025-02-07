@@ -432,7 +432,8 @@ class GenotypeHandler(PrimaryEntityHandler):
             elif len(organism_id_list) == 1:
                 org_id = organism_id_list[0]
                 genotype.ncbi_taxon_id = self.organism_lookup[org_id]['taxon_curie']
-                non_dmel_genotype_counter += 1
+                if org_id != 1:
+                    non_dmel_genotype_counter += 1
             # If organism info is ambiguous, the taxon is given as "unidentified".
             else:
                 genotype.ncbi_taxon_id = 'NCBITaxon:32644'
