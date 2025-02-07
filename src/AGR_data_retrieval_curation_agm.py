@@ -69,7 +69,7 @@ session = Session()
 
 # Create a session to the reference db.
 if reference_db:
-    engine_var_ref = 'postgresql://' + username + ":" + password + '@' + 'flysql25' + '/' + reference_db
+    engine_var_ref = 'postgresql://' + username + ":" + password + '@' + 'flysql23' + '/' + reference_db
     ref_engine = create_engine(engine_var_ref)
     RefSession = sessionmaker(bind=ref_engine)
     reference_session = RefSession()

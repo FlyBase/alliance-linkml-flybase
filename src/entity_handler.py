@@ -168,7 +168,10 @@ class PrimaryEntityHandler(DataHandler):
             chado_type = 'feature'
         else:
             chado_type = self.datatype
-        self.log.info(f'Get {self.datatype} data entities from {chado_type} table.')
+        if reference_set is True:
+            self.log.info(f'Get {self.datatype} data entities from {chado_type} table (previous reference db for incremental update).')
+        else:
+            self.log.info(f'Get {self.datatype} data entities from {chado_type} table.')
         chado_table = self.chado_tables['main_table'][chado_type]
         filters = ()
         if self.datatype in self.regex.keys() and self.datatype != 'genotype':
