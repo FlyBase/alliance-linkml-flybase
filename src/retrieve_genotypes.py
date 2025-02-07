@@ -328,7 +328,7 @@ class GenotypeHandler(object):
                 }
                 json_data = json.dumps(linkml_genotype)
                 log.debug(f'Have this LinkML AGM genotype JSON:\n{json_data}')
-                post_url = 'https://beta-curation.alliancegenome.org/api/agm/'
+                post_url = 'https://beta-curation.alliancegenome.org/api/agm/'    # BOB: Change to main curation once in production.
                 post_headers = {
                     'Content-Type': 'application/json',
                     'accept': 'application/json',

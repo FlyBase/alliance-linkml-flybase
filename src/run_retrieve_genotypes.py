@@ -67,7 +67,7 @@ except SystemExit as e:
 
 # Open config for chado communication.
 config = configparser.ConfigParser()
-config.read('/data/credentials/production/config.cfg')
+config.read('/data/credentials/production/config.cfg')    # BOB: Point config to production_chado for prod
 server = config['chiacur']['Server']
 database = config['chiacur']['Database']
 user = config['chiacur']['User']
