@@ -7,9 +7,8 @@ Author(s):
 
 Usage:
     AGR_data_retrieval_curation_gene.py [-h] [-v VERBOSE] [-c CONFIG] [-t TESTING]
-    [-l LINKML_RELEASE] 
-    [-r REFERENCE_DB] (OPTIONAL)
-    
+    [-l LINKML_RELEASE] [-r REFERENCE_DB] (OPTIONAL)
+
 Example:
     python AGR_data_retrieval_curation_gene.py -v -t -c /path/to/config.cfg
     -l v1.1.2
