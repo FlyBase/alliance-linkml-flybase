@@ -865,12 +865,17 @@ class PrimaryEntityHandler(DataHandler):
         new_addition_counter = 0
         new_obsolete_counter = 0
         for fb_data_entity in self.fb_data_entities.values():
-            if fb_data_entity.db_primary_id not in self.fb_reference_entity_ids:
-                fb_data_entity.is_new_addition = True
-                new_addition_counter += 1
-            elif self.datatype != 'cell_line' and fb_data_entity.is_obsolete is True:
-                fb_data_entity.is_new_obsolete = True
-                new_obsolete_counter += 1
+            if self.datatype == 'cell_line':
+                if fb_data_entity.db_primary_id not in self.fb_reference_entity_ids:
+                    fb_data_entity.is_new_addition = True
+                    new_addition_counter += 1
+            else:
+                if fb_data_entity.is_obsolete is False and fb_data_entity.db_primary_id not in self.fb_reference_entity_ids:
+                    fb_data_entity.is_new_addition = True
+                    new_addition_counter += 1
+                elif fb_data_entity.is_obsolete is True and fb_data_entity.db_primary_id in self.fb_reference_entity_ids:
+                    fb_data_entity.is_new_obsolete = True
+                    new_obsolete_counter += 1
         self.log.info(f'Found {new_addition_counter} new entities in chado relative to the reference db.')
         self.log.info(f'Found {new_obsolete_counter} newly obsoleted entities in chado relative to the reference db.')
         return
