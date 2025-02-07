@@ -291,13 +291,13 @@ class GenotypeHandler(object):
                         log.error('FAILURE: Got a response but could not find ID attribute.')
                         raise
                 except KeyError:
-                    log.debug(f'FAILURE: Could not find {geno_anno.curie} at the Alliance.')
+                    log.debug(f'FAILURE: Could not find {agr_curie} at the Alliance.')
             else:
                 log.error(f'FAILURE: Lookup of {agr_curie} did not return any response from the Alliance API.')
                 raise
             if genotype_at_alliance is False:
                 genotype_display_name = sub_sup_sgml_to_plain_text(geno_anno.uniquename)
-                genotype_display_name = sgml_to_plain_text(geno_anno.uniquename)
+                genotype_display_name = sgml_to_plain_text(genotype_display_name)
                 log.debug(f'Load {geno_anno} into the Alliance using this name: {genotype_display_name}')
                 linkml_genotype = {
                     'type': 'AffectedGenomicModel',
