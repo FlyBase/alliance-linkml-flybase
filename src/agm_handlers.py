@@ -72,6 +72,7 @@ class StrainHandler(PrimaryEntityHandler):
     def synthesize_info(self):
         """Extend the method for the StrainHandler."""
         super().synthesize_info()
+        self.flag_new_additions_and_obsoletes()
         self.synthesize_ncbi_taxon_id()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
@@ -125,6 +126,9 @@ class GenotypeHandler(PrimaryEntityHandler):
         450391: 'wg[l-8]/wg[l-8]',                                 # Homozygous wg[l-8] allele.
         367896: 'Tak1[2]/Tak1[+]',                                 # Simple heterozygous Tak1[2] over wt allele.
         515567: 'Sdc[12]/Sdc[unspecified]',                        # Sdc[12]/Sdc[unspecified].
+        167742: 'Psn[-]',                                          # A single unknown mutant allele represented by a bogus symbol; has pheno_comp data.
+        416752: 'crb[Y10A]/crb[-]',                                # crb allele with unknown mutant crb (bogus symbol); has pheno_comp data.
+        169086: 'dl<up>-</up> dl<up>S70A</up>',                    # A transgenic dl (FBal0095462) with unknown mutant dl (bogus symbol); has pheno_comp data.
         166899: 'Df(2R)173/PCNA[D-292]',                           # PCNA[D-292]/Df(2R)173.
         168332: 'Df(3L)Ez7 hay[nc2.tMa]',                          # Df(3L)Ez7 + hay[nc2.tMa] (diff complementation groups).
         166704: 'shi[EM33] shi[t15]',                              # shi[EM33] + shi[t15] (allele + rescue construct).
@@ -147,12 +151,15 @@ class GenotypeHandler(PrimaryEntityHandler):
         294012: 'P{CH1226-43A10} lz[L]',                           # Has FBal and FBtp associated - no export.
         223641: 'Dp1[EP2422] P{hsp26-pt-T}39C-12',                 # Has FBal and FBti associated - no export.
         169272: 'P{wA}4-4 brm[2]',                                 # Has FBti directly related - no export.
+        526093: 'daw[d05680]',                                     # A genotype new to FB2025_01 (not in FB2024_06 reference) - test incremental export.
+        510779: 'OBSOLETE510779:w[<up>]Ecol_lexA.110]',            # A genotype newly obsoleted in FB2025_01 - test incremental export.
+
         # 525357: 'w[*]; betaTub60D[2] Kr[If-1]|CyO',                              # Genotype from stock; genotype_id here is for FB2024_06 only.
     }
 
     # Additional reference info.
     dmel_insertion_allele_ids = []    # feature_ids for alleles related to FBti insertions (associated_with/progenitor).
-    transgenic_allele_ids = []        # feature_ids for alleles related to FBtp constructs (derived_tp_assoc_alleles).
+    transgenic_allele_ids = []        # feature_ids for alleles related to FBtp constructs.
     in_vitro_allele_ids = []          # feature_ids for alleles having "in vitro construct" CV term annotations.
     introgressed_aberr_ids = []       # feature_ids for aberrations of type "introgressed_chromosome".
 
@@ -190,12 +197,13 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.log.info('Get feature_ids for alleles related to FBtp constructs.')
         construct = aliased(Feature, name='construct')
         allele = aliased(Feature, name='allele')
+        fr_types = ['derived_tp_assoc_alleles', 'associated_with', 'gets_expression_data_from']
         filters = (
             construct.is_obsolete.is_(False),
             construct.uniquename.op('~')(self.regex['construct']),
             allele.is_obsolete.is_(False),
             allele.uniquename.op('~')(self.regex['allele']),
-            Cvterm.name == 'derived_tp_assoc_alleles',
+            Cvterm.name.in_((fr_types)),
         )
         results = session.query(allele).\
             select_from(allele).\
@@ -424,7 +432,8 @@ class GenotypeHandler(PrimaryEntityHandler):
             elif len(organism_id_list) == 1:
                 org_id = organism_id_list[0]
                 genotype.ncbi_taxon_id = self.organism_lookup[org_id]['taxon_curie']
-                non_dmel_genotype_counter += 1
+                if org_id != 1:
+                    non_dmel_genotype_counter += 1
             # If organism info is ambiguous, the taxon is given as "unidentified".
             else:
                 genotype.ncbi_taxon_id = 'NCBITaxon:32644'
@@ -477,6 +486,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         """Extend the method for the GenotypeHandler."""
         super().synthesize_info()
         self.prune_stock_only_genotypes()
+        self.flag_new_additions_and_obsoletes()
         self.clean_up_genotype_name()
         self.synthesize_genotype_ncbi_taxon_id()
         self.synthesize_genotype_components()

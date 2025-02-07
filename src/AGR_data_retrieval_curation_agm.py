@@ -6,12 +6,13 @@ Author(s):
     Gil dos Santos dossantos@morgan.harvard.edu
 
 Usage:
-    AGR_data_retrieval_curation_agm.py [-h]
-    [-l LINKML_RELEASE] [-v VERBOSE] [-c CONFIG] [-t TESTING]
+    AGR_data_retrieval_curation_agm.py [-h] [-v VERBOSE] [-c CONFIG] [-t TESTING]
+    [-l LINKML_RELEASE] [-r REFERENCE_DB] (OPTIONAL)
 
 Example:
-    python AGR_data_retrieval_curation_agm.py -v -r 2023_05 -l v1.1.2
-    -c /path/to/config.cfg
+    python AGR_data_retrieval_curation_agm.py -v -t -c /path/to/config.cfg
+    -l v1.1.2
+    -r fb_2024_06_reporting
 
 Notes:
     This script exports FlyBase AGM data as a JSON file conforming to the
@@ -27,7 +28,7 @@ from harvdev_utils.psycopg_functions import set_up_db_reading
 from agm_handlers import (
     StrainHandler, GenotypeHandler
 )
-from utils import db_query_transaction, generate_export_file
+from utils import export_chado_data, generate_export_file
 
 # Data types handled by this script.
 REPORT_LABEL = 'agm_curation'
@@ -48,11 +49,14 @@ testing = set_up_dict['testing']
 # Process additional input parameters not handled by the set_up_db_reading() function above.
 parser = argparse.ArgumentParser(description='inputs')
 parser.add_argument('-l', '--linkml_release', help='The "agr_curation_schema" LinkML release number.', required=True)
+parser.add_argument('-r', '--reference_db', help='The name of a previous reference db for incremental exports.', required=False)
+
 
 # Use parse_known_args(), not parse_args(), to handle args specific to this script (outside of set_up_db_reading()).
 args, extra_args = parser.parse_known_args()
 log.info('Parsing args specific to this script; ignoring these: {}'.format(extra_args))
 linkml_release = args.linkml_release
+reference_db = args.reference_db
 
 # Create SQL Alchemy engines from environmental variables.
 engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server + '/' + database
@@ -60,6 +64,15 @@ engine = create_engine(engine_var_rep)
 # insp = inspect(engine)    # I always have this line, but I do not know what it does.
 Session = sessionmaker(bind=engine)
 session = Session()
+
+# Create a session to the reference db.
+if reference_db:
+    engine_var_ref = 'postgresql://' + username + ":" + password + '@' + 'flysql23' + '/' + reference_db
+    ref_engine = create_engine(engine_var_ref)
+    RefSession = sessionmaker(bind=ref_engine)
+    reference_session = RefSession()
+else:
+    reference_session = None
 
 
 # The main process.
@@ -73,8 +86,12 @@ def main():
     # Get the data and process it.
     genotype_handler = GenotypeHandler(log, testing)
     strain_handler = StrainHandler(log, testing)
-    db_query_transaction(session, log, genotype_handler)
-    db_query_transaction(session, log, strain_handler)
+    if reference_session:
+        export_chado_data(session, log, genotype_handler, reference_session=reference_session)
+        export_chado_data(session, log, strain_handler, reference_session=reference_session)
+    else:
+        export_chado_data(session, log, genotype_handler)
+        export_chado_data(session, log, strain_handler)
 
     # Export the data.
     export_dict = {

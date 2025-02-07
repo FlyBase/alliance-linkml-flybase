@@ -247,7 +247,8 @@ class AlleleHandler(MetaAlleleHandler):
         super().get_datatype_data(session)
         self.get_entities(session)
         self.get_entity_relationships(session, 'subject', rel_type='alleleof', entity_type='gene', entity_regex=self.regex['gene'])
-        self.get_entity_relationships(session, 'subject', rel_type='derived_tp_assoc_alleles', entity_type='construct', entity_regex=self.regex['construct'])
+        al_cons_fr_types = ['derived_tp_assoc_alleles', 'associated_with', 'gets_expression_data_from']
+        self.get_entity_relationships(session, 'subject', rel_type=al_cons_fr_types, entity_type='construct', entity_regex=self.regex['construct'])
         self.get_entity_relationships(session, 'subject', rel_type='associated_with', entity_type='insertion', entity_regex=self.regex['insertion'])
         self.get_entity_relationships(session, 'object', rel_type='partof', entity_type='variation')
         self.get_entity_cvterms(session)
@@ -407,6 +408,7 @@ class AlleleHandler(MetaAlleleHandler):
     def synthesize_info(self):
         """Extend the method for the AlleleHandler."""
         super().synthesize_info()
+        self.flag_new_additions_and_obsoletes()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
@@ -655,6 +657,7 @@ class InsertionHandler(MetaAlleleHandler):
     def synthesize_info(self):
         """Extend the method for the InsertionHandler."""
         super().synthesize_info()
+        self.flag_new_additions_and_obsoletes()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
@@ -885,6 +888,7 @@ class AberrationHandler(MetaAlleleHandler):
     def synthesize_info(self):
         """Extend the method for the AberrationHandler."""
         super().synthesize_info()
+        self.flag_new_additions_and_obsoletes()
         self.adjust_aberration_organism()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
@@ -1043,6 +1047,7 @@ class BalancerHandler(MetaAlleleHandler):
     def synthesize_info(self):
         """Extend the method for the BalancerHandler."""
         super().synthesize_info()
+        self.flag_new_additions_and_obsoletes()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
