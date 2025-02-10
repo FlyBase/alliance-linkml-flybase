@@ -807,6 +807,10 @@ class DataHandler(object):
                     fb_data_entity.internal_reasons.append('Obsolete')
             except AttributeError:
                 self.log.error('LinkMLDTO entity lacks obsolete attribute.')
+            if self.incremental_update:
+                if fb_data_entity.is_new_addition:
+                    fb_data_entity.linkmldto.internal = True
+                    fb_data_entity.internal_reasons.append('Production entity (not yet publicly released)')
         return
 
     # The map_fb_data_to_alliance() wrapper; sub-methods are called (and usually defined) in more specific DataHandler types.
@@ -898,7 +902,6 @@ class DataHandler(object):
             if self.incremental_update is False:
                 self.export_data[output_set_name].append(export_agr_dict)
             elif i.is_new_addition is True or i.is_new_obsolete is True:
-                i.linkmldto.internal = True
                 self.export_data[output_set_name].append(export_agr_dict)
                 incremental_count += 1
         public_count = self.export_count - self.internal_count
