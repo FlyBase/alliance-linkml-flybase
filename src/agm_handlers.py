@@ -554,8 +554,8 @@ class GenotypeHandler(PrimaryEntityHandler):
         """Extend the method for the GenotypeHandler."""
         super().map_fb_data_to_alliance()
         self.map_genotype_basic()
-        # self.map_genotype_components()    # Suppressed until AGM-allele association file can be accepted.
-        # self.map_synonyms()               # Suppressed until AGM has proper support for synonyms.
+        self.map_genotype_components()
+        # self.map_synonyms()    # Suppressed until AGM has proper support for synonyms.
         self.map_data_provider_dto()
         self.map_xrefs()
         self.map_pubs()
