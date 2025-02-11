@@ -188,7 +188,7 @@ class AgmAlleleAssociationDTO(AuditedObjectDTO):
         # 'hemizygous X-linked': 'GENO:0000604',
         # 'hemizygous Y-linked': 'GENO:0000605',
         # 'hemizygous insertion-linked': 'GENO:0000606'
-    }    
+    }
 
 
 class AlleleGenomicEntityAssociationDTO(EvidenceAssociationDTO):
