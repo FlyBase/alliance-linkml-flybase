@@ -402,7 +402,7 @@ class ConstructHandler(FeatureHandler):
         for construct in self.fb_data_entities.values():
             agr_construct = self.agr_export_type()
             agr_construct.obsolete = construct.chado_obj.is_obsolete
-            agr_construct.mod_entity_id = f'FB:{construct.uniquename}'
+            agr_construct.primary_external_id = f'FB:{construct.uniquename}'
             # agr_construct.mod_internal_id = f'FB.feature_id={construct.chado_obj.feature_id}'
             construct.linkmldto = agr_construct
         return

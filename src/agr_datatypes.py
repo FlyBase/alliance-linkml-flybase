@@ -38,7 +38,7 @@ class SubmittedObjectDTO(AuditedObjectDTO):
     def __init__(self):
         """Create SubmittedObjectDTO for FlyBase objects."""
         super().__init__()
-        self.mod_entity_id = None
+        self.primary_external_id = None
         self.mod_internal_id = None
         self.data_provider_dto = None
         self.required_fields.extend(['data_provider_dto'])
@@ -71,7 +71,7 @@ class AffectedGenomicModelDTO(GenomicEntityDTO):
         self.subtype_name = None           # "strain" or "genotype".
         self.agm_secondary_id_dtos = []    # Secondary IDs.
         self.reference_curies = []         # Publication curies (PMID or FBrf).
-        self.component_dtos = []           # AffectedGenomicModelComponentDTOs.
+        # self.component_dtos = []         # Retired in LinkML v2.9.0.
         self.required_fields.extend(['subtype_name'])
 
 
@@ -100,7 +100,7 @@ class AlleleDTO(GenomicEntityDTO):
         self.is_extrachromosomal = None                        # N/A (WB).
         self.is_integrated = None                              # N/A (WB).
         self.laboratory_of_origin_curie = None                 # N/A (WB).
-        self.required_fields.extend(['allele_symbol_dto', 'mod_entity_id'])
+        self.required_fields.extend(['allele_symbol_dto', 'primary_external_id'])
 
 
 class GeneDTO(GenomicEntityDTO):
@@ -163,6 +163,33 @@ class SingleReferenceAssociationDTO(AuditedObjectDTO):
         super().__init__()
         self.reference_curie = None
         self.required_fields.extend([])
+
+
+class AgmAlleleAssociationDTO(AuditedObjectDTO):
+    """AgmAlleleAssociationDTO class."""
+    def __init__(self, genotype_curie, component_curie, zygosity):
+        """Create AgmAlleleAssociationDTO for FlyBase object."""
+        super().__init__()
+        self.agm_subject_identifier = genotype_curie
+        self.allele_identifier = component_curie
+        self.zygosity_curie = self.zygosity_id[zygosity]
+        self.relation_name = 'AGM Allele Association Relation'
+        self.required_fields.extend(['agm_subject_identifier', 'allele_identifier', 'zygosity_curie', 'relation_name'])
+    # Zygosity mapping to GENO IDs.
+    # https://github.com/monarch-initiative/GENO-ontology/blob/develop/geno-base.obo
+    zygosity_id = {
+        # 'hemizygous': 'GENO:0000134_hemizygous',                          # Not yet implemented in FB code.
+        # 'heterozygous': 'GENO:0000135',                                   # Retired in favor of more specific terms.
+        'simple heterozygous': 'GENO:0000458_simple_heterozygous',
+        'compound heterozygous': 'GENO:0000402_compound_heterozygous',
+        'homozygous': 'GENO:0000136_homozygous',
+        'unspecified zygosity': 'GENO:0000137_unspecified_zygosity',
+        # 'homoplasmic': 'GENO:0000602',
+        # 'heteroplasmic': 'GENO:0000603',
+        # 'hemizygous X-linked': 'GENO:0000604',
+        # 'hemizygous Y-linked': 'GENO:0000605',
+        # 'hemizygous insertion-linked': 'GENO:0000606'
+    }
 
 
 class AlleleGenomicEntityAssociationDTO(EvidenceAssociationDTO):
@@ -231,7 +258,7 @@ class AnnotationDTO(SingleReferenceAssociationDTO):
         """Create AnnotationDTO for FlyBase object."""
         super().__init__()
         self.reference_curie = reference_curie
-        self.mod_entity_id = None
+        self.primary_external_id = None
         self.mod_internal_id = None
         self.data_provider_dto = None
         self.note_dtos = []

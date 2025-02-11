@@ -104,6 +104,17 @@ def main():
 
     generate_export_file(export_dict, log, output_filename)
 
+    if not reference_session:
+        # Export the agm-allele associations to a separate file.
+        association_output_filename = output_filename.replace('agm', 'agm_allele_association')
+        association_export_dict = {
+            'linkml_version': linkml_release,
+            'alliance_member_release_version': database_release,
+        }
+        association_export_dict['agm_allele_association_ingest_set'] = []
+        association_export_dict['agm_allele_association_ingest_set'].extend(genotype_handler.export_data['agm_allele_association_ingest_set'])
+        generate_export_file(association_export_dict, log, association_output_filename)
+
     log.info('Ended main function.\n')
 
 

@@ -86,7 +86,7 @@ class StrainHandler(PrimaryEntityHandler):
         for strain in self.fb_data_entities.values():
             agr_strain = self.agr_export_type()
             agr_strain.obsolete = strain.chado_obj.is_obsolete
-            agr_strain.mod_entity_id = f'FB:{strain.uniquename}'
+            agr_strain.primary_external_id = f'FB:{strain.uniquename}'
             agr_strain.taxon_curie = strain.ncbi_taxon_id
             agr_strain.name = strain.name
             agr_strain.subtype_name = 'strain'
@@ -156,6 +156,9 @@ class GenotypeHandler(PrimaryEntityHandler):
 
         # 525357: 'w[*]; betaTub60D[2] Kr[If-1]|CyO',                              # Genotype from stock; genotype_id here is for FB2024_06 only.
     }
+
+    # Additional export sets.
+    agm_component_associations = []    # A list of AgmAlleleAssociationDTOs.
 
     # Additional reference info.
     dmel_insertion_allele_ids = []    # feature_ids for alleles related to FBti insertions (associated_with/progenitor).
@@ -503,7 +506,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         for genotype in self.fb_data_entities.values():
             agr_genotype = self.agr_export_type()
             agr_genotype.obsolete = genotype.chado_obj.is_obsolete
-            agr_genotype.mod_entity_id = f'FB:{genotype.fb_curie}'
+            agr_genotype.primary_external_id = f'FB:{genotype.fb_curie}'
             agr_genotype.taxon_curie = genotype.ncbi_taxon_id
             agr_genotype.name = genotype.name
             agr_genotype.subtype_name = 'genotype'
@@ -521,9 +524,11 @@ class GenotypeHandler(PrimaryEntityHandler):
         for genotype in self.fb_data_entities.values():
             for zygosity, component_feature_id_list in genotype.component_features.items():
                 for feature_id in component_feature_id_list:
+                    geno_allele_rel = fb_datatypes.FBExportEntity()
                     component_curie = self.feature_lookup[feature_id]['curie']
-                    agm_component = agr_datatypes.AffectedGenomicModelComponentDTO(component_curie, zygosity)
-                    genotype.linkmldto.component_dtos.append(agm_component.dict_export())
+                    geno_allele_rel.linkmldto = agr_datatypes.AgmAlleleAssociationDTO(genotype.linkmldto.primary_external_id,
+                                                                                      component_curie, zygosity)
+                    self.agm_component_associations.append(geno_allele_rel)
         return
 
     def flag_unexportable_genotypes(self):
@@ -550,7 +555,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         super().map_fb_data_to_alliance()
         self.map_genotype_basic()
         self.map_genotype_components()
-        # self.map_synonyms()
+        # self.map_synonyms()    # Suppressed until AGM has proper support for synonyms.
         self.map_data_provider_dto()
         self.map_xrefs()
         self.map_pubs()
@@ -558,4 +563,13 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.map_secondary_ids('agm_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
         self.flag_unexportable_genotypes()
+        self.flag_internal_fb_entities('agm_component_associations')
+        return
+
+    # Elaborate on query_chado_and_export() for the GenotypeHandler.
+    def query_chado_and_export(self, session):
+        """Elaborate on query_chado_and_export method for the GenotypeHandler."""
+        super().query_chado_and_export(session)
+        self.flag_unexportable_entities(self.agm_component_associations, 'agm_allele_association_ingest_set')
+        self.generate_export_dict(self.agm_component_associations, 'agm_allele_association_ingest_set')
         return
