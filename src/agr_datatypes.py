@@ -173,7 +173,8 @@ class AgmAlleleAssociationDTO(AuditedObjectDTO):
         self.agm_subject_identifier = genotype_curie
         self.allele_identifier = component_curie
         self.zygosity_curie = self.zygosity_id[zygosity]
-        self.required_fields.extend(['agm_subject_identifier', 'allele_identifier', 'zygosity_curie'])
+        self.relation_name = 'AGM Allele Association Relation'
+        self.required_fields.extend(['agm_subject_identifier', 'allele_identifier', 'zygosity_curie', 'relation_name'])
     # Zygosity mapping to GENO IDs.
     # https://github.com/monarch-initiative/GENO-ontology/blob/develop/geno-base.obo
     zygosity_id = {
