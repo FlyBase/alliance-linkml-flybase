@@ -86,7 +86,7 @@ class StrainHandler(PrimaryEntityHandler):
         for strain in self.fb_data_entities.values():
             agr_strain = self.agr_export_type()
             agr_strain.obsolete = strain.chado_obj.is_obsolete
-            agr_strain.mod_entity_id = f'FB:{strain.uniquename}'
+            agr_strain.primary_external_id = f'FB:{strain.uniquename}'
             agr_strain.taxon_curie = strain.ncbi_taxon_id
             agr_strain.name = strain.name
             agr_strain.subtype_name = 'strain'
@@ -503,7 +503,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         for genotype in self.fb_data_entities.values():
             agr_genotype = self.agr_export_type()
             agr_genotype.obsolete = genotype.chado_obj.is_obsolete
-            agr_genotype.mod_entity_id = f'FB:{genotype.fb_curie}'
+            agr_genotype.primary_external_id = f'FB:{genotype.fb_curie}'
             agr_genotype.taxon_curie = genotype.ncbi_taxon_id
             agr_genotype.name = genotype.name
             agr_genotype.subtype_name = 'genotype'
