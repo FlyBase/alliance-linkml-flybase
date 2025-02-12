@@ -398,6 +398,7 @@ class FBAlleleDiseaseAnnotation(FBExportEntity):
         self.evidence_code = None               # Will be the "evidence_code" FeatureCvtermprop.
         self.qualifier = None                   # Will be the "qualifier" FeatureCvtermprop.
         # Processed FB data.
+        self.text_embedded_allele_ids = []      # FBal IDs of alleles in embedded text (updated as needed and if possible).
         self.preferred_gene_curie = None        # Get the most appropriate curie for the allele's parental gene.
         self.fb_modifier_type = None
         self.fb_modifier_id = None

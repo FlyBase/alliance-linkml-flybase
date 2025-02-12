@@ -17,10 +17,8 @@ from harvdev_utils.char_conversions import (
     sgml_to_plain_text, sub_sup_sgml_to_plain_text
 )
 from harvdev_utils.reporting import (
-    Cvterm, Db, Dbxref, Feature, FeatureCvterm, FeatureGenotype,
-    FeatureRelationship, Genotype, GenotypeDbxref, Organism
+    Db, Dbxref, Feature, FeatureGenotype, Genotype, GenotypeDbxref
 )
-from sqlalchemy.orm import aliased
 
 
 class StrainHandler(PrimaryEntityHandler):
@@ -165,101 +163,6 @@ class GenotypeHandler(PrimaryEntityHandler):
     transgenic_allele_ids = []        # feature_ids for alleles related to FBtp constructs.
     in_vitro_allele_ids = []          # feature_ids for alleles having "in vitro construct" CV term annotations.
     introgressed_aberr_ids = []       # feature_ids for aberrations of type "introgressed_chromosome".
-
-    # Additional sub-methods for get_general_data().
-    def get_dmel_insertion_allele_ids(self, session):
-        """Get feature_ids for alleles related to Dmel FBti insertions."""
-        self.log.info('Get feature_ids for alleles related to Dmel FBti insertions.')
-        insertion = aliased(Feature, name='insertion')
-        allele = aliased(Feature, name='allele')
-        fr_types = ['associated_with', 'progenitor']
-        filters = (
-            insertion.is_obsolete.is_(False),
-            insertion.uniquename.op('~')(self.regex['insertion']),
-            Organism.abbreviation == 'Dmel',
-            allele.is_obsolete.is_(False),
-            allele.uniquename.op('~')(self.regex['allele']),
-            Cvterm.name.in_((fr_types)),
-        )
-        results = session.query(allele).\
-            select_from(allele).\
-            join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
-            join(insertion, (insertion.feature_id == FeatureRelationship.object_id)).\
-            join(Organism, (Organism.organism_id == insertion.organism_id)).\
-            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
-            filter(*filters).\
-            distinct()
-        for result in results:
-            self.dmel_insertion_allele_ids.append(result.feature_id)
-        self.dmel_insertion_allele_ids = list(set(self.dmel_insertion_allele_ids))
-        self.log.info(f'Found {len(self.dmel_insertion_allele_ids)} alleles related to Dmel FBti insertions.')
-        return
-
-    def get_transgenic_allele_ids(self, session):
-        """Get feature_ids for alleles related to FBtp constructs."""
-        self.log.info('Get feature_ids for alleles related to FBtp constructs.')
-        construct = aliased(Feature, name='construct')
-        allele = aliased(Feature, name='allele')
-        fr_types = ['derived_tp_assoc_alleles', 'associated_with', 'gets_expression_data_from']
-        filters = (
-            construct.is_obsolete.is_(False),
-            construct.uniquename.op('~')(self.regex['construct']),
-            allele.is_obsolete.is_(False),
-            allele.uniquename.op('~')(self.regex['allele']),
-            Cvterm.name.in_((fr_types)),
-        )
-        results = session.query(allele).\
-            select_from(allele).\
-            join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
-            join(construct, (construct.feature_id == FeatureRelationship.object_id)).\
-            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
-            filter(*filters).\
-            distinct()
-        for result in results:
-            self.transgenic_allele_ids.append(result.feature_id)
-        self.transgenic_allele_ids = list(set(self.transgenic_allele_ids))
-        self.log.info(f'Found {len(self.transgenic_allele_ids)} alleles related to FBtp constructs.')
-        return
-
-    def get_in_vitro_allele_ids(self, session):
-        """Get feature_ids for alleles having "in vitro construct" annotations."""
-        self.log.info('Get feature_ids for alleles having "in vitro construct" annotations.')
-        filters = (
-            Feature.is_obsolete.is_(False),
-            Feature.uniquename.op('~')(self.regex['allele']),
-            Cvterm.name == 'in vitro construct',
-        )
-        results = session.query(Feature).\
-            select_from(Feature).\
-            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
-            join(Cvterm, (Cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
-            filter(*filters).\
-            distinct()
-        for result in results:
-            self.in_vitro_allele_ids.append(result.feature_id)
-        self.in_vitro_allele_ids = list(set(self.in_vitro_allele_ids))
-        self.log.info(f'Found {len(self.in_vitro_allele_ids)} alleles annotated as "in vitro construct".')
-        return
-
-    def get_introgressed_aberration_ids(self, session):
-        """Get feature_ids for introgressed_chromosome aberrations."""
-        self.log.info('Get feature_ids for introgressed_chromosome aberrations.')
-        filters = (
-            Feature.is_obsolete.is_(False),
-            Feature.uniquename.op('~')(self.regex['aberration']),
-            Cvterm.name == 'introgressed_chromosome_region',
-        )
-        results = session.query(Feature).\
-            select_from(Feature).\
-            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
-            join(Cvterm, (Cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
-            filter(*filters).\
-            distinct()
-        for result in results:
-            self.introgressed_aberr_ids.append(result.feature_id)
-        self.introgressed_aberr_ids = list(set(self.introgressed_aberr_ids))
-        self.log.info(f'Found {len(self.introgressed_aberr_ids)} aberrations annotated as "introgressed_chromosome_region".')
-        return
 
     # Elaborate on get_general_data() for the GenotypeHandler.
     def get_general_data(self, session):
