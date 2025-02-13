@@ -12,7 +12,6 @@ Author(s):
 
 import datetime
 import strict_rfc3339
-from collections import defaultdict
 from logging import Logger
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm.exc import NoResultFound
@@ -352,8 +351,8 @@ class DataHandler(object):
         return cvterm_id_list
 
     def build_organism_lookup(self, session):
-        """Build organism lookup."""
-        self.log.info('Build organism lookup.')
+        """Build organism lookup and look up official MOD chado db for each."""
+        self.log.info('Build organism lookup and look up official MOD chado db for each.')
         # First, get basic organism table info.
         organism_results = session.query(Organism).distinct()
         counter = 0
@@ -549,6 +548,7 @@ class DataHandler(object):
                     )
                     results = session.query(FeatureDbxref, Dbxref).\
                         select_from(Feature).\
+                        join(Organism, (Organism.organism_id == Feature.organism_id)).\
                         join(FeatureDbxref, (FeatureDbxref.feature_id == Feature.feature_id)).\
                         join(Dbxref, (Dbxref.dbxref_id == FeatureDbxref.dbxref_id)).\
                         join(Db, (Db.db_id == Dbxref.db_id)).\
@@ -557,7 +557,10 @@ class DataHandler(object):
                     counter = 0
                     db_prefix = self.fb_agr_db_dict[mod_db_name]
                     for result in results:
-                        self.feature_lookup[result.FeatureDbxref.feature_id]['curie'] = f'{db_prefix}:{result.Dbxref.accession}'
+                        accession = result.Dbxref.accession
+                        if db_prefix == 'MGI':
+                            accession = accession.replace('MGI:', '')
+                        self.feature_lookup[result.FeatureDbxref.feature_id]['curie'] = f'{db_prefix}:{accession}'
                         counter += 1
                     self.log.info(f'Obtained {counter} MOD curies for {org_abbr} ({mod_db_name}).')
         return
@@ -850,57 +853,6 @@ class DataHandler(object):
             self.introgressed_aberr_ids.append(result.feature_id)
         self.introgressed_aberr_ids = list(set(self.introgressed_aberr_ids))
         self.log.info(f'Found {len(self.introgressed_aberr_ids)} aberrations annotated as "introgressed_chromosome_region".')
-        return
-
-    def build_gene_mod_curie_lookup(self, session):
-        """Build a lookup of FB gene uniquename to MOD curie."""
-        self.log.info('Build a lookup of FB gene uniquename to MOD curie.')
-        mod_organisms = {
-            'Scer': 'SGD',
-            'Cele': 'WormBase',
-            'Drer': 'ZFIN',
-            'Mmus': 'MGI',
-            'Rnor': 'RGD',
-            'Hsap': 'HGNC',
-            'Xlae': 'Xenbase',
-            'Xtro': 'Xenbase',
-        }
-        counter = 0
-        temp_gene_mod_curie_dict = defaultdict(list)
-        for org_abbr, db_name in mod_organisms.items():
-            filters = (
-                Feature.is_obsolete.is_(False),
-                Feature.is_analysis.is_(False),
-                Feature.uniquename.op('~')(self.regex['gene']),
-                Organism.abbreviation == org_abbr,
-                FeatureDbxref.is_current.is_(True),
-                Db.name == db_name,
-            )
-            mod_genes = session.query(Feature, Dbxref).\
-                select_from(Feature).\
-                join(Organism, (Organism.organism_id == Feature.feature_id)).\
-                join(FeatureDbxref, (FeatureDbxref.feature_id == Feature.feature_id)).\
-                join(Dbxref, (Dbxref.dbxref_id == FeatureDbxref.dbxref_id)).\
-                join(Db, (Db.db_id == Dbxref.db_id)).\
-                filter(*filters).\
-                distinct()
-            for result in mod_genes:
-                counter += 1
-                prefix = db_name
-                if db_name == 'WormBase':
-                    prefix = 'WB'
-                accession = result.Dbxref.accession
-                if db_name == 'MGI' and accession.startswith('MGI:'):
-                    accession = accession.replace('MGI:', '')
-                mod_curie = f'{prefix}:{accession}'
-                temp_gene_mod_curie_dict[result.Feature.uniquename].append(mod_curie)
-        unambiguous_counter = 0
-        for fb_uname, mod_curie_list in temp_gene_mod_curie_dict.values():
-            if len(mod_curie_list) == 1:
-                self.gene_mod_curie_lookup[fb_uname] = mod_curie_list[0]
-                unambiguous_counter += 1
-        self.log.info(f'Found {counter} gene-MOD curie xrefs in chado.')
-        self.log.info(f'Of these, {unambiguous_counter} genes had a single unambiguous MOD curie.')
         return
 
     # The get_general_data() wrapper; sub-methods are defined and called in more specific DataHandler types.

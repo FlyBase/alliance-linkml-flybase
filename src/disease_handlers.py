@@ -70,11 +70,11 @@ class AGMDiseaseHandler(DataHandler):
         super().get_general_data(session)
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
-        self.build_feature_lookup(session, feature_types=['aberration', 'allele'])
+        self.build_organism_lookup(session)
+        self.build_feature_lookup(session, feature_types=['aberration', 'allele', 'gene'])
         self.get_transgenic_allele_ids(session)
         self.get_in_vitro_allele_ids(session)
         self.build_allele_gene_lookup(session)
-        self.build_gene_mod_curie_lookup(session)
         return
 
     # Add methods to be run by get_datatype_data() below.
@@ -266,12 +266,12 @@ class AGMDiseaseHandler(DataHandler):
                     curr_allele_id = self.get_current_id_for_allele(session, allele_id)
                     if curr_allele_id:
                         dis_anno.text_embedded_allele_ids.append(allele_id)
-                        dis_anno.modifier_id_was_updated = True
+                        dis_anno.allele_id_was_updated = True
                         updated_allele_id_counter += 1
                     else:
-                        dis_anno.modifier_problem = True
+                        dis_anno.allele_id_problem = True
                         cannot_update_allele_id_counter += 1
-            if dis_anno.modifier_problem is True:
+            if dis_anno.allele_id_problem is True:
                 allele_id_prob_counter += 1
         self.log.info(f'{current_allele_id_counter} text-embedded allele IDs are current.')
         self.log.info(f'{updated_allele_id_counter} text-embedded allele IDs were not current and mapped unambiguously to a current allele.')
@@ -279,9 +279,9 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'{allele_id_prob_counter} disease annotations have one or more problematic text-embedded allele IDs.')
         return
 
-    # Elaborate on get_datatype_data() for the AlleleDiseaseHandler.
+    # Elaborate on get_datatype_data() for the AGMDiseaseHandler.
     def get_datatype_data(self, session):
-        """Extend the method for the AlleleDiseaseHandler."""
+        """Extend the method for the AGMDiseaseHandler."""
         super().get_datatype_data(session)
         self.get_allele_disease_annotations(session)
         self.get_disease_qualifiers(session)
@@ -290,24 +290,21 @@ class AGMDiseaseHandler(DataHandler):
         self.extract_text_embedded_alleles(session)
         return
 
+    # Add methods to be run by synthesize_info() below.
     # BOB
     # CONTINUE HERE
-    # Add methods to be run by synthesize_info() below.
-    def flag_unexportable_annotations(self):
+    # NEED METHODS TO EXTRACT THE MODEL AND ANY MODIFIERS
+
+    def flag_problematic_annotations(self):
         """Flag internal annotations."""
         self.log.info('Flag internal annotations.')
         problem_counter = {
-            'Not model annotation': 0,
-            'Multi-allele model': 0,
             'Obsolete modifier ID': 0,
         }
         no_export_counter = 0
         for dis_anno in self.fb_data_entities.values():
             export_checks = {
-                dis_anno.qualifier.value not in self.relevant_qualifiers: 'Not model annotation',
-                ' with FLYBASE' in dis_anno.evidence_code.value: 'Multi-allele model',
                 dis_anno.modifier_problem is True: 'Obsolete modifier ID',
-                dis_anno.modifier_id_was_updated is True: 'Obsolete modifier ID',
             }
             for check, msg in export_checks.items():
                 if check:
@@ -321,11 +318,11 @@ class AGMDiseaseHandler(DataHandler):
             self.log.info(f'Problem: "{problem}", count={problem_count}')
         return
 
-    # Elaborate on synthesize_info() for the AlleleDiseaseHandler.
+    # Elaborate on synthesize_info() for the AGMDiseaseHandler.
     def synthesize_info(self):
-        """Extend the method for the AlleleDiseaseHandler."""
+        """Extend the method for the AGMDiseaseHandler."""
         super().synthesize_info()
-        self.flag_unexportable_annotations()
+        self.flag_problematic_annotations()
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
@@ -414,9 +411,9 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'A further {redundant_counter} redundant annotations blocked from export.')
         return
 
-    # Elaborate on map_fb_data_to_alliance() for the AlleleDiseaseHandler.
+    # Elaborate on map_fb_data_to_alliance() for the AGMDiseaseHandler.
     def map_fb_data_to_alliance(self):
-        """Extend the method for the AlleleDiseaseHandler."""
+        """Extend the method for the AGMDiseaseHandler."""
         super().map_fb_data_to_alliance()
         self.map_allele_disease_annotation_basic()
         self.map_data_provider_dto()
