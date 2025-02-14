@@ -399,11 +399,11 @@ class FBAlleleDiseaseAnnotation(FBExportEntity):
         self.qualifier = None                   # Will be the "qualifier" FeatureCvtermprop.
         # Processed FB data for AGMDiseaseAnnotationDTO.
         self.text_embedded_allele_ids = []      # FBal IDs of alleles in embedded text (updated as needed and if possible).
-        self.modeled_by = None                  # Will be sorted concatenation of all allele FBal IDs in the model.
+        self.modeled_by = []                    # Will be a list of all allele FBal IDs that model the disease.
         self.is_not = False                     # Becomes True for "DOES NOT model" annotations.
         self.modifier_id = None                 # Will be FBal ID of the modifier, if applicable.
         self.modifier_role = None               # Will be Alliance role for a modifier.
-        self.unique_key = None                  # A unique descriptor: FBrfID_(NOT)model=<FBalIDs>_<modifier_role>_<modifierFBalID>.
+        self.unique_key = ''                    # A unique descriptor: FBrfID_(NOT)model=<FBalIDs>_<modifier_role>_<modifierFBalID>.
         self.allele_id_was_updated = False      # Change to True if text-embedded allele ID was updated.
         self.allele_id_problem = False          # Change to True if a text-embedded allele ID could not be updated.
         # Processed FB data for AlleleDiseaseAnnotationDTO.
