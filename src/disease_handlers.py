@@ -71,7 +71,8 @@ class AGMDiseaseHandler(DataHandler):
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
         self.build_organism_lookup(session)
-        self.build_feature_lookup(session, feature_types=['aberration', 'allele', 'gene'])
+        self.build_feature_lookup(session, feature_types=['aberration', 'allele', 'gene', 'insertion', 'construct'])
+        self.build_uname_feature_lookup()
         self.get_transgenic_allele_ids(session)
         self.get_in_vitro_allele_ids(session)
         self.build_allele_gene_lookup(session)
@@ -279,6 +280,37 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'{allele_id_prob_counter} disease annotations have one or more problematic text-embedded allele IDs.')
         return
 
+    def extract_model_and_modifiers(self):
+        """Extract model components from annotation subject, qualifier and evidence_code."""
+        self.log.info('Extract model components from annotation subject, qualifier and evidence_code.')
+        for dis_anno in self.fb_data_entities.values():
+            dis_anno.modeled_by.extend(dis_anno.text_embedded_allele_ids)
+            allele_subject_id = self.feature_lookup[dis_anno.feature_cvterm.feature_id]['uniquename']
+            if dis_anno.qualifier.value in ('model of', 'DOES NOT model'):
+                dis_anno.modeled_by.append(allele_subject_id)
+                if dis_anno.qualifier.value == 'DOES NOT model':
+                    dis_anno.is_not = True
+            else:
+                dis_anno.modifier_id = allele_subject_id
+                dis_anno.modifier_role = self.disease_genetic_modifier_terms[dis_anno.qualifier.value]
+        return
+
+    def calculate_annotation_unique_key(self):
+        """Calculate unique descriptors for disease annotations."""
+        self.log.info('Calculate unique descriptors for disease annotations.')
+        for dis_anno in self.fb_data_entities.values():
+            dis_anno.unique_key += f'{dis_anno.feature_cvterm.pub.uniquename}_'
+            if dis_anno.is_not:
+                dis_anno.unique_key += 'NOT_'
+            dis_anno.unique_key += f'model={'|'.join(sorted(dis_anno.modeled_by))}_'
+            dis_anno.unique_key += f'disease_term=DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}'
+            if dis_anno.modifier_id:
+                dis_anno.unique_key += f'_{dis_anno.modifier_role}={dis_anno.modifier_id}'
+            self.log.debug(f'BOB: Annotation db_primary_id={dis_anno.db_primary_id} has this unique key: {dis_anno.unique_key}')
+        return
+
+    # BOB - method for getting/creating a genotype from the model IDs.
+
     # Elaborate on get_datatype_data() for the AGMDiseaseHandler.
     def get_datatype_data(self, session):
         """Extend the method for the AGMDiseaseHandler."""
@@ -288,13 +320,10 @@ class AGMDiseaseHandler(DataHandler):
         self.get_disease_evidence_codes(session)
         self.get_disease_timestamps(session)
         self.extract_text_embedded_alleles(session)
+        self.extract_model_and_modifiers()
         return
 
     # Add methods to be run by synthesize_info() below.
-    # BOB
-    # CONTINUE HERE
-    # NEED METHODS TO EXTRACT THE MODEL AND ANY MODIFIERS
-
     def flag_problematic_annotations(self):
         """Flag internal annotations."""
         self.log.info('Flag internal annotations.')
@@ -305,6 +334,7 @@ class AGMDiseaseHandler(DataHandler):
         for dis_anno in self.fb_data_entities.values():
             export_checks = {
                 dis_anno.modifier_problem is True: 'Obsolete modifier ID',
+                dis_anno.is_not is True and dis_anno.modifier_id: 'Have a modifier of "DOES NOT model" annotation'
             }
             for check, msg in export_checks.items():
                 if check:
@@ -325,101 +355,101 @@ class AGMDiseaseHandler(DataHandler):
         self.flag_problematic_annotations()
         return
 
-    # Add methods to be run by map_fb_data_to_alliance() below.
-    def map_allele_disease_annotation_basic(self):
-        """Map basic FlyBase allele disease annotation to the Alliance LinkML object."""
-        self.log.info('Map basic FlyBase allele disease annotation to the Alliance LinkML object.')
-        for dis_anno in self.fb_data_entities.values():
-            if dis_anno.for_export is False:
-                continue
-            allele_curie = f'FB:{dis_anno.feature_cvterm.feature.uniquename}'
-            do_curie = f'DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}'
-            pub_curie = self.lookup_single_pub_curie(dis_anno.feature_cvterm.pub_id)
-            agr_dis_anno = self.agr_export_type(allele_curie, do_curie, pub_curie)
-            if dis_anno.qualifier.value == 'DOES NOT model':
-                agr_dis_anno.negated = True
-            if dis_anno.evidence_code.value.startswith('CEC'):
-                agr_dis_anno.evidence_code_curies.append(self.evidence_code_xrefs['CEC'])
-            else:
-                agr_dis_anno.evidence_code_curies.append(self.evidence_code_xrefs['CEA'])
-            if dis_anno.fb_modifier_type in self.disease_genetic_modifier_terms.keys():
-                agr_dis_anno.disease_genetic_modifier_relation_name = self.disease_genetic_modifier_terms[dis_anno.fb_modifier_type]
-            if dis_anno.fb_modifier_id:
-                agr_dis_anno.disease_genetic_modifier_identifiers = [f'FB:{dis_anno.fb_modifier_id}']
-            agr_dis_anno.inferred_gene_identifier = dis_anno.preferred_gene_curie
-            dis_anno.linkmldto = agr_dis_anno
-        return
+    # # Add methods to be run by map_fb_data_to_alliance() below.
+    # def map_allele_disease_annotation_basic(self):
+    #     """Map basic FlyBase allele disease annotation to the Alliance LinkML object."""
+    #     self.log.info('Map basic FlyBase allele disease annotation to the Alliance LinkML object.')
+    #     for dis_anno in self.fb_data_entities.values():
+    #         if dis_anno.for_export is False:
+    #             continue
+    #         allele_curie = f'FB:{dis_anno.feature_cvterm.feature.uniquename}'
+    #         do_curie = f'DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}'
+    #         pub_curie = self.lookup_single_pub_curie(dis_anno.feature_cvterm.pub_id)
+    #         agr_dis_anno = self.agr_export_type(allele_curie, do_curie, pub_curie)
+    #         if dis_anno.qualifier.value == 'DOES NOT model':
+    #             agr_dis_anno.negated = True
+    #         if dis_anno.evidence_code.value.startswith('CEC'):
+    #             agr_dis_anno.evidence_code_curies.append(self.evidence_code_xrefs['CEC'])
+    #         else:
+    #             agr_dis_anno.evidence_code_curies.append(self.evidence_code_xrefs['CEA'])
+    #         if dis_anno.fb_modifier_type in self.disease_genetic_modifier_terms.keys():
+    #             agr_dis_anno.disease_genetic_modifier_relation_name = self.disease_genetic_modifier_terms[dis_anno.fb_modifier_type]
+    #         if dis_anno.fb_modifier_id:
+    #             agr_dis_anno.disease_genetic_modifier_identifiers = [f'FB:{dis_anno.fb_modifier_id}']
+    #         agr_dis_anno.inferred_gene_identifier = dis_anno.preferred_gene_curie
+    #         dis_anno.linkmldto = agr_dis_anno
+    #     return
 
-    def map_data_provider_dto(self):
-        """Return the DataProviderDTO for the annotation."""
-        self.log.info('Map data provider.')
-        for dis_anno in self.fb_data_entities.values():
-            if dis_anno.for_export is False:
-                continue
-            dp_xref = agr_datatypes.CrossReferenceDTO('DOID', dis_anno.linkmldto.do_term_curie, 'disease/fb', dis_anno.linkmldto.do_term_curie).dict_export()
-            dis_anno.linkmldto.data_provider_dto = agr_datatypes.DataProviderDTO(dp_xref).dict_export()
-        return
+    # def map_data_provider_dto(self):
+    #     """Return the DataProviderDTO for the annotation."""
+    #     self.log.info('Map data provider.')
+    #     for dis_anno in self.fb_data_entities.values():
+    #         if dis_anno.for_export is False:
+    #             continue
+    #         dp_xref = agr_datatypes.CrossReferenceDTO('DOID', dis_anno.linkmldto.do_term_curie, 'disease/fb', dis_anno.linkmldto.do_term_curie).dict_export()
+    #         dis_anno.linkmldto.data_provider_dto = agr_datatypes.DataProviderDTO(dp_xref).dict_export()
+    #     return
 
-    def derive_uniq_key(self):
-        """Derive the unique key based on defining aspects of Alliance disease annotation."""
-        self.log.info('Derive the unique key based on defining aspects of Alliance disease annotation.')
-        for dis_anno in self.fb_data_entities.values():
-            if dis_anno.for_export is False:
-                continue
-            dis_anno.uniq_key = f'{dis_anno.linkmldto.allele_identifier}'
-            dis_anno.uniq_key += f'||{dis_anno.linkmldto.do_term_curie}'
-            dis_anno.uniq_key += f'||{dis_anno.linkmldto.disease_relation_name}'
-            dis_anno.uniq_key += f'||{dis_anno.linkmldto.negated}'
-            dis_anno.uniq_key += f'||{dis_anno.linkmldto.reference_curie}'
-            evi_codes = sorted(list(set(dis_anno.linkmldto.evidence_code_curies)))
-            evi_code_str = '|'.join(evi_codes)
-            dis_anno.uniq_key += f'||{evi_code_str}'
-            if dis_anno.linkmldto.disease_genetic_modifier_identifiers:
-                dis_anno.uniq_key += f'||{dis_anno.linkmldto.disease_genetic_modifier_identifiers[0]}'
-            else:
-                dis_anno.uniq_key += f'{None}'
-            dis_anno.uniq_key += f'||{dis_anno.linkmldto.disease_genetic_modifier_relation_name}'
-        return
+    # def derive_uniq_key(self):
+    #     """Derive the unique key based on defining aspects of Alliance disease annotation."""
+    #     self.log.info('Derive the unique key based on defining aspects of Alliance disease annotation.')
+    #     for dis_anno in self.fb_data_entities.values():
+    #         if dis_anno.for_export is False:
+    #             continue
+    #         dis_anno.uniq_key = f'{dis_anno.linkmldto.allele_identifier}'
+    #         dis_anno.uniq_key += f'||{dis_anno.linkmldto.do_term_curie}'
+    #         dis_anno.uniq_key += f'||{dis_anno.linkmldto.disease_relation_name}'
+    #         dis_anno.uniq_key += f'||{dis_anno.linkmldto.negated}'
+    #         dis_anno.uniq_key += f'||{dis_anno.linkmldto.reference_curie}'
+    #         evi_codes = sorted(list(set(dis_anno.linkmldto.evidence_code_curies)))
+    #         evi_code_str = '|'.join(evi_codes)
+    #         dis_anno.uniq_key += f'||{evi_code_str}'
+    #         if dis_anno.linkmldto.disease_genetic_modifier_identifiers:
+    #             dis_anno.uniq_key += f'||{dis_anno.linkmldto.disease_genetic_modifier_identifiers[0]}'
+    #         else:
+    #             dis_anno.uniq_key += f'{None}'
+    #         dis_anno.uniq_key += f'||{dis_anno.linkmldto.disease_genetic_modifier_relation_name}'
+    #     return
 
-    def group_dis_annos(self):
-        """Group redundant disease annotations."""
-        self.log.info('Group redundant disease annotations.')
-        input_counter = 0
-        redundant_counter = 0
-        for dis_anno in self.fb_data_entities.values():
-            if dis_anno.for_export is False:
-                continue
-            input_counter += 1
-            try:
-                self.uniq_dis_dict[dis_anno.uniq_key].append(dis_anno.db_primary_id)
-            except KeyError:
-                self.uniq_dis_dict[dis_anno.uniq_key] = [dis_anno.db_primary_id]
-        grouped_counter = len(self.uniq_dis_dict.keys())
-        self.log.info(f'Found {grouped_counter} unique keys for {input_counter} exportable disease annotations.')
-        # Flag redundant disease annotations.
-        for uniq_key, db_primary_ids in self.uniq_dis_dict.items():
-            if len(db_primary_ids) > 1:
-                self.log.warning(f'REDUNDANT: AGR_UNIQ_KEY: {uniq_key}')
-                first_db_id = min(db_primary_ids)
-                for db_primary_id in db_primary_ids:
-                    self.log.debug(f'REDUNDANT: {self.fb_data_entities[db_primary_id]}')
-                    if db_primary_id != first_db_id:
-                        self.fb_data_entities[db_primary_id].is_redundant = True
-                        self.fb_data_entities[db_primary_id].for_export = False
-                        self.fb_data_entities[db_primary_id].export_warnings.append('Annotation is redundant')
-                        redundant_counter += 1
-        self.log.info(f'A further {redundant_counter} redundant annotations blocked from export.')
-        return
+    # def group_dis_annos(self):
+    #     """Group redundant disease annotations."""
+    #     self.log.info('Group redundant disease annotations.')
+    #     input_counter = 0
+    #     redundant_counter = 0
+    #     for dis_anno in self.fb_data_entities.values():
+    #         if dis_anno.for_export is False:
+    #             continue
+    #         input_counter += 1
+    #         try:
+    #             self.uniq_dis_dict[dis_anno.uniq_key].append(dis_anno.db_primary_id)
+    #         except KeyError:
+    #             self.uniq_dis_dict[dis_anno.uniq_key] = [dis_anno.db_primary_id]
+    #     grouped_counter = len(self.uniq_dis_dict.keys())
+    #     self.log.info(f'Found {grouped_counter} unique keys for {input_counter} exportable disease annotations.')
+    #     # Flag redundant disease annotations.
+    #     for uniq_key, db_primary_ids in self.uniq_dis_dict.items():
+    #         if len(db_primary_ids) > 1:
+    #             self.log.warning(f'REDUNDANT: AGR_UNIQ_KEY: {uniq_key}')
+    #             first_db_id = min(db_primary_ids)
+    #             for db_primary_id in db_primary_ids:
+    #                 self.log.debug(f'REDUNDANT: {self.fb_data_entities[db_primary_id]}')
+    #                 if db_primary_id != first_db_id:
+    #                     self.fb_data_entities[db_primary_id].is_redundant = True
+    #                     self.fb_data_entities[db_primary_id].for_export = False
+    #                     self.fb_data_entities[db_primary_id].export_warnings.append('Annotation is redundant')
+    #                     redundant_counter += 1
+    #     self.log.info(f'A further {redundant_counter} redundant annotations blocked from export.')
+    #     return
 
     # Elaborate on map_fb_data_to_alliance() for the AGMDiseaseHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the AGMDiseaseHandler."""
         super().map_fb_data_to_alliance()
-        self.map_allele_disease_annotation_basic()
-        self.map_data_provider_dto()
-        self.map_timestamps()
-        self.derive_uniq_key()
-        self.group_dis_annos()
+        # self.map_allele_disease_annotation_basic()
+        # self.map_data_provider_dto()
+        # self.map_timestamps()
+        # self.derive_uniq_key()
+        # self.group_dis_annos()
         return
 
 

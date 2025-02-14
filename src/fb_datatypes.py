@@ -397,8 +397,16 @@ class FBAlleleDiseaseAnnotation(FBExportEntity):
         self.db_primary_id = f'{feature_cvterm.feature_cvterm_id}_{provenance_prop.rank}'
         self.evidence_code = None               # Will be the "evidence_code" FeatureCvtermprop.
         self.qualifier = None                   # Will be the "qualifier" FeatureCvtermprop.
-        # Processed FB data.
+        # Processed FB data for AGMDiseaseAnnotationDTO.
         self.text_embedded_allele_ids = []      # FBal IDs of alleles in embedded text (updated as needed and if possible).
+        self.modeled_by = None                  # Will be sorted concatenation of all allele FBal IDs in the model.
+        self.is_not = False                     # Becomes True for "DOES NOT model" annotations.
+        self.modifier_id = None                 # Will be FBal ID of the modifier, if applicable.
+        self.modifier_role = None               # Will be Alliance role for a modifier.
+        self.unique_key = None                  # A unique descriptor: FBrfID_(NOT)model=<FBalIDs>_<modifier_role>_<modifierFBalID>.
+        self.allele_id_was_updated = False      # Change to True if text-embedded allele ID was updated.
+        self.allele_id_problem = False          # Change to True if a text-embedded allele ID could not be updated.
+        # Processed FB data for AlleleDiseaseAnnotationDTO.
         self.preferred_gene_curie = None        # Get the most appropriate curie for the allele's parental gene.
         self.fb_modifier_type = None
         self.fb_modifier_id = None

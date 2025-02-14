@@ -62,6 +62,7 @@ class DataHandler(object):
         self.organism_lookup = {}                   # An organism_id-keyed dict of organism info.
         self.chr_dict = {}                          # Will be a feature_id-keyed dict of chr scaffold uniquenames.
         self.feature_lookup = {}                    # feature_id-keyed dicts {uniquename, curie, is_obsolete, type, organism_id, name, symbol, exported}.
+        self.uname_feature_lookup = {}              # FB uniquename-keyed dicts of self.feature_lookup.values().
         self.allele_gene_lookup = {}                # allele feature_id-keyed dict of related gene feature_id (current features only).
         self.seqfeat_gene_lookup = {}               # Will be seqfeat feature_id-keyed lists of gene feature_ids (current features only).
         self.gene_tool_lookup = {}                  # Will be gene feature_id-keyed lists of related FBto tools (current features only).
@@ -563,6 +564,17 @@ class DataHandler(object):
                         self.feature_lookup[result.FeatureDbxref.feature_id]['curie'] = f'{db_prefix}:{accession}'
                         counter += 1
                     self.log.info(f'Obtained {counter} MOD curies for {org_abbr} ({mod_db_name}).')
+        return
+
+    def build_uname_feature_lookup(self):
+        """Build a FB uniquename-keyed dict of features from a previously generated feature_id-keyed dict."""
+        self.log.info('Build a FB uniquename-keyed dict of features from a feature_id-keyed dict.')
+        if not self.feature_lookup:
+            error_msg = 'Must run handler.build_feature_lookup() before running handler.build_uname_feature_lookup().'
+            self.log.error(error_msg)
+            raise Exception(error_msg)
+        for feature_dict in self.feature_lookup.values():
+            self.uname_feature_lookup[feature_dict['uniquename']] = feature_dict
         return
 
     def get_internal_genes(self, session):
