@@ -321,6 +321,7 @@ class AGMDiseaseHandler(DataHandler):
         self.get_disease_timestamps(session)
         self.extract_text_embedded_alleles(session)
         self.extract_model_and_modifiers()
+        self.calculate_annotation_unique_key()
         return
 
     # Add methods to be run by synthesize_info() below.
