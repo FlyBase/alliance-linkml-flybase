@@ -32,7 +32,7 @@ class AGMDiseaseHandler(DataHandler):
     def __init__(self, log: Logger, testing: bool):
         """Create the AGMDiseaseHandler object."""
         super().__init__(log, testing)
-        self.datatype = 'disease'
+        self.datatype = 'agm_disease'
         self.fb_export_type = fb_datatypes.FBAlleleDiseaseAnnotation
         self.agr_export_type = agr_datatypes.AGMDiseaseAnnotationDTO
         self.primary_export_set = 'disease_agm_ingest_set'
