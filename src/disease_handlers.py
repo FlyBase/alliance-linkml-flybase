@@ -302,7 +302,7 @@ class AGMDiseaseHandler(DataHandler):
             dis_anno.unique_key += f'{dis_anno.feature_cvterm.pub.uniquename}_'
             if dis_anno.is_not:
                 dis_anno.unique_key += 'NOT_'
-            dis_anno.unique_key += f'model={'|'.join(sorted(dis_anno.modeled_by))}_'
+            dis_anno.unique_key += f'model={"|".join(sorted(dis_anno.modeled_by))}_'
             dis_anno.unique_key += f'disease_term=DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}'
             if dis_anno.modifier_id:
                 dis_anno.unique_key += f'_{dis_anno.modifier_role}={dis_anno.modifier_id}'
