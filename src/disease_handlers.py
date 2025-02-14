@@ -335,7 +335,6 @@ class AGMDiseaseHandler(DataHandler):
         for dis_anno in self.fb_data_entities.values():
             export_checks = {
                 dis_anno.modifier_problem is True: 'Obsolete modifier ID',
-                dis_anno.is_not is True and dis_anno.modifier_id: 'Have a modifier of "DOES NOT model" annotation'
             }
             for check, msg in export_checks.items():
                 if check:
