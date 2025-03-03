@@ -321,7 +321,7 @@ class AGMDiseaseHandler(DataHandler):
         distinct_ecos = []
         for ukey, eco_list in self.model_eco_lookup.items():
             uniqued_list = list(set(eco_list))
-            self.log.debug(f'BILLYBOB: ukey={ukey}, eco_list={uniqued_list}')
+            # self.log.debug(f'ukey={ukey}, eco_list={uniqued_list}')
             self.model_eco_lookup[ukey] = uniqued_list
             distinct_ecos.extend(uniqued_list)
             if len(uniqued_list) == 0:
@@ -344,44 +344,26 @@ class AGMDiseaseHandler(DataHandler):
         assess_counter = 0
         match_counter = 0
         no_match_counter = 0
-        bob_counter = 0
         for dis_anno in self.fb_data_entities.values():
             input_counter += 1
             if dis_anno.eco_abbr:
                 skip_counter += 1
                 continue
             assess_counter += 1
-            known_key = True
+            # Choose default CEA if no info.
             if dis_anno.model_unique_key not in self.model_eco_lookup.keys():
-                bob_counter += 1
-                known_key = False
-            try:
-                eco_list = self.model_eco_lookup[dis_anno.model_unique_key]
-                self.log.debug(f'Have this eco_list: {eco_list}')
-                if len(eco_list) == 1:
-                    dis_anno.eco_abbr = eco_list[0]
-                    match_counter += 1
-                    if eco_list[0] not in ['CEA', 'CEC']:
-                        self.log.warning(f'BOB1: Found odd ECO: {eco_list[0]}')
-                # If CEA or CEC found, choose CEA.
-                elif len(eco_list) > 1 and 'CEA' in eco_list:
-                    dis_anno.eco_abbr = 'CEA'
-                    match_counter += 1
-                # If somehow (?), key exists but list is empty, use default CEA.
-                else:
-                    self.log.warning(f'BOB2: Have empty or many eco_list: {eco_list}')
-                    if known_key is True:
-                        self.log.warning('BOB3: THIS WAS IN THE LOOKUP KEYS???')
-                    dis_anno.eco_abbr = 'CEA'
-                    no_match_counter += 1
-            # If no known ECO for the model, choose CEA.
-            except KeyError:
                 dis_anno.eco_abbr = 'CEA'
                 no_match_counter += 1
+            elif len(self.model_eco_lookup[dis_anno.model_unique_key]) == 1:
+                dis_anno.eco_abbr = self.model_eco_lookup[dis_anno.model_unique_key][0]
+                match_counter += 1
+            # Choose default CEA if many codes.
+            elif len(self.model_eco_lookup[dis_anno.model_unique_key]) > 1:
+                dis_anno.eco_abbr = 'CEA'
+                match_counter += 1
         self.log.info(f'Assessed {assess_counter}/{input_counter} annotations, skipped {skip_counter}/{input_counter} annotations.')
         self.log.info(f'Found ECO for {match_counter} modifier-type annotations.')
         self.log.info(f'Assigned "CEA" for {no_match_counter} modifier-type annotations with no info.')
-        self.log.info(f'BOBCOUNTER: Found {bob_counter} annotations not represented in the model_eco_lookup.')
         return
 
     def calculate_annotation_unique_key(self):
