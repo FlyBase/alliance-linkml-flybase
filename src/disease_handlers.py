@@ -345,9 +345,10 @@ class AGMDiseaseHandler(DataHandler):
                     dis_anno.eco_abbr = 'CEA'
                     match_counter += 1
                 # If somehow (?), key exists but list is empty, use default CEA.
-                else:
-                    dis_anno.eco_abbr = 'CEA'
-                    no_match_counter += 1
+                # BILLY BOB _ TEMP SUPPRESS
+                # else:
+                #     dis_anno.eco_abbr = 'CEA'
+                #     no_match_counter += 1
             # If no known ECO for the model, choose CEA.
             except KeyError:
                 dis_anno.eco_abbr = 'CEA'
