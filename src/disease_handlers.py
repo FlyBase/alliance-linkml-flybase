@@ -16,6 +16,7 @@ Author(s):
 #    d. Consider giving curators a report of non-transferred comments for manual addition.
 
 import re
+from collections import defaultdict
 from logging import Logger
 from sqlalchemy.orm import aliased
 from harvdev_utils.reporting import (
@@ -36,7 +37,8 @@ class AGMDiseaseHandler(DataHandler):
         self.fb_export_type = fb_datatypes.FBAlleleDiseaseAnnotation
         self.agr_export_type = agr_datatypes.AGMDiseaseAnnotationDTO
         self.primary_export_set = 'disease_agm_ingest_set'
-        self.uniq_dis_dict = {}    # Disease annotations keyed by a unique attribute concatenation.
+        self.model_eco_lookup = defaultdict(list)    # Evidence abbreviation lookup for "model_of" annotations.
+        self.uniq_dis_dict = defaultdict(list)       # Disease annotations keyed by a unique attribute concatenation.
 
     relevant_fcvtp_types = [
         'evidence_code',
@@ -295,21 +297,88 @@ class AGMDiseaseHandler(DataHandler):
                 dis_anno.modifier_role = self.disease_genetic_modifier_terms[dis_anno.qualifier.value]
         return
 
+    def build_model_eco_lookup(self):
+        """Build ECO lookup for model-type annotations."""
+        self.log.info('Build ECO lookup for model-type annotations.')
+        for dis_anno in self.fb_data_entities.values():
+            # Determine unique key for the model in this annotation.
+            dis_anno.model_unique_key = f'{dis_anno.feature_cvterm.pub.uniquename}_'
+            if dis_anno.is_not:
+                dis_anno.unique_key += 'NOT_'
+            dis_anno.model_unique_key = f'model={"|".join(sorted(dis_anno.modeled_by))}_'
+            dis_anno.model_unique_key += f'disease_term=DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}'
+            if re.match(r'^CE(A|C)', dis_anno.evidence_code.value):
+                dis_anno.eco_abbr = dis_anno.evidence_code.value[0:3]
+                if dis_anno.is_not is False:
+                    self.model_eco_lookup[dis_anno.model_unique_key].append(dis_anno.eco_abbr)
+        self.log.info(f'Have {len(self.model_eco_lookup)} distinct model-ECO in the lookup.')
+        for ukey, eco_list in self.model_eco_lookup.items():
+            uniqued_list = list(set(eco_list))
+            self.model_eco_lookup[ukey] = uniqued_list
+            if len(uniqued_list) > 1:
+                self.log.debug(f'Many ECOs for model_key={ukey}: {uniqued_list}')
+        return
+
+    def lookup_eco_codes_for_modifier_annotations(self):
+        """Lookup ECO code for modifier-type annotations."""
+        self.log.info('Lookup ECO code for modifier-type annotations.')
+        match_counter = 0
+        no_match_counter = 0
+        for dis_anno in self.fb_data_entities.values():
+            if dis_anno.eco_abbr:
+                continue
+            try:
+                eco_list = self.model_eco_lookup[dis_anno.model_unique_key]
+                if len(eco_list) == 1:
+                    dis_anno.eco_abbr = eco_list[0]
+                    match_counter += 1
+                else:
+                    dis_anno.eco_abbr = 'CEA'    # If CEA or CEC found, choose CEA.
+                    match_counter += 1
+            except KeyError:
+                dis_anno.eco_abbr = 'CEA'        # If no known ECO for the model, choose CEA.
+                no_match_counter += 1
+        self.log.info(f'Found ECO for {match_counter} modifier-type annotations.')
+        self.log.info(f'Assigned "CEA" for {no_match_counter} modifier-type annotations with no info.')
+        return
+
     def calculate_annotation_unique_key(self):
         """Calculate unique descriptors for disease annotations."""
         self.log.info('Calculate unique descriptors for disease annotations.')
         for dis_anno in self.fb_data_entities.values():
-            dis_anno.unique_key += f'{dis_anno.feature_cvterm.pub.uniquename}_'
+            dis_anno.unique_key = f'{dis_anno.feature_cvterm.pub.uniquename}_'
             if dis_anno.is_not:
                 dis_anno.unique_key += 'NOT_'
             dis_anno.unique_key += f'model={"|".join(sorted(dis_anno.modeled_by))}_'
-            dis_anno.unique_key += f'disease_term=DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}'
+            dis_anno.unique_key += f'disease_term=DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}_'
+            dis_anno.unique_key += f'eco_code={dis_anno.eco_abbr}'
+            if not dis_anno.eco_abbr:
+                self.log.warning(f'')
             if dis_anno.modifier_id:
                 dis_anno.unique_key += f'_{dis_anno.modifier_role}={dis_anno.modifier_id}'
             self.log.debug(f'BOB: Annotation db_primary_id={dis_anno.db_primary_id} has this unique key: {dis_anno.unique_key}')
+            if not dis_anno.eco_abbr:
+                self.log.warning('BILLY: BAD ECO')
         return
 
-    # BOB - method for getting/creating a genotype from the model IDs.
+    # BOB: to do.
+    def integrate_gal4_info(self):
+        """Integrate Gal4 driver info into annotations."""
+        # self.log.info('Integrate Gal4 driver info into annotations.')
+        # input_file = open('/src/input/gal4_driver_info.tsv')
+        return
+
+    # BOB: to do.
+    def integrate_aberration_info(self):
+        """Integrate aberration info into annotations."""
+        # self.log.info('Integrate aberration info into annotations.')
+        return
+
+    # BOB: to do.
+    def get_genotype(self, session):
+        """Get or create the appropriate genotype for each disease annotation."""
+        # self.log.info('Get or create the appropriate genotype for each disease annotation.')
+        return
 
     # Elaborate on get_datatype_data() for the AGMDiseaseHandler.
     def get_datatype_data(self, session):
@@ -321,7 +390,12 @@ class AGMDiseaseHandler(DataHandler):
         self.get_disease_timestamps(session)
         self.extract_text_embedded_alleles(session)
         self.extract_model_and_modifiers()
+        self.build_model_eco_lookup()
+        self.lookup_eco_codes_for_modifier_annotations()
         self.calculate_annotation_unique_key()
+        self.integrate_gal4_info()
+        self.integrate_gal4_info()
+        self.get_genotype(session)
         return
 
     # Add methods to be run by synthesize_info() below.

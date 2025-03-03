@@ -403,6 +403,8 @@ class FBAlleleDiseaseAnnotation(FBExportEntity):
         self.is_not = False                     # Becomes True for "DOES NOT model" annotations.
         self.modifier_id = None                 # Will be FBal ID of the modifier, if applicable.
         self.modifier_role = None               # Will be Alliance role for a modifier.
+        self.eco_abbr = ''                      # Will be CEA or CEC, as appropriate.
+        self.model_unique_key = ''              # A unique descriptor for the model (pub, genotype, disease).
         self.unique_key = ''                    # A unique descriptor: FBrfID_(NOT)model=<FBalIDs>_<modifier_role>_<modifierFBalID>.
         self.allele_id_was_updated = False      # Change to True if text-embedded allele ID was updated.
         self.allele_id_problem = False          # Change to True if a text-embedded allele ID could not be updated.
