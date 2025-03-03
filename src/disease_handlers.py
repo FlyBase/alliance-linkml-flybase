@@ -313,12 +313,22 @@ class AGMDiseaseHandler(DataHandler):
                 if dis_anno.is_not is False:
                     self.model_eco_lookup[dis_anno.model_unique_key].append(dis_anno.eco_abbr)
                     counter += 1
-        self.log.info(f'Have {len(self.model_eco_lookup)} distinct model-ECO in the lookup from {counter} annotations.')
+        self.log.info(f'Have ECO abbreviations for {len(self.model_eco_lookup)} distinct disease models from {counter} annotations.')
+        zero_counter = 0
+        one_counter = 0
+        many_counter = 0
         for ukey, eco_list in self.model_eco_lookup.items():
             uniqued_list = list(set(eco_list))
             self.model_eco_lookup[ukey] = uniqued_list
-            if len(uniqued_list) > 1:
+            if len(uniqued_list) == 0:
+                self.log.debug(f'Zero ECOs for model_key={ukey}')
+                zero_counter += 1
+            elif len(uniqued_list) == 1:
+                one_counter += 1
+            else:
                 self.log.debug(f'Many ECOs for model_key={ukey}: {uniqued_list}')
+                many_counter += 1
+        self.log.info(f'Have {zero_counter} keys in lookup with NO ECO; {one_counter} keys with ONE ECO; {many_counter} keys with MANY ECOS.')
         return
 
     def lookup_eco_codes_for_modifier_annotations(self):
@@ -345,10 +355,9 @@ class AGMDiseaseHandler(DataHandler):
                     dis_anno.eco_abbr = 'CEA'
                     match_counter += 1
                 # If somehow (?), key exists but list is empty, use default CEA.
-                # BILLY BOB _ TEMP SUPPRESS
-                # else:
-                #     dis_anno.eco_abbr = 'CEA'
-                #     no_match_counter += 1
+                else:
+                    dis_anno.eco_abbr = 'CEA'
+                    no_match_counter += 1
             # If no known ECO for the model, choose CEA.
             except KeyError:
                 dis_anno.eco_abbr = 'CEA'
