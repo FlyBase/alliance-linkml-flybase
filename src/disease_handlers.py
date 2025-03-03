@@ -300,6 +300,7 @@ class AGMDiseaseHandler(DataHandler):
     def build_model_eco_lookup(self):
         """Build ECO lookup for model-type annotations."""
         self.log.info('Build ECO lookup for model-type annotations.')
+        counter = 0
         for dis_anno in self.fb_data_entities.values():
             # Determine unique key for the model in this annotation.
             dis_anno.model_unique_key = f'{dis_anno.feature_cvterm.pub.uniquename}_'
@@ -311,7 +312,8 @@ class AGMDiseaseHandler(DataHandler):
                 dis_anno.eco_abbr = dis_anno.evidence_code.value[0:3]
                 if dis_anno.is_not is False:
                     self.model_eco_lookup[dis_anno.model_unique_key].append(dis_anno.eco_abbr)
-        self.log.info(f'Have {len(self.model_eco_lookup)} distinct model-ECO in the lookup.')
+                    counter += 1
+        self.log.info(f'Have {len(self.model_eco_lookup)} distinct model-ECO in the lookup from {counter} annotations.')
         for ukey, eco_list in self.model_eco_lookup.items():
             uniqued_list = list(set(eco_list))
             self.model_eco_lookup[ukey] = uniqued_list
@@ -322,22 +324,35 @@ class AGMDiseaseHandler(DataHandler):
     def lookup_eco_codes_for_modifier_annotations(self):
         """Lookup ECO code for modifier-type annotations."""
         self.log.info('Lookup ECO code for modifier-type annotations.')
+        input_counter = 0
+        skip_counter = 0
+        assess_counter = 0
         match_counter = 0
         no_match_counter = 0
         for dis_anno in self.fb_data_entities.values():
+            input_counter += 1
             if dis_anno.eco_abbr:
+                skip_counter += 1
                 continue
+            assess_counter += 1
             try:
                 eco_list = self.model_eco_lookup[dis_anno.model_unique_key]
                 if len(eco_list) == 1:
                     dis_anno.eco_abbr = eco_list[0]
                     match_counter += 1
-                else:
-                    dis_anno.eco_abbr = 'CEA'    # If CEA or CEC found, choose CEA.
+                # If CEA or CEC found, choose CEA.
+                elif len(eco_list) > 1 and 'CEA' in eco_list:
+                    dis_anno.eco_abbr = 'CEA'
                     match_counter += 1
+                # If somehow (?), key exists but list is empty, use default CEA.
+                else:
+                    dis_anno.eco_abbr = 'CEA'
+                    no_match_counter += 1
+            # If no known ECO for the model, choose CEA.
             except KeyError:
-                dis_anno.eco_abbr = 'CEA'        # If no known ECO for the model, choose CEA.
+                dis_anno.eco_abbr = 'CEA'
                 no_match_counter += 1
+        self.log.info(f'Assessed {assess_counter}/{input_counter} annotations, skipped {skip_counter}/{input_counter} annotations.')
         self.log.info(f'Found ECO for {match_counter} modifier-type annotations.')
         self.log.info(f'Assigned "CEA" for {no_match_counter} modifier-type annotations with no info.')
         return
@@ -353,7 +368,7 @@ class AGMDiseaseHandler(DataHandler):
             dis_anno.unique_key += f'disease_term=DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}_'
             dis_anno.unique_key += f'eco_code={dis_anno.eco_abbr}'
             if not dis_anno.eco_abbr:
-                self.log.warning(f'')
+                self.log.warning(f'No ECO abbr for {dis_anno.unique_key}')
             if dis_anno.modifier_id:
                 dis_anno.unique_key += f'_{dis_anno.modifier_role}={dis_anno.modifier_id}'
             self.log.debug(f'BOB: Annotation db_primary_id={dis_anno.db_primary_id} has this unique key: {dis_anno.unique_key}')
