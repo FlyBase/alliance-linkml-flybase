@@ -310,6 +310,7 @@ class AGMDiseaseHandler(DataHandler):
             dis_anno.model_unique_key += f'disease_term=DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}'
             if re.match(r'^CE(A|C)', dis_anno.evidence_code.value):
                 dis_anno.eco_abbr = dis_anno.evidence_code.value[0:3]
+                self.log.debug(f'BOB: Have this ECO: {dis_anno.evidence_code.value[0:3]}')
                 if dis_anno.is_not is False:
                     self.model_eco_lookup[dis_anno.model_unique_key].append(dis_anno.eco_abbr)
                     counter += 1
@@ -317,9 +318,11 @@ class AGMDiseaseHandler(DataHandler):
         zero_counter = 0
         one_counter = 0
         many_counter = 0
+        distinct_ecos = []
         for ukey, eco_list in self.model_eco_lookup.items():
             uniqued_list = list(set(eco_list))
             self.model_eco_lookup[ukey] = uniqued_list
+            distinct_ecos.extend(uniqued_list)
             if len(uniqued_list) == 0:
                 self.log.debug(f'Zero ECOs for model_key={ukey}')
                 zero_counter += 1
@@ -329,6 +332,7 @@ class AGMDiseaseHandler(DataHandler):
                 self.log.debug(f'Many ECOs for model_key={ukey}: {uniqued_list}')
                 many_counter += 1
         self.log.info(f'Have {zero_counter} keys in lookup with NO ECO; {one_counter} keys with ONE ECO; {many_counter} keys with MANY ECOS.')
+        self.log.info(f'Have these distinct ECO codes: {set(distinct_ecos)}')
         return
 
     def lookup_eco_codes_for_modifier_annotations(self):
@@ -382,8 +386,6 @@ class AGMDiseaseHandler(DataHandler):
             if dis_anno.modifier_id:
                 dis_anno.unique_key += f'_{dis_anno.modifier_role}={dis_anno.modifier_id}'
             self.log.debug(f'BOB: Annotation db_primary_id={dis_anno.db_primary_id} has this unique key: {dis_anno.unique_key}')
-            if not dis_anno.eco_abbr:
-                self.log.warning('BILLY: BAD ECO')
         return
 
     # BOB: to do.
