@@ -321,6 +321,7 @@ class AGMDiseaseHandler(DataHandler):
         distinct_ecos = []
         for ukey, eco_list in self.model_eco_lookup.items():
             uniqued_list = list(set(eco_list))
+            self.log.debug(f'BILLYBOB: ukey={ukey}, eco_list={uniqued_list}')
             self.model_eco_lookup[ukey] = uniqued_list
             distinct_ecos.extend(uniqued_list)
             if len(uniqued_list) == 0:
@@ -343,12 +344,15 @@ class AGMDiseaseHandler(DataHandler):
         assess_counter = 0
         match_counter = 0
         no_match_counter = 0
+        bob_counter = 0
         for dis_anno in self.fb_data_entities.values():
             input_counter += 1
             if dis_anno.eco_abbr:
                 skip_counter += 1
                 continue
             assess_counter += 1
+            if dis_anno.model_unique_key not in self.model_eco_lookup.keys():
+                bob_counter += 1
             try:
                 self.log.debug(f'Find ECO for this ukey: {dis_anno.model_unique_key}')
                 eco_list = self.model_eco_lookup[dis_anno.model_unique_key]
@@ -374,6 +378,7 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Assessed {assess_counter}/{input_counter} annotations, skipped {skip_counter}/{input_counter} annotations.')
         self.log.info(f'Found ECO for {match_counter} modifier-type annotations.')
         self.log.info(f'Assigned "CEA" for {no_match_counter} modifier-type annotations with no info.')
+        self.log.info(f'BOBCOUNTER: Found {bob_counter} annotations not represented in the model_eco_lookup.')
         return
 
     def calculate_annotation_unique_key(self):

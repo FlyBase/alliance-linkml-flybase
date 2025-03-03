@@ -25,7 +25,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
 from disease_handlers import AGMDiseaseHandler
-from utils import export_chado_data, generate_export_file
+from utils import export_chado_data    # generate_export_file
 
 # Data types handled by this script.
 REPORT_LABEL = 'agm_disease_curation'
