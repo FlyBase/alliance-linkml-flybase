@@ -310,11 +310,11 @@ class AGMDiseaseHandler(DataHandler):
             dis_anno.model_unique_key += f'disease_term=DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}'
             if re.match(r'^CE(A|C)', dis_anno.evidence_code.value):
                 dis_anno.eco_abbr = dis_anno.evidence_code.value[0:3]
-                self.log.debug(f'BOB: Have this ECO: {dis_anno.evidence_code.value[0:3]}')
                 if dis_anno.is_not is False:
                     self.model_eco_lookup[dis_anno.model_unique_key].append(dis_anno.eco_abbr)
                     counter += 1
         self.log.info(f'Have ECO abbreviations for {len(self.model_eco_lookup)} distinct disease models from {counter} annotations.')
+        # Make sure the lookup is ok.
         zero_counter = 0
         one_counter = 0
         many_counter = 0
@@ -350,16 +350,21 @@ class AGMDiseaseHandler(DataHandler):
                 continue
             assess_counter += 1
             try:
+                self.log.debug(f'Find ECO for this ukey: {dis_anno.model_unique_key}')
                 eco_list = self.model_eco_lookup[dis_anno.model_unique_key]
+                self.log.debug(f'Have this eco_list: {eco_list}')
                 if len(eco_list) == 1:
                     dis_anno.eco_abbr = eco_list[0]
                     match_counter += 1
+                    if eco_list[0] not in ['CEA', 'CEC']:
+                        self.log.warning(f'BOB1: Found odd ECO: {eco_list[0]}')
                 # If CEA or CEC found, choose CEA.
                 elif len(eco_list) > 1 and 'CEA' in eco_list:
                     dis_anno.eco_abbr = 'CEA'
                     match_counter += 1
                 # If somehow (?), key exists but list is empty, use default CEA.
                 else:
+                    self.log.warning(f'BOB2: Have empty or many eco_list: {eco_list}')
                     dis_anno.eco_abbr = 'CEA'
                     no_match_counter += 1
             # If no known ECO for the model, choose CEA.
