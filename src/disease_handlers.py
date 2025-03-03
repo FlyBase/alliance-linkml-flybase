@@ -351,10 +351,11 @@ class AGMDiseaseHandler(DataHandler):
                 skip_counter += 1
                 continue
             assess_counter += 1
+            known_key = True
             if dis_anno.model_unique_key not in self.model_eco_lookup.keys():
                 bob_counter += 1
+                known_key = False
             try:
-                self.log.debug(f'Find ECO for this ukey: {dis_anno.model_unique_key}')
                 eco_list = self.model_eco_lookup[dis_anno.model_unique_key]
                 self.log.debug(f'Have this eco_list: {eco_list}')
                 if len(eco_list) == 1:
@@ -369,6 +370,8 @@ class AGMDiseaseHandler(DataHandler):
                 # If somehow (?), key exists but list is empty, use default CEA.
                 else:
                     self.log.warning(f'BOB2: Have empty or many eco_list: {eco_list}')
+                    if known_key is True:
+                        self.log.warning('BOB3: THIS WAS IN THE LOOKUP KEYS???')
                     dis_anno.eco_abbr = 'CEA'
                     no_match_counter += 1
             # If no known ECO for the model, choose CEA.
