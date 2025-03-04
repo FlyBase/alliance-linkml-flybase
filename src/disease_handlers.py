@@ -420,7 +420,7 @@ class AGMDiseaseHandler(DataHandler):
         ADDITIONAL_ALLELES = 7
         GAL4_INPUT = 8
         OPERATION = 12
-        gal4_input = open('/src/input/gal4_driver_info.tsv')
+        gal4_input = open('/src/output/gal4_driver_info.tsv')
         pub_not_found_counter = 0
         allele_not_found_counter = 0
         additional_allele_not_found_counter = 0
