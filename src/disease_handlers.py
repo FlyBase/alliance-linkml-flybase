@@ -428,6 +428,7 @@ class AGMDiseaseHandler(DataHandler):
         driver_not_found_counter = 0
         dis_anno_not_found = 0
         line_number = 0
+        input_counter = 0
         matched_dis_anno_counter = 0
         unmatched_dis_anno_counter = 0
         prob_counter = 0
@@ -436,6 +437,7 @@ class AGMDiseaseHandler(DataHandler):
             line_number += 1
             if not i.startswith('FBrf'):
                 continue
+            input_counter += 1
             line = i.split('\t')
             driver_info = {
                 # Attributes from input file.
@@ -553,9 +555,9 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Could not find {do_term_not_found_counter} DO terms.')
         self.log.info(f'Could not find {driver_not_found_counter} drivers.')
         self.log.info(f'Could not find {dis_anno_not_found} disease annotations.')
-        self.log.info(f'Found dis anno for {matched_dis_anno_counter} driver info lines.')
-        self.log.info(f'Could not find dis anno for {unmatched_dis_anno_counter} driver info lines.')
-        self.log.info(f'Had problems looking up info for {prob_counter} driver info lines.')
+        self.log.info(f'Found dis anno for {matched_dis_anno_counter}/{input_counter} driver info lines.')
+        self.log.info(f'Could not find dis anno for {unmatched_dis_anno_counter}/{input_counter} driver info lines.')
+        self.log.info(f'Had problems looking up info for {prob_counter}/{input_counter} driver info lines.')
         return
 
     # BOB: to do.
