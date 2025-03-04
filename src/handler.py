@@ -58,6 +58,7 @@ class DataHandler(object):
         self.export_data = {}                       # agr_ingest_set_name-keyed lists of data objects for export.
         # General data bins.
         self.bibliography = {}                      # A pub_id-keyed dict of pub curies (PMID, or, FBrf if no PMID).
+        self.fbrf_bibliography = {}                 # An FBrf_id-keyed dict of chado Pub objects, current pubs only.
         self.cvterm_lookup = {}                     # A cvterm_id-keyed dict of dicts with these keys: 'name', 'cv_name', 'db_name', 'curie'.
         self.organism_lookup = {}                   # An organism_id-keyed dict of organism info.
         self.chr_dict = {}                          # Will be a feature_id-keyed dict of chr scaffold uniquenames.
@@ -214,6 +215,7 @@ class DataHandler(object):
             distinct()
         pub_counter = 0
         for pub in results:
+            self.fbrf_bibliography[pub.uniquename] = pub
             self.bibliography[pub.pub_id] = f'FB:{pub.uniquename}'
             pub_counter += 1
         # Next find PMIDs if available and replace the curie in the bibliography.
@@ -273,6 +275,7 @@ class DataHandler(object):
         cvterm_counter = 0
         for result in results:
             cvterm_dict = {
+                'cvterm_id': result.cvterm_id,
                 'name': result.name,
                 'cv_name': result.cv.name,
                 'db_name': result.dbxref.db.name,

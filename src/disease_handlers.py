@@ -19,6 +19,7 @@ import re
 from collections import defaultdict
 from logging import Logger
 from sqlalchemy.orm import aliased
+from harvdev_utils.char_conversions import sgml_to_plain_text
 from harvdev_utils.reporting import (
     Cv, Cvterm, Db, Dbxref, Feature, FeatureCvterm, FeatureCvtermprop,
     FeatureDbxref, FeatureRelationship, Pub
@@ -37,8 +38,11 @@ class AGMDiseaseHandler(DataHandler):
         self.fb_export_type = fb_datatypes.FBAlleleDiseaseAnnotation
         self.agr_export_type = agr_datatypes.AGMDiseaseAnnotationDTO
         self.primary_export_set = 'disease_agm_ingest_set'
+        self.allele_name_lookup = {}                 # feature.name-keyed feature dicts, current only.
+        self.doid_term_lookup = {}                   # cvterm.name-keyed cvterm dicts.
         self.model_eco_lookup = defaultdict(list)    # Evidence abbreviation lookup for "model_of" annotations.
         self.uniq_dis_dict = defaultdict(list)       # Disease annotations keyed by a unique attribute concatenation.
+        self.gal4_info = defaultdict(list)           # Gal4 info to integrate, keyed by unique disease descriptor.
 
     relevant_fcvtp_types = [
         'evidence_code',
@@ -66,6 +70,25 @@ class AGMDiseaseHandler(DataHandler):
         'DOES NOT exacerbate': 'not_exacerbated_by'
     }
 
+    # Add methods to be run by get_general_data() below.
+    def build_allele_name_lookup(self):
+        """Build name-keyed dict of alleles."""
+        self.log.info('Build name-keyed dict of alleles.')
+        for feature in self.feature_lookup.values():
+            if feature['type'] == 'allele' and feature['is_obsolete'] is False:
+                self.allele_name_lookup[feature['name']] = feature
+        self.log.info(f'Have {len(self.allele_name_lookup)} current alleles in the allele-by-name lookup.')
+        return
+
+    def build_doid_term_lookup(self):
+        """Build name-keyed dict of DOID terms."""
+        self.log.info('Build name-keyed dict of DOID terms.')
+        for term in self.cvterm_lookup.values():
+            if term['cv_name'] == 'disease_ontology' and term['db_name'] == 'DOID':
+                self.doid_term_lookup[term['name']] = term
+        self.log.info(f'Have {len(self.cvterm_lookup)} DOID terms in the CV term-by-name lookup.')
+        return
+
     # Elaborate on get_general_data() for the AGMDiseaseHandler.
     def get_general_data(self, session):
         """Extend the method for the AGMDiseaseHandler."""
@@ -78,6 +101,8 @@ class AGMDiseaseHandler(DataHandler):
         self.get_transgenic_allele_ids(session)
         self.get_in_vitro_allele_ids(session)
         self.build_allele_gene_lookup(session)
+        self.build_allele_name_lookup()
+        self.build_doid_term_lookup()
         return
 
     # Add methods to be run by get_datatype_data() below.
@@ -186,7 +211,8 @@ class AGMDiseaseHandler(DataHandler):
                 self.fb_data_entities[row[DB_PRIMARY_ID]].timestamps.append(row[TIMESTAMP])
                 counter += 1
             except KeyError:
-                self.log.debug(f'Could not put this in anno dict: {row}')
+                # self.log.debug(f'Could not put this in anno dict: {row}')
+                pass
         self.log.info(f'Obtained {counter} timestamps for annotations directly from the audit_chado table.')
         return
 
@@ -321,7 +347,6 @@ class AGMDiseaseHandler(DataHandler):
         distinct_ecos = []
         for ukey, eco_list in self.model_eco_lookup.items():
             uniqued_list = list(set(eco_list))
-            # self.log.debug(f'ukey={ukey}, eco_list={uniqued_list}')
             self.model_eco_lookup[ukey] = uniqued_list
             distinct_ecos.extend(uniqued_list)
             if len(uniqued_list) == 0:
@@ -380,14 +405,123 @@ class AGMDiseaseHandler(DataHandler):
                 self.log.warning(f'No ECO abbr for {dis_anno.unique_key}')
             if dis_anno.modifier_id:
                 dis_anno.unique_key += f'_{dis_anno.modifier_role}={dis_anno.modifier_id}'
-            self.log.debug(f'BOB: Annotation db_primary_id={dis_anno.db_primary_id} has this unique key: {dis_anno.unique_key}')
+            self.log.debug(f'Annotation db_primary_id={dis_anno.db_primary_id} has this unique key: {dis_anno.unique_key}')
+            self.uniq_dis_dict[dis_anno.unique_key].append(dis_anno)
         return
 
-    # BOB: to do.
     def integrate_gal4_info(self):
         """Integrate Gal4 driver info into annotations."""
-        # self.log.info('Integrate Gal4 driver info into annotations.')
-        # input_file = open('/src/input/gal4_driver_info.tsv')
+        self.log.info('Integrate Gal4 driver info into annotations.')
+        PUB_GIVEN = 0
+        ALLELE_SYMBOL = 1
+        QUAL = 4
+        DO_TERM = 5
+        EVI_CODE = 6
+        ADDITIONAL_ALLELES = 7
+        GAL4_INPUT = 8
+        OPERATION = 12
+        gal4_input = open('/src/input/gal4_driver_info.tsv')
+        pub_not_found_counter = 0
+        allele_not_found_counter = 0
+        additional_allele_not_found_counter = 0
+        do_term_not_found_counter = 0
+        gal4_not_found_counter = 0
+        dis_anno_not_found = 0
+        line_number = 1
+        for line in gal4_input:
+            if not line.starstwith('FBrf'):
+                continue
+            gal4_info = {
+                # Attributes from input file.
+                'line_number': line_number,
+                'pub_given': line[PUB_GIVEN],
+                'allele_symbol': sgml_to_plain_text(line[ALLELE_SYMBOL]),
+                'additional_alleles': line[ADDITIONAL_ALLELES].split(','),
+                'qualifier': line[QUAL],
+                'evi_code': line[EVI_CODE],
+                'do_term': line[DO_TERM],
+                'gal4_input': line[GAL4_INPUT].split(','),
+                'operation': line[OPERATION],
+                # Attributes to be obtained from chado.
+                'pub': None,
+                'allele_feature_id': None,
+                'additional_allele_ids': [],
+                'gal4_ids': [],
+                'doid_term_curie': None,
+                # Attributes synthesized from the above.
+                'modeled_by': [],
+                'is_not': False,
+                'modifier_id': None,
+                'modifier_role': None,
+                'eco_abbr': None,
+                'unique_key': None,
+                'problem': False,
+            }
+            try:
+                gal4_info['pub'] = self.fbrf_bibliography[gal4_info['pub']]
+            except KeyError:
+                self.log.error(f'Line={line_number}: could not find pub \"{gal4_info["pub_given"]}\" in chado.')
+                gal4_info['problem'] = True
+                pub_not_found_counter += 1
+            try:
+                gal4_info['allele_feature_id'] = self.allele_name_lookup[gal4_info['allele_symbol']]['uniquename']
+            except KeyError:
+                self.log.error(f'Line={line_number}: could not find allele \"{gal4_info["allele_symbol"]}\" in chado.')
+                gal4_info['problem'] = True
+                allele_not_found_counter += 1
+            for allele_symbol in gal4_info['additional_alleles']:
+                converted_allele_symbol = sgml_to_plain_text(allele_symbol)
+                try:
+                    gal4_info['additional_allele_ids'].append(self.allele_name_lookup[converted_allele_symbol]['uniquename'])
+                except KeyError:
+                    self.log.error(f'Line={line_number}: could not find additional allele "{allele_symbol}" in chado.')
+                    gal4_info['problem'] = True
+                    additional_allele_not_found_counter += 1
+            try:
+                gal4_info['doid_term_curie'] = self.doid_term_lookup[gal4_info['do_term']]['curie']
+            except KeyError:
+                self.log.error(f'Line={line_number}: could not find DO term \"{gal4_info["do_term"]}\" in chado.')
+                gal4_info['problem'] = True
+                do_term_not_found_counter += 1
+            for gal4_symbol in gal4_info['gal4_input']:
+                converted_gal4_symbol = sgml_to_plain_text(allele_symbol)
+                try:
+                    gal4_info['additional_allele_ids'].append(self.allele_name_lookup[converted_gal4_symbol]['uniquename'])
+                except KeyError:
+                    self.log.error(f'Line={line_number}: could not find Gal4 "{gal4_symbol}" in chado.')
+                    gal4_info['problem'] = True
+                    gal4_not_found_counter += 1
+
+            # Fill in below attributes.
+            # Need to look at qualifiers/eco to determine if we have a model or modifier type annotation.
+            # Attributes synthesized from the above.
+            # 'is_not',
+            # 'modeled_by': [],
+            # 'modifier_id': None,
+            # 'modifier_role': None,
+            # 'eco_abbr': None,
+            # 'unique_key': None,
+            # 'problem': False,
+
+            # Determine the ukey.
+            # unique_key = f'{gal4_info['pub_given']}_'
+            # dis_anno.unique_key += f'model={"|".join(sorted(dis_anno.modeled_by))}_'
+            # dis_anno.unique_key += f'disease_term=DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}_'
+            # dis_anno.unique_key += f'eco_code={dis_anno.eco_abbr}'
+            # if not dis_anno.eco_abbr:
+            #     self.log.warning(f'No ECO abbr for {dis_anno.unique_key}')
+            # if dis_anno.modifier_id:
+            #     dis_anno.unique_key += f'_{dis_anno.modifier_role}={dis_anno.modifier_id}'
+            # self.log.debug(f'Annotation db_primary_id={dis_anno.db_primary_id} has this unique key: {dis_anno.unique_key}')
+            # self.uniq_dis_dict[dis_anno.unique_key].append(dis_anno)
+            # if unique_key not in
+            # line_number += 1
+        self.log.info(f'Could not find {pub_not_found_counter} pubs.')
+        self.log.info(f'Could not find {allele_not_found_counter} alleles.')
+        self.log.info(f'Could not find {additional_allele_not_found_counter} additional alleles.')
+        self.log.info(f'Could not find {do_term_not_found_counter} DO terms.')
+        self.log.info(f'Could not find {gal4_not_found_counter} Gal4s.')
+        self.log.info(f'Could not find {dis_anno_not_found} disease annotations.')
         return
 
     # BOB: to do.
@@ -416,7 +550,7 @@ class AGMDiseaseHandler(DataHandler):
         self.lookup_eco_codes_for_modifier_annotations()
         self.calculate_annotation_unique_key()
         self.integrate_gal4_info()
-        self.integrate_gal4_info()
+        self.integrate_aberration_info()
         self.get_genotype(session)
         return
 
