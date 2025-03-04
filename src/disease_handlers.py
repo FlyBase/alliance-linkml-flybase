@@ -517,7 +517,7 @@ class AGMDiseaseHandler(DataHandler):
             if gal4_info['is_not']:
                 gal4_info['unique_key'] += 'NOT_'
             gal4_info['unique_key'] += f'model={"|".join(sorted(gal4_info["modeled_by"]))}_'
-            gal4_info['unique_key'] += f'disease_term={gal4_info["curie"]}_'
+            gal4_info['unique_key'] += f'disease_term={gal4_info["doid_term_curie"]}_'
             gal4_info['unique_key'] += f'disease_term={gal4_info["eco_abbr"]}'
             if gal4_info['modifier_id']:
                 gal4_info['unique_key'] += f'_{gal4_info["modifier_role"]}={gal4_info["modifier_id"]}'
