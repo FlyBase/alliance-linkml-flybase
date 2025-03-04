@@ -420,7 +420,7 @@ class AGMDiseaseHandler(DataHandler):
         ADDITIONAL_ALLELES = 7
         DRIVER_INPUT = 8
         OPERATION = 12
-        DRIVER_INPUT = open('/src/output/driver_info.tsv')
+        file_input = open('/src/output/driver_info.tsv')
         pub_not_found_counter = 0
         allele_not_found_counter = 0
         additional_allele_not_found_counter = 0
@@ -430,7 +430,7 @@ class AGMDiseaseHandler(DataHandler):
         line_number = 0
         matched_dis_anno_counter = 0
         unmatched_dis_anno_counter = 0
-        for i in DRIVER_INPUT:
+        for i in file_input:
             line_number += 1
             if not i.startswith('FBrf'):
                 continue
