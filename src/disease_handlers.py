@@ -543,6 +543,7 @@ class AGMDiseaseHandler(DataHandler):
             if driver_info['modifier_id']:
                 driver_info['unique_key'] += f'_{driver_info["modifier_role"]}={driver_info["modifier_id"]}'
             self.driver_dict[driver_info['unique_key']].append(driver_info)
+            self.log.debug(f'BOB: line={line_number}; ukey={driver_info["unique_key"]}')
             # Find the matching disease annotation.
             if driver_info['unique_key'] in self.uniq_dis_dict.keys():
                 matched_dis_anno_counter += 1
@@ -558,6 +559,9 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Found dis anno for {matched_dis_anno_counter}/{input_counter} driver info lines.')
         self.log.info(f'Could not find dis anno for {unmatched_dis_anno_counter}/{input_counter} driver info lines.')
         self.log.info(f'Had problems looking up info for {prob_counter}/{input_counter} driver info lines.')
+        for k, v in self.driver_dict.items():
+            if len(v) > 1:
+                self.log.debug(f'BILLY: found {len(v)} rows for this annotation: {k}')
         return
 
     # BOB: to do.
