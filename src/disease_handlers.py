@@ -429,7 +429,7 @@ class AGMDiseaseHandler(DataHandler):
         dis_anno_not_found = 0
         line_number = 1
         for line in gal4_input:
-            if not line.starstwith('FBrf'):
+            if not line.startswith('FBrf'):
                 continue
             gal4_info = {
                 # Attributes from input file.
