@@ -487,7 +487,7 @@ class AGMDiseaseHandler(DataHandler):
             for allele_symbol in driver_info['additional_alleles']:
                 if allele_symbol == '' or allele_symbol == ' ':
                     continue
-                allele_symbol = allele_symbol.rstrip(',')
+                allele_symbol = allele_symbol.rstrip(',').rstrip('.')
                 converted_allele_symbol = sgml_to_plain_text(allele_symbol).strip()
                 # Adjust for old style names of large allele class.
                 if '[dsRNA' in converted_allele_symbol and converted_allele_symbol not in self.allele_name_lookup.keys():
@@ -510,16 +510,16 @@ class AGMDiseaseHandler(DataHandler):
             for driver_symbol in driver_info['driver_input']:
                 if driver_symbol == '' or driver_symbol == ' ' or driver_symbol == '+':
                     continue
-                driver_symbol = driver_symbol.rstrip(',')
+                driver_symbol = driver_symbol.rstrip(',').rstrip('.')
                 # self.log.debug(f'Look for this driver: {driver_symbol}')
                 converted_driver_symbol = sgml_to_plain_text(driver_symbol).strip()
                 # self.log.debug(f'Have this cleaned name for this driver: {converted_driver_symbol}')
-                driver_rgx = r'(GAL4|lexA|QF)'
+                driver_rgx = r'(GAL4|GAL80|lexA|QF|FLP1|Cas|VP16|RELA)'
                 if not re.search(driver_rgx, converted_driver_symbol):
-                    self.log.error(f'Line={line_number}: symbol given does not seem to represent a driver: "{driver_symbol}".')
-                    driver_info['problem'] = True
-                    driver_not_found_counter += 1
-                    continue
+                    self.log.warning(f'Line={line_number}: symbol given does not seem to represent a driver: "{driver_symbol}".')
+                    # driver_info['problem'] = True
+                    # driver_not_found_counter += 1
+                    # continue
                 try:
                     allele_id = self.allele_name_lookup[converted_driver_symbol]['uniquename']
                     driver_info['driver_ids'].append(allele_id)
