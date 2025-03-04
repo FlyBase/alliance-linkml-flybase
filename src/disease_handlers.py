@@ -432,6 +432,7 @@ class AGMDiseaseHandler(DataHandler):
         unmatched_dis_anno_counter = 0
         prob_counter = 0
         for i in file_input:
+            self.log.debug(f'Process this line: {line.strip()}')
             line_number += 1
             if not i.startswith('FBrf'):
                 continue
@@ -465,6 +466,7 @@ class AGMDiseaseHandler(DataHandler):
             # Fill in info from chado.
             try:
                 driver_info['pub'] = self.fbrf_bibliography[driver_info['pub_given']]
+                self.log.debug(f'Found ID {allele_id} for subject allele "{converted_sbj_allele_symbol}"')
             except KeyError:
                 self.log.error(f'Line={line_number}: could not find pub \"{driver_info["pub_given"]}\" in chado.')
                 driver_info['problem'] = True
@@ -473,7 +475,7 @@ class AGMDiseaseHandler(DataHandler):
             try:
                 allele_id = self.allele_name_lookup[converted_sbj_allele_symbol]['uniquename']
                 driver_info['allele_feature_id'] = allele_id
-                self.log.debug(f'Found ID {allele_id} for subject allele "{converted_sbj_allele_symbol}"')
+                # self.log.debug(f'Found ID {allele_id} for subject allele "{converted_sbj_allele_symbol}"')
             except KeyError:
                 self.log.error(f'Line={line_number}: could not find allele \"{converted_sbj_allele_symbol}\" in chado.')
                 driver_info['problem'] = True
@@ -485,22 +487,22 @@ class AGMDiseaseHandler(DataHandler):
                 try:
                     allele_id = self.allele_name_lookup[converted_allele_symbol]['uniquename']
                     driver_info['additional_allele_ids'].append(allele_id)
-                    self.log.debug(f'Found ID {allele_id} for additional allele {converted_allele_symbol}')
+                    # self.log.debug(f'Found ID {allele_id} for additional allele {converted_allele_symbol}')
                 except KeyError:
                     self.log.error(f'Line={line_number}: could not find additional allele "{converted_allele_symbol}" in chado.')
                     driver_info['problem'] = True
                     additional_allele_not_found_counter += 1
             try:
                 driver_info['doid_term_curie'] = self.doid_term_lookup[driver_info['do_term']]['curie']
-                self.log.debug(f'Found curie "{driver_info["doid_term_curie"]}" for DO term "{driver_info["do_term"]}"')
+                # self.log.debug(f'Found curie "{driver_info["doid_term_curie"]}" for DO term "{driver_info["do_term"]}"')
             except KeyError:
                 self.log.error(f'Line={line_number}: could not find DO term \"{driver_info["do_term"]}\" in chado.')
                 driver_info['problem'] = True
                 do_term_not_found_counter += 1
             for driver_symbol in driver_info['driver_input']:
-                self.log.debug(f'Look for this driver: {driver_symbol}')
+                # self.log.debug(f'Look for this driver: {driver_symbol}')
                 converted_driver_symbol = sgml_to_plain_text(driver_symbol).strip()
-                self.log.debug(f'Have this cleaned name for this driver: {converted_driver_symbol}')
+                # self.log.debug(f'Have this cleaned name for this driver: {converted_driver_symbol}')
                 driver_rgx = r'(GAL4|lexA|QF)'
                 if not re.search(driver_rgx, converted_driver_symbol):
                     self.log.error(f'Line={line_number}: symbol given does not seem to represent a driver: "{driver_symbol}".')
@@ -510,7 +512,7 @@ class AGMDiseaseHandler(DataHandler):
                 try:
                     allele_id = self.allele_name_lookup[converted_driver_symbol]['uniquename']
                     driver_info['driver_ids'].append(allele_id)
-                    self.log.debug(f'BILLYBOB: Line={line_number}: actually found driver "{driver_symbol}" in chado.')
+                    # self.log.debug(f'Line={line_number}: found driver "{driver_symbol}" in chado.')
                 except KeyError:
                     self.log.error(f'Line={line_number}: could not find driver "{driver_symbol}" in chado.')
                     driver_info['problem'] = True
