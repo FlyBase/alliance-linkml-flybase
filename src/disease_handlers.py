@@ -473,25 +473,31 @@ class AGMDiseaseHandler(DataHandler):
                 driver_info['problem'] = True
                 pub_not_found_counter += 1
             converted_sbj_allele_symbol = sgml_to_plain_text(driver_info['allele_symbol']).strip()
+            # Adjust for old style names of large allele class.
+            if '[dsRNA' in converted_sbj_allele_symbol and converted_sbj_allele_symbol not in self.allele_name_lookup.keys():
+                converted_sbj_allele_symbol = converted_sbj_allele_symbol.replace('[dsRNA', '[RNAi')
             try:
                 allele_id = self.allele_name_lookup[converted_sbj_allele_symbol]['uniquename']
                 driver_info['allele_feature_id'] = allele_id
                 # self.log.debug(f'Found ID {allele_id} for subject allele "{converted_sbj_allele_symbol}"')
             except KeyError:
-                self.log.error(f'Line={line_number}: could not find allele \"{converted_sbj_allele_symbol}\" in chado.')
+                self.log.error(f'Line={line_number}: could not find allele {driver_info["allele_symbol"]} in chado.')
                 driver_info['problem'] = True
                 allele_not_found_counter += 1
             for allele_symbol in driver_info['additional_alleles']:
                 if allele_symbol == '' or allele_symbol == ' ':
                     continue
+                allele_symbol = allele_symbol.rstrip(',')
                 converted_allele_symbol = sgml_to_plain_text(allele_symbol).strip()
-                converted_allele_symbol = converted_allele_symbol.rstrip(',')
+                # Adjust for old style names of large allele class.
+                if '[dsRNA' in converted_allele_symbol and converted_allele_symbol not in self.allele_name_lookup.keys():
+                    converted_allele_symbol = converted_allele_symbol.replace('[dsRNA', '[RNAi')
                 try:
                     allele_id = self.allele_name_lookup[converted_allele_symbol]['uniquename']
                     driver_info['additional_allele_ids'].append(allele_id)
                     # self.log.debug(f'Found ID {allele_id} for additional allele {converted_allele_symbol}')
                 except KeyError:
-                    self.log.error(f'Line={line_number}: could not find additional allele "{converted_allele_symbol}" in chado.')
+                    self.log.error(f'Line={line_number}: could not find additional allele "{allele_symbol}" in chado.')
                     driver_info['problem'] = True
                     additional_allele_not_found_counter += 1
             try:
@@ -504,9 +510,9 @@ class AGMDiseaseHandler(DataHandler):
             for driver_symbol in driver_info['driver_input']:
                 if driver_symbol == '' or driver_symbol == ' ' or driver_symbol == '+':
                     continue
+                driver_symbol = driver_symbol.rstrip(',')
                 # self.log.debug(f'Look for this driver: {driver_symbol}')
                 converted_driver_symbol = sgml_to_plain_text(driver_symbol).strip()
-                converted_driver_symbol = converted_driver_symbol.rstrip(',')
                 # self.log.debug(f'Have this cleaned name for this driver: {converted_driver_symbol}')
                 driver_rgx = r'(GAL4|lexA|QF)'
                 if not re.search(driver_rgx, converted_driver_symbol):
