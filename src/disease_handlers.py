@@ -444,11 +444,11 @@ class AGMDiseaseHandler(DataHandler):
                 'line_number': line_number,
                 'pub_given': line[PUB_GIVEN].strip(),
                 'allele_symbol': sgml_to_plain_text(line[ALLELE_SYMBOL]).strip(),
-                'additional_alleles': line[ADDITIONAL_ALLELES].split(', '),
+                'additional_alleles': line[ADDITIONAL_ALLELES].split(' '),
                 'qualifier': line[QUAL].strip(),
                 'evi_code': line[EVI_CODE].strip(),
                 'do_term': line[DO_TERM].strip(),
-                'driver_input': line[DRIVER_INPUT].split(', '),
+                'driver_input': line[DRIVER_INPUT].split(' '),
                 'operation': line[OPERATION].rstrip(),
                 # Attributes to be obtained from chado.
                 'pub': None,
@@ -485,6 +485,7 @@ class AGMDiseaseHandler(DataHandler):
                 if allele_symbol == '' or allele_symbol == ' ':
                     continue
                 converted_allele_symbol = sgml_to_plain_text(allele_symbol).strip()
+                converted_allele_symbol = converted_allele_symbol.rstrip(',')
                 try:
                     allele_id = self.allele_name_lookup[converted_allele_symbol]['uniquename']
                     driver_info['additional_allele_ids'].append(allele_id)
@@ -501,10 +502,11 @@ class AGMDiseaseHandler(DataHandler):
                 driver_info['problem'] = True
                 do_term_not_found_counter += 1
             for driver_symbol in driver_info['driver_input']:
-                if driver_symbol == '' or driver_symbol == ' ':
+                if driver_symbol == '' or driver_symbol == ' ' or driver_symbol == '+':
                     continue
                 # self.log.debug(f'Look for this driver: {driver_symbol}')
                 converted_driver_symbol = sgml_to_plain_text(driver_symbol).strip()
+                converted_driver_symbol = converted_driver_symbol.rstrip(',')
                 # self.log.debug(f'Have this cleaned name for this driver: {converted_driver_symbol}')
                 driver_rgx = r'(GAL4|lexA|QF)'
                 if not re.search(driver_rgx, converted_driver_symbol):
