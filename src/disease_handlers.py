@@ -42,7 +42,7 @@ class AGMDiseaseHandler(DataHandler):
         self.doid_term_lookup = {}                   # cvterm.name-keyed cvterm dicts.
         self.model_eco_lookup = defaultdict(list)    # Evidence abbreviation lookup for "model_of" annotations.
         self.uniq_dis_dict = defaultdict(list)       # Disease annotations keyed by a unique attribute concatenation.
-        self.gal4_dict = defaultdict(list)           # Gal4 info to integrate, keyed by unique disease descriptor.
+        self.driver_dict = defaultdict(list)         # Driver info to integrate, keyed by unique disease descriptor.
 
     relevant_fcvtp_types = [
         'evidence_code',
@@ -409,33 +409,33 @@ class AGMDiseaseHandler(DataHandler):
             self.uniq_dis_dict[dis_anno.unique_key].append(dis_anno)
         return
 
-    def integrate_gal4_info(self):
-        """Integrate Gal4 driver info into annotations."""
-        self.log.info('Integrate Gal4 driver info into annotations.')
+    def integrate_driver_info(self):
+        """Integrate driver info into annotations."""
+        self.log.info('Integrate driver info into annotations.')
         PUB_GIVEN = 0
         ALLELE_SYMBOL = 1
         QUAL = 4
         DO_TERM = 5
         EVI_CODE = 6
         ADDITIONAL_ALLELES = 7
-        GAL4_INPUT = 8
+        DRIVER_INPUT = 8
         OPERATION = 12
-        gal4_input = open('/src/output/gal4_driver_info.tsv')
+        DRIVER_INPUT = open('/src/output/driver_info.tsv')
         pub_not_found_counter = 0
         allele_not_found_counter = 0
         additional_allele_not_found_counter = 0
         do_term_not_found_counter = 0
-        gal4_not_found_counter = 0
+        driver_not_found_counter = 0
         dis_anno_not_found = 0
         line_number = 0
         matched_dis_anno_counter = 0
         unmatched_dis_anno_counter = 0
-        for i in gal4_input:
+        for i in DRIVER_INPUT:
             line_number += 1
             if not i.startswith('FBrf'):
                 continue
             line = i.split('\t')
-            gal4_info = {
+            driver_info = {
                 # Attributes from input file.
                 'line_number': line_number,
                 'pub_given': line[PUB_GIVEN],
@@ -444,13 +444,13 @@ class AGMDiseaseHandler(DataHandler):
                 'qualifier': line[QUAL],
                 'evi_code': line[EVI_CODE],
                 'do_term': line[DO_TERM],
-                'gal4_input': line[GAL4_INPUT].split(','),
+                'DRIVER_INPUT': line[DRIVER_INPUT].split(','),
                 'operation': line[OPERATION].rstrip(),
                 # Attributes to be obtained from chado.
                 'pub': None,
                 'allele_feature_id': None,
                 'additional_allele_ids': [],
-                'gal4_ids': [],
+                'driver_ids': [],
                 'doid_term_curie': None,
                 # Attributes synthesized from the above.
                 'modeled_by': [],
@@ -463,85 +463,86 @@ class AGMDiseaseHandler(DataHandler):
             }
             # Fill in info from chado.
             try:
-                gal4_info['pub'] = self.fbrf_bibliography[gal4_info['pub_given']]
+                driver_info['pub'] = self.fbrf_bibliography[driver_info['pub_given']]
             except KeyError:
-                self.log.error(f'Line={line_number}: could not find pub \"{gal4_info["pub_given"]}\" in chado.')
-                gal4_info['problem'] = True
+                self.log.error(f'Line={line_number}: could not find pub \"{driver_info["pub_given"]}\" in chado.')
+                driver_info['problem'] = True
                 pub_not_found_counter += 1
             try:
-                gal4_info['allele_feature_id'] = self.allele_name_lookup[gal4_info['allele_symbol']]['uniquename']
+                driver_info['allele_feature_id'] = self.allele_name_lookup[driver_info['allele_symbol']]['uniquename']
             except KeyError:
-                self.log.error(f'Line={line_number}: could not find allele \"{gal4_info["allele_symbol"]}\" in chado.')
-                gal4_info['problem'] = True
+                self.log.error(f'Line={line_number}: could not find allele \"{driver_info["allele_symbol"]}\" in chado.')
+                driver_info['problem'] = True
                 allele_not_found_counter += 1
-            for allele_symbol in gal4_info['additional_alleles']:
+            for allele_symbol in driver_info['additional_alleles']:
                 if allele_symbol == '':
                     continue
                 converted_allele_symbol = sgml_to_plain_text(allele_symbol).strip()
                 try:
-                    gal4_info['additional_allele_ids'].append(self.allele_name_lookup[converted_allele_symbol]['uniquename'])
+                    driver_info['additional_allele_ids'].append(self.allele_name_lookup[converted_allele_symbol]['uniquename'])
                 except KeyError:
                     self.log.error(f'Line={line_number}: could not find additional allele "{allele_symbol}" in chado.')
-                    gal4_info['problem'] = True
+                    driver_info['problem'] = True
                     additional_allele_not_found_counter += 1
             try:
-                gal4_info['doid_term_curie'] = self.doid_term_lookup[gal4_info['do_term']]['curie']
+                driver_info['doid_term_curie'] = self.doid_term_lookup[driver_info['do_term']]['curie']
             except KeyError:
-                self.log.error(f'Line={line_number}: could not find DO term \"{gal4_info["do_term"]}\" in chado.')
-                gal4_info['problem'] = True
+                self.log.error(f'Line={line_number}: could not find DO term \"{driver_info["do_term"]}\" in chado.')
+                driver_info['problem'] = True
                 do_term_not_found_counter += 1
-            for gal4_symbol in gal4_info['gal4_input']:
-                converted_gal4_symbol = sgml_to_plain_text(allele_symbol).strip().replace('\\', '\\\\')
-                gal4_rgx = r'(GAL4|lexA|QF)'
-                if not re.search(gal4_rgx, converted_gal4_symbol):
-                    self.log.error(f'Line={line_number}: symbol given does not seem to represent a driver: "{gal4_symbol}".')
-                    gal4_info['problem'] = True
-                    gal4_not_found_counter += 1
+            for driver_symbol in driver_info['DRIVER_INPUT']:
+                converted_driver_symbol = sgml_to_plain_text(allele_symbol).strip().replace('\\', '\\\\')
+                driver_rgx = r'(GAL4|lexA|QF)'
+                if not re.search(driver_rgx, converted_driver_symbol):
+                    self.log.error(f'Line={line_number}: symbol given does not seem to represent a driver: "{driver_symbol}".')
+                    driver_info['problem'] = True
+                    driver_not_found_counter += 1
                     continue
                 try:
-                    gal4_info['gal4_ids'].append(self.allele_name_lookup[converted_gal4_symbol]['uniquename'])
+                    driver_info['driver_ids'].append(self.allele_name_lookup[converted_driver_symbol]['uniquename'])
+                    self.log.debug(f'BILLYBOB: Line={line_number}: actually found driver "{driver_symbol}" in chado.')
                 except KeyError:
-                    self.log.error(f'Line={line_number}: could not find driver "{gal4_symbol}" in chado.')
-                    gal4_info['problem'] = True
-                    gal4_not_found_counter += 1
+                    self.log.error(f'Line={line_number}: could not find driver "{driver_symbol}" in chado.')
+                    driver_info['problem'] = True
+                    driver_not_found_counter += 1
             # Map info to annotation.
-            if gal4_info['qualifier'] in self.disease_genetic_modifier_terms.keys():
-                gal4_info['modifier_id'] = gal4_info['allele_feature_id']
-                gal4_info['modifier_role'] = self.disease_genetic_modifier_terms[gal4_info['qualifier']]
-                gal4_info['modeled_by'].extend(gal4_info['additional_allele_ids'])
-                gal4_info['eco_abbr'] = 'CEA'
+            if driver_info['qualifier'] in self.disease_genetic_modifier_terms.keys():
+                driver_info['modifier_id'] = driver_info['allele_feature_id']
+                driver_info['modifier_role'] = self.disease_genetic_modifier_terms[driver_info['qualifier']]
+                driver_info['modeled_by'].extend(driver_info['additional_allele_ids'])
+                driver_info['eco_abbr'] = 'CEA'
             else:
-                if gal4_info['qualifier'] == 'DOES NOT model':
-                    gal4_info['is_not'] = True
-                gal4_info['modeled_by'].append(gal4_info['allele_feature_id'])
-                gal4_info['modeled_by'].extend(gal4_info['additional_allele_ids'])
-                gal4_info['eco_abbr'] = gal4_info['evi_code'][0:3]
+                if driver_info['qualifier'] == 'DOES NOT model':
+                    driver_info['is_not'] = True
+                driver_info['modeled_by'].append(driver_info['allele_feature_id'])
+                driver_info['modeled_by'].extend(driver_info['additional_allele_ids'])
+                driver_info['eco_abbr'] = driver_info['evi_code'][0:3]
             # Build an annotation descriptor.
-            if gal4_info['problem'] is True:
+            if driver_info['problem'] is True:
                 continue
-            gal4_info['unique_key'] = f'{gal4_info["pub_given"]}_'
-            if gal4_info['is_not']:
-                gal4_info['unique_key'] += 'NOT_'
-            gal4_info['unique_key'] += f'model={"|".join(sorted(gal4_info["modeled_by"]))}_'
-            gal4_info['unique_key'] += f'disease_term={gal4_info["doid_term_curie"]}_'
-            gal4_info['unique_key'] += f'eco_code={gal4_info["eco_abbr"]}'
-            if gal4_info['modifier_id']:
-                gal4_info['unique_key'] += f'_{gal4_info["modifier_role"]}={gal4_info["modifier_id"]}'
-            self.gal4_dict[gal4_info['unique_key']].append(gal4_info)
+            driver_info['unique_key'] = f'{driver_info["pub_given"]}_'
+            if driver_info['is_not']:
+                driver_info['unique_key'] += 'NOT_'
+            driver_info['unique_key'] += f'model={"|".join(sorted(driver_info["modeled_by"]))}_'
+            driver_info['unique_key'] += f'disease_term={driver_info["doid_term_curie"]}_'
+            driver_info['unique_key'] += f'eco_code={driver_info["eco_abbr"]}'
+            if driver_info['modifier_id']:
+                driver_info['unique_key'] += f'_{driver_info["modifier_role"]}={driver_info["modifier_id"]}'
+            self.driver_dict[driver_info['unique_key']].append(driver_info)
             # Find the matching disease annotation.
-            if gal4_info['unique_key'] in self.uniq_dis_dict.keys():
+            if driver_info['unique_key'] in self.uniq_dis_dict.keys():
                 matched_dis_anno_counter += 1
             else:
-                self.log.info(f'Could not find dis anno for line={line_number}; unique_key={gal4_info["unique_key"]}')
+                self.log.info(f'Could not find dis anno for line={line_number}; unique_key={driver_info["unique_key"]}')
                 unmatched_dis_anno_counter += 1
         self.log.info(f'Could not find {pub_not_found_counter} pubs.')
         self.log.info(f'Could not find {allele_not_found_counter} alleles.')
         self.log.info(f'Could not find {additional_allele_not_found_counter} additional alleles.')
         self.log.info(f'Could not find {do_term_not_found_counter} DO terms.')
-        self.log.info(f'Could not find {gal4_not_found_counter} Gal4s.')
+        self.log.info(f'Could not find {driver_not_found_counter} drivers.')
         self.log.info(f'Could not find {dis_anno_not_found} disease annotations.')
-        self.log.info(f'Found dis anno for {matched_dis_anno_counter} Gal4 lines.')
-        self.log.info(f'Found NO dis anno for {unmatched_dis_anno_counter} Gal4 lines.')
+        self.log.info(f'Found dis anno for {matched_dis_anno_counter} driver info lines.')
+        self.log.info(f'Found NO dis anno for {unmatched_dis_anno_counter} driver info lines.')
         return
 
     # BOB: to do.
@@ -569,7 +570,7 @@ class AGMDiseaseHandler(DataHandler):
         self.build_model_eco_lookup()
         self.lookup_eco_codes_for_modifier_annotations()
         self.calculate_annotation_unique_key()
-        self.integrate_gal4_info()
+        self.integrate_driver_info()
         self.integrate_aberration_info()
         self.get_genotype(session)
         return
