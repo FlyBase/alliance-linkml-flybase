@@ -493,9 +493,9 @@ class AGMDiseaseHandler(DataHandler):
             for gal4_symbol in gal4_info['gal4_input']:
                 converted_gal4_symbol = sgml_to_plain_text(allele_symbol).strip().replace('\\', '\\\\')
                 try:
-                    gal4_info['additional_allele_ids'].append(self.allele_name_lookup[converted_gal4_symbol]['uniquename'])
+                    gal4_info['gal4_ids'].append(self.allele_name_lookup[converted_gal4_symbol]['uniquename'])
                 except KeyError:
-                    self.log.error(f'Line={line_number}: could not find Gal4 "{gal4_symbol}" in chado.')
+                    self.log.error(f'Line={line_number}: could not find driver "{gal4_symbol}" in chado.')
                     gal4_info['problem'] = True
                     gal4_not_found_counter += 1
             # Map info to annotation.
@@ -510,7 +510,7 @@ class AGMDiseaseHandler(DataHandler):
                 gal4_info['modeled_by'].append(gal4_info['allele_feature_id'])
                 gal4_info['modeled_by'].extend(gal4_info['additional_allele_ids'])
                 gal4_info['eco_abbr'] = gal4_info['evi_code'][0:3]
-            # Build an annotation descriptor and try to find the corresponding annotation.
+            # Build an annotation descriptor.
             if gal4_info['problem'] is True:
                 continue
             gal4_info['unique_key'] = f'{gal4_info["pub_given"]}_'
@@ -518,10 +518,11 @@ class AGMDiseaseHandler(DataHandler):
                 gal4_info['unique_key'] += 'NOT_'
             gal4_info['unique_key'] += f'model={"|".join(sorted(gal4_info["modeled_by"]))}_'
             gal4_info['unique_key'] += f'disease_term={gal4_info["doid_term_curie"]}_'
-            gal4_info['unique_key'] += f'disease_term={gal4_info["eco_abbr"]}'
+            gal4_info['unique_key'] += f'eco_code={gal4_info["eco_abbr"]}'
             if gal4_info['modifier_id']:
                 gal4_info['unique_key'] += f'_{gal4_info["modifier_role"]}={gal4_info["modifier_id"]}'
             self.gal4_dict[gal4_info['unique_key']].append(gal4_info)
+            # Find the matching disease annotation.
             if gal4_info['unique_key'] in self.uniq_dis_dict.keys():
                 matched_dis_anno_counter += 1
             else:
