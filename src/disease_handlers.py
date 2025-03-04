@@ -432,11 +432,11 @@ class AGMDiseaseHandler(DataHandler):
         unmatched_dis_anno_counter = 0
         prob_counter = 0
         for i in file_input:
+            self.log.debug(f'Process this line: {i.strip()}')
             line_number += 1
             if not i.startswith('FBrf'):
                 continue
             line = i.split('\t')
-            self.log.debug(f'Process this line: {line.strip()}')
             driver_info = {
                 # Attributes from input file.
                 'line_number': line_number,
