@@ -487,7 +487,7 @@ class AGMDiseaseHandler(DataHandler):
             for allele_symbol in driver_info['additional_alleles']:
                 if allele_symbol == '' or allele_symbol == ' ':
                     continue
-                allele_symbol = allele_symbol.rstrip(',').rstrip('.')
+                allele_symbol = allele_symbol.strip(',').strip('.')
                 converted_allele_symbol = sgml_to_plain_text(allele_symbol).strip()
                 # Adjust for old style names of large allele class.
                 if '[dsRNA' in converted_allele_symbol and converted_allele_symbol not in self.allele_name_lookup.keys():
@@ -510,7 +510,7 @@ class AGMDiseaseHandler(DataHandler):
             for driver_symbol in driver_info['driver_input']:
                 if driver_symbol == '' or driver_symbol == ' ' or driver_symbol == '+':
                     continue
-                driver_symbol = driver_symbol.rstrip(',').rstrip('.')
+                driver_symbol = driver_symbol.strip(',').strip('.')
                 # self.log.debug(f'Look for this driver: {driver_symbol}')
                 converted_driver_symbol = sgml_to_plain_text(driver_symbol).strip()
                 # self.log.debug(f'Have this cleaned name for this driver: {converted_driver_symbol}')
