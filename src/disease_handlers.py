@@ -428,9 +428,10 @@ class AGMDiseaseHandler(DataHandler):
         gal4_not_found_counter = 0
         dis_anno_not_found = 0
         line_number = 1
-        for line in gal4_input:
-            if not line.startswith('FBrf'):
+        for i in gal4_input:
+            if not i.startswith('FBrf'):
                 continue
+            line = i.split('\t')
             gal4_info = {
                 # Attributes from input file.
                 'line_number': line_number,
@@ -515,7 +516,7 @@ class AGMDiseaseHandler(DataHandler):
             # self.log.debug(f'Annotation db_primary_id={dis_anno.db_primary_id} has this unique key: {dis_anno.unique_key}')
             # self.uniq_dis_dict[dis_anno.unique_key].append(dis_anno)
             # if unique_key not in
-            # line_number += 1
+            line_number += 1
         self.log.info(f'Could not find {pub_not_found_counter} pubs.')
         self.log.info(f'Could not find {allele_not_found_counter} alleles.')
         self.log.info(f'Could not find {additional_allele_not_found_counter} additional alleles.')
