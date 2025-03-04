@@ -492,6 +492,12 @@ class AGMDiseaseHandler(DataHandler):
                 do_term_not_found_counter += 1
             for gal4_symbol in gal4_info['gal4_input']:
                 converted_gal4_symbol = sgml_to_plain_text(allele_symbol).strip().replace('\\', '\\\\')
+                gal4_rgx = r'(GAL4|lexA|QF)'
+                if not re.search(gal4_rgx, converted_gal4_symbol):
+                    self.log.error(f'Line={line_number}: symbol given does not seem to represent a driver: "{gal4_symbol}".')
+                    gal4_info['problem'] = True
+                    gal4_not_found_counter += 1
+                    continue
                 try:
                     gal4_info['gal4_ids'].append(self.allele_name_lookup[converted_gal4_symbol]['uniquename'])
                 except KeyError:
