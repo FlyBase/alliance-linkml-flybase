@@ -432,11 +432,11 @@ class AGMDiseaseHandler(DataHandler):
         unmatched_dis_anno_counter = 0
         prob_counter = 0
         for i in file_input:
-            self.log.debug(f'Process this line: {line.strip()}')
             line_number += 1
             if not i.startswith('FBrf'):
                 continue
             line = i.split('\t')
+            self.log.debug(f'Process this line: {line.strip()}')
             driver_info = {
                 # Attributes from input file.
                 'line_number': line_number,
@@ -466,7 +466,6 @@ class AGMDiseaseHandler(DataHandler):
             # Fill in info from chado.
             try:
                 driver_info['pub'] = self.fbrf_bibliography[driver_info['pub_given']]
-                self.log.debug(f'Found ID {allele_id} for subject allele "{converted_sbj_allele_symbol}"')
             except KeyError:
                 self.log.error(f'Line={line_number}: could not find pub \"{driver_info["pub_given"]}\" in chado.')
                 driver_info['problem'] = True
