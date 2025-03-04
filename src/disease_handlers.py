@@ -430,6 +430,7 @@ class AGMDiseaseHandler(DataHandler):
         line_number = 0
         matched_dis_anno_counter = 0
         unmatched_dis_anno_counter = 0
+        prob_counter = 0
         for i in file_input:
             line_number += 1
             if not i.startswith('FBrf'):
@@ -462,14 +463,12 @@ class AGMDiseaseHandler(DataHandler):
                 'problem': False,
             }
             # Fill in info from chado.
-
             try:
                 driver_info['pub'] = self.fbrf_bibliography[driver_info['pub_given']]
             except KeyError:
                 self.log.error(f'Line={line_number}: could not find pub \"{driver_info["pub_given"]}\" in chado.')
                 driver_info['problem'] = True
                 pub_not_found_counter += 1
-
             converted_sbj_allele_symbol = sgml_to_plain_text(driver_info['allele_symbol']).strip()
             try:
                 allele_id = self.allele_name_lookup[converted_sbj_allele_symbol]['uniquename']
@@ -479,7 +478,6 @@ class AGMDiseaseHandler(DataHandler):
                 self.log.error(f'Line={line_number}: could not find allele \"{converted_sbj_allele_symbol}\" in chado.')
                 driver_info['problem'] = True
                 allele_not_found_counter += 1
-
             for allele_symbol in driver_info['additional_alleles']:
                 if allele_symbol == '':
                     continue
@@ -492,7 +490,6 @@ class AGMDiseaseHandler(DataHandler):
                     self.log.error(f'Line={line_number}: could not find additional allele "{converted_allele_symbol}" in chado.')
                     driver_info['problem'] = True
                     additional_allele_not_found_counter += 1
-
             try:
                 driver_info['doid_term_curie'] = self.doid_term_lookup[driver_info['do_term']]['curie']
                 self.log.debug(f'Found curie "{driver_info["doid_term_curie"]}" for DO term "{driver_info["do_term"]}"')
@@ -500,7 +497,6 @@ class AGMDiseaseHandler(DataHandler):
                 self.log.error(f'Line={line_number}: could not find DO term \"{driver_info["do_term"]}\" in chado.')
                 driver_info['problem'] = True
                 do_term_not_found_counter += 1
-
             for driver_symbol in driver_info['driver_input']:
                 self.log.debug(f'Look for this driver: {driver_symbol}')
                 converted_driver_symbol = sgml_to_plain_text(driver_symbol).strip()
@@ -513,8 +509,6 @@ class AGMDiseaseHandler(DataHandler):
                     continue
                 try:
                     allele_id = self.allele_name_lookup[converted_driver_symbol]['uniquename']
-
-
                     driver_info['driver_ids'].append(allele_id)
                     self.log.debug(f'BILLYBOB: Line={line_number}: actually found driver "{driver_symbol}" in chado.')
                 except KeyError:
@@ -535,6 +529,7 @@ class AGMDiseaseHandler(DataHandler):
                 driver_info['eco_abbr'] = driver_info['evi_code'][0:3]
             # Build an annotation descriptor.
             if driver_info['problem'] is True:
+                prob_counter += 1
                 continue
             driver_info['unique_key'] = f'{driver_info["pub_given"]}_'
             if driver_info['is_not']:
@@ -558,7 +553,8 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Could not find {driver_not_found_counter} drivers.')
         self.log.info(f'Could not find {dis_anno_not_found} disease annotations.')
         self.log.info(f'Found dis anno for {matched_dis_anno_counter} driver info lines.')
-        self.log.info(f'Found NO dis anno for {unmatched_dis_anno_counter} driver info lines.')
+        self.log.info(f'Could not find dis anno for {unmatched_dis_anno_counter} driver info lines.')
+        self.log.info(f'Had problems looking up info for {prob_counter} driver info lines.')
         return
 
     # BOB: to do.
