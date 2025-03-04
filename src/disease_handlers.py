@@ -442,13 +442,13 @@ class AGMDiseaseHandler(DataHandler):
             driver_info = {
                 # Attributes from input file.
                 'line_number': line_number,
-                'pub_given': line[PUB_GIVEN],
-                'allele_symbol': sgml_to_plain_text(line[ALLELE_SYMBOL]),
-                'additional_alleles': line[ADDITIONAL_ALLELES].split(','),
-                'qualifier': line[QUAL],
-                'evi_code': line[EVI_CODE],
-                'do_term': line[DO_TERM],
-                'driver_input': line[DRIVER_INPUT].split(','),
+                'pub_given': line[PUB_GIVEN].strip(),
+                'allele_symbol': sgml_to_plain_text(line[ALLELE_SYMBOL]).strip(),
+                'additional_alleles': line[ADDITIONAL_ALLELES].split(', '),
+                'qualifier': line[QUAL].strip(),
+                'evi_code': line[EVI_CODE].strip(),
+                'do_term': line[DO_TERM].strip(),
+                'driver_input': line[DRIVER_INPUT].split(', '),
                 'operation': line[OPERATION].rstrip(),
                 # Attributes to be obtained from chado.
                 'pub': None,
@@ -482,7 +482,7 @@ class AGMDiseaseHandler(DataHandler):
                 driver_info['problem'] = True
                 allele_not_found_counter += 1
             for allele_symbol in driver_info['additional_alleles']:
-                if allele_symbol == '':
+                if allele_symbol == '' or allele_symbol == ' ':
                     continue
                 converted_allele_symbol = sgml_to_plain_text(allele_symbol).strip()
                 try:
@@ -501,6 +501,8 @@ class AGMDiseaseHandler(DataHandler):
                 driver_info['problem'] = True
                 do_term_not_found_counter += 1
             for driver_symbol in driver_info['driver_input']:
+                if driver_symbol == '' or driver_symbol == ' ':
+                    continue
                 # self.log.debug(f'Look for this driver: {driver_symbol}')
                 converted_driver_symbol = sgml_to_plain_text(driver_symbol).strip()
                 # self.log.debug(f'Have this cleaned name for this driver: {converted_driver_symbol}')
