@@ -563,9 +563,15 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Found dis anno for {matched_dis_anno_counter}/{input_counter} driver info lines.')
         self.log.info(f'Could not find dis anno for {unmatched_dis_anno_counter}/{input_counter} driver info lines.')
         self.log.info(f'Had problems looking up info for {prob_counter}/{input_counter} driver info lines.')
+        counter = 0
         for k, v in self.driver_dict.items():
             if len(v) > 1:
-                self.log.debug(f'BILLY: found {len(v)} rows for this annotation: {k}')
+                self.log.debug(f'BILLY: found {len(v)} driver info rows for this annotation: {k}')
+            elif len(v) == 0:
+                self.log.error(f'BILLY: found ZERO driver info rows for this annotation (?): {k}')
+            else:
+                counter += 1
+        self.log.info(f'{counter} disease annotations have a single driver adjustment eacn.')
         return
 
     # BOB: to do.
