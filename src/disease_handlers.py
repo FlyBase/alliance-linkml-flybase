@@ -503,7 +503,7 @@ class AGMDiseaseHandler(DataHandler):
 
             for driver_symbol in driver_info['driver_input']:
                 self.log.debug(f'Look for this driver: {driver_symbol}')
-                converted_driver_symbol = sgml_to_plain_text(allele_symbol).strip()
+                converted_driver_symbol = sgml_to_plain_text(driver_symbol).strip()
                 self.log.debug(f'Have this cleaned name for this driver: {converted_driver_symbol}')
                 driver_rgx = r'(GAL4|lexA|QF)'
                 if not re.search(driver_rgx, converted_driver_symbol):
