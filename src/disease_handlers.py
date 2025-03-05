@@ -452,6 +452,8 @@ class AGMDiseaseHandler(DataHandler):
                 uniquename = fb_ids[0]
             elif len(fb_ids) > 1:
                 self.log.error(f'Found MANY possible FB IDs for "{feature_symbol}": {fb_ids}')
+        if uniquename is None:
+            self.log.debug(f'BILLYBOB: No result for symbol={feature_symbol}, converted={converted_feature_symbol}')
         return uniquename
 
     def integrate_driver_info(self, session):
