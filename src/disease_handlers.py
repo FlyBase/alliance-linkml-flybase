@@ -22,7 +22,7 @@ from sqlalchemy.orm import aliased
 from harvdev_utils.char_conversions import sgml_to_plain_text
 from harvdev_utils.reporting import (
     Cv, Cvterm, Db, Dbxref, Feature, FeatureCvterm, FeatureCvtermprop,
-    FeatureDbxref, FeatureRelationship, Pub
+    FeatureDbxref, FeatureRelationship, FeatureSynonym, Pub, Synonym
 )
 import agr_datatypes
 import fb_datatypes
@@ -75,7 +75,7 @@ class AGMDiseaseHandler(DataHandler):
         """Build name-keyed dict of alleles."""
         self.log.info('Build name-keyed dict of alleles.')
         for feature in self.feature_lookup.values():
-            if feature['type'] == 'allele' and feature['is_obsolete'] is False:
+            if feature['type'] in ['allele', 'chromosome_structure_variation'] and feature['is_obsolete'] is False:
                 self.allele_name_lookup[feature['name']] = feature
         self.log.info(f'Have {len(self.allele_name_lookup)} current alleles in the allele-by-name lookup.')
         return
@@ -409,7 +409,52 @@ class AGMDiseaseHandler(DataHandler):
             self.uniq_dis_dict[dis_anno.unique_key].append(dis_anno)
         return
 
-    def integrate_driver_info(self):
+    def find_feature_uniquename_from_name(self, session, feature_symbol, fb_id_rgx):
+        """Find the uniquename for a feature from a symbol or synonym.
+
+        Args:
+            feature_symbol (str): The feature symbol (plain text or SGML), current or an alias.
+            fb_id_rgx (str): The FB ID regex: e.g., r'FBal[0-9]{7}$'.
+
+        Returns:
+            The feature uniquename, or, None if there is no answer or an ambiguous answer.
+
+        Raises:
+            Raises an exception if the handler (self) does not have a name-based feature lookup dict.
+
+        """
+        if not self.allele_name_lookup:
+            e = 'Must create handler.allele_name_lookup with handler.build_allele_name_lookup() '
+            e += 'before calling the handler.find_feature_uniquename() method.'
+            self.log.critical(e)
+            raise Exception(e)
+        converted_feature_symbol = sgml_to_plain_text(feature_symbol).strip().strip(',').strip('.')
+        uniquename = None
+        try:
+            uniquename = self.allele_name_lookup[converted_feature_symbol]['uniquename']
+        except KeyError:
+            filters = (
+                Feature.is_obsolete.is_(False),
+                Feature.uniquename.op('~')(fb_id_rgx),
+                Synonym.name == feature_symbol,
+                FeatureSynonym.is_current.is_(False),
+            )
+            results = session.query(Feature).\
+                select_from(Feature).\
+                join(FeatureSynonym, (FeatureSynonym.feature_id == Feature.feature_id)).\
+                join(Synonym, (Synonym.synonym_id == FeatureSynonym.synonym_id)).\
+                filter(*filters).\
+                distinct()
+            fb_ids = []
+            for result in results:
+                fb_ids.append(result.uniquename)
+            if len(fb_ids) == 1:
+                uniquename = fb_ids[0]
+            elif len(fb_ids) > 1:
+                self.log.error(f'Found MANY possible FB IDs for this feature symbol: {fb_ids}')
+        return uniquename
+
+    def integrate_driver_info(self, session):
         """Integrate driver info into annotations."""
         self.log.info('Integrate driver info into annotations.')
         PUB_GIVEN = 0
@@ -465,25 +510,23 @@ class AGMDiseaseHandler(DataHandler):
                 'unique_key': None,
                 'problem': False,
             }
-            # Fill in info from chado.
+
             try:
                 driver_info['pub'] = self.fbrf_bibliography[driver_info['pub_given']]
             except KeyError:
-                self.log.error(f'Line={line_number}: could not find pub \"{driver_info["pub_given"]}\" in chado.')
+                self.log.error(f'Line={line_number}: could not find pub "{driver_info["pub_given"]}" in chado.')
                 driver_info['problem'] = True
                 pub_not_found_counter += 1
-            converted_sbj_allele_symbol = sgml_to_plain_text(driver_info['allele_symbol']).strip()
-            # Adjust for old style names of large allele class.
-            if '[dsRNA' in converted_sbj_allele_symbol and converted_sbj_allele_symbol not in self.allele_name_lookup.keys():
-                converted_sbj_allele_symbol = converted_sbj_allele_symbol.replace('[dsRNA', '[RNAi')
-            try:
-                allele_id = self.allele_name_lookup[converted_sbj_allele_symbol]['uniquename']
+
+            allele_id = self.find_feature_uniquename_from_name(self, session, driver_info['allele_symbol'], self.regex['allele'])
+            if allele_id:
                 driver_info['allele_feature_id'] = allele_id
                 # self.log.debug(f'Found ID {allele_id} for subject allele "{converted_sbj_allele_symbol}"')
-            except KeyError:
+            else:
                 self.log.error(f'Line={line_number}: could not find allele {driver_info["allele_symbol"]} in chado.')
                 driver_info['problem'] = True
                 allele_not_found_counter += 1
+
             for allele_symbol in driver_info['additional_alleles']:
                 if allele_symbol == '' or allele_symbol == ' ':
                     continue
@@ -605,7 +648,7 @@ class AGMDiseaseHandler(DataHandler):
         self.build_model_eco_lookup()
         self.lookup_eco_codes_for_modifier_annotations()
         self.calculate_annotation_unique_key()
-        self.integrate_driver_info()
+        self.integrate_driver_info(session)
         self.integrate_aberration_info()
         self.get_genotype(session)
         return
