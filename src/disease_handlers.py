@@ -21,7 +21,7 @@ from logging import Logger
 from sqlalchemy.orm import aliased
 from harvdev_utils.char_conversions import sgml_to_plain_text
 from harvdev_utils.reporting import (
-    Cv, Cvterm, Db, Dbxref, Feature, FeatureCvterm, FeatureCvtermprop,
+    Cv, Cvterm, Cvtermsynonym, Db, Dbxref, Feature, FeatureCvterm, FeatureCvtermprop,
     FeatureDbxref, FeatureRelationship, FeatureSynonym, Pub, Synonym
 )
 import agr_datatypes
@@ -409,6 +409,42 @@ class AGMDiseaseHandler(DataHandler):
             self.uniq_dis_dict[dis_anno.unique_key].append(dis_anno)
         return
 
+    def find_cvterm_curie_from_name(self, session, cvterm_name):
+        """Find the CV term curie from a CV term name or alias; return None if nothing found."""
+        cvterm_curie = None
+        if not self.doid_term_lookup:
+            e = 'Must create handler.doid_term_lookup with handler.build_doid_term_lookup() '
+            e += 'before calling the handler.find_cvterm_curie_from_name() method.'
+            self.log.critical(e)
+            raise Exception(e)
+        try:
+            cvterm_curie = self.doid_term_lookup[cvterm_name]['curie']
+        except KeyError:
+            filters = (
+                Cvterm.is_obsolete == 0,
+                Cv.name == 'disease_ontology',
+                Db.name == 'DOID',
+                Cvtermsynonym.name == cvterm_name,
+            )
+            results = session.query(Dbxref).\
+                select_from(Cvterm).\
+                join(Cv, (Cv.cv_id == Cvterm.cv_id)).\
+                join(Dbxref, (Dbxref.dbxref_id == Cvterm.dbxref_id)).\
+                join(Db, (Db.db_id == Dbxref.db_id)).\
+                join(Cvtermsynonym, (Cvtermsynonym.cvterm_id == Cvterm.cvterm_id)).\
+                filter(*filters).\
+                distinct()
+            curies = []
+            for result in results:
+                curies.append(f'DOID:{result.accession}')
+            if len(curies) == 1:
+                cvterm_curie = curies[0]
+            elif len(curies) > 1:
+                self.log.error(f'Found MANY possible curies for "{cvterm_name}": {curies}')
+        if cvterm_curie is None:
+            self.log.debug(f'No result for cvterm={cvterm_name}')
+        return cvterm_curie
+
     def find_feature_uniquename_from_name(self, session, feature_symbol, fb_id_rgx):
         """Find the uniquename for a feature from a symbol or synonym.
 
@@ -453,7 +489,7 @@ class AGMDiseaseHandler(DataHandler):
             elif len(fb_ids) > 1:
                 self.log.error(f'Found MANY possible FB IDs for "{feature_symbol}": {fb_ids}')
         if uniquename is None:
-            self.log.debug(f'BILLYBOB: No result for symbol={feature_symbol}, converted={converted_feature_symbol}')
+            self.log.debug(f'No result for symbol={feature_symbol}, converted={converted_feature_symbol}')
         return uniquename
 
     def integrate_driver_info(self, session):
@@ -520,11 +556,12 @@ class AGMDiseaseHandler(DataHandler):
                 driver_info['problem'] = True
                 pub_not_found_counter += 1
 
-            try:
-                driver_info['doid_term_curie'] = self.doid_term_lookup[driver_info['do_term']]['curie']
-                # self.log.debug(f'Line={line_number}: found "{driver_info["doid_term_curie"]}" for "{driver_info["do_term"]}" in chado.')
-            except KeyError:
-                self.log.error(f'Line={line_number}: could not find DO term \"{driver_info["do_term"]}\" in chado.')
+            cvterm_curie = self.find_cvterm_curie_from_name(session, driver_info['do_term'])
+            if cvterm_curie:
+                driver_info['doid_term_curie'] = cvterm_curie
+                # self.log.debug(f'Line={line_number}: found "{cvterm_curie}" for "{driver_info["do_term"]}" in chado.')
+            else:
+                self.log.error(f'Line={line_number}: could not find DO term for "{driver_info["do_term"]}" in chado.')
                 driver_info['problem'] = True
                 do_term_not_found_counter += 1
 
@@ -590,7 +627,7 @@ class AGMDiseaseHandler(DataHandler):
             if driver_info['modifier_id']:
                 driver_info['unique_key'] += f'_{driver_info["modifier_role"]}={driver_info["modifier_id"]}'
             self.driver_dict[driver_info['unique_key']].append(driver_info)
-            self.log.debug(f'BOB: line={line_number}; ukey={driver_info["unique_key"]}')
+            self.log.debug(f'Line={line_number}; ukey={driver_info["unique_key"]}')
 
             # Find the matching disease annotation.
             if driver_info['unique_key'] in self.uniq_dis_dict.keys():
@@ -611,9 +648,9 @@ class AGMDiseaseHandler(DataHandler):
         counter = 0
         for k, v in self.driver_dict.items():
             if len(v) > 1:
-                self.log.debug(f'BILLY: found {len(v)} driver info rows for this annotation: {k}')
+                self.log.debug(f'Found {len(v)} driver info rows for this annotation: {k}')
             elif len(v) == 0:
-                self.log.error(f'BILLY: found ZERO driver info rows for this annotation (?): {k}')
+                self.log.error(f'Found ZERO driver info rows for this annotation (?): {k}')
             else:
                 counter += 1
         self.log.info(f'{counter} disease annotations have a single driver adjustment eacn.')
