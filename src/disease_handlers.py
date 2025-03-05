@@ -512,6 +512,7 @@ class AGMDiseaseHandler(DataHandler):
         dis_anno_not_found = 0
         line_number = 0
         input_counter = 0
+        skip_counter = 0
         matched_dis_anno_counter = 0
         close_matched_dis_anno_counter = 0
         unmatched_dis_anno_counter = 0
@@ -549,7 +550,9 @@ class AGMDiseaseHandler(DataHandler):
                 'unique_key': None,
                 'problem': False,
             }
-
+            if not driver_info['driver_input']:
+                skip_counter += 1
+                continue
             try:
                 driver_info['pub'] = self.fbrf_bibliography[driver_info['pub_given']]
             except KeyError:
@@ -640,6 +643,9 @@ class AGMDiseaseHandler(DataHandler):
                 self.log.warning(f'Could not find dis anno for line={line_number}; unique_key={driver_info["unique_key"]}; dict={driver_info}; line={line}')
                 unmatched_dis_anno_counter += 1
 
+        # Summary
+        self.log.info(f'Skipped {skip_counter}/{input_counter} driver info lines due to lack of Gal4 info.')
+        self.log.info(f'Processed {input_counter - skip_counter}/{input_counter} driver info lines having Gal4 info.')
         self.log.info(f'Could not find {pub_not_found_counter} pubs.')
         self.log.info(f'Could not find {allele_not_found_counter} alleles.')
         self.log.info(f'Could not find {additional_allele_not_found_counter} additional alleles.')
@@ -650,15 +656,18 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Found close dis anno for {close_matched_dis_anno_counter}/{input_counter} driver info lines (differ only in evidence code).')
         self.log.info(f'Could not find dis anno for {unmatched_dis_anno_counter}/{input_counter} driver info lines.')
         self.log.info(f'Had problems looking up info for {prob_counter}/{input_counter} driver info lines.')
-        counter = 0
+        single_counter = 0
+        many_counter = 0
         for k, v in self.driver_dict.items():
             if len(v) > 1:
                 self.log.warning(f'Found {len(v)} driver info rows for this annotation: {k}')
+                many_counter += 1
             elif len(v) == 0:
                 self.log.error(f'Found ZERO driver info rows for this annotation (?): {k}')
             else:
-                counter += 1
-        self.log.info(f'{counter} disease annotations have a single driver adjustment each.')
+                single_counter += 1
+        self.log.info(f'{single_counter} disease annotations have a single driver adjustment each.')
+        self.log.info(f'{many_counter} disease annotations have MANY driver adjustments each.')
         return
 
     # BOB: to do.
