@@ -634,9 +634,10 @@ class AGMDiseaseHandler(DataHandler):
             if driver_info['unique_key'] in self.uniq_dis_dict.keys():
                 matched_dis_anno_counter += 1
             elif driver_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC') in self.uniq_dis_dict.keys():
+                self.driver_dict[driver_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC')].append(driver_info)
                 close_matched_dis_anno_counter += 1
             else:
-                self.log.warning(f'Could not find dis anno for line={line_number}; unique_key={driver_info["unique_key"]}; line={line}')
+                self.log.warning(f'Could not find dis anno for line={line_number}; unique_key={driver_info["unique_key"]}; dict={driver_info}; line={line}')
                 unmatched_dis_anno_counter += 1
 
         self.log.info(f'Could not find {pub_not_found_counter} pubs.')
