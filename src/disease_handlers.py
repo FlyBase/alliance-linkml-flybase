@@ -634,7 +634,7 @@ class AGMDiseaseHandler(DataHandler):
             if driver_info['unique_key'] in self.uniq_dis_dict.keys():
                 matched_dis_anno_counter += 1
             elif driver_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC') in self.uniq_dis_dict.keys():
-                self.driver_dict[driver_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC')].append(driver_info)
+                # self.driver_dict[driver_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC')].append(driver_info)    # BOB
                 close_matched_dis_anno_counter += 1
             else:
                 self.log.warning(f'Could not find dis anno for line={line_number}; unique_key={driver_info["unique_key"]}; dict={driver_info}; line={line}')
@@ -653,7 +653,7 @@ class AGMDiseaseHandler(DataHandler):
         counter = 0
         for k, v in self.driver_dict.items():
             if len(v) > 1:
-                self.log.debug(f'Found {len(v)} driver info rows for this annotation: {k}')
+                self.log.warning(f'Found {len(v)} driver info rows for this annotation: {k}')
             elif len(v) == 0:
                 self.log.error(f'Found ZERO driver info rows for this annotation (?): {k}')
             else:
