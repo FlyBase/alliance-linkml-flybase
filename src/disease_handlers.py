@@ -436,7 +436,7 @@ class AGMDiseaseHandler(DataHandler):
             filters = (
                 Feature.is_obsolete.is_(False),
                 Feature.uniquename.op('~')(fb_id_rgx),
-                Synonym.name == feature_symbol,
+                Synonym.name == converted_feature_symbol,
                 FeatureSynonym.is_current.is_(False),
             )
             results = session.query(Feature).\
