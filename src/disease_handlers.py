@@ -451,7 +451,7 @@ class AGMDiseaseHandler(DataHandler):
             if len(fb_ids) == 1:
                 uniquename = fb_ids[0]
             elif len(fb_ids) > 1:
-                self.log.error(f'Found MANY possible FB IDs for this feature symbol: {fb_ids}')
+                self.log.error(f'Found MANY possible FB IDs for "{feature_symbol}": {fb_ids}')
         return uniquename
 
     def integrate_driver_info(self, session):
@@ -518,59 +518,50 @@ class AGMDiseaseHandler(DataHandler):
                 driver_info['problem'] = True
                 pub_not_found_counter += 1
 
-            allele_id = self.find_feature_uniquename_from_name(session, driver_info['allele_symbol'], self.regex['allele'])
-            if allele_id:
-                driver_info['allele_feature_id'] = allele_id
-                # self.log.debug(f'Found ID {allele_id} for subject allele "{converted_sbj_allele_symbol}"')
-            else:
-                self.log.error(f'Line={line_number}: could not find allele {driver_info["allele_symbol"]} in chado.')
-                driver_info['problem'] = True
-                allele_not_found_counter += 1
-
-            for allele_symbol in driver_info['additional_alleles']:
-                if allele_symbol == '' or allele_symbol == ' ':
-                    continue
-                allele_symbol = allele_symbol.strip(',').strip('.')
-                converted_allele_symbol = sgml_to_plain_text(allele_symbol).strip()
-                # Adjust for old style names of large allele class.
-                if '[dsRNA' in converted_allele_symbol and converted_allele_symbol not in self.allele_name_lookup.keys():
-                    converted_allele_symbol = converted_allele_symbol.replace('[dsRNA', '[RNAi')
-                try:
-                    allele_id = self.allele_name_lookup[converted_allele_symbol]['uniquename']
-                    driver_info['additional_allele_ids'].append(allele_id)
-                    # self.log.debug(f'Found ID {allele_id} for additional allele {converted_allele_symbol}')
-                except KeyError:
-                    self.log.error(f'Line={line_number}: could not find additional allele "{allele_symbol}" in chado.')
-                    driver_info['problem'] = True
-                    additional_allele_not_found_counter += 1
             try:
                 driver_info['doid_term_curie'] = self.doid_term_lookup[driver_info['do_term']]['curie']
-                # self.log.debug(f'Found curie "{driver_info["doid_term_curie"]}" for DO term "{driver_info["do_term"]}"')
+                # self.log.debug(f'Line={line_number}: found "{driver_info["doid_term_curie"]}" for "{driver_info["do_term"]}" in chado.')
             except KeyError:
                 self.log.error(f'Line={line_number}: could not find DO term \"{driver_info["do_term"]}\" in chado.')
                 driver_info['problem'] = True
                 do_term_not_found_counter += 1
+
+            allele_id = self.find_feature_uniquename_from_name(session, driver_info['allele_symbol'], self.regex['allele'])
+            if allele_id:
+                driver_info['allele_feature_id'] = allele_id
+                # self.log.error(f'Line={line_number}: found "{allele_id}" for "{driver_info["allele_symbol"]}" in chado.')
+            else:
+                self.log.error(f'Line={line_number}: could not find allele "{driver_info["allele_symbol"]}" in chado.')
+                driver_info['problem'] = True
+                allele_not_found_counter += 1
+
+            for allele_symbol in driver_info['additional_alleles']:
+                if allele_symbol == '' or allele_symbol == ' ' or allele_symbol == '+':
+                    continue
+                allele_id = self.find_feature_uniquename_from_name(session, allele_symbol, self.regex['allele'])
+                if allele_id:
+                    driver_info['additional_allele_ids'].append(allele_id)
+                    # self.log.error(f'Line={line_number}: found "{allele_id}" for additional allele "{allele_symbol}" in chado.')
+                else:
+                    self.log.error(f'Line={line_number}: could not find additional allele "{allele_symbol}" in chado.')
+                    driver_info['problem'] = True
+                    additional_allele_not_found_counter += 1
+
             for driver_symbol in driver_info['driver_input']:
                 if driver_symbol == '' or driver_symbol == ' ' or driver_symbol == '+':
                     continue
-                driver_symbol = driver_symbol.strip(',').strip('.')
-                # self.log.debug(f'Look for this driver: {driver_symbol}')
-                converted_driver_symbol = sgml_to_plain_text(driver_symbol).strip()
-                # self.log.debug(f'Have this cleaned name for this driver: {converted_driver_symbol}')
-                driver_rgx = r'(GAL4|GAL80|lexA|QF|FLP1|Cas|VP16|RELA)'
-                if not re.search(driver_rgx, converted_driver_symbol):
+                driver_rgx = r'(GAL4|GAL80|lexA|QF|FLP1|Cas|VP16|RELA|G4DBD)'
+                if not re.search(driver_rgx, driver_symbol):
                     self.log.warning(f'Line={line_number}: symbol given does not seem to represent a driver: "{driver_symbol}".')
-                    # driver_info['problem'] = True
-                    # driver_not_found_counter += 1
-                    # continue
-                try:
-                    allele_id = self.allele_name_lookup[converted_driver_symbol]['uniquename']
+                allele_id = self.find_feature_uniquename_from_name(session, driver_symbol, self.regex['allele'])
+                if allele_id:
                     driver_info['driver_ids'].append(allele_id)
-                    # self.log.debug(f'Line={line_number}: found driver "{driver_symbol}" in chado.')
-                except KeyError:
+                    # self.log.error(f'Line={line_number}: found "{allele_id}" for driver "{driver_symbol}" in chado.')
+                else:
                     self.log.error(f'Line={line_number}: could not find driver "{driver_symbol}" in chado.')
                     driver_info['problem'] = True
                     driver_not_found_counter += 1
+
             # Map info to annotation.
             if driver_info['qualifier'] in self.disease_genetic_modifier_terms.keys():
                 driver_info['modifier_id'] = driver_info['allele_feature_id']
@@ -583,6 +574,7 @@ class AGMDiseaseHandler(DataHandler):
                 driver_info['modeled_by'].append(driver_info['allele_feature_id'])
                 driver_info['modeled_by'].extend(driver_info['additional_allele_ids'])
                 driver_info['eco_abbr'] = driver_info['evi_code'][0:3]
+
             # Build an annotation descriptor.
             if driver_info['problem'] is True:
                 prob_counter += 1
@@ -597,12 +589,14 @@ class AGMDiseaseHandler(DataHandler):
                 driver_info['unique_key'] += f'_{driver_info["modifier_role"]}={driver_info["modifier_id"]}'
             self.driver_dict[driver_info['unique_key']].append(driver_info)
             self.log.debug(f'BOB: line={line_number}; ukey={driver_info["unique_key"]}')
+
             # Find the matching disease annotation.
             if driver_info['unique_key'] in self.uniq_dis_dict.keys():
                 matched_dis_anno_counter += 1
             else:
                 self.log.info(f'Could not find dis anno for line={line_number}; unique_key={driver_info["unique_key"]}')
                 unmatched_dis_anno_counter += 1
+
         self.log.info(f'Could not find {pub_not_found_counter} pubs.')
         self.log.info(f'Could not find {allele_not_found_counter} alleles.')
         self.log.info(f'Could not find {additional_allele_not_found_counter} additional alleles.')
