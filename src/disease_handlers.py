@@ -520,7 +520,7 @@ class AGMDiseaseHandler(DataHandler):
         for i in file_input:
             self.log.debug(f'Process this line: {i.strip()}')
             line_number += 1
-            if not i.startswith('FBrf'):
+            if not i.startswith('FBrf0'):
                 continue
             input_counter += 1
             line = i.split('\t')
