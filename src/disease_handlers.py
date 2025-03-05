@@ -633,14 +633,20 @@ class AGMDiseaseHandler(DataHandler):
             self.driver_dict[driver_info['unique_key']].append(driver_info)
             self.log.debug(f'Line={line_number}; ukey={driver_info["unique_key"]}')
 
-            # Find the matching disease annotation.
+        # Find the matching disease annotation once all driver info is collected.
+        for driver_info in self.driver_dict.values():
             if driver_info['unique_key'] in self.uniq_dis_dict.keys():
                 matched_dis_anno_counter += 1
-            elif driver_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC') in self.uniq_dis_dict.keys():
-                # self.driver_dict[driver_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC')].append(driver_info)    # BOB
+                continue
+            alt_unique_key = driver_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC')
+            if alt_unique_key in self.uniq_dis_dict.keys() and alt_unique_key not in driver_info.keys():
+                self.driver_dict[alt_unique_key].append(driver_info)
                 close_matched_dis_anno_counter += 1
+            elif alt_unique_key in self.uniq_dis_dict.keys() and alt_unique_key in driver_info.keys():
+                self.log.warning(f'Could not find dis anno ECO: line={line_number}; unique_key={driver_info["unique_key"]}; dict={driver_info}; line={line}')
+                unmatched_dis_anno_counter += 1
             else:
-                self.log.warning(f'Could not find dis anno for line={line_number}; unique_key={driver_info["unique_key"]}; dict={driver_info}; line={line}')
+                self.log.warning(f'Could not find dis anno: line={line_number}; unique_key={driver_info["unique_key"]}; dict={driver_info}; line={line}')
                 unmatched_dis_anno_counter += 1
 
         # Summary
@@ -656,6 +662,8 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Found close dis anno for {close_matched_dis_anno_counter}/{input_counter} driver info lines (differ only in evidence code).')
         self.log.info(f'Could not find dis anno for {unmatched_dis_anno_counter}/{input_counter} driver info lines.')
         self.log.info(f'Had problems looking up info for {prob_counter}/{input_counter} driver info lines.')
+
+        # Finally check the driver_info dict for annotations with many driver info lines.
         single_counter = 0
         many_counter = 0
         for k, v in self.driver_dict.items():
