@@ -513,6 +513,7 @@ class AGMDiseaseHandler(DataHandler):
         line_number = 0
         input_counter = 0
         matched_dis_anno_counter = 0
+        close_matched_dis_anno_counter = 0
         unmatched_dis_anno_counter = 0
         prob_counter = 0
         for i in file_input:
@@ -606,7 +607,7 @@ class AGMDiseaseHandler(DataHandler):
                 driver_info['modifier_id'] = driver_info['allele_feature_id']
                 driver_info['modifier_role'] = self.disease_genetic_modifier_terms[driver_info['qualifier']]
                 driver_info['modeled_by'].extend(driver_info['additional_allele_ids'])
-                driver_info['eco_abbr'] = 'CEA'
+                driver_info['eco_abbr'] = 'CEA'    # The default.
             else:
                 if driver_info['qualifier'] == 'DOES NOT model':
                     driver_info['is_not'] = True
@@ -632,8 +633,10 @@ class AGMDiseaseHandler(DataHandler):
             # Find the matching disease annotation.
             if driver_info['unique_key'] in self.uniq_dis_dict.keys():
                 matched_dis_anno_counter += 1
+            elif driver_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC') in self.uniq_dis_dict.keys():
+                close_matched_dis_anno_counter += 1
             else:
-                self.log.info(f'Could not find dis anno for line={line_number}; unique_key={driver_info["unique_key"]}')
+                self.log.warning(f'Could not find dis anno for line={line_number}; unique_key={driver_info["unique_key"]}; line={line}')
                 unmatched_dis_anno_counter += 1
 
         self.log.info(f'Could not find {pub_not_found_counter} pubs.')
@@ -643,6 +646,7 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Could not find {driver_not_found_counter} drivers.')
         self.log.info(f'Could not find {dis_anno_not_found} disease annotations.')
         self.log.info(f'Found dis anno for {matched_dis_anno_counter}/{input_counter} driver info lines.')
+        self.log.info(f'Found close dis anno for {close_matched_dis_anno_counter}/{input_counter} driver info lines (differ only in evidence code).')
         self.log.info(f'Could not find dis anno for {unmatched_dis_anno_counter}/{input_counter} driver info lines.')
         self.log.info(f'Had problems looking up info for {prob_counter}/{input_counter} driver info lines.')
         counter = 0
@@ -653,7 +657,7 @@ class AGMDiseaseHandler(DataHandler):
                 self.log.error(f'Found ZERO driver info rows for this annotation (?): {k}')
             else:
                 counter += 1
-        self.log.info(f'{counter} disease annotations have a single driver adjustment eacn.')
+        self.log.info(f'{counter} disease annotations have a single driver adjustment each.')
         return
 
     # BOB: to do.
