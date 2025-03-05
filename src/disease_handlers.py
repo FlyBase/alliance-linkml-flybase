@@ -518,7 +518,7 @@ class AGMDiseaseHandler(DataHandler):
                 driver_info['problem'] = True
                 pub_not_found_counter += 1
 
-            allele_id = self.find_feature_uniquename_from_name(self, session, driver_info['allele_symbol'], self.regex['allele'])
+            allele_id = self.find_feature_uniquename_from_name(session, driver_info['allele_symbol'], self.regex['allele'])
             if allele_id:
                 driver_info['allele_feature_id'] = allele_id
                 # self.log.debug(f'Found ID {allele_id} for subject allele "{converted_sbj_allele_symbol}"')
