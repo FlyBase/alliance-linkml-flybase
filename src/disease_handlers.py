@@ -635,7 +635,7 @@ class AGMDiseaseHandler(DataHandler):
 
         # Find the matching disease annotation once all driver info is collected.
         for driver_info in self.driver_dict.values():
-            if driver_info['unique_key'] in self.uniq_dis_dict.keys():
+            if driver_info['unique_key'] and driver_info['unique_key'] in self.uniq_dis_dict.keys():
                 matched_dis_anno_counter += 1
                 continue
             alt_unique_key = driver_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC')
