@@ -295,7 +295,7 @@ class AGMDiseaseHandler(DataHandler):
                 else:
                     curr_allele_id = self.get_current_id_for_allele(session, allele_id)
                     if curr_allele_id:
-                        dis_anno.text_embedded_allele_ids.append(allele_id)
+                        dis_anno.text_embedded_allele_ids.append(curr_allele_id)
                         dis_anno.allele_id_was_updated = True
                         updated_allele_id_counter += 1
                     else:
