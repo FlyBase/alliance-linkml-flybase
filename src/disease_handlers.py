@@ -531,9 +531,6 @@ class AGMDiseaseHandler(DataHandler):
                 self.log.error(f'Line={line_number} is malformed: {i}')
                 malformed_line_counter += 1
                 continue
-            elif not line[DRIVER_INPUT].strip():
-                skip_counter += 1
-                continue
             driver_info = {
                 # Attributes from input file.
                 'line_number': line_number,
@@ -644,7 +641,14 @@ class AGMDiseaseHandler(DataHandler):
                 driver_info['unique_key'] += f'_{driver_info["modifier_role"]}={driver_info["modifier_id"]}'
             self.log.debug(f'Line={line_number}; ukey={driver_info["unique_key"]}')
 
-            # Keep driver info lines that match a disease annotation.
+            # Assess non-driver lines in the input file partially.
+            if not driver_info['driver_ids']():
+                if driver_info['unique_key'] not in self.uniq_dis_dict.keys():
+                    rejected_driver_info.append(driver_info)
+                skip_counter += 1
+                continue
+
+            # Now assess lines that have some driver info.
             if driver_info['unique_key'] and driver_info['unique_key'] in self.uniq_dis_dict.keys():
                 self.driver_dict[driver_info['unique_key']].append(driver_info)
                 matched_dis_anno_counter += 1
