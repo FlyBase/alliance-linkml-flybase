@@ -512,6 +512,7 @@ class AGMDiseaseHandler(DataHandler):
         dis_anno_not_found = 0
         line_number = 0
         input_counter = 0
+        malformed_line_counter = 0
         skip_counter = 0
         matched_dis_anno_counter = 0
         close_matched_dis_anno_counter = 0
@@ -524,6 +525,10 @@ class AGMDiseaseHandler(DataHandler):
                 continue
             input_counter += 1
             line = i.split('\t')
+            if len(line) != 13:
+                self.log.error(f'Line={line_number} is malformed: {i}')
+                malformed_line_counter += 1
+                continue
             driver_info = {
                 # Attributes from input file.
                 'line_number': line_number,
