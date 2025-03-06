@@ -324,7 +324,7 @@ class AGMDiseaseHandler(DataHandler):
                 dis_anno.modifier_role = self.disease_genetic_modifier_terms[dis_anno.qualifier.value]
         return
 
-    def get_parent_genes(self, session):
+    def get_parent_genes(self):
         """Get parent genes for key alleles."""
         self.log.info('Get parent genes for key alleles.')
         counter = 0
