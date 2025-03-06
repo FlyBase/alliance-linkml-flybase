@@ -331,7 +331,8 @@ class AGMDiseaseHandler(DataHandler):
         for dis_anno in self.fb_data_entities.values():
             key_alleles = []
             key_alleles.extend(dis_anno.modeled_by)
-            key_alleles.extend(dis_anno.modifier_id)
+            if dis_anno.modifier_id:
+                key_alleles.append(dis_anno.modifier_id)
             for fbal_id in key_alleles:
                 allele_feature_id = self.uname_feature_lookup[fbal_id]
                 dis_anno.parent_gene_ids.add(self.allele_gene_lookup[allele_feature_id])
