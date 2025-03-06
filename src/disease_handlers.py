@@ -532,6 +532,9 @@ class AGMDiseaseHandler(DataHandler):
                 self.log.error(f'Line={line_number} is malformed: {i}')
                 malformed_line_counter += 1
                 continue
+            elif not line[DRIVER_INPUT].strip():
+                skip_counter += 1
+                continue
             driver_info = {
                 # Attributes from input file.
                 'line_number': line_number,
@@ -558,9 +561,6 @@ class AGMDiseaseHandler(DataHandler):
                 'unique_key': None,
                 'problems': [],
             }
-            if not driver_info['driver_input']:
-                skip_counter += 1
-                continue
             try:
                 driver_info['pub_id'] = self.fbrf_bibliography[driver_info['pub_given']].pub_id
             except KeyError:
