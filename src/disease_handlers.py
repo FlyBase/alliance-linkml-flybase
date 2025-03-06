@@ -642,7 +642,7 @@ class AGMDiseaseHandler(DataHandler):
             self.log.debug(f'Line={line_number}; ukey={driver_info["unique_key"]}')
 
             # Assess non-driver lines in the input file partially.
-            if not driver_info['driver_ids']():
+            if not driver_info['driver_ids']:
                 if driver_info['unique_key'] not in self.uniq_dis_dict.keys():
                     rejected_driver_info.append(driver_info)
                 skip_counter += 1
