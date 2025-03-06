@@ -700,7 +700,7 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Could not find the subject allele for {allele_not_found_counter} lines.')
         self.log.info(f'Could not find {additional_allele_not_found_counter} additional alleles.')
         self.log.info(f'Could not find {driver_not_found_counter} drivers.')
-        fully_processed_count = input_counter -skip_counter - prob_counter
+        fully_processed_count = input_counter - skip_counter - prob_counter
         self.log.info(f'Had problems finding pub/allele/term info for {prob_counter}/{input_counter} driver info lines.')
         self.log.info(f'Fully processed {fully_processed_count}/{input_counter} driver info lines having Gal4 info without issue.')
         self.log.info(f'Found dis anno for {matched_dis_anno_counter}/{fully_processed_count} fully processed driver info lines.')
@@ -712,10 +712,12 @@ class AGMDiseaseHandler(DataHandler):
         many_counter = 0
         for k, v in self.driver_dict.items():
             if len(v) > 1:
-                self.log.warning(f'Found {len(v)} driver info rows for this annotation: {k}')
+                line_numbers = ", ".join([i['line_number'] for i in v])
+                driver_lists = "|".join([sorted(i["driver_ids"]) for i in v])
+                self.log.warning(f'Found {len(v)} driver info rows for this annotation: {k}. Lines={line_numbers}. Driver_lists={driver_lists}')
                 many_counter += 1
             elif len(v) == 0:
-                self.log.error(f'Found ZERO driver info rows for this annotation (?): {k}')
+                self.log.error(f'Found ZERO driver info rows for this annotation (?): {k}. Line={v[0]["line_number"]}')
             else:
                 single_counter += 1
         self.log.info(f'{single_counter} disease annotations have a single driver adjustment each.')
