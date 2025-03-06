@@ -659,7 +659,7 @@ class AGMDiseaseHandler(DataHandler):
                 second_pass_driver_info.append(driver_info)
 
         # A second pass at matching driver info to account of ambiguity in eco_abbr determination for modifier-type annotations.
-        for driver_info in self.second_pass_driver_info:
+        for driver_info in second_pass_driver_info:
             alt_unique_key = driver_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC')
             if alt_unique_key in self.uniq_dis_dict.keys() and alt_unique_key not in self.driver_dict.keys():
                 driver_info['unique_key'] = alt_unique_key
