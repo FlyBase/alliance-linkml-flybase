@@ -399,7 +399,7 @@ class AGMDiseaseHandler(DataHandler):
                     distinct()
                 for result in results:
                     ab_gn_tuple = (result.feature_id, parent_gene_id)
-                    dis_anno.possible_aberrations.add()
+                    dis_anno.possible_aberrations.add(ab_gn_tuple)
             # Print out to the report.
             for ab_gn_tuple in dis_anno.possible_aberrations:
                 report_dict = {
