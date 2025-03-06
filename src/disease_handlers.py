@@ -674,7 +674,7 @@ class AGMDiseaseHandler(DataHandler):
                 unmatched_dis_anno_counter += 1
 
         # Print out a report for curators of correctly formatted driver info lines that could not be matched up to dis anno.
-        curator_report = open('/src/output/driver_lines_unmatched_to_disease_annotations.tsv')
+        curator_report = open('/src/output/driver_lines_unmatched_to_disease_annotations.tsv', 'w')
         headers = [
             'line_number',
             'pub_given',
