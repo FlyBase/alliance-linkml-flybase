@@ -512,7 +512,6 @@ class AGMDiseaseHandler(DataHandler):
         additional_allele_not_found_counter = 0
         do_term_not_found_counter = 0
         driver_not_found_counter = 0
-        dis_anno_not_found = 0
         line_number = 0
         input_counter = 0
         malformed_line_counter = 0
@@ -696,14 +695,13 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Skipped {malformed_line_counter}/{input_counter} driver info lines due to bad column formatting.')
         self.log.info(f'Skipped {skip_counter}/{input_counter} driver info lines due to lack of Gal4 info.')
         self.log.info(f'Processed {input_counter - skip_counter}/{input_counter} driver info lines having Gal4 info.')
+        self.log.info(f'Could not find the pub for {pub_not_found_counter} lines.')
+        self.log.info(f'Could not find the DO term for {do_term_not_found_counter} lines.')
+        self.log.info(f'Could not find the subject allele for {allele_not_found_counter} lines.')
+        self.log.info(f'Could not find {additional_allele_not_found_counter} additional alleles.')
+        self.log.info(f'Could not find {driver_not_found_counter} drivers.')
         fully_processed_count = input_counter - prob_counter
         self.log.info(f'Had problems finding pub/allele/term info for {prob_counter}/{input_counter} driver info lines.')
-        self.log.info(f'Could not find {pub_not_found_counter} pubs.')
-        self.log.info(f'Could not find {allele_not_found_counter} alleles.')
-        self.log.info(f'Could not find {additional_allele_not_found_counter} additional alleles.')
-        self.log.info(f'Could not find {do_term_not_found_counter} DO terms.')
-        self.log.info(f'Could not find {driver_not_found_counter} drivers.')
-        self.log.info(f'Could not find {dis_anno_not_found} disease annotations.')
         self.log.info(f'Fully processed {fully_processed_count}/{input_counter} driver info lines having Gal4 info without issue.')
         self.log.info(f'Found dis anno for {matched_dis_anno_counter}/{fully_processed_count} fully processed driver info lines.')
         self.log.info(f'Found close dis anno for {close_matched_dis_anno_counter}/{fully_processed_count} fully processed driver info lines (ECO adjustment).')
