@@ -15,6 +15,7 @@ Author(s):
 #    c. Consider adding hdm_comment as notes to disease annotations if 1:1 match.
 #    d. Consider giving curators a report of non-transferred comments for manual addition.
 
+import csv
 import re
 from collections import defaultdict
 from logging import Logger
@@ -42,7 +43,7 @@ class AGMDiseaseHandler(DataHandler):
         self.doid_term_lookup = {}                   # cvterm.name-keyed cvterm dicts.
         self.model_eco_lookup = defaultdict(list)    # Evidence abbreviation lookup for "model_of" annotations.
         self.uniq_dis_dict = defaultdict(list)       # Disease annotations keyed by a unique attribute concatenation.
-        self.driver_dict = defaultdict(list)         # Driver info to integrate, keyed by unique disease descriptor.
+        self.driver_dict = defaultdict(list)         # Unique disease descriptors key lists of driver info to integrate.
 
     relevant_fcvtp_types = [
         'evidence_code',
@@ -504,6 +505,8 @@ class AGMDiseaseHandler(DataHandler):
         DRIVER_INPUT = 8
         OPERATION = 12
         file_input = open('/src/output/driver_info.tsv')
+        second_pass_driver_info = []
+        rejected_driver_info = []
         pub_not_found_counter = 0
         allele_not_found_counter = 0
         additional_allele_not_found_counter = 0
@@ -553,7 +556,7 @@ class AGMDiseaseHandler(DataHandler):
                 'modifier_role': None,
                 'eco_abbr': None,
                 'unique_key': None,
-                'problem': False,
+                'problems': [],
             }
             if not driver_info['driver_input']:
                 skip_counter += 1
@@ -562,7 +565,8 @@ class AGMDiseaseHandler(DataHandler):
                 driver_info['pub'] = self.fbrf_bibliography[driver_info['pub_given']]
             except KeyError:
                 self.log.error(f'Line={line_number}: could not find pub "{driver_info["pub_given"]}" in chado.')
-                driver_info['problem'] = True
+                prob_msg = 'bad pub id'
+                driver_info['problems'].append(prob_msg)
                 pub_not_found_counter += 1
 
             cvterm_curie = self.find_cvterm_curie_from_name(session, driver_info['do_term'])
@@ -571,7 +575,8 @@ class AGMDiseaseHandler(DataHandler):
                 # self.log.debug(f'Line={line_number}: found "{cvterm_curie}" for "{driver_info["do_term"]}" in chado.')
             else:
                 self.log.error(f'Line={line_number}: could not find DO term for "{driver_info["do_term"]}" in chado.')
-                driver_info['problem'] = True
+                prob_msg = 'bad DO term name'
+                driver_info['problems'].append(prob_msg)
                 do_term_not_found_counter += 1
 
             allele_id = self.find_feature_uniquename_from_name(session, driver_info['allele_symbol'], self.regex['allele'])
@@ -580,7 +585,8 @@ class AGMDiseaseHandler(DataHandler):
                 # self.log.error(f'Line={line_number}: found "{allele_id}" for "{driver_info["allele_symbol"]}" in chado.')
             else:
                 self.log.error(f'Line={line_number}: could not find allele "{driver_info["allele_symbol"]}" in chado.')
-                driver_info['problem'] = True
+                prob_msg = 'bad allele symbol'
+                driver_info['problems'].append(prob_msg)
                 allele_not_found_counter += 1
 
             for allele_symbol in driver_info['additional_alleles']:
@@ -592,7 +598,8 @@ class AGMDiseaseHandler(DataHandler):
                     # self.log.error(f'Line={line_number}: found "{allele_id}" for additional allele "{allele_symbol}" in chado.')
                 else:
                     self.log.error(f'Line={line_number}: could not find additional allele "{allele_symbol}" in chado.')
-                    driver_info['problem'] = True
+                    prob_msg = 'bad additional allele symbol'
+                    driver_info['problems'].append(prob_msg)
                     additional_allele_not_found_counter += 1
 
             for driver_symbol in driver_info['driver_input']:
@@ -607,7 +614,8 @@ class AGMDiseaseHandler(DataHandler):
                     # self.log.error(f'Line={line_number}: found "{allele_id}" for driver "{driver_symbol}" in chado.')
                 else:
                     self.log.error(f'Line={line_number}: could not find driver "{driver_symbol}" in chado.')
-                    driver_info['problem'] = True
+                    prob_msg = 'bad driver symbol'
+                    driver_info['problems'].append(prob_msg)
                     driver_not_found_counter += 1
 
             # Map info to annotation.
@@ -623,8 +631,8 @@ class AGMDiseaseHandler(DataHandler):
                 driver_info['modeled_by'].extend(driver_info['additional_allele_ids'])
                 driver_info['eco_abbr'] = driver_info['evi_code'][0:3]
 
-            # Build an annotation descriptor.
-            if driver_info['problem'] is True:
+            # Build an annotation unique key.
+            if driver_info['problems']:
                 prob_counter += 1
                 continue
             driver_info['unique_key'] = f'{driver_info["pub_given"]}_'
@@ -635,29 +643,59 @@ class AGMDiseaseHandler(DataHandler):
             driver_info['unique_key'] += f'eco_code={driver_info["eco_abbr"]}'
             if driver_info['modifier_id']:
                 driver_info['unique_key'] += f'_{driver_info["modifier_role"]}={driver_info["modifier_id"]}'
-            self.driver_dict[driver_info['unique_key']].append(driver_info)
             self.log.debug(f'Line={line_number}; ukey={driver_info["unique_key"]}')
 
-        # Find the matching disease annotation once all driver info is collected.
-        for driver_info in self.driver_dict.values():
-            try:
-                if driver_info['unique_key'] and driver_info['unique_key'] in self.uniq_dis_dict.keys():
-                    matched_dis_anno_counter += 1
-                    continue
-            except TypeError:
-                self.log.error(f'Problems processing this: {driver_info}')
-            alt_unique_key = driver_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC')
-            if alt_unique_key in self.uniq_dis_dict.keys() and alt_unique_key not in driver_info.keys():
-                self.driver_dict[alt_unique_key].append(driver_info)
-                close_matched_dis_anno_counter += 1
-            elif alt_unique_key in self.uniq_dis_dict.keys() and alt_unique_key in driver_info.keys():
-                self.log.warning(f'Could not find dis anno ECO: line={line_number}; unique_key={driver_info["unique_key"]}; dict={driver_info}; line={line}')
+            # Keep driver info lines that match a disease annotation.
+            if driver_info['unique_key'] and driver_info['unique_key'] in self.uniq_dis_dict.keys():
+                self.driver_dict[driver_info['unique_key']].append(driver_info)
+                matched_dis_anno_counter += 1
+            elif 'model' in driver_info['qualifier']:
+                self.log.warning(f'Could not find dis anno: line={line_number}; unique_key={driver_info["unique_key"]}; dict={driver_info}; line={line}')
+                prob_msg = 'no matching dis anno'
+                driver_info['problems'].append(prob_msg)
+                rejected_driver_info.append(driver_info)
                 unmatched_dis_anno_counter += 1
             else:
+                second_pass_driver_info.append(driver_info)
+
+        # A second pass at matching driver info to account of ambiguity in eco_abbr determination for modifier-type annotations.
+        for driver_info in self.second_pass_driver_info:
+            alt_unique_key = driver_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC')
+            if alt_unique_key in self.uniq_dis_dict.keys() and alt_unique_key not in self.driver_dict.keys():
+                driver_info['unique_key'] = alt_unique_key
+                self.driver_dict[alt_unique_key].append(driver_info)
+                close_matched_dis_anno_counter += 1
+            else:
+                line_number = driver_info['line_number']
                 self.log.warning(f'Could not find dis anno: line={line_number}; unique_key={driver_info["unique_key"]}; dict={driver_info}; line={line}')
+                prob_msg = 'no matching dis anno'
+                driver_info['problems'].append(prob_msg)
+                rejected_driver_info.append(driver_info)
                 unmatched_dis_anno_counter += 1
 
+        # Print out a report for curators of correctly formatted driver info lines that could not be matched up to dis anno.
+        curator_report = open('/src/output/driver_lines_unmatched_to_disease_annotations.tsv')
+        headers = [
+            'line_number',
+            'pub_given',
+            'allele_symbol',
+            'qualifier',
+            'do_term',
+            'evi_code',
+            'additional_alleles',
+            'driver_input',
+            'operation',
+            'problem_string'
+        ]
+        curator_report.write('#')
+        csv_writer = csv.DictWriter(curator_report, fieldnames=headers, delimiter='\t', extrasaction='ignore', lineterminator='\n')
+        csv_writer.writeheader()
+        for i in rejected_driver_info:
+            i['problem_string'] = '|'.join(i['problems'])
+            csv_writer.writerow(i)
+
         # Summary
+        self.log.info(f'Skipped {malformed_line_counter}/{input_counter} driver info lines due to bad column formatting.')
         self.log.info(f'Skipped {skip_counter}/{input_counter} driver info lines due to lack of Gal4 info.')
         self.log.info(f'Processed {input_counter - skip_counter}/{input_counter} driver info lines having Gal4 info.')
         self.log.info(f'Could not find {pub_not_found_counter} pubs.')
