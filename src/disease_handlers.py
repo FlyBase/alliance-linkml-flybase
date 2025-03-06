@@ -698,16 +698,18 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Skipped {malformed_line_counter}/{input_counter} driver info lines due to bad column formatting.')
         self.log.info(f'Skipped {skip_counter}/{input_counter} driver info lines due to lack of Gal4 info.')
         self.log.info(f'Processed {input_counter - skip_counter}/{input_counter} driver info lines having Gal4 info.')
+        fully_processed_count = input_counter - prob_counter
+        self.log.info(f'Had problems finding pub/allele/term info for {prob_counter}/{input_counter} driver info lines.')
         self.log.info(f'Could not find {pub_not_found_counter} pubs.')
         self.log.info(f'Could not find {allele_not_found_counter} alleles.')
         self.log.info(f'Could not find {additional_allele_not_found_counter} additional alleles.')
         self.log.info(f'Could not find {do_term_not_found_counter} DO terms.')
         self.log.info(f'Could not find {driver_not_found_counter} drivers.')
         self.log.info(f'Could not find {dis_anno_not_found} disease annotations.')
-        self.log.info(f'Found dis anno for {matched_dis_anno_counter}/{input_counter} driver info lines.')
-        self.log.info(f'Found close dis anno for {close_matched_dis_anno_counter}/{input_counter} driver info lines (differ only in evidence code).')
-        self.log.info(f'Could not find dis anno for {unmatched_dis_anno_counter}/{input_counter} driver info lines.')
-        self.log.info(f'Had problems looking up info for {prob_counter}/{input_counter} driver info lines.')
+        self.log.info(f'Fully processed {fully_processed_count}/{input_counter} driver info lines having Gal4 info without issue.')
+        self.log.info(f'Found dis anno for {matched_dis_anno_counter}/{fully_processed_count} fully processed driver info lines.')
+        self.log.info(f'Found close dis anno for {close_matched_dis_anno_counter}/{fully_processed_count} fully processed driver info lines (ECO adjustment).')
+        self.log.info(f'Could not find dis anno for {unmatched_dis_anno_counter}/{fully_processed_count} fully processed driver info lines.')
 
         # Finally check the driver_info dict for annotations with many driver info lines.
         single_counter = 0
