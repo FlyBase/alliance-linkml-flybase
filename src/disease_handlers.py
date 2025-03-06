@@ -23,7 +23,7 @@ from sqlalchemy.orm import aliased
 from harvdev_utils.char_conversions import sgml_to_plain_text
 from harvdev_utils.reporting import (
     Cv, Cvterm, Cvtermsynonym, Db, Dbxref, Feature, FeatureCvterm, FeatureCvtermprop,
-    FeatureDbxref, FeatureRelationship, FeatureSynonym, Pub, Synonym
+    FeatureDbxref, FeaturePub, FeatureRelationship, FeatureSynonym, Pub, Synonym
 )
 import agr_datatypes
 import fb_datatypes
@@ -342,8 +342,84 @@ class AGMDiseaseHandler(DataHandler):
     def search_useful_aberrations(self, session):
         """Search for aberrations that may have been used in the disease experiment."""
         self.log.info('Search for aberrations that may have been used in the disease experiment.')
+        ABERR_ID = 0
+        GENE_ID = 1
+        counter = 0
+        # Set up the report file.
+        aberr_report = open('/src/output/aberr_report.tsv', 'w')
+        headers = [
+            'aberr_id',
+            'aberr_name',
+            'gene_id',
+            'gene_name',
+            'pub_id',
+            'do_term_name',
+            'do_term_id',
+            'model_name',
+            'model_ids',
+            'modifier_name',
+            'modifier_id',
+            'modifier_type',
+        ]
+        aberr_report.write('#')
+        csv_writer = csv.DictWriter(aberr_report, fieldnames=headers, delimiter='\t', extrasaction='ignore', lineterminator='\n')
+        csv_writer.writeheader()
+        # Set up the chado query.
+        fr_types = [
+            'deletes',
+            'duplicates',
+            'molec_deletes',
+            'molec_dups',
+            'molec_partdeletes',
+            'molec_partdups',
+            'part_deletes',
+            'part_duplicates',
+            'useful_Df_direct',
+            'useful_Df_from_cyto',
+            'useful_Dp_direct',
+            'useful_Dp_from_cyto',
+        ]
+        filters = (
+            Feature.is_obsolete.is_(False),
+            Feature.uniquename.op('~')(self.regex['aberration']),
+            Cvterm.name.in_((fr_types)),
+        )
         for dis_anno in self.fb_data_entities.values():
-            pass
+            filters += (FeaturePub.pub_id == dis_anno.feature_cvterm.pub_id, )
+            for parent_gene_id in dis_anno.parent_gene_ids:
+                filters += (FeatureRelationship.object_id == parent_gene_id, )
+                results = session.query(Feature).\
+                    select_from(Feature).\
+                    join(FeaturePub, (FeaturePub.feature_id == Feature.feature_id)).\
+                    join(FeatureRelationship, (FeatureRelationship.subject_id == Feature.feature_id)).\
+                    join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+                    filter(*filters).\
+                    distinct()
+                for result in results:
+                    ab_gn_tuple = (result.feature_id, parent_gene_id)
+                    dis_anno.possible_aberrations.add()
+            # Print out to the report.
+            for ab_gn_tuple in dis_anno.possible_aberrations:
+                report_dict = {
+                    'aberr_id': self.feature_lookup[ab_gn_tuple[ABERR_ID]]['uniquename'],
+                    'aberr_name': self.feature_lookup[ab_gn_tuple[ABERR_ID]]['name'],
+                    'gene_id': self.feature_lookup[ab_gn_tuple[GENE_ID]]['name'],
+                    'gene_name': self.feature_lookup[ab_gn_tuple[GENE_ID]]['uniquename'],
+                    'pub_id': dis_anno.feature_cvterm.pub.uniquename,
+                    'do_term_name': dis_anno.feature_cvterm.cvterm.name,
+                    'do_term_id': f'DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}',
+                    'model_name': None,
+                    'model_ids': dis_anno.modeled_by,
+                    'modifier_name': None,
+                    'modifier_id': dis_anno.modifier_id,
+                    'modifier_type': dis_anno.modifier_role,
+                }
+                report_dict['model_name'] = ', '.join([self.uname_feature_lookup[i]['name'] for i in dis_anno.modeled_by])
+                if dis_anno.modifier_id:
+                    report_dict['modifier_name'] = self.uname_feature_lookup[dis_anno.modifier_id]['name']
+                csv_writer.writerow(report_dict)
+                counter += 1
+        self.log.info(f'Found {counter} possible aberrations of interest to disease annotations.')
         return
 
     def build_model_eco_lookup(self):
