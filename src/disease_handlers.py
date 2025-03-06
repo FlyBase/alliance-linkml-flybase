@@ -717,13 +717,16 @@ class AGMDiseaseHandler(DataHandler):
                 for i in v:
                     driver_list = '_'.join(i['driver_ids'])
                     driver_lists.add(driver_list)
-                if len(driver_lists) == 1:
-                    self.log.warning(f'Found {len(v)} driver info rows for this annotation, ONE LIST: {k}. Lines={line_numbers}. Drivers={driver_lists}')
+                    operations = set([i['operation'] for i in v])
+                if len(driver_lists) == 1 and len(operations) == 1:
+                    self.log.warning(f'Found {len(v)} driver info rows for an annotation, ONE LIST, ONE OP: {k}. Lines={line_numbers}. Drivers={driver_lists}')
+                elif len(driver_lists) == 1 and len(operations) > 1:
+                    self.log.warning(f'Found {len(v)} driver info rows for an annotation, ONE LIST, MANY OP: {k}. Lines={line_numbers}. Drivers={driver_lists}')
                 else:
-                    self.log.warning(f'Found {len(v)} driver info rows for this annotation, MANY LISTS: {k}. Lines={line_numbers}. Drivers={driver_lists}')
+                    self.log.warning(f'Found {len(v)} driver info rows for an annotation, MANY LISTS: {k}. Lines={line_numbers}. Drivers={driver_lists}')
                 many_counter += 1
             elif len(v) == 0:
-                self.log.error(f'Found ZERO driver info rows for this annotation (?): {k}. Line={v[0]["line_number"]}')
+                self.log.error(f'Found ZERO driver info rows for an annotation (?): {k}. Line={v[0]["line_number"]}')
             else:
                 single_counter += 1
         self.log.info(f'{single_counter} disease annotations have a single driver adjustment each.')
