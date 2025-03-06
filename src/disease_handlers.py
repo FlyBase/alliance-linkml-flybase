@@ -324,6 +324,28 @@ class AGMDiseaseHandler(DataHandler):
                 dis_anno.modifier_role = self.disease_genetic_modifier_terms[dis_anno.qualifier.value]
         return
 
+    def get_parent_genes(self, session):
+        """Get parent genes for key alleles."""
+        self.log.info('Get parent genes for key alleles.')
+        counter = 0
+        for dis_anno in self.fb_data_entities.values():
+            key_alleles = []
+            key_alleles.extend(dis_anno.modeled_by)
+            key_alleles.extend(dis_anno.modifier_id)
+            for fbal_id in key_alleles:
+                allele_feature_id = self.uname_feature_lookup[fbal_id]
+                dis_anno.parent_gene_ids.add(self.allele_gene_lookup[allele_feature_id])
+                counter += len(dis_anno.parent_gene_ids)
+        self.log.info(f'Found {counter} parent genes for key alleles of disease annotations.')
+        return
+
+    def search_useful_aberrations(self, session):
+        """Search for aberrations that may have been used in the disease experiment."""
+        self.log.info('Search for aberrations that may have been used in the disease experiment.')
+        for dis_anno in self.fb_data_entities.values():
+            pass
+        return
+
     def build_model_eco_lookup(self):
         """Build ECO lookup for model-type annotations."""
         self.log.info('Build ECO lookup for model-type annotations.')
@@ -767,12 +789,14 @@ class AGMDiseaseHandler(DataHandler):
         self.get_disease_timestamps(session)
         self.extract_text_embedded_alleles(session)
         self.extract_model_and_modifiers()
+        self.get_parent_genes()
+        self.search_useful_aberrations(session)
         self.build_model_eco_lookup()
         self.lookup_eco_codes_for_modifier_annotations()
         self.calculate_annotation_unique_key()
         self.integrate_driver_info(session)
-        self.integrate_aberration_info()
-        self.get_genotype(session)
+        # self.integrate_aberration_info()
+        # self.get_genotype(session)
         return
 
     # Add methods to be run by synthesize_info() below.
@@ -805,6 +829,12 @@ class AGMDiseaseHandler(DataHandler):
         super().synthesize_info()
         self.flag_problematic_annotations()
         return
+
+    ############################################################################
+    # BOB - when reporting asserted genes, use the MOD curie.
+    # BOB - if no MOD curie for a non-Dros gene, do not report it.\
+    # BOB - how many annotations are for genes with no MOD curie? If many, a blocker?
+    ############################################################################
 
     # # Add methods to be run by map_fb_data_to_alliance() below.
     # def map_allele_disease_annotation_basic(self):
