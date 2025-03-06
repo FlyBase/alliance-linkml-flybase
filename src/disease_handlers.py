@@ -685,13 +685,11 @@ class AGMDiseaseHandler(DataHandler):
             'additional_alleles',
             'driver_input',
             'operation',
-            'problem_string'
         ]
         curator_report.write('#')
         csv_writer = csv.DictWriter(curator_report, fieldnames=headers, delimiter='\t', extrasaction='ignore', lineterminator='\n')
         csv_writer.writeheader()
         for i in rejected_driver_info:
-            i['problem_string'] = '|'.join(i['problems'])
             csv_writer.writerow(i)
 
         # Summary
