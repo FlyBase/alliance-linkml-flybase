@@ -713,8 +713,14 @@ class AGMDiseaseHandler(DataHandler):
         for k, v in self.driver_dict.items():
             if len(v) > 1:
                 line_numbers = ", ".join([str(i['line_number']) for i in v])
-                driver_lists = "|".join([sorted(i["driver_ids"]) for i in v])
-                self.log.warning(f'Found {len(v)} driver info rows for this annotation: {k}. Lines={line_numbers}. Driver_lists={driver_lists}')
+                driver_lists = set()
+                for i in v:
+                    driver_list = '_'.join(i['driver_ids'])
+                    driver_lists.add(driver_list)
+                if len(driver_lists) == 1:
+                    self.log.warning(f'Found {len(v)} driver info rows for this annotation, ONE LIST: {k}. Lines={line_numbers}. Drivers={driver_lists}')
+                else:
+                    self.log.warning(f'Found {len(v)} driver info rows for this annotation, MANY LISTS: {k}. Lines={line_numbers}. Drivers={driver_lists}')
                 many_counter += 1
             elif len(v) == 0:
                 self.log.error(f'Found ZERO driver info rows for this annotation (?): {k}. Line={v[0]["line_number"]}')
