@@ -712,7 +712,7 @@ class AGMDiseaseHandler(DataHandler):
         many_counter = 0
         for k, v in self.driver_dict.items():
             if len(v) > 1:
-                line_numbers = ", ".join([i['line_number'] for i in v])
+                line_numbers = ", ".join([str(i['line_number']) for i in v])
                 driver_lists = "|".join([sorted(i["driver_ids"]) for i in v])
                 self.log.warning(f'Found {len(v)} driver info rows for this annotation: {k}. Lines={line_numbers}. Driver_lists={driver_lists}')
                 many_counter += 1
