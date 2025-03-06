@@ -544,7 +544,7 @@ class AGMDiseaseHandler(DataHandler):
                 'driver_input': line[DRIVER_INPUT].split(' '),
                 'operation': line[OPERATION].rstrip(),
                 # Attributes to be obtained from chado.
-                'pub': None,
+                'pub_id': None,
                 'allele_feature_id': None,
                 'additional_allele_ids': [],
                 'driver_ids': [],
@@ -562,7 +562,7 @@ class AGMDiseaseHandler(DataHandler):
                 skip_counter += 1
                 continue
             try:
-                driver_info['pub'] = self.fbrf_bibliography[driver_info['pub_given']]
+                driver_info['pub_id'] = self.fbrf_bibliography[driver_info['pub_given']].pub_id
             except KeyError:
                 self.log.error(f'Line={line_number}: could not find pub "{driver_info["pub_given"]}" in chado.')
                 prob_msg = 'bad pub id'
