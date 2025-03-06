@@ -492,6 +492,7 @@ class DataHandler(object):
             feat_counter = 0
             for result in feat_results:
                 feat_dict = {
+                    'feature_id': result[FEATURE_ID],
                     'uniquename': result[UNIQUENAME],
                     'curie': f'FB:{result[UNIQUENAME]}',    # Replaced by MOD curies as applicable down below.
                     'is_obsolete': result[OBSOLETE],

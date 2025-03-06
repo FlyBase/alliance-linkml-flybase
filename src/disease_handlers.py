@@ -335,7 +335,7 @@ class AGMDiseaseHandler(DataHandler):
                 key_alleles.append(dis_anno.modifier_id)
             key_alleles = set(key_alleles)
             for fbal_id in key_alleles:
-                allele_feature_id = self.uname_feature_lookup[fbal_id]
+                allele_feature_id = self.uname_feature_lookup[fbal_id]['feature_id']
                 dis_anno.parent_gene_ids.add(self.allele_gene_lookup[allele_feature_id])
             counter += len(dis_anno.parent_gene_ids)
         self.log.info(f'Found {counter} parent genes for key alleles of disease annotations.')
