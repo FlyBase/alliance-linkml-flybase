@@ -708,10 +708,12 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Could not find dis anno for {unmatched_dis_anno_counter}/{fully_processed_count} fully processed driver info lines.')
 
         # Finally check the driver_info dict for annotations with many driver info lines.
+        dup_lines_to_report = []
         single_counter = 0
         many_counter = 0
         for k, v in self.driver_dict.items():
             if len(v) > 1:
+                pub_id = v[0]['pub_given']
                 line_numbers = ", ".join([str(i['line_number']) for i in v])
                 driver_lists = set()
                 for i in v:
@@ -722,13 +724,19 @@ class AGMDiseaseHandler(DataHandler):
                     self.log.warning(f'Found {len(v)} driver info rows for an annotation, ONE LIST, ONE OP: {k}. Lines={line_numbers}. Drivers={driver_lists}')
                 elif len(driver_lists) == 1 and len(operations) > 1:
                     self.log.warning(f'Found {len(v)} driver info rows for an annotation, ONE LIST, MANY OP: {k}. Lines={line_numbers}. Drivers={driver_lists}')
+                    dup_line = f'{pub_id}; count={len(v)}; lines={line_numbers}; driver_lists={driver_lists}; operations={operations}'
+                    dup_lines_to_report.append(dup_line)
                 else:
                     self.log.warning(f'Found {len(v)} driver info rows for an annotation, MANY LISTS: {k}. Lines={line_numbers}. Drivers={driver_lists}')
+                    dup_line = f'{pub_id}; count={len(v)}; lines={line_numbers}; driver_lists={driver_lists}; operations={operations}'
+                    dup_lines_to_report.append(dup_line)
                 many_counter += 1
             elif len(v) == 0:
                 self.log.error(f'Found ZERO driver info rows for an annotation (?): {k}. Line={v[0]["line_number"]}')
             else:
                 single_counter += 1
+        for j in dup_lines_to_report:
+            self.log.debug(f'DUPLINE: {j}')
         self.log.info(f'{single_counter} disease annotations have a single driver adjustment each.')
         self.log.info(f'{many_counter} disease annotations have MANY driver adjustments each.')
         return
