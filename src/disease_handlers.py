@@ -90,6 +90,82 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Have {len(self.cvterm_lookup)} DOID terms in the CV term-by-name lookup.')
         return
 
+    def get_aberration_pub_info(self, session):
+        """Get pub info for aberrations."""
+        self.log.info('Get pub info for aberrations.')
+        filters = (
+            Feature.is_obsolete.is_(False),
+            Feature.uniquename.op('~')(self.regex['aberration']),
+            Pub.is_obsolete.is_(False),
+            Pub.uniquename.op('~')(self.regex['pub']),
+            Pub.uniquename != 'unattributed',
+        )
+        results = session.query(FeaturePub).\
+            select_from(Feature).\
+            join(FeaturePub, (FeaturePub.feature_id == Feature.feature_id)).\
+            join(Pub, (Pub.pub_id == FeaturePub.pub_id)).\
+            filter(*filters).\
+            distinct()
+        ab_counter = 0
+        pub_counter = 0
+        for result in results:
+            try:
+                self.feature_lookup[result.feature_id]['pub_ids'].append(result.pub_id)
+                pub_counter += 1
+            except KeyError:
+                self.feature_lookup[result.feature_id]['pub_ids'] = [result.pub_id]
+                ab_counter += 1
+                pub_counter += 1
+        self.log.info(f'Found {pub_counter} pubs for {ab_counter} aberrations.')
+        return
+
+    def get_aberration_gene_info(self, session):
+        """Get gene info for aberrations."""
+        self.log.info('Get gene info for aberrations.')
+        aberration = aliased(Feature, name='aberration')
+        gene = aliased(Feature, name='gene')
+        fr_types = [
+            'deletes',
+            'duplicates',
+            'molec_deletes',
+            'molec_dups',
+            'molec_partdeletes',
+            'molec_partdups',
+            'part_deletes',
+            'part_duplicates',
+            'useful_Df_direct',
+            'useful_Df_from_cyto',
+            'useful_Dp_direct',
+            'useful_Dp_from_cyto',
+        ]
+        filters = (
+            aberration.is_obsolete.is_(False),
+            aberration.uniquename.op('~')(self.regex['aberration']),
+            gene.is_obsolete.is_(False),
+            gene.uniquename.op('~')(self.regex['gene']),
+            Cvterm.name.in_((fr_types)),
+        )
+        results = session.query(aberration, Cvterm, gene).\
+            select_from(aberration).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == aberration.feature_id)).\
+            join(gene, (gene.feature_id == FeatureRelationship.object_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+        ab_counter = 0
+        gene_counter = 0
+        for result in results:
+            self.log.debug(f'BOB: {result.aberration.uniquename} {result.Cvterm.name} {result.gene.name}')
+            try:
+                self.feature_lookup[result.aberration.feature_id]['affected_genes'].append(result.gene.feature_id)
+                gene_counter += 1
+            except KeyError:
+                self.feature_lookup[result.aberration.feature_id]['affected_genes'] = [result.gene.feature_id]
+                ab_counter += 1
+                gene_counter += 1
+        self.log.info(f'Found {gene_counter} genes with useful relationships to {ab_counter} aberrations.')
+        return
+
     # Elaborate on get_general_data() for the AGMDiseaseHandler.
     def get_general_data(self, session):
         """Extend the method for the AGMDiseaseHandler."""
@@ -98,6 +174,8 @@ class AGMDiseaseHandler(DataHandler):
         self.build_cvterm_lookup(session)
         self.build_organism_lookup(session)
         self.build_feature_lookup(session, feature_types=['aberration', 'allele', 'gene', 'insertion', 'construct'])
+        self.get_aberration_pub_info()
+        self.get_aberration_gene_info()
         self.build_uname_feature_lookup()
         self.get_transgenic_allele_ids(session)
         self.get_in_vitro_allele_ids(session)
@@ -339,89 +417,6 @@ class AGMDiseaseHandler(DataHandler):
                 dis_anno.parent_gene_ids.add(self.allele_gene_lookup[allele_feature_id])
             counter += len(dis_anno.parent_gene_ids)
         self.log.info(f'Found {counter} parent genes for key alleles of disease annotations.')
-        return
-
-    def search_useful_aberrations(self, session):
-        """Search for aberrations that may have been used in the disease experiment."""
-        self.log.info('Search for aberrations that may have been used in the disease experiment.')
-        ABERR_ID = 0
-        GENE_ID = 1
-        counter = 0
-        # Set up the report file.
-        aberr_report = open('/src/output/aberr_report.tsv', 'w')
-        headers = [
-            'aberr_id',
-            'aberr_name',
-            'gene_id',
-            'gene_name',
-            'pub_id',
-            'do_term_name',
-            'do_term_id',
-            'model_name',
-            'model_ids',
-            'modifier_name',
-            'modifier_id',
-            'modifier_type',
-        ]
-        aberr_report.write('#')
-        csv_writer = csv.DictWriter(aberr_report, fieldnames=headers, delimiter='\t', extrasaction='ignore', lineterminator='\n')
-        csv_writer.writeheader()
-        # Set up the chado query.
-        fr_types = [
-            'deletes',
-            'duplicates',
-            'molec_deletes',
-            'molec_dups',
-            'molec_partdeletes',
-            'molec_partdups',
-            'part_deletes',
-            'part_duplicates',
-            'useful_Df_direct',
-            'useful_Df_from_cyto',
-            'useful_Dp_direct',
-            'useful_Dp_from_cyto',
-        ]
-        filters = (
-            Feature.is_obsolete.is_(False),
-            Feature.uniquename.op('~')(self.regex['aberration']),
-            Cvterm.name.in_((fr_types)),
-        )
-        for dis_anno in self.fb_data_entities.values():
-            filters += (FeaturePub.pub_id == dis_anno.feature_cvterm.pub_id, )
-            for parent_gene_id in dis_anno.parent_gene_ids:
-                filters += (FeatureRelationship.object_id == parent_gene_id, )
-                results = session.query(Feature).\
-                    select_from(Feature).\
-                    join(FeaturePub, (FeaturePub.feature_id == Feature.feature_id)).\
-                    join(FeatureRelationship, (FeatureRelationship.subject_id == Feature.feature_id)).\
-                    join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
-                    filter(*filters).\
-                    distinct()
-                for result in results:
-                    ab_gn_tuple = (result.feature_id, parent_gene_id)
-                    dis_anno.possible_aberrations.add(ab_gn_tuple)
-            # Print out to the report.
-            for ab_gn_tuple in dis_anno.possible_aberrations:
-                report_dict = {
-                    'aberr_id': self.feature_lookup[ab_gn_tuple[ABERR_ID]]['uniquename'],
-                    'aberr_name': self.feature_lookup[ab_gn_tuple[ABERR_ID]]['name'],
-                    'gene_id': self.feature_lookup[ab_gn_tuple[GENE_ID]]['name'],
-                    'gene_name': self.feature_lookup[ab_gn_tuple[GENE_ID]]['uniquename'],
-                    'pub_id': dis_anno.feature_cvterm.pub.uniquename,
-                    'do_term_name': dis_anno.feature_cvterm.cvterm.name,
-                    'do_term_id': f'DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}',
-                    'model_name': None,
-                    'model_ids': dis_anno.modeled_by,
-                    'modifier_name': None,
-                    'modifier_id': dis_anno.modifier_id,
-                    'modifier_type': dis_anno.modifier_role,
-                }
-                report_dict['model_name'] = ', '.join([self.uname_feature_lookup[i]['name'] for i in dis_anno.modeled_by])
-                if dis_anno.modifier_id:
-                    report_dict['modifier_name'] = self.uname_feature_lookup[dis_anno.modifier_id]['name']
-                csv_writer.writerow(report_dict)
-                counter += 1
-        self.log.info(f'Found {counter} possible aberrations of interest to disease annotations.')
         return
 
     def build_model_eco_lookup(self):
@@ -752,19 +747,19 @@ class AGMDiseaseHandler(DataHandler):
             if driver_info['unique_key'] and driver_info['unique_key'] in self.uniq_dis_dict.keys():
                 self.driver_dict[driver_info['unique_key']].append(driver_info)
                 matched_dis_anno_counter += 1
-            elif 'model' in driver_info['qualifier']:
-                self.log.warning(f'Could not find dis anno: line={line_number}; unique_key={driver_info["unique_key"]}; dict={driver_info}; line={line}')
-                prob_msg = 'no matching dis anno'
-                driver_info['problems'].append(prob_msg)
-                rejected_driver_info.append(driver_info)
-                unmatched_dis_anno_counter += 1
+            # elif 'model' in driver_info['qualifier']:
+            #     self.log.warning(f'Could not find dis anno: line={line_number}; unique_key={driver_info["unique_key"]}; dict={driver_info}; line={line}')
+            #     prob_msg = 'no matching dis anno'
+            #     driver_info['problems'].append(prob_msg)
+            #     rejected_driver_info.append(driver_info)
+            #     unmatched_dis_anno_counter += 1
             else:
                 second_pass_driver_info.append(driver_info)
 
-        # A second pass at matching driver info to account of ambiguity in eco_abbr determination for modifier-type annotations.
+        # A second pass at matching driver info to account of error/ambiguity in eco_abbr.
         for driver_info in second_pass_driver_info:
             alt_unique_key = driver_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC')
-            if alt_unique_key in self.uniq_dis_dict.keys() and alt_unique_key not in self.driver_dict.keys():
+            if alt_unique_key in self.uniq_dis_dict.keys():
                 driver_info['unique_key'] = alt_unique_key
                 self.driver_dict[alt_unique_key].append(driver_info)
                 close_matched_dis_anno_counter += 1
@@ -868,7 +863,6 @@ class AGMDiseaseHandler(DataHandler):
         self.extract_text_embedded_alleles(session)
         self.extract_model_and_modifiers()
         self.get_parent_genes()
-        self.search_useful_aberrations(session)
         self.build_model_eco_lookup()
         self.lookup_eco_codes_for_modifier_annotations()
         self.calculate_annotation_unique_key()
