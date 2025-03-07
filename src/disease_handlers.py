@@ -619,7 +619,7 @@ class AGMDiseaseHandler(DataHandler):
             evip.value == evi_code,
             evip.rank == qualp.rank,
         )
-        results = session.query(FeatureCvterm).\
+        results = session.query(FeatureCvterm, qualp).\
             select_from(Feature).\
             join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
             join(dis_term, (dis_term.cvterm_id == FeatureCvterm.cvterm_id)).\
@@ -630,7 +630,9 @@ class AGMDiseaseHandler(DataHandler):
             join(evi_type, (evi_type.cvterm_id == evip.type_id)).\
             filter(*filters).\
             distinct()
-        if results:
+        for result in results:
+            msg = f'Found {result.FeatureCvterm.feature_cvterm_id}_{result.qualp.rank}'
+            self.log.debug(f'GILLYGOAT: {msg}')
             exists = True
         return exists
 
