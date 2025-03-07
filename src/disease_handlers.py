@@ -445,11 +445,11 @@ class AGMDiseaseHandler(DataHandler):
                         msg += f'DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}\t'
                         msg += f'{dis_anno.qualifier.value}\t'
                         msg += f'{dis_anno.evidence_code.value}'
-                        self.log.debug(f'BOB:{msg}')
+                        self.log.debug(f'Found FBab-dis_anno match: {msg}')
                         match_counter += 1
                 pair_counter += 1
-                if pair_counter % 1000 == 0:
-                    self.log.debug(f'BOBBYSUE: Have checked {pair_counter} aberration-dis_anno pairs.')
+                if pair_counter % 1000000 == 0:
+                    self.log.debug(f'Have checked {pair_counter} aberration-dis_anno pairs.')
         self.log.info(f'Found {match_counter} potential aberration-dis_anno matches.')
         return
 
@@ -666,13 +666,13 @@ class AGMDiseaseHandler(DataHandler):
             distinct()
         for result in results:
             msg = f'Found {result.FeatureCvterm.feature_cvterm_id}_{result.qualp.rank}'
-            self.log.debug(f'GILLYGOAT: {msg}')
+            self.log.warning(msg)
             exists = True
         return exists
 
     def parse_driver_info(self, session):
-        """Integrate driver info into annotations."""
-        self.log.info('Integrate driver info into annotations.')
+        """Parse driver info into annotations."""
+        self.log.info('Parse driver info into annotations.')
         PUB_GIVEN = 0
         ALLELE_SYMBOL = 1
         QUAL = 4
@@ -873,6 +873,26 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Found {discrepancy_counter} discrepancies where an unmatched disease annotations is in chado.')
         return
 
+    # BOB: use code below when processing self.uniq_dis_dict annotation sets.
+    # BOB: need to collapse redundant annotations in self.uniq_dis_dict.values()
+    # BOB: then for the collapsed annotation, make one variation for driver combo list.
+    def integrate_driver_info(self):
+        """Integrate driver info."""
+        self.log.info('Integrate driver info.')
+        for uniq_key, driver_info_list in self.driver_dict.items():
+            driver_combo_lists = []
+            for driver_info in driver_info_list:
+                # For the "and" operation, we keep the set intact - integrate the combination.
+                if driver_info['operation'] == 'and':
+                    driver_combo_lists.append(driver_info['driver_ids'])
+                # For "or" and "na" operations, we integrate each driver separately.
+                else:
+                    for driver_id in driver_info['driver_ids']:
+                        driver_combo_lists.append([driver_id])
+            # BOB: Then we match up with dis anno set.
+            _ = self.uniq_dis_dict[uniq_key]
+        return
+
     # BOB: to do.
     def integrate_aberration_info(self):
         """Integrate aberration info into annotations."""
@@ -902,6 +922,7 @@ class AGMDiseaseHandler(DataHandler):
         self.calculate_annotation_unique_key()
         self.parse_driver_info(session)
         self.report_unmatched_driver_lines(session)
+        self.integrate_driver_info()
         # self.integrate_aberration_info()
         # self.get_genotype(session)
         return
