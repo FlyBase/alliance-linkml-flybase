@@ -501,7 +501,7 @@ class AGMDiseaseHandler(DataHandler):
                 self.log.warning(f'No ECO abbr for {dis_anno.unique_key}')
             if dis_anno.modifier_id:
                 dis_anno.unique_key += f'_{dis_anno.modifier_role}={dis_anno.modifier_id}'
-            # self.log.debug(f'Annotation db_primary_id={dis_anno.db_primary_id} has this unique key: {dis_anno.unique_key}')
+            self.log.debug(f'Annotation db_primary_id={dis_anno.db_primary_id} has this unique key: {dis_anno.unique_key}')
             self.uniq_dis_dict[dis_anno.unique_key].append(dis_anno)
         return
 
