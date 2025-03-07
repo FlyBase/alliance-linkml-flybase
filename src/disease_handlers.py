@@ -155,7 +155,7 @@ class AGMDiseaseHandler(DataHandler):
         ab_counter = 0
         gene_counter = 0
         for result in results:
-            self.log.debug(f'BOB: {result.aberration.uniquename} {result.Cvterm.name} {result.gene.name}')
+            # self.log.debug(f'{result.aberration.uniquename} {result.Cvterm.name} {result.gene.name}')
             try:
                 self.feature_lookup[result.aberration.feature_id]['affected_genes'].append(result.gene.feature_id)
                 gene_counter += 1
@@ -417,6 +417,35 @@ class AGMDiseaseHandler(DataHandler):
                 dis_anno.parent_gene_ids.add(self.allele_gene_lookup[allele_feature_id])
             counter += len(dis_anno.parent_gene_ids)
         self.log.info(f'Found {counter} parent genes for key alleles of disease annotations.')
+        return
+
+    def find_relevant_aberrations(self):
+        """Find aberrations that might be relevant to the disease annotations."""
+        self.log.info('Find aberrations that might be relevant to the disease annotations.')
+        pair_counter = 0
+        match_counter = 0
+        for feature in self.feature_lookup.values():
+            if feature['type'] != 'chromosome_structure_variation':
+                continue
+            for dis_anno in self.fb_data_entities.values():
+                if dis_anno.feature_cvterm.pub_id in feature['pubs']:
+                    if dis_anno.parent_gene_ids.intersection(set(feature['affected_genes'])):
+                        dis_anno.possible_aberrations.add(feature['feature_id'])
+                        msg = f'{dis_anno.feature_cvterm.pub.uniquename}\t'
+                        msg += f'{feature["uniquename"]}\t'
+                        msg += f'{feature["name"]}\t'
+                        msg += f'{dis_anno.feature_cvterm.feature.uniquename}\t'
+                        msg += f'{dis_anno.feature_cvterm.feature.name}\t'
+                        msg += f'{dis_anno.feature_cvterm.cvterm.name}\t'
+                        msg += f'DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}\t'
+                        msg += f'{dis_anno.qualifier.value}\t'
+                        msg += f'{dis_anno.evidence_code.value}'
+                        self.log.debug(f'BOB:{msg}')
+                        match_counter += 1
+                pair_counter += 1
+                if pair_counter % 1000 == 0:
+                    self.log.debug(f'BOBBYSUE: Have checked {pair_counter} aberration-dis_anno pairs.')
+        self.log.info(f'Found {match_counter} potential aberration-dis_anno matches.')
         return
 
     def build_model_eco_lookup(self):
@@ -829,7 +858,7 @@ class AGMDiseaseHandler(DataHandler):
                                                    i['pub_given'], i['qualifier'], i['evi_code'])
             if exists:
                 desc = f'line={i["line_number"]}; unique_key={driver_info["unique_key"]}'
-                self.log.warning(f'BILLYBOB: No match for annotation but in chado? {desc}')
+                self.log.warning(f'No match for annotation but in chado? {desc}')
                 discrepancy_counter += 1
             else:
                 confirmed_counter += 1
@@ -928,6 +957,7 @@ class AGMDiseaseHandler(DataHandler):
         self.extract_text_embedded_alleles(session)
         self.extract_model_and_modifiers()
         self.get_parent_genes()
+        self.find_relevant_aberrations()
         self.build_model_eco_lookup()
         self.lookup_eco_codes_for_modifier_annotations()
         self.calculate_annotation_unique_key()
