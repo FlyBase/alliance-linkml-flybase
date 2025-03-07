@@ -408,7 +408,7 @@ class FBAlleleDiseaseAnnotation(FBExportEntity):
         self.unique_key = ''                    # A unique descriptor: FBrfID_(NOT)model=<FBalIDs>_<modifier_role>_<modifierFBalID>.
         self.allele_id_was_updated = False      # Change to True if text-embedded allele ID was updated.
         self.allele_id_problem = False          # Change to True if a text-embedded allele ID could not be updated.
-        self.parent_gene_ids = set()            # The set of parent genes for key alleles (model or modifier).
+        self.parent_gene_ids = set()            # The set of parent gene feature_ids for key alleles (model or modifier).
         self.possible_aberrations = set()       # (aberr feature_id, gene_feature_id)) tuples for Df that may overlap a key gene in this annotation.
         # Processed FB data for AlleleDiseaseAnnotationDTO.
         self.preferred_gene_curie = None        # Get the most appropriate curie for the allele's parental gene.
