@@ -738,9 +738,11 @@ class AGMDiseaseHandler(DataHandler):
 
             # Assess non-driver lines in the input file partially.
             if not driver_info['driver_ids']:
-                if driver_info['unique_key'] not in self.uniq_dis_dict.keys():
-                    rejected_driver_info.append(driver_info)
-                skip_counter += 1
+                if not driver_info['unique_key'] in self.uniq_dis_dict.keys():
+                    alt_unique_key = driver_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC')
+                    if alt_unique_key not in self.uniq_dis_dict.keys():
+                        rejected_driver_info.append(driver_info)
+                        skip_counter += 1
                 continue
 
             # Now assess lines that have some driver info.
