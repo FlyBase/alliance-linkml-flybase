@@ -606,28 +606,28 @@ class AGMDiseaseHandler(DataHandler):
         dis_term = aliased(Cvterm, name='dis_term')
         qual_type = aliased(Cvterm, name='qual_type')
         evi_type = aliased(Cvterm, name='evi_type')
-        qual = aliased(FeatureCvtermprop, name='qual')
-        evi = aliased(FeatureCvtermprop, name='evi')
+        qualp = aliased(FeatureCvtermprop, name='qualp')
+        evip = aliased(FeatureCvtermprop, name='evip')
         filters = (
             Feature.is_obsolete.is_(False),
             Feature.uniquename == feat,
             dis_term.name == dis,
             Pub.uniquename == pub,
             qual_type == 'qualifier',
-            qual.value == qual,
+            qualp.value == qual,
             evi_type == 'evidence_code',
-            evi.value == evi_code,
-            evi.rank == qual.rank,
+            evip.value == evi_code,
+            evip.rank == qualp.rank,
         )
         results = session.query(FeatureCvterm).\
             select_from(Feature).\
             join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
             join(dis_term, (dis_term.cvterm_id == FeatureCvterm.cvterm_id)).\
             join(Pub, (Pub.pub_id == FeatureCvterm.pub_id)).\
-            join(qual, (qual.feature_cvterm_id == FeatureCvterm.feature_cvterm_id)).\
-            join(qual_type, (qual_type.cvterm_id == qual.type_id)).\
-            join(evi, (evi.feature_cvterm_id == FeatureCvterm.feature_cvterm_id)).\
-            join(evi_type, (evi_type.cvterm_id == evi.type_id)).\
+            join(qualp, (qualp.feature_cvterm_id == FeatureCvterm.feature_cvterm_id)).\
+            join(qual_type, (qual_type.cvterm_id == qualp.type_id)).\
+            join(evip, (evip.feature_cvterm_id == FeatureCvterm.feature_cvterm_id)).\
+            join(evi_type, (evi_type.cvterm_id == evip.type_id)).\
             filter(*filters).\
             distinct()
         if results:
