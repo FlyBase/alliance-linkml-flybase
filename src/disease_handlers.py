@@ -428,7 +428,7 @@ class AGMDiseaseHandler(DataHandler):
             if feature['type'] != 'chromosome_structure_variation':
                 continue
             for dis_anno in self.fb_data_entities.values():
-                if dis_anno.feature_cvterm.pub_id in feature['pubs']:
+                if dis_anno.feature_cvterm.pub_id in feature['pub_ids']:
                     if dis_anno.parent_gene_ids.intersection(set(feature['affected_genes'])):
                         dis_anno.possible_aberrations.add(feature['feature_id'])
                         msg = f'{dis_anno.feature_cvterm.pub.uniquename}\t'
