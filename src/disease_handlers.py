@@ -616,7 +616,7 @@ class AGMDiseaseHandler(DataHandler):
             qual_type == 'qualifier',
             qualp.value == qual,
             evi_type == 'evidence_code',
-            evip.value == evi_code,
+            # evip.value == evi_code,
             evip.rank == qualp.rank,
         )
         results = session.query(FeatureCvterm, qualp).\
