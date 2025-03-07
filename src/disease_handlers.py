@@ -588,7 +588,7 @@ class AGMDiseaseHandler(DataHandler):
             self.log.debug(f'No result for given symbol={feature_symbol}, converted={converted_feature_symbol}')
         return uniquename
 
-    def check_disease_annotation(self, session, feat, dis, pub, qual):
+    def check_disease_annotation(self, session, feat, dis, pub, qual, evi_code):
         """Check that a given disease annotations exists, or not.
 
         Args:
@@ -596,6 +596,7 @@ class AGMDiseaseHandler(DataHandler):
             dis (str): The DO term name.
             pub (str): The pub FBrf ID.
             qual (str): The qualifier value.
+            evi_code (str): The evidence_code value.
 
         Returns:
             exists (boolean): True if any matching annotations found.
@@ -603,22 +604,30 @@ class AGMDiseaseHandler(DataHandler):
         """
         exists = False
         dis_term = aliased(Cvterm, name='dis_term')
-        prop_type = aliased(Cvterm, name='prop_type')
+        qual_type = aliased(Cvterm, name='qual_type')
+        evi_type = aliased(Cvterm, name='evi_type')
+        qual = aliased(FeatureCvtermprop, name='qual')
+        evi = aliased(FeatureCvtermprop, name='evi')
         filters = (
             Feature.is_obsolete.is_(False),
             Feature.uniquename == feat,
             dis_term.name == dis,
             Pub.uniquename == pub,
-            prop_type == 'qualifier',
-            FeatureCvtermprop.value == qual,
+            qual_type == 'qualifier',
+            qual.value == qual,
+            evi_type == 'evidence_code',
+            evi.value == evi_code,
+            evi.rank == qual.rank,
         )
         results = session.query(FeatureCvterm).\
             select_from(Feature).\
             join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
             join(dis_term, (dis_term.cvterm_id == FeatureCvterm.cvterm_id)).\
             join(Pub, (Pub.pub_id == FeatureCvterm.pub_id)).\
-            join(FeatureCvtermprop, (FeatureCvtermprop.feature_cvterm_id == FeatureCvterm.feature_cvterm_id)).\
-            join(prop_type, (prop_type.cvterm_id == FeatureCvtermprop.type_id)).\
+            join(qual, (qual.feature_cvterm_id == FeatureCvterm.feature_cvterm_id)).\
+            join(qual_type, (qual_type.cvterm_id == qual.type_id)).\
+            join(evi, (evi.feature_cvterm_id == FeatureCvterm.feature_cvterm_id)).\
+            join(evi_type, (evi_type.cvterm_id == evi.type_id)).\
             filter(*filters).\
             distinct()
         if results:
@@ -814,8 +823,8 @@ class AGMDiseaseHandler(DataHandler):
         confirmed_counter = 0
         discrepancy_counter = 0
         for i in rejected_driver_info:
-            exists = self.check_disease_annotation(self, session, i['allele_feature_id'],
-                                                   i['do_term'], i['pub_given'], i['qualifier'])
+            exists = self.check_disease_annotation(session, i['allele_feature_id'], i['do_term'],
+                                                   i['pub_given'], i['qualifier'], i['evi_code'])
             if exists:
                 desc = f'line={i["line_number"]}; unique_key={driver_info["unique_key"]}'
                 self.log.warning(f'BILLYBOB: No match for annotation but in chado? {desc}')
