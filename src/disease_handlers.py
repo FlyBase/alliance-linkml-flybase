@@ -691,7 +691,6 @@ class AGMDiseaseHandler(DataHandler):
         line_number = 0
         input_counter = 0
         malformed_line_counter = 0
-        skip_counter = 0
         matched_dis_anno_counter = 0
         close_matched_dis_anno_counter = 0
         unmatched_dis_anno_counter = 0
@@ -819,11 +818,14 @@ class AGMDiseaseHandler(DataHandler):
 
             # Assess non-driver lines in the input file partially.
             if not driver_info['driver_ids']:
-                if not driver_info['unique_key'] in self.uniq_dis_dict.keys():
+                if driver_info['unique_key'] in self.uniq_dis_dict.keys():
+                    matched_dis_anno_counter += 1
+                else:
                     alt_unique_key = driver_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC')
-                    if alt_unique_key not in self.uniq_dis_dict.keys():
+                    if alt_unique_key in self.uniq_dis_dict.keys():
+                        matched_dis_anno_counter += 1
+                    else:
                         rejected_driver_info.append(driver_info)
-                        skip_counter += 1
                 continue
 
             # Now assess lines that have some driver info.
@@ -890,14 +892,13 @@ class AGMDiseaseHandler(DataHandler):
 
         # Summary
         self.log.info(f'Skipped {malformed_line_counter}/{input_counter} driver info lines due to bad column formatting.')
-        self.log.info(f'Skipped {skip_counter}/{input_counter} driver info lines due to lack of Gal4 info.')
-        self.log.info(f'Processed {input_counter - skip_counter}/{input_counter} driver info lines having Gal4 info.')
+        self.log.info(f'Processed {input_counter} driver info lines having Gal4 info.')
         self.log.info(f'Could not find the pub for {pub_not_found_counter} lines.')
         self.log.info(f'Could not find the DO term for {do_term_not_found_counter} lines.')
         self.log.info(f'Could not find the subject allele for {allele_not_found_counter} lines.')
         self.log.info(f'Could not find {additional_allele_not_found_counter} additional alleles.')
         self.log.info(f'Could not find {driver_not_found_counter} drivers.')
-        fully_processed_count = input_counter - skip_counter - prob_counter
+        fully_processed_count = input_counter - prob_counter
         self.log.info(f'Had problems finding pub/allele/term info for {prob_counter}/{input_counter} driver info lines.')
         self.log.info(f'Fully processed {fully_processed_count}/{input_counter} driver info lines having Gal4 info without issue.')
         self.log.info(f'Found dis anno for {matched_dis_anno_counter}/{fully_processed_count} fully processed driver info lines.')
