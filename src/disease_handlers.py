@@ -588,6 +588,43 @@ class AGMDiseaseHandler(DataHandler):
             self.log.debug(f'No result for given symbol={feature_symbol}, converted={converted_feature_symbol}')
         return uniquename
 
+    def check_disease_annotation(self, session, feat, dis, pub, qual):
+        """Check that a given disease annotations exists, or not.
+
+        Args:
+            feat (str): The FBal ID for the feature.
+            dis (str): The DO term name.
+            pub (str): The pub FBrf ID.
+            qual (str): The qualifier value.
+
+        Returns:
+            exists (boolean): True if any matching annotations found.
+
+        """
+        exists = False
+        dis_term = aliased(Cvterm, name='dis_term')
+        prop_type = aliased(Cvterm, name='prop_type')
+        filters = (
+            Feature.is_obsolete.is_(False),
+            Feature.uniquename == feat,
+            dis_term.name == dis,
+            Pub.uniquename == pub,
+            prop_type == 'qualifier',
+            FeatureCvtermprop.value == qual,
+        )
+        results = session.query(FeatureCvterm).\
+            select_from(Feature).\
+            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
+            join(dis_term, (dis_term.cvterm_id == FeatureCvterm.cvterm_id)).\
+            join(Pub, (Pub.pub_id == FeatureCvterm.pub_id)).\
+            join(FeatureCvtermprop, (FeatureCvtermprop.feature_cvterm_id == FeatureCvterm.feature_cvterm_id)).\
+            join(prop_type, (prop_type.cvterm_id == FeatureCvtermprop.type_id)).\
+            filter(*filters).\
+            distinct()
+        if results:
+            exists = True
+        return exists
+
     def integrate_driver_info(self, session):
         """Integrate driver info into annotations."""
         self.log.info('Integrate driver info into annotations.')
@@ -772,6 +809,21 @@ class AGMDiseaseHandler(DataHandler):
                 driver_info['problems'].append(prob_msg)
                 rejected_driver_info.append(driver_info)
                 unmatched_dis_anno_counter += 1
+
+        # Double check that unmatched dis annos in the spreadsheet are not in chado.
+        confirmed_counter = 0
+        discrepancy_counter = 0
+        for i in rejected_driver_info:
+            exists = self.check_disease_annotation(self, session, i['allele_feature_id'],
+                                                   i['do_term'], i['pub_given'], i['qualifier'])
+            if exists:
+                desc = f'line={i["line_number"]}; unique_key={driver_info["unique_key"]}'
+                self.log.warning(f'BILLYBOB: No match for annotation but in chado? {desc}')
+                discrepancy_counter += 1
+            else:
+                confirmed_counter += 1
+        self.log.info(f'Confirmed that {confirmed_counter} unmatched disease annotations are not in chado.')
+        self.log.info(f'Found {discrepancy_counter} discrepancies where an unmatched disease annotations is in chado.')
 
         # Print out a report for curators of correctly formatted driver info lines that could not be matched up to dis anno.
         curator_report = open('/src/output/unmatched_driver_lines.tsv', 'w')
