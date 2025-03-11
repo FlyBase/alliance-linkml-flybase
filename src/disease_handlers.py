@@ -1126,14 +1126,14 @@ class AGMDiseaseHandler(DataHandler):
                 continue
             # Get allele IDs.
             al_dis_anno = geno_dis_anno.allele_annotations[0]
-            asserted_allele_identifiers = []
+            asserted_fbal_ids = []
             for fbal_id in al_dis_anno.modeled_by:
-                asserted_allele_identifiers.append(f'FB:{fbal_id}')
-            geno_dis_anno.linkmldto.asserted_allele_identifier = asserted_allele_identifiers[0]    # BOB - temp, want many.
-            # geno_dis_anno.linkmldto.asserted_allele_identifiers = asserted_allele_identifiers    # BOB - what we want eventually.
+                asserted_fbal_ids.append(fbal_id)
+            geno_dis_anno.linkmldto.asserted_allele_identifier = f'FB:{asserted_fbal_ids[0]}'                # BOB - temp, want many.
+            geno_dis_anno.linkmldto.asserted_allele_identifiers = [f'FB:{i}' for i in asserted_fbal_ids]    # BOB - what we want eventually.
             # Get gene IDs.
             asserted_gene_identifiers = set()
-            for fbal_id in asserted_allele_identifiers:
+            for fbal_id in asserted_fbal_ids:
                 allele_id = self.uname_feature_lookup[fbal_id]['feature_id']
                 parent_gene = self.feature_lookup[self.allele_gene_lookup[allele_id]]
                 gene_organism = self.organism_lookup[parent_gene['organism_id']]
