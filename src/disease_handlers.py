@@ -881,8 +881,6 @@ class AGMDiseaseHandler(DataHandler):
     def integrate_driver_info(self):
         """Integrate driver info."""
         self.log.info('Integrate driver info.')
-        and_counter = 0
-        or_counter = 0
         counter = 0
         miscounter = 0
         for uniq_key, driver_info_list in self.driver_dict.items():
@@ -893,20 +891,16 @@ class AGMDiseaseHandler(DataHandler):
                 if driver_info['operation'] == 'and':
                     driver_combo_str = '_'.join(sorted(driver_info['driver_ids']))
                     driver_combos.add(driver_combo_str)
-                    and_counter += 1
                 # For "or" and "na" operations, we integrate each driver separately.
                 else:
                     for driver_id in driver_info['driver_ids']:
                         driver_combos.add(driver_id)
-                    or_counter += 1
-
             self.log.debug(f'BOB: Have this final set of driver combos: {driver_combos}')
             try:
                 self.fb_data_entities[uniq_key].driver_combos = driver_combos
                 counter += 1
             except KeyError:
                 miscounter += 1
-        self.log.info(f'Found {or_counter} "OR" and {and_counter} "AND" driver info items.')
         self.log.info(f'Integrated driver info into {counter} genotype-level disease annotations.')
         self.log.info(f'For {miscounter}, could not match up driver info to a genotype-level disease annotation.')
         return
