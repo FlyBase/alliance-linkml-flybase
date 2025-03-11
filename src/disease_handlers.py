@@ -977,6 +977,7 @@ class AGMDiseaseHandler(DataHandler):
             genotype_name = ' '.join(cgroup_names)
             self.log.debug(f'BILLY: have this genotype name: {genotype_name}')
             genotype = GenotypeAnnotation(genotype_name, session, self.log)
+            genotype.get_known_or_create_new_genotype(session)
             self.log.debug(f'Got this curie: {genotype.curie}')
             dis_anno.final_genotype = genotype.curie
             counter += 1
