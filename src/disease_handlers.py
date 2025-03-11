@@ -946,8 +946,9 @@ class AGMDiseaseHandler(DataHandler):
             allele_dis_anno = dis_anno.allele_annotations[0]
             components = []
             components.extend(allele_dis_anno.modeled_by)
-            driver_ids = list(dis_anno.driver_combos)[0].split('_')
-            components.extend(driver_ids)
+            if dis_anno.driver_combos:
+                driver_ids = list(dis_anno.driver_combos)[0].split('_')
+                components.extend(driver_ids)
             # Next, sort into complementation groups, with classical alleles of same gene in same cgroup.
             cgroup_dict = {}
             cgroup_names = []
