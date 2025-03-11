@@ -397,7 +397,7 @@ class FBAlleleDiseaseAnnotation(FBExportEntity):
         self.db_primary_id = f'{feature_cvterm.feature_cvterm_id}_{provenance_prop.rank}'
         self.evidence_code = None               # Will be the "evidence_code" FeatureCvtermprop.
         self.qualifier = None                   # Will be the "qualifier" FeatureCvtermprop.
-        # Processed FB data for AGMDiseaseAnnotationDTO.
+        # Processed FB data for conversion to FBGenotypeDiseaseAnnotation.
         self.text_embedded_allele_ids = []      # FBal IDs of alleles in embedded text (updated as needed and if possible).
         self.modeled_by = []                    # Will be a list of all allele FBal IDs that model the disease.
         self.is_not = False                     # Becomes True for "DOES NOT model" annotations.
@@ -432,6 +432,25 @@ class FBAlleleDiseaseAnnotation(FBExportEntity):
                    self.evidence_code.value)
         self.entity_desc = desc
         return
+
+
+class FBGenotypeDiseaseAnnotation(FBExportEntity):
+    """FBGenotypeDiseaseAnnotation class."""
+    def __init__(self, unique_key):
+        """Create a FBGenotypeDiseaseAnnotation object.
+
+        There is no such entity in chado. This class aggregates many FBAlleleDiseaseAnnotation objects.
+
+        Args:
+            unique_key (str): A unique descriptor for this genotype-level disease annotation.
+
+        """
+        super().__init__()
+        self.unique_key = unique_key
+        self.entity_desc = unique_key
+        self.allele_annotations = []    # Allele-level annotations that map to this genotype-level annotation.
+        self.driver_combo_lists = []    # Lists of driver combinations (FB IDs) to be integrated into this genotype-level annotation.
+        self.aberration_ids = []        # Driver FB uniquenames to be integrated into this genotype-level annotation.
 
 
 class FBRelationship(FBExportEntity):

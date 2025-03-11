@@ -39,10 +39,11 @@ class AGMDiseaseHandler(DataHandler):
         self.fb_export_type = fb_datatypes.FBAlleleDiseaseAnnotation
         self.agr_export_type = agr_datatypes.AGMDiseaseAnnotationDTO
         self.primary_export_set = 'disease_agm_ingest_set'
+        self.prelim_fb_data_entities = {}            # Initial allele-level disease annotations.
         self.allele_name_lookup = {}                 # feature.name-keyed feature dicts, current only.
         self.doid_term_lookup = {}                   # cvterm.name-keyed cvterm dicts.
         self.model_eco_lookup = defaultdict(list)    # Evidence abbreviation lookup for "model_of" annotations.
-        self.uniq_dis_dict = defaultdict(list)       # Disease annotations keyed by a unique attribute concatenation.
+        # self.uniq_dis_dict = defaultdict(list)       # Disease annotations keyed by a unique attribute concatenation.
         self.driver_dict = defaultdict(list)         # Unique disease descriptors key lists of driver info to integrate.
         self.rejected_driver_info = []               # List of driver dicts missing chado dis anno.
 
@@ -217,7 +218,7 @@ class AGMDiseaseHandler(DataHandler):
         counter = 0
         for result in results:
             dis_anno = self.fb_export_type(result.FeatureCvterm, result.FeatureCvtermprop)
-            self.fb_data_entities[dis_anno.db_primary_id] = dis_anno
+            self.prelim_fb_data_entities[dis_anno.db_primary_id] = dis_anno
             counter += 1
         self.log.info(f'Found {counter} allele-based disease annotations from chado (excludes annotations to obsolete alleles).')
         return
@@ -237,7 +238,7 @@ class AGMDiseaseHandler(DataHandler):
         for qualifier in results:
             db_primary_id = '{}_{}'.format(qualifier.feature_cvterm_id, qualifier.rank)
             try:
-                self.fb_data_entities[db_primary_id].qualifier = qualifier
+                self.prelim_fb_data_entities[db_primary_id].qualifier = qualifier
                 qualifier_count += 1
             except KeyError:
                 pass
@@ -259,13 +260,13 @@ class AGMDiseaseHandler(DataHandler):
         for evidence_code in results:
             db_primary_id = '{}_{}'.format(evidence_code.feature_cvterm_id, evidence_code.rank)
             try:
-                self.fb_data_entities[db_primary_id].evidence_code = evidence_code
+                self.prelim_fb_data_entities[db_primary_id].evidence_code = evidence_code
                 evidence_code_count += 1
             except KeyError:
                 pass
         self.log.info('Found {} disease annotation evidence codes.'.format(evidence_code_count))
         # Update annotation descriptions now that all info is in.
-        for dis_anno in self.fb_data_entities.values():
+        for dis_anno in self.prelim_fb_data_entities.values():
             dis_anno.set_entity_desc()
         return
 
@@ -288,7 +289,7 @@ class AGMDiseaseHandler(DataHandler):
         counter = 0
         for row in audit_results:
             try:
-                self.fb_data_entities[row[DB_PRIMARY_ID]].timestamps.append(row[TIMESTAMP])
+                self.prelim_fb_data_entities[row[DB_PRIMARY_ID]].timestamps.append(row[TIMESTAMP])
                 counter += 1
             except KeyError:
                 # self.log.debug(f'Could not put this in anno dict: {row}')
@@ -363,7 +364,7 @@ class AGMDiseaseHandler(DataHandler):
         updated_allele_id_counter = 0
         cannot_update_allele_id_counter = 0
         allele_id_prob_counter = 0
-        for dis_anno in self.fb_data_entities.values():
+        for dis_anno in self.prelim_fb_data_entities.values():
             if not re.search(embedded_allele_regex, dis_anno.evidence_code.value):
                 continue
             embedded_allele_ids = re.findall(embedded_allele_regex, dis_anno.evidence_code.value)
@@ -391,7 +392,7 @@ class AGMDiseaseHandler(DataHandler):
     def extract_model_and_modifiers(self):
         """Extract model components from annotation subject, qualifier and evidence_code."""
         self.log.info('Extract model components from annotation subject, qualifier and evidence_code.')
-        for dis_anno in self.fb_data_entities.values():
+        for dis_anno in self.prelim_fb_data_entities.values():
             dis_anno.modeled_by.extend(dis_anno.text_embedded_allele_ids)
             allele_subject_id = self.feature_lookup[dis_anno.feature_cvterm.feature_id]['uniquename']
             if dis_anno.qualifier.value in ('model of', 'DOES NOT model'):
@@ -407,7 +408,7 @@ class AGMDiseaseHandler(DataHandler):
         """Get parent genes for key alleles."""
         self.log.info('Get parent genes for key alleles.')
         counter = 0
-        for dis_anno in self.fb_data_entities.values():
+        for dis_anno in self.prelim_fb_data_entities.values():
             key_alleles = []
             key_alleles.extend(dis_anno.modeled_by)
             if dis_anno.modifier_id:
@@ -430,7 +431,7 @@ class AGMDiseaseHandler(DataHandler):
                 continue
             elif 'pub_ids' not in feature.keys():
                 continue
-            for dis_anno in self.fb_data_entities.values():
+            for dis_anno in self.prelim_fb_data_entities.values():
                 if dis_anno.feature_cvterm.pub_id in feature['pub_ids']:
                     if 'affected_genes' not in feature:
                         continue
@@ -457,7 +458,7 @@ class AGMDiseaseHandler(DataHandler):
         """Build ECO lookup for model-type annotations."""
         self.log.info('Build ECO lookup for model-type annotations.')
         counter = 0
-        for dis_anno in self.fb_data_entities.values():
+        for dis_anno in self.prelim_fb_data_entities.values():
             # Determine unique key for the model in this annotation.
             dis_anno.model_unique_key = f'{dis_anno.feature_cvterm.pub.uniquename}_'
             if dis_anno.is_not:
@@ -499,7 +500,7 @@ class AGMDiseaseHandler(DataHandler):
         assess_counter = 0
         match_counter = 0
         no_match_counter = 0
-        for dis_anno in self.fb_data_entities.values():
+        for dis_anno in self.prelim_fb_data_entities.values():
             input_counter += 1
             if dis_anno.eco_abbr:
                 skip_counter += 1
@@ -521,10 +522,10 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Assigned "CEA" for {no_match_counter} modifier-type annotations with no info.')
         return
 
-    def calculate_annotation_unique_key(self):
-        """Calculate unique descriptors for disease annotations."""
-        self.log.info('Calculate unique descriptors for disease annotations.')
-        for dis_anno in self.fb_data_entities.values():
+    def group_redundant_annotations(self):
+        """Group allele-level disease annotations into genotype-level disease annotations."""
+        self.log.info('Group allele-level disease annotations into genotype-level disease annotations.')
+        for dis_anno in self.prelim_fb_data_entities.values():
             dis_anno.unique_key = f'{dis_anno.feature_cvterm.pub.uniquename}_'
             if dis_anno.is_not:
                 dis_anno.unique_key += 'NOT_'
@@ -536,7 +537,11 @@ class AGMDiseaseHandler(DataHandler):
             if dis_anno.modifier_id:
                 dis_anno.unique_key += f'_{dis_anno.modifier_role}={dis_anno.modifier_id}'
             self.log.debug(f'Annotation db_primary_id={dis_anno.db_primary_id} has this unique key: {dis_anno.unique_key}')
-            self.uniq_dis_dict[dis_anno.unique_key].append(dis_anno)
+            if dis_anno.unique_key in self.fb_data_entities.keys():
+                self.fb_data_entities[dis_anno.unique_key].allele_annotations.append(dis_anno)
+            else:
+                self.fb_data_entities[dis_anno.unique_key] = fb_datatypes.FBGenotypeDiseaseAnnotation(dis_anno.unique_key)
+                self.fb_data_entities[dis_anno.unique_key].allele_annotations.append(dis_anno)
         return
 
     def find_cvterm_curie_from_name(self, session, cvterm_name):
@@ -807,13 +812,13 @@ class AGMDiseaseHandler(DataHandler):
             self.log.debug(f'Line={line_number}; ukey={driver_info["unique_key"]}')
 
             # Look for matches between input file annotations and chado annotations.
-            if driver_info['unique_key'] in self.uniq_dis_dict.keys():
+            if driver_info['unique_key'] in self.fb_data_entities.keys():
                 matched_dis_anno_counter += 1
                 if driver_info['driver_ids']:
                     self.driver_dict[driver_info['unique_key']].append(driver_info)
             else:
                 alt_unique_key = driver_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC')
-                if alt_unique_key in self.uniq_dis_dict.keys():
+                if alt_unique_key in self.fb_data_entities.keys():
                     close_matched_dis_anno_counter += 1
                     if driver_info['driver_ids']:
                         driver_info['unique_key'] = alt_unique_key
@@ -873,12 +878,11 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Found {discrepancy_counter} discrepancies where an unmatched disease annotations is in chado.')
         return
 
-    # BOB: use code below when processing self.uniq_dis_dict annotation sets.
-    # BOB: need to collapse redundant annotations in self.uniq_dis_dict.values()
-    # BOB: then for the collapsed annotation, make one variation for driver combo list.
     def integrate_driver_info(self):
         """Integrate driver info."""
         self.log.info('Integrate driver info.')
+        counter = 0
+        miscounter = 0
         for uniq_key, driver_info_list in self.driver_dict.items():
             driver_combo_lists = []
             for driver_info in driver_info_list:
@@ -889,8 +893,13 @@ class AGMDiseaseHandler(DataHandler):
                 else:
                     for driver_id in driver_info['driver_ids']:
                         driver_combo_lists.append([driver_id])
-            # BOB: Then we match up with dis anno set.
-            _ = self.uniq_dis_dict[uniq_key]
+            try:
+                self.fb_data_entities[uniq_key].driver_combo_lists = driver_combo_lists
+                counter += 1
+            except KeyError:
+                miscounter += 1
+        self.log.info(f'Integrated driver info into {counter} genotype-level disease annotations.')
+        self.log.info(f'For {miscounter}, could not match up driver info to a genotype-level disease annotation.')
         return
 
     # BOB: to do.
@@ -919,7 +928,7 @@ class AGMDiseaseHandler(DataHandler):
         # self.find_relevant_aberrations()    # Run only upon request (Jira FTA-45)
         self.build_model_eco_lookup()
         self.lookup_eco_codes_for_modifier_annotations()
-        self.calculate_annotation_unique_key()
+        self.group_redundant_annotations()
         self.parse_driver_info(session)
         self.report_unmatched_driver_lines(session)
         self.integrate_driver_info()
@@ -935,7 +944,7 @@ class AGMDiseaseHandler(DataHandler):
             'Obsolete modifier ID': 0,
         }
         no_export_counter = 0
-        for dis_anno in self.fb_data_entities.values():
+        for dis_anno in self.prelim_fb_data_entities.values():
             export_checks = {
                 dis_anno.modifier_problem is True: 'Obsolete modifier ID',
             }
@@ -968,7 +977,7 @@ class AGMDiseaseHandler(DataHandler):
     # def map_allele_disease_annotation_basic(self):
     #     """Map basic FlyBase allele disease annotation to the Alliance LinkML object."""
     #     self.log.info('Map basic FlyBase allele disease annotation to the Alliance LinkML object.')
-    #     for dis_anno in self.fb_data_entities.values():
+    #     for dis_anno in self.prelim_fb_data_entities.values():
     #         if dis_anno.for_export is False:
     #             continue
     #         allele_curie = f'FB:{dis_anno.feature_cvterm.feature.uniquename}'
@@ -992,7 +1001,7 @@ class AGMDiseaseHandler(DataHandler):
     # def map_data_provider_dto(self):
     #     """Return the DataProviderDTO for the annotation."""
     #     self.log.info('Map data provider.')
-    #     for dis_anno in self.fb_data_entities.values():
+    #     for dis_anno in self.prelim_fb_data_entities.values():
     #         if dis_anno.for_export is False:
     #             continue
     #         dp_xref = agr_datatypes.CrossReferenceDTO('DOID', dis_anno.linkmldto.do_term_curie, 'disease/fb', dis_anno.linkmldto.do_term_curie).dict_export()
@@ -1002,7 +1011,7 @@ class AGMDiseaseHandler(DataHandler):
     # def derive_uniq_key(self):
     #     """Derive the unique key based on defining aspects of Alliance disease annotation."""
     #     self.log.info('Derive the unique key based on defining aspects of Alliance disease annotation.')
-    #     for dis_anno in self.fb_data_entities.values():
+    #     for dis_anno in self.prelim_fb_data_entities.values():
     #         if dis_anno.for_export is False:
     #             continue
     #         dis_anno.uniq_key = f'{dis_anno.linkmldto.allele_identifier}'
@@ -1025,7 +1034,7 @@ class AGMDiseaseHandler(DataHandler):
     #     self.log.info('Group redundant disease annotations.')
     #     input_counter = 0
     #     redundant_counter = 0
-    #     for dis_anno in self.fb_data_entities.values():
+    #     for dis_anno in self.prelim_fb_data_entities.values():
     #         if dis_anno.for_export is False:
     #             continue
     #         input_counter += 1
@@ -1041,11 +1050,11 @@ class AGMDiseaseHandler(DataHandler):
     #             self.log.warning(f'REDUNDANT: AGR_UNIQ_KEY: {uniq_key}')
     #             first_db_id = min(db_primary_ids)
     #             for db_primary_id in db_primary_ids:
-    #                 self.log.debug(f'REDUNDANT: {self.fb_data_entities[db_primary_id]}')
+    #                 self.log.debug(f'REDUNDANT: {self.prelim_fb_data_entities[db_primary_id]}')
     #                 if db_primary_id != first_db_id:
-    #                     self.fb_data_entities[db_primary_id].is_redundant = True
-    #                     self.fb_data_entities[db_primary_id].for_export = False
-    #                     self.fb_data_entities[db_primary_id].export_warnings.append('Annotation is redundant')
+    #                     self.prelim_fb_data_entities[db_primary_id].is_redundant = True
+    #                     self.prelim_fb_data_entities[db_primary_id].for_export = False
+    #                     self.prelim_fb_data_entities[db_primary_id].export_warnings.append('Annotation is redundant')
     #                     redundant_counter += 1
     #     self.log.info(f'A further {redundant_counter} redundant annotations blocked from export.')
     #     return
