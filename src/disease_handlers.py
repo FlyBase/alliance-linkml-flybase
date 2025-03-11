@@ -1056,7 +1056,7 @@ class AGMDiseaseHandler(DataHandler):
         self.integrate_driver_info()
         # self.integrate_aberration_info()
         self.split_out_genotype_disease_annotations()
-        self.get_genotypes(session)
+        # self.get_genotypes(session)
         return
 
     # Add methods to be run by synthesize_info() below.
