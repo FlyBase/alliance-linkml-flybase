@@ -21,6 +21,7 @@ from collections import defaultdict
 from logging import Logger
 from sqlalchemy.orm import aliased
 from harvdev_utils.char_conversions import sgml_to_plain_text
+from harvdev_utils.genotype_utilities import GenotypeAnnotation
 from harvdev_utils.reporting import (
     Cv, Cvterm, Cvtermsynonym, Db, Dbxref, Feature, FeatureCvterm, FeatureCvtermprop,
     FeatureDbxref, FeaturePub, FeatureRelationship, FeatureSynonym, Pub, Synonym
@@ -938,7 +939,47 @@ class AGMDiseaseHandler(DataHandler):
     # BOB: to do.
     def get_genotypes(self, session):
         """Get genotypes for final genotype-level disease annotations."""
-        self.log.info('Get genotyeps for final genotype-level disease annotations.')
+        self.log.info('Get genotypes for final genotype-level disease annotations.')
+        counter = 0
+        for dis_anno in self.fb_data_entities.values():
+            # First, get the genotype components (excluding modifier).
+            allele_dis_anno = dis_anno.allele_annotations[0]
+            components = []
+            components.extend(allele_dis_anno.modeled_by)
+            driver_ids = list(dis_anno.driver_combos)[0].split('_')
+            components.extend(driver_ids)
+            # Next, sort into complementation groups, with classical alleles of same gene in same cgroup.
+            cgroup_dict = {}
+            cgroup_names = []
+            for curie in components:
+                feature = self.uname_feature_lookup[curie]
+                single_cgroup = True
+                # Flag transgenic alleles.
+                if feature['feature_id'] in self.transgenic_allele_ids:
+                    single_cgroup = False
+                elif feature['feature_id'] in self.in_vitro_allele_ids:
+                    single_cgroup = False
+                # Sort transgenic alleles into their own cgroup.
+                if single_cgroup is False:
+                    cgroup_dict[curie] = feature
+                # Group classical alleles by gene.
+                else:
+                    gene_feature_id = self.allele_gene_lookup[feature['feature_id']]
+                    gene = self.uname_feature_lookup[gene_feature_id]
+                    try:
+                        cgroup_dict[gene['curie']].append(feature)
+                    except KeyError:
+                        cgroup_dict[gene['curie']] = [feature]
+            for cgroup in cgroup_dict.values():
+                cgroup_name = '/'.join([i['name'] for i in cgroup])
+                cgroup_names.append(cgroup_name)
+            genotype_name = ' '.join(cgroup_names)
+            self.log.debug(f'BILLY: have this genotype name: {genotype_name}')
+            genotype = GenotypeAnnotation(genotype_name, self.log)
+            self.log.debug(f'Got this curie: {genotype.curie}')
+            dis_anno.final_genotype = genotype.curie
+            counter += 1
+        self.log.info(f'Got/created {counter} disease genotypes.')
         return
 
     # Elaborate on get_datatype_data() for the AGMDiseaseHandler.
