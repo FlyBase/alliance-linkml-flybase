@@ -962,7 +962,7 @@ class AGMDiseaseHandler(DataHandler):
                     single_cgroup = False
                 # Sort transgenic alleles into their own cgroup.
                 if single_cgroup is False:
-                    cgroup_dict[curie] = feature
+                    cgroup_dict[curie] = [feature]
                 # Group classical alleles by gene.
                 else:
                     gene_feature_id = self.allele_gene_lookup[feature['feature_id']]
