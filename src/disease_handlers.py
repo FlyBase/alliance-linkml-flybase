@@ -45,9 +45,9 @@ class AGMDiseaseHandler(DataHandler):
         self.allele_name_lookup = {}                 # feature.name-keyed feature dicts, current only.
         self.doid_term_lookup = {}                   # cvterm.name-keyed cvterm dicts.
         self.model_eco_lookup = defaultdict(list)    # Evidence abbreviation lookup for "model_of" annotations.
-        # self.uniq_dis_dict = defaultdict(list)       # Disease annotations keyed by a unique attribute concatenation.
         self.driver_dict = defaultdict(list)         # Unique disease descriptors key lists of driver info to integrate.
         self.rejected_driver_info = []               # List of driver dicts missing chado dis anno.
+        self.misxprn_allele_ids = []                 # Allele IDs for misexpression elements.
 
     relevant_fcvtp_types = [
         'evidence_code',
@@ -170,6 +170,51 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Found {gene_counter} genes with useful relationships to {ab_counter} aberrations.')
         return
 
+    def get_misexpression_elements(self, session):
+        """Get misexpression alleles."""
+        self.log.info('Get misexpression alleles.')
+        allele_feature = aliased(Feature, name='allele_feature')
+        construct_feature = aliased(Feature, name='construct_feature')
+        insertion_feature = aliased(Feature, name='insertion_feature')
+        allele_insertion_rel = aliased(FeatureRelationship, name='allele_insertion_rel')
+        insertion_construct_rel = aliased(FeatureRelationship, name='insertion_construct_rel')
+        ai_rel_type = aliased(Cvterm, name='ai_rel_type')
+        ic_rel_type = aliased(Cvterm, name='ic_rel_type')
+        tool_type = aliased(Cvterm, name='tool_type')
+        tool_rel = aliased(Cvterm, name='tool_rel')
+        filters = (
+            allele_feature.is_obsolete.is_(False),
+            allele_feature.uniquename.op('~')(self.regex['allele']),
+            construct_feature.uniquename.op('~')(self.regex['construct']),
+            construct_feature.is_obsolete.is_(False),
+            insertion_feature.uniquename.op('~')(self.regex['insertion']),
+            insertion_feature.is_obsolete.is_(False),
+            ai_rel_type.name == 'associated_with',
+            ic_rel_type.name == 'producedby',
+            tool_type.name == 'misexpression element',
+            tool_rel.name == 'tool_uses'
+        )
+        results = session.query(allele_feature).\
+            select_from(allele_feature).\
+            join(allele_insertion_rel, (allele_insertion_rel.subject_id == allele_feature.feature_id)).\
+            join(insertion_feature, (insertion_feature.feature_id == allele_insertion_rel.object_id)).\
+            join(ai_rel_type, (ai_rel_type.cvterm_id == allele_insertion_rel.type_id)).\
+            join(insertion_construct_rel, (insertion_construct_rel.subject_id == insertion_feature.feature_id)).\
+            join(construct_feature, (construct_feature.feature_id == insertion_construct_rel.object_id)).\
+            join(ic_rel_type, (ic_rel_type.cvterm_id == insertion_construct_rel.type_id)).\
+            join(FeatureCvterm, (FeatureCvterm.feature_id == construct_feature.feature_id)).\
+            join(tool_type, (tool_type.cvterm_id == FeatureCvterm.cvterm_id)).\
+            join(FeatureCvtermprop, (FeatureCvtermprop.feature_cvterm_id == FeatureCvterm.feature_cvterm_id)).\
+            join(tool_rel, (tool_rel.cvterm_id == FeatureCvtermprop.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            self.misxprn_allele_ids.append(result.feature_id)
+            counter += 1
+        self.log.info(f'Found {counter} misexpression alleles in chado.')
+        return
+
     # Elaborate on get_general_data() for the AGMDiseaseHandler.
     def get_general_data(self, session):
         """Extend the method for the AGMDiseaseHandler."""
@@ -186,6 +231,7 @@ class AGMDiseaseHandler(DataHandler):
         self.build_allele_gene_lookup(session)
         self.build_allele_name_lookup()
         self.build_doid_term_lookup()
+        self.get_misexpression_elements(session)
         return
 
     # Add methods to be run by get_datatype_data() below.
@@ -941,6 +987,7 @@ class AGMDiseaseHandler(DataHandler):
         """Get genotypes for final genotype-level disease annotations."""
         self.log.info('Get genotypes for final genotype-level disease annotations.')
         counter = 0
+        no_counter = 0
         for dis_anno in self.fb_data_entities.values():
             # First, get the genotype components (excluding modifier).
             allele_dis_anno = dis_anno.allele_annotations[0]
@@ -959,6 +1006,8 @@ class AGMDiseaseHandler(DataHandler):
                 if feature['feature_id'] in self.transgenic_allele_ids:
                     single_cgroup = False
                 elif feature['feature_id'] in self.in_vitro_allele_ids:
+                    single_cgroup = False
+                elif feature['feature_id'] in self.misxprn_allele_ids:
                     single_cgroup = False
                 # Sort transgenic alleles into their own cgroup.
                 if single_cgroup is False:
@@ -980,8 +1029,12 @@ class AGMDiseaseHandler(DataHandler):
             genotype.get_known_or_create_new_genotype(session)
             self.log.debug(f'Got this curie: {genotype.curie}')
             dis_anno.final_genotype = genotype.curie
-            counter += 1
+            if genotype.curie is None:
+                no_counter += 1
+            else:
+                counter += 1
         self.log.info(f'Got/created {counter} disease genotypes.')
+        self.log.info(f'Could not get/create a genotype in {no_counter} cases.')
         return
 
     # Elaborate on get_datatype_data() for the AGMDiseaseHandler.
