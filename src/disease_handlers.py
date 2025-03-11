@@ -1137,7 +1137,7 @@ class AGMDiseaseHandler(DataHandler):
                 allele_id = self.uname_feature_lookup[fbal_id]['feature_id']
                 parent_gene = self.feature_lookup[self.allele_gene_lookup[allele_id]]
                 gene_organism = self.organism_lookup[parent_gene['organism_id']]
-                if gene_organism['is_dros'] is True:
+                if gene_organism['is_drosophilid'] is True:
                     asserted_gene_identifiers.add(parent_gene['curie'])
                 elif not parent_gene['curie'].startswith('FB') and gene_organism['official_db']:
                     asserted_gene_identifiers.add(parent_gene['curie'])
