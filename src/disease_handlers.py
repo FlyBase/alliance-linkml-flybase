@@ -696,7 +696,7 @@ class AGMDiseaseHandler(DataHandler):
         prob_counter = 0
         self.rejected_driver_info = []
         for i in file_input:
-            self.log.debug(f'Process this line: {i.strip()}')
+            # self.log.debug(f'Process this line: {i.strip()}')
             line_number += 1
             if not i.startswith('FBrf0'):
                 continue
@@ -884,17 +884,20 @@ class AGMDiseaseHandler(DataHandler):
         counter = 0
         miscounter = 0
         for uniq_key, driver_info_list in self.driver_dict.items():
-            driver_combo_lists = []
+            self.log.debug(f'BOB: Process {uniq_key} driver_info: {driver_info_list}')
+            driver_combos = set()
             for driver_info in driver_info_list:
                 # For the "and" operation, we keep the set intact - integrate the combination.
                 if driver_info['operation'] == 'and':
-                    driver_combo_lists.append(driver_info['driver_ids'])
+                    driver_combo_str = '_'.join(sorted(driver_info['driver_ids']))
+                    driver_combos.add(driver_combo_str)
                 # For "or" and "na" operations, we integrate each driver separately.
                 else:
                     for driver_id in driver_info['driver_ids']:
-                        driver_combo_lists.append([driver_id])
+                        driver_combos.add(driver_id)
+            self.log.debug(f'BOB: Have this final set of driver combos: {driver_combos}')
             try:
-                self.fb_data_entities[uniq_key].driver_combo_lists = driver_combo_lists
+                self.fb_data_entities[uniq_key].driver_combos = driver_combos
                 counter += 1
             except KeyError:
                 miscounter += 1
@@ -968,9 +971,10 @@ class AGMDiseaseHandler(DataHandler):
         return
 
     ############################################################################
-    # BOB - when reporting asserted genes, use the MOD curie.
-    # BOB - if no MOD curie for a non-Dros gene, do not report it.\
-    # BOB - how many annotations are for genes with no MOD curie? If many, a blocker?
+    # BOB - when reporting asserted genes:
+    #        - report FBgn for Dros gene.
+    #        - report MOD gene IFF has a MOD curie (non-FBgn).
+    #        - suppress all other genes (track this in log msg).
     ############################################################################
 
     # # Add methods to be run by map_fb_data_to_alliance() below.
