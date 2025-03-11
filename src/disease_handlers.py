@@ -982,7 +982,6 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Have {len(self.fb_data_entities.keys())} split out annotations.')
         return
 
-    # BOB: to do.
     def get_genotypes(self, session):
         """Get genotypes for final genotype-level disease annotations."""
         self.log.info('Get genotypes for final genotype-level disease annotations.')
