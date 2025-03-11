@@ -451,6 +451,7 @@ class FBGenotypeDiseaseAnnotation(FBExportEntity):
         self.allele_annotations = []    # Allele-level annotations that map to this genotype-level annotation.
         self.driver_combos = set()      # Each item is a driver combo (ID concatenation) to be integrated into this genotype-level annotation.
         self.aberration_ids = []        # Driver FB uniquenames to be integrated into this genotype-level annotation.
+        self.final_genotype = None      # Will be the FBgo of the final genotype.
 
 
 class FBRelationship(FBExportEntity):
