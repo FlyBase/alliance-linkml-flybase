@@ -30,6 +30,7 @@ def export_chado_data(session: Session, log: Logger, object_to_execute: DataHand
         Raises a RuntimeError if there are problems with executing the query.
 
     """
+    global TESTING
     if 'reference_session' in kwargs.keys():
         try:
             object_to_execute.get_entities(kwargs['reference_session'], reference=True)
@@ -44,6 +45,12 @@ def export_chado_data(session: Session, log: Logger, object_to_execute: DataHand
         session.rollback()
         log.critical('Critical transaction error occurred during main chado query; rolling back and exiting.')
         raise
+    if TESTING is True:
+        log.info('Since "testing" is True, rolling back all transactions.')
+        session.rollback()
+    else:
+        log.info('Since "testing" is False, committing transactions.')
+        session.commit()
     return
 
 
