@@ -70,7 +70,7 @@ def main():
 
     # Get the data and process it.
     agm_disease_handler = AGMDiseaseHandler(log, testing)
-    export_chado_data(session, log, agm_disease_handler)
+    export_chado_data(session, log, agm_disease_handler, testing=testing)
 
     # Export the data.
     # export_dict = {
