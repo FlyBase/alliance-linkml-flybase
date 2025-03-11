@@ -966,7 +966,7 @@ class AGMDiseaseHandler(DataHandler):
                 # Group classical alleles by gene.
                 else:
                     gene_feature_id = self.allele_gene_lookup[feature['feature_id']]
-                    gene = self.uname_feature_lookup[gene_feature_id]
+                    gene = self.feature_lookup[gene_feature_id]
                     try:
                         cgroup_dict[gene['curie']].append(feature)
                     except KeyError:
