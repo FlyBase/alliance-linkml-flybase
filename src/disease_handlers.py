@@ -932,6 +932,7 @@ class AGMDiseaseHandler(DataHandler):
                     self.fb_data_entities[new_unique_key] = new_dis_anno
                     output_counter += 1
         self.log.info(f'Turned {input_counter} initial genotype-level disease annotations into {output_counter} genotype disease annotations.')
+        self.log.info(f'Have {len(self.fb_data_entities.keys())} split out annotations.')
         return
 
     # BOB: to do.
