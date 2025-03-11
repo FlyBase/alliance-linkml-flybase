@@ -959,7 +959,7 @@ class AGMDiseaseHandler(DataHandler):
         self.report_unmatched_driver_lines(session)
         self.integrate_driver_info()
         # self.integrate_aberration_info()
-        self.split_out_genotype_disease_annotations(session)
+        self.split_out_genotype_disease_annotations()
         # self.get_genotypes(session)    # BOB - not yet written
         return
 
