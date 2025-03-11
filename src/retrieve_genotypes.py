@@ -269,7 +269,7 @@ class GenotypeHandler(object):
             agr_curie = f'FB:{geno_anno.curie}'
             log.debug(f'Check Alliance for {agr_curie}: {geno_anno}')
             genotype_at_alliance = False
-            get_url = f'https://beta-curation.alliancegenome.org/api/agm/{agr_curie}'
+            get_url = f'https://beta-curation.alliancegenome.org/api/agm/{agr_curie}'    # BOB: Change to prod once implemented.
             headers = {
                 'accept': 'application/json',
                 'Authorization': f'Bearer {self.agr_token}',
