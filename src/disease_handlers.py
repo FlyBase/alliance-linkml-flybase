@@ -1147,7 +1147,7 @@ class AGMDiseaseHandler(DataHandler):
     def map_data_provider_dto(self):
         """Return the DataProviderDTO for the annotation."""
         self.log.info('Map data provider.')
-        for dis_anno in self.allele_dis_annos.values():
+        for dis_anno in self.fb_data_entities.values():
             if dis_anno.for_export is False:
                 continue
             dp_xref = agr_datatypes.CrossReferenceDTO('DOID', dis_anno.linkmldto.do_term_curie, 'disease/fb', dis_anno.linkmldto.do_term_curie).dict_export()
