@@ -25,7 +25,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
 from disease_handlers import AGMDiseaseHandler
-from utils import export_chado_data    # generate_export_file
+from utils import export_chado_data, generate_export_file
 
 # Data types handled by this script.
 REPORT_LABEL = 'agm_disease_curation'
@@ -73,12 +73,12 @@ def main():
     export_chado_data(session, log, agm_disease_handler, testing=testing)
 
     # Export the data.
-    # export_dict = {
-    #     'linkml_version': linkml_release,
-    #     'alliance_member_release_version': database_release,
-    # }
-    # export_dict[agm_disease_handler.primary_export_set] = agm_disease_handler.export_data[agm_disease_handler.primary_export_set]
-    # generate_export_file(export_dict, log, output_filename)
+    export_dict = {
+        'linkml_version': linkml_release,
+        'alliance_member_release_version': database_release,
+    }
+    export_dict[agm_disease_handler.primary_export_set] = agm_disease_handler.export_data[agm_disease_handler.primary_export_set]
+    generate_export_file(export_dict, log, output_filename)
 
     log.info('Ended main function.\n')
 

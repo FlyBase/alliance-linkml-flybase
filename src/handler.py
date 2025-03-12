@@ -55,7 +55,7 @@ class DataHandler(object):
         # Datatype bins.
         self.fb_data_entities = {}                  # db_primary_id-keyed dict of chado objects to export.
         self.fb_reference_entity_ids = []           # A list of db_primary_ids for current entities in a previous reference db (incremental updates).
-        self.export_data = {}                       # agr_ingest_set_name-keyed lists of data objects for export.
+        self.export_data = {}                       # agr_ingest_set_name-keyed list of data objects for export.
         # General data bins.
         self.bibliography = {}                      # A pub_id-keyed dict of pub curies (PMID, or, FBrf if no PMID).
         self.fbrf_bibliography = {}                 # An FBrf_id-keyed dict of chado Pub objects, current pubs only.
