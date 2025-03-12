@@ -1054,9 +1054,9 @@ class AGMDiseaseHandler(DataHandler):
         self.parse_driver_info(session)
         self.report_unmatched_driver_lines(session)
         self.integrate_driver_info()
-        # self.integrate_aberration_info()
+        self.integrate_aberration_info()
         self.split_out_genotype_disease_annotations()
-        # self.get_genotypes(session)
+        self.get_genotypes(session)
         return
 
     # Add methods to be run by synthesize_info() below.
@@ -1089,13 +1089,6 @@ class AGMDiseaseHandler(DataHandler):
         super().synthesize_info()
         self.flag_problematic_annotations()
         return
-
-    ############################################################################
-    # BOB - when reporting asserted genes:
-    #        - report FBgn for Dros gene.
-    #        - report MOD gene IFF has a MOD curie (non-FBgn).
-    #        - suppress all other genes (track this in log msg).
-    ############################################################################
 
     # Add methods to be run by map_fb_data_to_alliance() below.
     def map_genotype_disease_annotation_basic(self):
