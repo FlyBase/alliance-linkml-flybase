@@ -873,7 +873,7 @@ class AGMDiseaseHandler(DataHandler):
                         self.driver_dict[alt_unique_key].append(driver_info)
                 else:
                     line_number = driver_info['line_number']
-                    self.log.warning(f'Could not find dis anno: line={line_number}; unique_key={driver_info["unique_key"]}; line={line}; dict={driver_info}')
+                    # self.log.warning(f'Could not find dis anno: line={line_number}; unique_key={driver_info["unique_key"]}; line={line}; dict={driver_info}')
                     prob_msg = 'no matching dis anno'
                     driver_info['problems'].append(prob_msg)
                     self.rejected_driver_info.append(driver_info)
@@ -950,7 +950,7 @@ class AGMDiseaseHandler(DataHandler):
             except KeyError:
                 miscounter += 1
         self.log.info(f'Integrated driver info into {counter} genotype-level disease annotations.')
-        self.log.info(f'For {miscounter}, could not match up driver info to a genotype-level disease annotation.')
+        self.log.info(f'For {miscounter} driver info objects, could not match up driver info to a genotype-level disease annotation.')
         return
 
     # BOB: to do.
@@ -1130,7 +1130,7 @@ class AGMDiseaseHandler(DataHandler):
             for fbal_id in al_dis_anno.modeled_by:
                 asserted_fbal_ids.append(fbal_id)
             geno_dis_anno.linkmldto.asserted_allele_identifier = f'FB:{asserted_fbal_ids[0]}'                # BOB - temp, want many.
-            geno_dis_anno.linkmldto.asserted_allele_identifiers = [f'FB:{i}' for i in asserted_fbal_ids]    # BOB - what we want eventually.
+            # geno_dis_anno.linkmldto.asserted_allele_identifiers = [f'FB:{i}' for i in asserted_fbal_ids]    # BOB - what we want eventually.
             # Get gene IDs.
             asserted_gene_identifiers = set()
             for fbal_id in asserted_fbal_ids:
