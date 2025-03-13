@@ -440,6 +440,7 @@ class FBGenotypeDiseaseAnnotation(FBExportEntity):
         """Create a FBGenotypeDiseaseAnnotation object.
 
         There is no such entity in chado. This class aggregates many FBAlleleDiseaseAnnotation objects.
+        Alternatively, this class can accept new annotations from spreadsheet (not in chado).
 
         Args:
             unique_key (str): A unique descriptor for this genotype-level disease annotation.
@@ -449,10 +450,19 @@ class FBGenotypeDiseaseAnnotation(FBExportEntity):
         self.unique_key = unique_key
         self.entity_desc = unique_key
         self.allele_annotations = []    # Allele-level annotations that map to this genotype-level annotation.
-        self.driver_combos = set()      # Each item is a driver combo (ID concatenation) to be integrated into this genotype-level annotation.
-        self.aberration_ids = []        # Driver FB uniquenames to be integrated into this genotype-level annotation.
-        # self.genotype_curie = None      # Will be the FBgo of the final genotype.    # BOB - suppress while debugging other steps.
-        self.genotype_curie = 'na'      # BOB: placeholder for faster debugging of upstream steps.
+        # Information for model genotype.
+        self.modeled_by = []          # Will be a list of all allele FBal IDs that model the disease.
+        self.driver_combos = set()    # Each item is a driver combo (ID concatenation) to be integrated into this genotype-level annotation.
+        # self.genotype_curie = None    # Will be the FBgo of the final genotype.    # BOB - suppress while debugging other steps.
+        self.genotype_curie = 'na'    # BOB: placeholder for faster debugging of upstream steps.
+        self.affected_genes = []      # List of affected genes for aberrations in model.
+        # Other information
+        self.pub_curie = None         # The pub curie (PMID or FBrf) for the reference.
+        self.do_term_curie = None     # The DO term curie.
+        self.is_not = False           # Becomes True for "DOES NOT model" annotations.
+        self.eco_abbr = ''            # Will be CEA or CEC, as appropriate.
+        self.modifier_id = None       # Will be FBal ID of the modifier, if applicable.
+        self.modifier_role = None     # Will be Alliance role for a modifier.
 
 
 class FBRelationship(FBExportEntity):
