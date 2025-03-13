@@ -906,6 +906,7 @@ class AGMDiseaseHandler(DataHandler):
             'additional_alleles',
             'driver_input',
             'operation',
+            'problems',
         ]
         curator_report.write('#')
         csv_writer = csv.DictWriter(curator_report, fieldnames=headers, delimiter='\t', extrasaction='ignore', lineterminator='\n')
@@ -914,6 +915,7 @@ class AGMDiseaseHandler(DataHandler):
         confirmed_counter = 0
         discrepancy_counter = 0
         for i in self.rejected_driver_info:
+            i['problems'] = '; '.join(i['problems'])
             exists = self.check_disease_annotation(session, i['allele_feature_id'], i['do_term'],
                                                    i['pub_given'], i['qualifier'], i['evi_code'])
             if exists:
