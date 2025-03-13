@@ -977,174 +977,181 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Have {len(self.fb_data_entities.keys())} split out annotations.')
         return
 
-    # # BOB: in progress.
-    # def parse_aberration_info(self, session):
-    #     """Parse new aberration disease annotations."""
-    #     self.log.info('Parse new aberration disease annotations.')
-    #     DF_ACROSS_ALLELE = 0
-    #     BANG_C = 1
-    #     PUB_GIVEN = 2
-    #     SUBJECT = 3
-    #     QUAL = 4
-    #     DO_TERM = 5
-    #     EVI_CODE = 6
-    #     ADDITIONAL_ALLELES = 7
-    #     DRIVER_INPUT = 8
-    #     DF_SBJ_GENE = 9
-    #     DF_OBJ_GENE = 10
-    #     GENOTYPE = 11
-    #     file_input = open('/src/output/aberr_info.tsv')
-    #     line_number = 0
-    #     input_counter = 0
-    #     malformed_line_counter = 0
-    #     matched_dis_anno_counter = 0
-    #     close_matched_dis_anno_counter = 0
-    #     unmatched_dis_anno_counter = 0
-    #     prob_counter = 0
-    #     self.rejected_aberr_info = []
-    #     for i in file_input:
-    #         self.log.debug(f'Process this aberr line: {i.strip()}')
-    #         line_number += 1
-    #         if not i.startswith('FBrf0'):
-    #             continue
-    #         input_counter += 1
-    #         line = i.split('\t')
-    #         if len(line) != 13:
-    #             self.log.error(f'Line={line_number} is malformed: {i}')
-    #             malformed_line_counter += 1
-    #             continue
-    #         aberr_info = {
-    #             # Attributes from input file.
-    #             'line_number': line_number,
-    #             'pub_given': line[PUB_GIVEN].strip(),
-    #             'allele_symbol': sgml_to_plain_text(line[SUBJECT]).strip(),
-    #             'additional_alleles': line[ADDITIONAL_ALLELES].split(' '),
-    #             'qualifier': line[QUAL].strip(),
-    #             'evi_code': line[EVI_CODE].strip(),
-    #             'do_term': line[DO_TERM].strip(),
-    #             'aberr_input': line[ABERR_INPUT].split(' '),
-    #             'operation': line[OPERATION].rstrip(),
-    #             # Attributes to be obtained from chado.
-    #             'pub_id': None,
-    #             'allele_feature_id': None,
-    #             'additional_allele_ids': [],
-    #             'aberr_ids': [],
-    #             'doid_term_curie': None,
-    #             # Attributes synthesized from the above.
-    #             'modeled_by': [],
-    #             'is_not': False,
-    #             'modifier_id': None,
-    #             'modifier_role': None,
-    #             'eco_abbr': None,
-    #             'unique_key': None,
-    #             'problems': [],
-    #         }
-    #         try:
-    #             aberr_info['pub_id'] = self.fbrf_bibliography[aberr_info['pub_given']].pub_id
-    #         except KeyError:
-    #             self.log.error(f'Line={line_number}: could not find pub "{aberr_info["pub_given"]}" in chado.')
-    #             prob_msg = 'bad pub id'
-    #             aberr_info['problems'].append(prob_msg)
+    # BOB: in progress.
+    def parse_aberration_info(self, session):
+        """Parse new aberration disease annotations."""
+        self.log.info('Parse new aberration disease annotations.')
+        DF_ACROSS_ALLELE = 0
+        BANG_C = 1
+        PUB_GIVEN = 2
+        SUBJECT = 3
+        QUAL = 4
+        DO_TERM = 5
+        EVI_CODE = 6
+        ADDITIONAL_ALLELES = 7
+        DRIVER_INPUT = 8
+        DF_SBJ_GENE = 9
+        DF_OBJ_GENE = 10
+        GENOTYPE = 11
+        file_input = open('/src/output/aberr_info.tsv')
+        line_number = 0
+        input_counter = 0
+        malformed_line_counter = 0
+        matched_dis_anno_counter = 0
+        close_matched_dis_anno_counter = 0
+        unmatched_dis_anno_counter = 0
+        prob_counter = 0
+        self.rejected_aberr_info = []
+        for i in file_input:
+            self.log.debug(f'Process this aberr line: {i.strip()}')
+            line_number += 1
+            if 'FBrf0' not in i:
+                continue
+            input_counter += 1
+            line = i.split('\t')
+            if len(line) != 12:
+                self.log.error(f'Line={line_number} is malformed: {i}')
+                malformed_line_counter += 1
+                continue
+            aberr_info = {
+                # Attributes from input file.
+                'line_number': line_number,
+                'df_across_allele': line[DF_ACROSS_ALLELE].strip(),    # Accepted values: 'trans', 'no', 'n/a'.
+                'bang_c': line[BANG_C].strip(),                        # Accepted values: 'yes', 'no'.
+                'pub_given': line[PUB_GIVEN].strip(),
+                'subject': sgml_to_plain_text(line[SUBJECT]).strip(),
+                'qualifier': line[QUAL].strip(),
+                'do_term': line[DO_TERM].strip(),
+                'evi_code': line[EVI_CODE].strip(),
+                'additional_alleles': line[ADDITIONAL_ALLELES].split(' '),
+                'driver_input': line[DRIVER_INPUT].split(' '),
+                'df_sbj_genes': line[DF_SBJ_GENE].strip().split(' '),
+                'df_obj_genes': line[DF_OBJ_GENE].strip().split(' '),
+                'genotype': line[GENOTYPE].strip(),
+# BILLY BOB
 
-    #         cvterm_curie = self.find_cvterm_curie_from_name(session, aberr_info['do_term'])
-    #         if cvterm_curie:
-    #             aberr_info['doid_term_curie'] = cvterm_curie
-    #             # self.log.debug(f'Line={line_number}: found "{cvterm_curie}" for "{aberr_info["do_term"]}" in chado.')
-    #         else:
-    #             self.log.error(f'Line={line_number}: could not find DO term for "{aberr_info["do_term"]}" in chado.')
-    #             prob_msg = 'bad DO term name'
-    #             aberr_info['problems'].append(prob_msg)
 
-    #         allele_id = self.find_feature_uniquename_from_name(session, aberr_info['allele_symbol'], self.regex['allele'])
-    #         if allele_id:
-    #             aberr_info['allele_feature_id'] = allele_id
-    #             # self.log.error(f'Line={line_number}: found "{allele_id}" for "{aberr_info["allele_symbol"]}" in chado.')
-    #         else:
-    #             self.log.error(f'Line={line_number}: could not find allele "{aberr_info["allele_symbol"]}" in chado.')
-    #             prob_msg = 'bad allele symbol'
-    #             aberr_info['problems'].append(prob_msg)
+                # Attributes to be obtained from chado.
+                'pub_id': None,
+                'allele_feature_id': None,
+                'additional_allele_ids': [],
+                'aberr_ids': [],
+                'doid_term_curie': None,
+                # Attributes synthesized from the above.
+                'modeled_by': [],
+                'is_not': False,
+                'modifier_id': None,
+                'modifier_role': None,
+                'eco_abbr': None,
+                'unique_key': None,
+                'problems': [],
+            }
+            try:
+                aberr_info['pub_id'] = self.fbrf_bibliography[aberr_info['pub_given']].pub_id
+            except KeyError:
+                self.log.error(f'Line={line_number}: could not find pub "{aberr_info["pub_given"]}" in chado.')
+                prob_msg = 'bad pub id'
+                aberr_info['problems'].append(prob_msg)
 
-    #         for allele_symbol in aberr_info['additional_alleles']:
-    #             if allele_symbol == '' or allele_symbol == ' ' or allele_symbol == '+':
-    #                 continue
-    #             allele_id = self.find_feature_uniquename_from_name(session, allele_symbol, self.regex['allele'])
-    #             if allele_id:
-    #                 aberr_info['additional_allele_ids'].append(allele_id)
-    #                 # self.log.error(f'Line={line_number}: found "{allele_id}" for additional allele "{allele_symbol}" in chado.')
-    #             else:
-    #                 self.log.error(f'Line={line_number}: could not find additional allele "{allele_symbol}" in chado.')
-    #                 prob_msg = 'bad additional allele symbol'
-    #                 aberr_info['problems'].append(prob_msg)
+            cvterm_curie = self.find_cvterm_curie_from_name(session, aberr_info['do_term'])
+            if cvterm_curie:
+                aberr_info['doid_term_curie'] = cvterm_curie
+                # self.log.debug(f'Line={line_number}: found "{cvterm_curie}" for "{aberr_info["do_term"]}" in chado.')
+            else:
+                self.log.error(f'Line={line_number}: could not find DO term for "{aberr_info["do_term"]}" in chado.')
+                prob_msg = 'bad DO term name'
+                aberr_info['problems'].append(prob_msg)
 
-    #         for aberr_symbol in aberr_info['aberr_input']:
-    #             if aberr_symbol == '' or aberr_symbol == ' ' or aberr_symbol == '+':
-    #                 continue
-    #             aberr_id = self.find_feature_uniquename_from_name(session, aberr_symbol, self.regex['aberration'])
-    #             if aberr_id:
-    #                 aberr_info['aberr_ids'].append(aberr_id)
-    #                 # self.log.error(f'Line={line_number}: found "{allele_id}" for aberration "{aberr_symbol}" in chado.')
-    #             else:
-    #                 self.log.error(f'Line={line_number}: could not find aberration "{aberr_symbol}" in chado.')
-    #                 prob_msg = 'bad aberration symbol'
-    #                 aberr_info['problems'].append(prob_msg)
+            allele_id = self.find_feature_uniquename_from_name(session, aberr_info['allele_symbol'], self.regex['allele'])
+            if allele_id:
+                aberr_info['allele_feature_id'] = allele_id
+                # self.log.error(f'Line={line_number}: found "{allele_id}" for "{aberr_info["allele_symbol"]}" in chado.')
+            else:
+                self.log.error(f'Line={line_number}: could not find allele "{aberr_info["allele_symbol"]}" in chado.')
+                prob_msg = 'bad allele symbol'
+                aberr_info['problems'].append(prob_msg)
 
-    #         # Map info to annotation.
-    #         if aberr_info['qualifier'] in self.disease_genetic_modifier_terms.keys():
-    #             aberr_info['modifier_id'] = aberr_info['allele_feature_id']
-    #             aberr_info['modifier_role'] = self.disease_genetic_modifier_terms[aberr_info['qualifier']]
-    #             aberr_info['modeled_by'].extend(aberr_info['additional_allele_ids'])
-    #             aberr_info['eco_abbr'] = 'CEA'    # The default.
-    #         else:
-    #             if aberr_info['qualifier'] == 'DOES NOT model':
-    #                 aberr_info['is_not'] = True
-    #             aberr_info['modeled_by'].append(aberr_info['allele_feature_id'])
-    #             aberr_info['modeled_by'].extend(aberr_info['additional_allele_ids'])
-    #             aberr_info['eco_abbr'] = aberr_info['evi_code'][0:3]
+            for allele_symbol in aberr_info['additional_alleles']:
+                if allele_symbol == '' or allele_symbol == ' ' or allele_symbol == '+':
+                    continue
+                allele_id = self.find_feature_uniquename_from_name(session, allele_symbol, self.regex['allele'])
+                if allele_id:
+                    aberr_info['additional_allele_ids'].append(allele_id)
+                    # self.log.error(f'Line={line_number}: found "{allele_id}" for additional allele "{allele_symbol}" in chado.')
+                else:
+                    self.log.error(f'Line={line_number}: could not find additional allele "{allele_symbol}" in chado.')
+                    prob_msg = 'bad additional allele symbol'
+                    aberr_info['problems'].append(prob_msg)
 
-    #         # Build an annotation unique key.
-    #         if aberr_info['problems']:
-    #             prob_counter += 1
-    #             continue
-    #         aberr_info['unique_key'] = f'{aberr_info["pub_given"]}_'
-    #         if aberr_info['is_not']:
-    #             aberr_info['unique_key'] += 'NOT_'
-    #         aberr_info['unique_key'] += f'model={"|".join(sorted(aberr_info["modeled_by"]))}_'
-    #         aberr_info['unique_key'] += f'disease_term={aberr_info["doid_term_curie"]}_'
-    #         aberr_info['unique_key'] += f'eco_code={aberr_info["eco_abbr"]}'
-    #         if aberr_info['modifier_id']:
-    #             aberr_info['unique_key'] += f'_{aberr_info["modifier_role"]}={aberr_info["modifier_id"]}'
-    #         self.log.debug(f'Line={line_number}; ukey={aberr_info["unique_key"]}')
+            for aberr_symbol in aberr_info['aberr_input']:
+                if aberr_symbol == '' or aberr_symbol == ' ' or aberr_symbol == '+':
+                    continue
+                aberr_id = self.find_feature_uniquename_from_name(session, aberr_symbol, self.regex['aberration'])
+                if aberr_id:
+                    aberr_info['aberr_ids'].append(aberr_id)
+                    # self.log.error(f'Line={line_number}: found "{allele_id}" for aberration "{aberr_symbol}" in chado.')
+                else:
+                    self.log.error(f'Line={line_number}: could not find aberration "{aberr_symbol}" in chado.')
+                    prob_msg = 'bad aberration symbol'
+                    aberr_info['problems'].append(prob_msg)
 
-    #         # Look for matches between input file annotations and chado annotations.
-    #         if aberr_info['unique_key'] in self.genotype_dis_annos.keys():
-    #             matched_dis_anno_counter += 1
-    #             if aberr_info['aberr_ids']:
-    #                 self.aberr_dict[aberr_info['unique_key']].append(aberr_info)
-    #         else:
-    #             alt_unique_key = aberr_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC')
-    #             if alt_unique_key in self.genotype_dis_annos.keys():
-    #                 close_matched_dis_anno_counter += 1
-    #                 if aberr_info['aberr_ids']:
-    #                     aberr_info['unique_key'] = alt_unique_key
-    #                     self.aberr_dict[alt_unique_key].append(aberr_info)
-    #             else:
-    #                 line_number = aberr_info['line_number']
-    #                 # self.log.warning(f'Could not find dis anno: line={line_number}; unique_key={aberr_info["unique_key"]}; line={line}; dict={aberr_info}')
-    #                 prob_msg = 'no matching dis anno'
-    #                 aberr_info['problems'].append(prob_msg)
-    #                 self.rejected_aberr_info.append(aberr_info)
-    #                 unmatched_dis_anno_counter += 1
+            # Map info to annotation.
+            if aberr_info['qualifier'] in self.disease_genetic_modifier_terms.keys():
+                aberr_info['modifier_id'] = aberr_info['allele_feature_id']
+                aberr_info['modifier_role'] = self.disease_genetic_modifier_terms[aberr_info['qualifier']]
+                aberr_info['modeled_by'].extend(aberr_info['additional_allele_ids'])
+                aberr_info['eco_abbr'] = 'CEA'    # The default.
+            else:
+                if aberr_info['qualifier'] == 'DOES NOT model':
+                    aberr_info['is_not'] = True
+                aberr_info['modeled_by'].append(aberr_info['allele_feature_id'])
+                aberr_info['modeled_by'].extend(aberr_info['additional_allele_ids'])
+                aberr_info['eco_abbr'] = aberr_info['evi_code'][0:3]
 
-    #     # Summary
-    #     self.log.info(f'Skipped {malformed_line_counter}/{input_counter} aberration info lines due to bad column formatting.')
-    #     self.log.info(f'Processed {input_counter} aberration info lines having aberration info.')
-    #     fully_processed_count = input_counter - prob_counter
-    #     self.log.info(f'Had problems finding pub/allele/term info for {prob_counter}/{input_counter} aberration info lines.')
-    #     self.log.info(f'Fully processed {fully_processed_count}/{input_counter} aberration info lines having aberration info without issue.')
-    #     self.log.info(f'Found dis anno for {matched_dis_anno_counter}/{fully_processed_count} fully processed aberration info lines.')
-    #     self.log.info(f'Found close dis anno for {close_matched_dis_anno_counter}/{fully_processed_count} fully processed aberr info lines (ECO adjustment).')
-    #     self.log.info(f'Could not find dis anno for {unmatched_dis_anno_counter}/{fully_processed_count} fully processed aberration info lines.')
-    #     return
+            # Build an annotation unique key.
+            if aberr_info['problems']:
+                prob_counter += 1
+                continue
+            aberr_info['unique_key'] = f'{aberr_info["pub_given"]}_'
+            if aberr_info['is_not']:
+                aberr_info['unique_key'] += 'NOT_'
+            aberr_info['unique_key'] += f'model={"|".join(sorted(aberr_info["modeled_by"]))}_'
+            aberr_info['unique_key'] += f'disease_term={aberr_info["doid_term_curie"]}_'
+            aberr_info['unique_key'] += f'eco_code={aberr_info["eco_abbr"]}'
+            if aberr_info['modifier_id']:
+                aberr_info['unique_key'] += f'_{aberr_info["modifier_role"]}={aberr_info["modifier_id"]}'
+            self.log.debug(f'Line={line_number}; ukey={aberr_info["unique_key"]}')
+
+            # Look for matches between input file annotations and chado annotations.
+            if aberr_info['unique_key'] in self.genotype_dis_annos.keys():
+                matched_dis_anno_counter += 1
+                if aberr_info['aberr_ids']:
+                    self.aberr_dict[aberr_info['unique_key']].append(aberr_info)
+            else:
+                alt_unique_key = aberr_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC')
+                if alt_unique_key in self.genotype_dis_annos.keys():
+                    close_matched_dis_anno_counter += 1
+                    if aberr_info['aberr_ids']:
+                        aberr_info['unique_key'] = alt_unique_key
+                        self.aberr_dict[alt_unique_key].append(aberr_info)
+                else:
+                    line_number = aberr_info['line_number']
+                    # self.log.warning(f'Could not find dis anno: line={line_number}; unique_key={aberr_info["unique_key"]}; line={line}; dict={aberr_info}')
+                    prob_msg = 'no matching dis anno'
+                    aberr_info['problems'].append(prob_msg)
+                    self.rejected_aberr_info.append(aberr_info)
+                    unmatched_dis_anno_counter += 1
+
+        # Summary
+        self.log.info(f'Skipped {malformed_line_counter}/{input_counter} aberration info lines due to bad column formatting.')
+        self.log.info(f'Processed {input_counter} aberration info lines having aberration info.')
+        fully_processed_count = input_counter - prob_counter
+        self.log.info(f'Had problems finding pub/allele/term info for {prob_counter}/{input_counter} aberration info lines.')
+        self.log.info(f'Fully processed {fully_processed_count}/{input_counter} aberration info lines having aberration info without issue.')
+        self.log.info(f'Found dis anno for {matched_dis_anno_counter}/{fully_processed_count} fully processed aberration info lines.')
+        self.log.info(f'Found close dis anno for {close_matched_dis_anno_counter}/{fully_processed_count} fully processed aberr info lines (ECO adjustment).')
+        self.log.info(f'Could not find dis anno for {unmatched_dis_anno_counter}/{fully_processed_count} fully processed aberration info lines.')
+        return
 
     def get_genotypes(self, session):
         """Get genotypes for final genotype-level disease annotations."""
@@ -1220,7 +1227,7 @@ class AGMDiseaseHandler(DataHandler):
         self.integrate_driver_info()
         self.split_out_genotype_disease_annotations()
         # self.parse_aberration_info(session)
-        self.get_genotypes(session)
+        # self.get_genotypes(session)    # BOB: suppress while working on aberr processing.
         return
 
     # Add methods to be run by synthesize_info() below.
