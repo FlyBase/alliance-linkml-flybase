@@ -979,7 +979,6 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Have {len(self.fb_data_entities.keys())} split out annotations.')
         return
 
-    # BOB: in progress.
     def parse_aberration_info(self, session):
         """Parse new aberration disease annotations."""
         self.log.info('Parse new aberration disease annotations.')
@@ -1030,7 +1029,8 @@ class AGMDiseaseHandler(DataHandler):
                 'df_sbj_genes': line[DF_SBJ_GENE].strip().split(' '),
                 'df_obj_genes': line[DF_OBJ_GENE].strip().split(' '),
                 'genotype': line[GENOTYPE].strip(),
-# BILLY BOB
+# BILLY BOB - CONTINUE HERE
+# BILLY BOB - need to derive genotype_name here (not later) to best incorporate curator info.
 
 
                 # Attributes to be obtained from chado.
@@ -1155,12 +1155,16 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Could not find dis anno for {unmatched_dis_anno_counter}/{fully_processed_count} fully processed aberration info lines.')
         return
 
-    def get_genotypes(self, session):
-        """Get genotypes for final genotype-level disease annotations."""
-        self.log.info('Get genotypes for final genotype-level disease annotations.')
+    def derive_genotypes(self):
+        """Derive genotypes for final genotype-level disease annotations."""
+        self.log.info('Derive genotypes for final genotype-level disease annotations.')
         counter = 0
-        no_counter = 0
+        skip_counter = 0
         for dis_anno in self.fb_data_entities.values():
+            # Skip annotations where the disease annotation already has a specified genotype name.
+            if dis_anno.genotype_name:
+                skip_counter += 1
+                continue
             # First, get the genotype components (excluding modifier).
             allele_dis_anno = dis_anno.allele_annotations[0]
             components = []
@@ -1195,9 +1199,25 @@ class AGMDiseaseHandler(DataHandler):
             for cgroup in cgroup_dict.values():
                 cgroup_name = '/'.join([i['name'] for i in cgroup])
                 cgroup_names.append(cgroup_name)
-            genotype_name = ' '.join(cgroup_names)
-            self.log.debug(f'Have this genotype name: {genotype_name}')
-            genotype = GenotypeAnnotation(genotype_name, session, self.log)
+            dis_anno.genotype_name = ' '.join(cgroup_names)
+            self.log.debug(f'For {dis_anno}:\n\tgenotype name: {dis_anno.genotype_name}')
+            counter += 1
+        self.log.info(f'Derived genotype names for {counter} disease annotations.')
+        self.log.info(f'Skipped {skip_counter} disease annotations where the genotype name was previously specified.')
+        return
+
+    def get_genotypes(self, session):
+        """Get genotypes for final genotype-level disease annotations."""
+        self.log.info('Get genotypes for final genotype-level disease annotations.')
+        counter = 0
+        prob_counter = 0
+        no_counter = 0
+        for dis_anno in self.fb_data_entities.values():
+            if not dis_anno.genotype_name:
+                self.log.error(f'No genotype_name for {dis_anno}')
+                prob_counter += 1
+                continue
+            genotype = GenotypeAnnotation(dis_anno.genotype_name, session, self.log)
             genotype.get_known_or_create_new_genotype(session)
             self.log.debug(f'Got this curie: {genotype.curie}')
             dis_anno.genotype_curie = genotype.curie
@@ -1205,6 +1225,7 @@ class AGMDiseaseHandler(DataHandler):
                 no_counter += 1
             else:
                 counter += 1
+        self.log.info(f'Skipped {prob_counter} disease annotations lacking a specified genotype name.')
         self.log.info(f'Got/created {counter} disease genotypes.')
         self.log.info(f'Could not get/create a genotype in {no_counter} cases.')
         return
@@ -1229,6 +1250,7 @@ class AGMDiseaseHandler(DataHandler):
         self.integrate_driver_info()
         self.split_out_genotype_disease_annotations()
         # self.parse_aberration_info(session)
+        self.derive_genotypes()        # BOB: suppress while working on aberr processing.
         # self.get_genotypes(session)    # BOB: suppress while working on aberr processing.
         return
 
