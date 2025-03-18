@@ -453,6 +453,7 @@ class FBGenotypeDiseaseAnnotation(FBExportEntity):
         # Information for model genotype.
         self.modeled_by = []          # Will be a list of all allele FBal IDs that model the disease.
         self.driver_combos = set()    # Each item is a driver combo (ID concatenation) to be integrated into this genotype-level annotation.
+        self.genotype_name = ''       # Will be genotype.uniquename to use in get/create.
         # self.genotype_curie = None    # Will be the FBgo of the final genotype.    # BOB - suppress while debugging other steps.
         self.genotype_curie = 'na'    # BOB: placeholder for faster debugging of upstream steps.
         self.affected_genes = []      # List of affected genes for aberrations in model.
