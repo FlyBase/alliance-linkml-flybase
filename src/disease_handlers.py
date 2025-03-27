@@ -1196,8 +1196,8 @@ class AGMDiseaseHandler(DataHandler):
             new_dis_anno.pub_curie = self.lookup_single_pub_curie(aberr_info['pub_id'])
             new_dis_anno.do_term_curie = aberr_info['doid_term_curie']
             new_dis_anno.eco_abbr = aberr_info['eco_abbr']
-            new_dis_anno.modifier_id = aberr_info['modifier_id']    # BOB - is this working?
-            new_dis_anno.modifier_role = self.disease_genetic_modifier_terms[aberr_info['modifier_role']]
+            new_dis_anno.modifier_id = aberr_info['modifier_id']
+            new_dis_anno.modifier_role = aberr_info['modifier_role']
             new_dis_anno.asserted_genes = aberr_info['asserted_gene_feature_ids']
             self.fb_data_entities[new_dis_anno.unique_key] = new_dis_anno
             self.log.debug(f'Line={line_number}; ukey={aberr_info["unique_key"]}')
