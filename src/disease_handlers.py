@@ -1149,6 +1149,7 @@ class AGMDiseaseHandler(DataHandler):
                     continue
                 try:
                     gene_feature_id = self.gene_name_lookup[gene_symbol]['feature_id']
+                    self.log.debug(f'BOB: Found {self.gene_name_lookup[gene_symbol]["uniquename"]} for {gene_symbol}')
                     aberr_info['gene_feature_ids'].append(gene_feature_id)
                 except KeyError:
                     self.log.error(f'Line={line_number}: could not find gene "{gene_symbol}" in chado.')
