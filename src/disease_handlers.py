@@ -781,7 +781,7 @@ class AGMDiseaseHandler(DataHandler):
                 # Attributes to be obtained from chado.
                 'pub_id': None,
                 'allele_feature_curie': None,
-                'additional_allele_ids': [],
+                'additional_allele_curies': [],
                 'driver_curies': [],
                 'doid_term_curie': None,
                 # Attributes synthesized from the above.
@@ -823,7 +823,7 @@ class AGMDiseaseHandler(DataHandler):
                     continue
                 allele_id = self.find_feature_uniquename_from_name(session, allele_symbol, self.regex['allele'])
                 if allele_id:
-                    driver_info['additional_allele_ids'].append(allele_id)
+                    driver_info['additional_allele_curies'].append(allele_id)
                     # self.log.error(f'Line={line_number}: found "{allele_id}" for additional allele "{allele_symbol}" in chado.')
                 else:
                     self.log.error(f'Line={line_number}: could not find additional allele "{allele_symbol}" in chado.')
@@ -849,13 +849,13 @@ class AGMDiseaseHandler(DataHandler):
             if driver_info['qualifier'] in self.disease_genetic_modifier_terms.keys():
                 driver_info['modifier_id'] = driver_info['allele_feature_curie']
                 driver_info['modifier_role'] = self.disease_genetic_modifier_terms[driver_info['qualifier']]
-                driver_info['modeled_by'].extend(driver_info['additional_allele_ids'])
+                driver_info['modeled_by'].extend(driver_info['additional_allele_curies'])
                 driver_info['eco_abbr'] = 'CEC'    # The default.
             else:
                 if driver_info['qualifier'] == 'DOES NOT model':
                     driver_info['is_not'] = True
                 driver_info['modeled_by'].append(driver_info['allele_feature_curie'])
-                driver_info['modeled_by'].extend(driver_info['additional_allele_ids'])
+                driver_info['modeled_by'].extend(driver_info['additional_allele_curies'])
                 driver_info['eco_abbr'] = driver_info['evi_code'][0:3]
 
             # Build an annotation unique key.
@@ -1215,6 +1215,7 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info('Derive genotypes for final genotype-level disease annotations.')
         counter = 0
         for dis_anno in self.fb_data_entities.values():
+            self.log.debug(f'BOB: Derive genotype for {dis_anno}')
             # Determine if input is allele-level, or, aberration-from-spreadsheet, annotation.
             aberr_anno = True
             if dis_anno.allele_annotations:
