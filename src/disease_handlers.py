@@ -1251,6 +1251,7 @@ class AGMDiseaseHandler(DataHandler):
                     self.log.error(f'model={dis_anno.modeled_by}')
                     self.log.error(f'modifier={dis_anno.modifier_curie}')
                     self.log.error(f'modifier_type={dis_anno.modifier_role}')
+                    self.log.error(f'Count allele annotations = {len(dis_anno.allele_annotations)}')
 
                 feature = self.uname_feature_lookup[curie]
                 single_cgroup = True
