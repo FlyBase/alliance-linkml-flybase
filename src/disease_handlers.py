@@ -515,8 +515,8 @@ class AGMDiseaseHandler(DataHandler):
         return
 
     def build_model_eco_lookup(self):
-        """Build ECO lookup for model-type annotations."""
-        self.log.info('Build ECO lookup for model-type annotations.')
+        """Build ECO lookup from model-type annotations for modifier annotations."""
+        self.log.info('Build ECO lookup from model-type annotations for modifier annotations.')
         counter = 0
         for dis_anno in self.allele_dis_annos.values():
             # Determine unique key for the model in this annotation.
@@ -525,6 +525,7 @@ class AGMDiseaseHandler(DataHandler):
                 dis_anno.unique_key += 'NOT_'
             dis_anno.model_unique_key = f'model={"|".join(sorted(dis_anno.modeled_by))}_'
             dis_anno.model_unique_key += f'disease_term=DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}'
+            self.log.debug(f'BOB: {dis_anno} has model_unique_key={dis_anno.model_unique_key}')
             if re.match(r'^CE(A|C)', dis_anno.evidence_code.value):
                 dis_anno.eco_abbr = dis_anno.evidence_code.value[0:3]
                 if dis_anno.is_not is False:
@@ -779,9 +780,9 @@ class AGMDiseaseHandler(DataHandler):
                 'operation': line[OPERATION].rstrip(),
                 # Attributes to be obtained from chado.
                 'pub_id': None,
-                'allele_feature_id': None,
+                'allele_feature_curie': None,
                 'additional_allele_ids': [],
-                'driver_ids': [],
+                'driver_curies': [],
                 'doid_term_curie': None,
                 # Attributes synthesized from the above.
                 'modeled_by': [],
@@ -808,9 +809,9 @@ class AGMDiseaseHandler(DataHandler):
                 prob_msg = 'bad DO term name'
                 driver_info['problems'].append(prob_msg)
 
-            allele_id = self.find_feature_uniquename_from_name(session, driver_info['allele_symbol'], self.regex['allele'])
-            if allele_id:
-                driver_info['allele_feature_id'] = allele_id
+            allele_curie = self.find_feature_uniquename_from_name(session, driver_info['allele_symbol'], self.regex['allele'])
+            if allele_curie:
+                driver_info['allele_feature_curie'] = allele_curie
                 # self.log.error(f'Line={line_number}: found "{allele_id}" for "{driver_info["allele_symbol"]}" in chado.')
             else:
                 self.log.error(f'Line={line_number}: could not find allele "{driver_info["allele_symbol"]}" in chado.')
@@ -835,9 +836,9 @@ class AGMDiseaseHandler(DataHandler):
                 driver_rgx = r'(GAL4|GAL80|lexA|QF|FLP1|Cas|VP16|RELA|G4DBD)'
                 if not re.search(driver_rgx, driver_symbol):
                     self.log.warning(f'Line={line_number}: symbol given does not seem to represent a driver: "{driver_symbol}".')
-                allele_id = self.find_feature_uniquename_from_name(session, driver_symbol, self.regex['allele'])
-                if allele_id:
-                    driver_info['driver_ids'].append(allele_id)
+                allele_curie = self.find_feature_uniquename_from_name(session, driver_symbol, self.regex['allele'])
+                if allele_curie:
+                    driver_info['driver_curies'].append(allele_curie)
                     # self.log.error(f'Line={line_number}: found "{allele_id}" for driver "{driver_symbol}" in chado.')
                 else:
                     self.log.error(f'Line={line_number}: could not find driver "{driver_symbol}" in chado.')
@@ -846,14 +847,14 @@ class AGMDiseaseHandler(DataHandler):
 
             # Map info to annotation.
             if driver_info['qualifier'] in self.disease_genetic_modifier_terms.keys():
-                driver_info['modifier_id'] = driver_info['allele_feature_id']
+                driver_info['modifier_id'] = driver_info['allele_feature_curie']
                 driver_info['modifier_role'] = self.disease_genetic_modifier_terms[driver_info['qualifier']]
                 driver_info['modeled_by'].extend(driver_info['additional_allele_ids'])
                 driver_info['eco_abbr'] = 'CEC'    # The default.
             else:
                 if driver_info['qualifier'] == 'DOES NOT model':
                     driver_info['is_not'] = True
-                driver_info['modeled_by'].append(driver_info['allele_feature_id'])
+                driver_info['modeled_by'].append(driver_info['allele_feature_curie'])
                 driver_info['modeled_by'].extend(driver_info['additional_allele_ids'])
                 driver_info['eco_abbr'] = driver_info['evi_code'][0:3]
 
@@ -874,13 +875,13 @@ class AGMDiseaseHandler(DataHandler):
             # Look for matches between input file annotations and chado annotations.
             if driver_info['unique_key'] in self.genotype_dis_annos.keys():
                 matched_dis_anno_counter += 1
-                if driver_info['driver_ids']:
+                if driver_info['driver_curies']:
                     self.driver_dict[driver_info['unique_key']].append(driver_info)
             else:
-                alt_unique_key = driver_info['unique_key'].replace('eco_code=CEC', 'eco_code=CEA')
+                alt_unique_key = driver_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC')
                 if alt_unique_key in self.genotype_dis_annos.keys():
                     close_matched_dis_anno_counter += 1
-                    if driver_info['driver_ids']:
+                    if driver_info['driver_curies']:
                         driver_info['unique_key'] = alt_unique_key
                         self.driver_dict[alt_unique_key].append(driver_info)
                 else:
@@ -927,7 +928,7 @@ class AGMDiseaseHandler(DataHandler):
         discrepancy_counter = 0
         for i in self.rejected_driver_info:
             i['problems'] = '; '.join(i['problems'])
-            exists = self.check_disease_annotation(session, i['allele_feature_id'], i['do_term'],
+            exists = self.check_disease_annotation(session, i['allele_feature_curie'], i['do_term'],
                                                    i['pub_given'], i['qualifier'], i['evi_code'])
             if exists:
                 desc = f'line={i["line_number"]}; unique_key={i["unique_key"]}'
@@ -951,12 +952,12 @@ class AGMDiseaseHandler(DataHandler):
             for driver_info in driver_info_list:
                 # For the "and" operation, we keep the set intact - integrate the combination.
                 if driver_info['operation'] == 'and':
-                    driver_combo_str = '_'.join(sorted(driver_info['driver_ids']))
+                    driver_combo_str = '_'.join(sorted(driver_info['driver_curies']))
                     driver_combos.add(driver_combo_str)
                 # For "or" and "na" operations, we integrate each driver separately.
                 else:
-                    for driver_id in driver_info['driver_ids']:
-                        driver_combos.add(driver_id)
+                    for driver_curie in driver_info['driver_curies']:
+                        driver_combos.add(driver_curie)
             # self.log.debug(f'Have this final set of driver combos: {driver_combos}')
             try:
                 self.genotype_dis_annos[uniq_key].driver_combos = driver_combos
@@ -975,12 +976,12 @@ class AGMDiseaseHandler(DataHandler):
         for dis_anno in self.genotype_dis_annos.values():
             input_counter += 1
             if not dis_anno.driver_combos:
-                dis_anno.unique_key += '_driver_ids=None'
+                dis_anno.unique_key += '_driver_curies=None'
                 self.fb_data_entities[dis_anno.unique_key] = dis_anno
                 output_counter += 1
             else:
                 for driver_combo in dis_anno.driver_combos:
-                    new_unique_key = f'{dis_anno.unique_key}_driver_ids={driver_combo}'
+                    new_unique_key = f'{dis_anno.unique_key}_driver_curies={driver_combo}'
                     new_dis_anno = fb_datatypes.FBGenotypeDiseaseAnnotation(new_unique_key)
                     new_dis_anno.allele_annotations = dis_anno.allele_annotations
                     new_dis_anno.driver_combos = {driver_combo}
@@ -1061,7 +1062,7 @@ class AGMDiseaseHandler(DataHandler):
                 'doid_term_curie': None,
                 'subject_curie': None,
                 'object_curies': [],
-                'driver_ids': [],
+                'driver_curies': [],
                 'driver_combo_str': '',
                 'asserted_gene_feature_ids': [],
                 # Attributes synthesized from the above.
@@ -1128,10 +1129,10 @@ class AGMDiseaseHandler(DataHandler):
             for driver_symbol in aberr_info['driver_input']:
                 if driver_symbol == '' or driver_symbol == ' ' or driver_symbol == '+':
                     continue
-                driver_id = self.find_feature_uniquename_from_name(session, driver_symbol, self.regex['allele'])
-                if driver_id:
-                    aberr_info['driver_ids'].append(driver_id)
-                    # self.log.debug(f'Line={line_number}: found "{driver_id}" for driver "{driver_symbol}" in chado.')
+                driver_curie = self.find_feature_uniquename_from_name(session, driver_symbol, self.regex['allele'])
+                if driver_curie:
+                    aberr_info['driver_curies'].append(driver_curie)
+                    # self.log.debug(f'Line={line_number}: found "{driver_curie}" for driver "{driver_symbol}" in chado.')
                 else:
                     self.log.error(f'Line={line_number}: could not find driver "{driver_symbol}" in chado.')
                     prob_msg = 'bad driver symbol'
@@ -1179,11 +1180,11 @@ class AGMDiseaseHandler(DataHandler):
             aberr_info['unique_key'] += f'eco_code={aberr_info["eco_abbr"]}'
             if aberr_info['modifier_id']:
                 aberr_info['unique_key'] += f'_{aberr_info["modifier_role"]}={aberr_info["modifier_id"]}'
-            if not aberr_info['driver_ids']:
-                aberr_info['unique_key'] += '_driver_ids=None'
+            if not aberr_info['driver_curies']:
+                aberr_info['unique_key'] += '_driver_curies=None'
             else:
-                aberr_info['driver_combo_str'] = '_'.join(sorted(aberr_info['driver_ids']))
-                aberr_info['unique_key'] += f'_driver_ids={aberr_info["driver_combo_str"]}'
+                aberr_info['driver_combo_str'] = '_'.join(sorted(aberr_info['driver_curies']))
+                aberr_info['unique_key'] += f'_driver_curies={aberr_info["driver_combo_str"]}'
 
             # Create a new annotation.
             new_dis_anno = fb_datatypes.FBGenotypeDiseaseAnnotation(aberr_info['unique_key'])
@@ -1222,8 +1223,8 @@ class AGMDiseaseHandler(DataHandler):
             components = []
             components.extend(dis_anno.modeled_by)
             if dis_anno.driver_combos:
-                driver_ids = list(dis_anno.driver_combos)[0].split('_')
-                components.extend(driver_ids)
+                driver_curies = list(dis_anno.driver_combos)[0].split('_')
+                components.extend(driver_curies)
             # Flag a prespecified pair (up to one for two components that make up a model).
             prespecified_pair = []
             if aberr_anno and dis_anno.aberr_trans and len(dis_anno.modeled_by) == 2:
