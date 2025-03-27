@@ -430,12 +430,12 @@ class AGMDiseaseHandler(DataHandler):
             embedded_allele_ids = re.findall(embedded_allele_regex, dis_anno.evidence_code.value)
             for allele_id in embedded_allele_ids:
                 if self.confirm_current_allele_by_uniquename(session, allele_id):
-                    dis_anno.text_embedded_allele_ids.append(allele_id)
+                    dis_anno.text_embedded_allele_curies.append(allele_id)
                     current_allele_id_counter += 1
                 else:
                     curr_allele_id = self.get_current_id_for_allele(session, allele_id)
                     if curr_allele_id:
-                        dis_anno.text_embedded_allele_ids.append(curr_allele_id)
+                        dis_anno.text_embedded_allele_curies.append(curr_allele_id)
                         dis_anno.allele_id_was_updated = True
                         updated_allele_id_counter += 1
                     else:
@@ -453,14 +453,14 @@ class AGMDiseaseHandler(DataHandler):
         """Extract model components from annotation subject, qualifier and evidence_code."""
         self.log.info('Extract model components from annotation subject, qualifier and evidence_code.')
         for dis_anno in self.allele_dis_annos.values():
-            dis_anno.modeled_by.extend(dis_anno.text_embedded_allele_ids)
-            allele_subject_id = self.feature_lookup[dis_anno.feature_cvterm.feature_id]['uniquename']
+            dis_anno.modeled_by.extend(dis_anno.text_embedded_allele_curies)
+            allele_subject_curie = self.feature_lookup[dis_anno.feature_cvterm.feature_id]['uniquename']
             if dis_anno.qualifier.value in ('model of', 'DOES NOT model'):
-                dis_anno.modeled_by.append(allele_subject_id)
+                dis_anno.modeled_by.append(allele_subject_curie)
                 if dis_anno.qualifier.value == 'DOES NOT model':
                     dis_anno.is_not = True
             else:
-                dis_anno.modifier_id = allele_subject_id
+                dis_anno.modifier_curie = allele_subject_curie
                 dis_anno.modifier_role = self.disease_genetic_modifier_terms[dis_anno.qualifier.value]
         return
 
@@ -471,8 +471,8 @@ class AGMDiseaseHandler(DataHandler):
         for dis_anno in self.allele_dis_annos.values():
             key_alleles = []
             key_alleles.extend(dis_anno.modeled_by)
-            if dis_anno.modifier_id:
-                key_alleles.append(dis_anno.modifier_id)
+            if dis_anno.modifier_curie:
+                key_alleles.append(dis_anno.modifier_curie)
             key_alleles = set(key_alleles)
             for fbal_id in key_alleles:
                 allele_feature_id = self.uname_feature_lookup[fbal_id]['feature_id']
@@ -594,8 +594,8 @@ class AGMDiseaseHandler(DataHandler):
             dis_anno.unique_key += f'eco_code={dis_anno.eco_abbr}'
             if not dis_anno.eco_abbr:
                 self.log.warning(f'No ECO abbr for {dis_anno.unique_key}')
-            if dis_anno.modifier_id:
-                dis_anno.unique_key += f'_{dis_anno.modifier_role}={dis_anno.modifier_id}'
+            if dis_anno.modifier_curie:
+                dis_anno.unique_key += f'_{dis_anno.modifier_role}={dis_anno.modifier_curie}'
             self.log.debug(f'Annotation db_primary_id={dis_anno.db_primary_id} has this unique key: {dis_anno.unique_key}')
             if dis_anno.unique_key in self.genotype_dis_annos.keys():
                 self.genotype_dis_annos[dis_anno.unique_key].allele_annotations.append(dis_anno)
@@ -1003,8 +1003,9 @@ class AGMDiseaseHandler(DataHandler):
             dis_anno.do_term_curie = self.cvterm_lookup[al_dis_anno.feature_cvterm.cvterm_id]['curie']
             dis_anno.is_not = al_dis_anno.is_not
             dis_anno.eco_abbr = al_dis_anno.eco_abbr
-            dis_anno.modifier_id = al_dis_anno.modifier_id
+            dis_anno.modifier_curie = al_dis_anno.modifier_curie
             dis_anno.modifier_role = al_dis_anno.modifier_role
+            counter += 1
         self.log.info(f'Extracted key info from {counter} genotype-level annotations in chado.')
         return
 
@@ -1030,10 +1031,10 @@ class AGMDiseaseHandler(DataHandler):
         prob_counter = 0
         self.rejected_aberr_info = []
         for i in file_input:
-            self.log.debug(f'Process this aberr line: {i.strip()}')
             line_number += 1
             if 'FBrf0' not in i:
                 continue
+            self.log.debug(f'Process this aberr line: {i.strip()}')
             input_counter += 1
             line = i.split('\t')
             if len(line) != 12:
@@ -1058,8 +1059,8 @@ class AGMDiseaseHandler(DataHandler):
                 # Attributes to be obtained from chado.
                 'pub_id': None,
                 'doid_term_curie': None,
-                'subject_feature_id': None,
-                'object_feature_ids': [],
+                'subject_curie': None,
+                'object_curies': [],
                 'driver_ids': [],
                 'driver_combo_str': '',
                 'asserted_gene_feature_ids': [],
@@ -1099,11 +1100,11 @@ class AGMDiseaseHandler(DataHandler):
                 prob_msg = 'bad qualifier'
                 aberr_info['problems'].append(prob_msg)
 
-            subject_id = self.find_feature_uniquename_from_name(session, aberr_info['subject'], self.regex['allele'])
-            if subject_id is None:
-                subject_id = self.find_feature_uniquename_from_name(session, aberr_info['subject'], self.regex['aberration'])
-            if subject_id:
-                aberr_info['subject_feature_id'] = subject_id
+            subject_curie = self.find_feature_uniquename_from_name(session, aberr_info['subject'], self.regex['allele'])
+            if subject_curie is None:
+                subject_curie = self.find_feature_uniquename_from_name(session, aberr_info['subject'], self.regex['aberration'])
+            if subject_curie:
+                aberr_info['subject_curie'] = subject_curie
                 # self.log.debug(f'Line={line_number}: found "{allele_id}" for "{aberr_info["allele_symbol"]}" in chado.')
             else:
                 self.log.error(f'Line={line_number}: could not find subject "{aberr_info["subject"]}" in chado.')
@@ -1117,7 +1118,7 @@ class AGMDiseaseHandler(DataHandler):
                 if feature_id is None:
                     feature_id = self.find_feature_uniquename_from_name(session, feature_symbol, self.regex['aberration'])
                 if feature_id:
-                    aberr_info['object_feature_ids'].append(feature_id)
+                    aberr_info['object_curies'].append(feature_id)
                     # self.log.debug(f'Line={line_number}: found "{feature_id}" for additional allele "{feature_symbol}" in chado.')
                 else:
                     self.log.error(f'Line={line_number}: could not find object feature "{feature_symbol}" in chado.')
@@ -1155,15 +1156,15 @@ class AGMDiseaseHandler(DataHandler):
 
             # Map info to annotation.
             if aberr_info['qualifier'] in self.disease_genetic_modifier_terms.keys():
-                aberr_info['modifier_id'] = aberr_info['subject_feature_id']
+                aberr_info['modifier_id'] = aberr_info['subject_curie']
                 aberr_info['modifier_role'] = self.disease_genetic_modifier_terms[aberr_info['qualifier']]
-                aberr_info['modeled_by'].extend(aberr_info['object_feature_ids'])
+                aberr_info['modeled_by'].extend(aberr_info['object_curies'])
                 aberr_info['eco_abbr'] = 'CEC'    # The default.
             else:
                 if aberr_info['qualifier'] == 'DOES NOT model':
                     aberr_info['is_not'] = True
-                aberr_info['modeled_by'].append(aberr_info['subject_feature_id'])
-                aberr_info['modeled_by'].extend(aberr_info['object_feature_ids'])
+                aberr_info['modeled_by'].append(aberr_info['subject_curie'])
+                aberr_info['modeled_by'].extend(aberr_info['object_curies'])
                 aberr_info['eco_abbr'] = aberr_info['evi_code'][0:3]
 
             # Build an annotation unique key.
@@ -1194,7 +1195,7 @@ class AGMDiseaseHandler(DataHandler):
             new_dis_anno.pub_curie = self.lookup_single_pub_curie(aberr_info['pub_id'])
             new_dis_anno.do_term_curie = aberr_info['doid_term_curie']
             new_dis_anno.eco_abbr = aberr_info['eco_abbr']
-            new_dis_anno.modifier_id = self.feature_lookup[aberr_info['modifier_id']]['curie']
+            new_dis_anno.modifier_id = aberr_info['modifier_id']    # BOB - is this working?
             new_dis_anno.modifier_role = self.disease_genetic_modifier_terms[aberr_info['modifier_role']]
             new_dis_anno.asserted_genes = aberr_info['asserted_gene_feature_ids']
             self.fb_data_entities[new_dis_anno.unique_key] = new_dis_anno
