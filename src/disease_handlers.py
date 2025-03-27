@@ -655,16 +655,33 @@ class AGMDiseaseHandler(DataHandler):
             Raises an exception if the handler (self) does not have a name-based feature lookup dict.
 
         """
-        if not self.allele_name_lookup:
-            e = 'Must create handler.allele_name_lookup with handler.build_allele_name_lookup() '
-            e += 'before calling the handler.find_feature_uniquename() method.'
-            self.log.critical(e)
-            raise Exception(e)
         converted_feature_symbol = sgml_to_plain_text(feature_symbol).strip().strip(',').strip('.')
         uniquename = None
-        try:
-            uniquename = self.allele_name_lookup[converted_feature_symbol]['uniquename']
-        except KeyError:
+        if 'FBal' in fb_id_rgx or 'FBab' in fb_id_rgx:
+            if not self.allele_name_lookup:
+                e = 'Must create handler.allele_name_lookup with handler.build_allele_name_lookup() '
+                e += 'before calling the handler.find_feature_uniquename() method.'
+                self.log.critical(e)
+                raise Exception(e)
+            try:
+                uniquename = self.allele_name_lookup[converted_feature_symbol]['uniquename']
+            except KeyError:
+                pass
+        elif 'FBgn' in fb_id_rgx:
+            if not self.gene_name_lookup:
+                e = 'Must create handler.gene_name_lookup with handler.build_gene_name_lookup() '
+                e += 'before calling the handler.find_feature_uniquename() method.'
+                self.log.critical(e)
+                raise Exception(e)
+            try:
+                uniquename = self.gene_name_lookup[converted_feature_symbol]['uniquename']
+            except KeyError:
+                pass
+        else:
+            e = f'find_feature_uniquename_from_name() method does not support {fb_id_rgx} yet'
+            self.log.critical(e)
+            raise Exception(e)
+        if uniquename is None:
             filters = (
                 Feature.is_obsolete.is_(False),
                 Feature.uniquename.op('~')(fb_id_rgx),
@@ -1148,8 +1165,9 @@ class AGMDiseaseHandler(DataHandler):
                 if gene_symbol == '' or gene_symbol == '***':
                     continue
                 try:
-                    gene_feature_id = self.gene_name_lookup[gene_symbol]['feature_id']
-                    self.log.debug(f'BOB: Found {self.gene_name_lookup[gene_symbol]["uniquename"]} for {gene_symbol}')
+                    gene_curie = self.find_feature_uniquename_from_name(session, gene_symbol, self.regex['gene'])
+                    self.log.debug(f'Line={line_number}: found gene curie {gene_curie} for "{gene_symbol}"')
+                    gene_feature_id = self.uname_feature_lookup[gene_curie]['feature_id']
                     aberr_info['gene_feature_ids'].append(gene_feature_id)
                 except KeyError:
                     self.log.error(f'Line={line_number}: could not find gene "{gene_symbol}" in chado.')
