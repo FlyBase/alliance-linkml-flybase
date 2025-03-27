@@ -878,7 +878,7 @@ class AGMDiseaseHandler(DataHandler):
                 if driver_info['driver_curies']:
                     self.driver_dict[driver_info['unique_key']].append(driver_info)
             else:
-                alt_unique_key = driver_info['unique_key'].replace('eco_code=CEA', 'eco_code=CEC')
+                alt_unique_key = driver_info['unique_key'].replace('eco_code=CEC', 'eco_code=CEA')
                 if alt_unique_key in self.genotype_dis_annos.keys():
                     close_matched_dis_anno_counter += 1
                     if driver_info['driver_curies']:
