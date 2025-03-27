@@ -1243,6 +1243,15 @@ class AGMDiseaseHandler(DataHandler):
             for curie in components:
                 if curie in prespecified_pair:
                     continue
+                if curie == '':
+                    self.log.error(f'BOB: Found empty component curie for {dis_anno}.')
+                    self.log.error(f'pub={dis_anno.pub_curie}')
+                    self.log.error(f'do_term={dis_anno.do_term_curie}')
+                    self.log.error(f'eco={dis_anno.eco_abbr}')
+                    self.log.error(f'model={dis_anno.modeled_by}')
+                    self.log.error(f'modifier={dis_anno.modifier_curie}')
+                    self.log.error(f'modifier_type={dis_anno.modifier_role}')
+
                 feature = self.uname_feature_lookup[curie]
                 single_cgroup = True
                 # Flag transgenic alleles.
