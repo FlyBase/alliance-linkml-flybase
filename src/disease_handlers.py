@@ -1182,7 +1182,7 @@ class AGMDiseaseHandler(DataHandler):
                 aberr_info['unique_key'] += '_driver_ids=None'
             else:
                 aberr_info['driver_combo_str'] = '_'.join(sorted(aberr_info['driver_ids']))
-                aberr_info['unique_key'] += f'_driver_ids={aberr_info['driver_combo_str']}'
+                aberr_info['unique_key'] += f'_driver_ids={aberr_info["driver_combo_str"]}'
 
             # Create a new annotation.
             new_dis_anno = fb_datatypes.FBGenotypeDiseaseAnnotation(aberr_info['unique_key'])
