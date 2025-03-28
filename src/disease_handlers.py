@@ -1208,7 +1208,8 @@ class AGMDiseaseHandler(DataHandler):
             # Create a new annotation.
             new_dis_anno = fb_datatypes.FBGenotypeDiseaseAnnotation(aberr_info['unique_key'])
             new_dis_anno.modeled_by = aberr_info['modeled_by']
-            new_dis_anno.driver_combos = {aberr_info['driver_combo_str']}
+            if aberr_info['driver_combo_str']:
+                new_dis_anno.driver_combos = {aberr_info['driver_combo_str']}
             new_dis_anno.is_not = aberr_info['is_not']
             if aberr_info['df_across_allele'] == 'trans':
                 new_dis_anno.aberr_trans = True
@@ -1241,6 +1242,7 @@ class AGMDiseaseHandler(DataHandler):
                 aberr_anno = False
             # Get all components.
             components = []
+            self.log.debug(f'BOB: modeled_by={dis_anno.modeled_by}')
             components.extend(dis_anno.modeled_by)
             if dis_anno.driver_combos:
                 driver_curies = list(dis_anno.driver_combos)[0].split('_')
