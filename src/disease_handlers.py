@@ -1099,6 +1099,16 @@ class AGMDiseaseHandler(DataHandler):
                 prob_msg = 'bad df_across_allele value'
                 aberr_info['problems'].append(prob_msg)
 
+            if not aberr_info['evi_code']:
+                self.log.error(f'Line={line_number}: no evidence code given.')
+                prob_msg = 'no evidence code given'
+                aberr_info['problems'].append(prob_msg)
+
+            if not aberr_info['qualifier']:
+                self.log.error(f'Line={line_number}: no qualifier given.')
+                prob_msg = 'no qualifier given'
+                aberr_info['problems'].append(prob_msg)
+
             try:
                 aberr_info['pub_id'] = self.fbrf_bibliography[aberr_info['pub_given']].pub_id
             except KeyError:
