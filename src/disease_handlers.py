@@ -439,7 +439,9 @@ class AGMDiseaseHandler(DataHandler):
                         dis_anno.allele_id_was_updated = True
                         updated_allele_id_counter += 1
                     else:
+                        self.log.error(f'Could not update allele ID {allele_id} for {dis_anno}.')
                         dis_anno.allele_id_problem = True
+                        dis_anno.export_warnings.append('Obsolete allele ID could not be updated')
                         cannot_update_allele_id_counter += 1
             if dis_anno.allele_id_problem is True:
                 allele_id_prob_counter += 1
@@ -453,6 +455,8 @@ class AGMDiseaseHandler(DataHandler):
         """Extract model components from annotation subject, qualifier and evidence_code."""
         self.log.info('Extract model components from annotation subject, qualifier and evidence_code.')
         for dis_anno in self.allele_dis_annos.values():
+            if dis_anno.export_warnings:
+                continue
             dis_anno.modeled_by.extend(dis_anno.text_embedded_allele_curies)
             allele_subject_curie = self.feature_lookup[dis_anno.feature_cvterm.feature_id]['uniquename']
             if dis_anno.qualifier.value in ('model of', 'DOES NOT model'):
@@ -469,6 +473,8 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info('Get parent genes for key alleles.')
         counter = 0
         for dis_anno in self.allele_dis_annos.values():
+            if dis_anno.export_warnings:
+                continue
             key_alleles = []
             key_alleles.extend(dis_anno.modeled_by)
             if dis_anno.modifier_curie:
@@ -519,13 +525,15 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info('Build ECO lookup from model-type annotations for modifier annotations.')
         counter = 0
         for dis_anno in self.allele_dis_annos.values():
+            if dis_anno.export_warnings:
+                continue
             # Determine unique key for the model in this annotation.
             dis_anno.model_unique_key = f'{dis_anno.feature_cvterm.pub.uniquename}_'
             if dis_anno.is_not:
                 dis_anno.unique_key += 'NOT_'
             dis_anno.model_unique_key = f'model={"|".join(sorted(dis_anno.modeled_by))}_'
             dis_anno.model_unique_key += f'disease_term=DOID:{dis_anno.feature_cvterm.cvterm.dbxref.accession}'
-            self.log.debug(f'BOB: {dis_anno} has model_unique_key={dis_anno.model_unique_key}')
+            # self.log.debug(f'{dis_anno} has model_unique_key={dis_anno.model_unique_key}')
             if re.match(r'^CE(A|C)', dis_anno.evidence_code.value):
                 dis_anno.eco_abbr = dis_anno.evidence_code.value[0:3]
                 if dis_anno.is_not is False:
@@ -558,11 +566,15 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info('Lookup ECO code for modifier-type annotations.')
         input_counter = 0
         skip_counter = 0
+        bad_counter = 0
         assess_counter = 0
         match_counter = 0
         no_match_counter = 0
         for dis_anno in self.allele_dis_annos.values():
             input_counter += 1
+            if dis_anno.export_warnings:
+                bad_counter += 1
+                continue
             if dis_anno.eco_abbr:
                 skip_counter += 1
                 continue
@@ -577,6 +589,7 @@ class AGMDiseaseHandler(DataHandler):
             elif len(self.model_eco_lookup[dis_anno.model_unique_key]) > 1:
                 dis_anno.eco_abbr = 'CEC'
                 match_counter += 1
+        self.log.info(f'Skipped {bad_counter}/{input_counter} problematic allele-level annotations.')
         self.log.info(f'Found {skip_counter}/{input_counter} annotations with explicitly curated ECO codes.')
         self.log.info(f'Filled in missing ECO codes for {assess_counter}/{input_counter} annotations.')
         self.log.info(f'Found ECO for {match_counter} modifier-type annotations.')
@@ -587,6 +600,8 @@ class AGMDiseaseHandler(DataHandler):
         """Group allele-level disease annotations into genotype-level disease annotations."""
         self.log.info('Group allele-level disease annotations into genotype-level disease annotations.')
         for dis_anno in self.allele_dis_annos.values():
+            if dis_anno.export_warnings:
+                continue
             dis_anno.unique_key = f'{dis_anno.feature_cvterm.pub.uniquename}_'
             if dis_anno.is_not:
                 dis_anno.unique_key += 'NOT_'
@@ -668,7 +683,6 @@ class AGMDiseaseHandler(DataHandler):
             except KeyError:
                 pass
         elif 'FBgn' in fb_id_rgx:
-            self.log.debug(f'BILLYBOB: input={feature_symbol}, conv={converted_feature_symbol}, rgx={fb_id_rgx}')
             if not self.gene_name_lookup:
                 e = 'Must create handler.gene_name_lookup with handler.build_gene_name_lookup() '
                 e += 'before calling the handler.find_feature_uniquename() method.'
@@ -677,7 +691,6 @@ class AGMDiseaseHandler(DataHandler):
             try:
                 uniquename = self.gene_name_lookup[converted_feature_symbol]['uniquename']
             except KeyError:
-                self.log.debug(f'BILLYBOBGIL: Could not find {converted_feature_symbol} in gene feature lookup.')
                 pass
         else:
             e = f'find_feature_uniquename_from_name() method does not support {fb_id_rgx} yet'
@@ -1247,14 +1260,13 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info('Derive genotypes for final genotype-level disease annotations.')
         counter = 0
         for dis_anno in self.fb_data_entities.values():
-            self.log.debug(f'BOB: Derive genotype for {dis_anno}')
+            # self.log.debug(f'Derive genotype for {dis_anno}')
             # Determine if input is allele-level, or, aberration-from-spreadsheet, annotation.
             aberr_anno = True
             if dis_anno.allele_annotations:
                 aberr_anno = False
             # Get all components.
             components = []
-            self.log.debug(f'BOB: modeled_by={dis_anno.modeled_by}')
             components.extend(dis_anno.modeled_by)
             if dis_anno.driver_combos:
                 driver_curies = list(dis_anno.driver_combos)[0].split('_')
@@ -1276,15 +1288,8 @@ class AGMDiseaseHandler(DataHandler):
                 if curie in prespecified_pair:
                     continue
                 if curie == '':
-                    self.log.error(f'BOB: Found empty component curie for {dis_anno}.')
-                    self.log.error(f'pub={dis_anno.pub_curie}')
-                    self.log.error(f'do_term={dis_anno.do_term_curie}')
-                    self.log.error(f'eco={dis_anno.eco_abbr}')
-                    self.log.error(f'model={dis_anno.modeled_by}')
-                    self.log.error(f'modifier={dis_anno.modifier_curie}')
-                    self.log.error(f'modifier_type={dis_anno.modifier_role}')
-                    self.log.error(f'Count allele annotations = {len(dis_anno.allele_annotations)}')
-
+                    self.log.error(f'Found empty component curie for {dis_anno}.')
+                    continue
                 feature = self.uname_feature_lookup[curie]
                 single_cgroup = True
                 # Flag transgenic alleles.
@@ -1370,35 +1375,11 @@ class AGMDiseaseHandler(DataHandler):
         return
 
     # Add methods to be run by synthesize_info() below.
-    # BOB - this needs to be fixed.
-    def flag_problematic_annotations(self):
-        """Flag internal annotations."""
-        self.log.info('Flag internal annotations.')
-        problem_counter = {
-            'Obsolete modifier ID': 0,
-        }
-        no_export_counter = 0
-        for dis_anno in self.allele_dis_annos.values():
-            export_checks = {
-                dis_anno.modifier_problem is True: 'Obsolete modifier ID',
-            }
-            for check, msg in export_checks.items():
-                if check:
-                    dis_anno.for_export = False
-                    dis_anno.export_warnings.append(msg)
-                    problem_counter[msg] += 1
-            if dis_anno.for_export is False:
-                no_export_counter += 1
-        self.log.info(f'{no_export_counter} annotations flagged as unexportable in early checking.')
-        for problem, problem_count in problem_counter.items():
-            self.log.info(f'Problem: "{problem}", count={problem_count}')
-        return
 
     # Elaborate on synthesize_info() for the AGMDiseaseHandler.
     def synthesize_info(self):
         """Extend the method for the AGMDiseaseHandler."""
         super().synthesize_info()
-        self.flag_problematic_annotations()
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
