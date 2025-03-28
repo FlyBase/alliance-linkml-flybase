@@ -668,6 +668,7 @@ class AGMDiseaseHandler(DataHandler):
             except KeyError:
                 pass
         elif 'FBgn' in fb_id_rgx:
+            self.log.debug(f'BILLYBOB: input={feature_symbol}, conv={converted_feature_symbol}, rgx={fb_id_rgx}')
             if not self.gene_name_lookup:
                 e = 'Must create handler.gene_name_lookup with handler.build_gene_name_lookup() '
                 e += 'before calling the handler.find_feature_uniquename() method.'
@@ -676,6 +677,7 @@ class AGMDiseaseHandler(DataHandler):
             try:
                 uniquename = self.gene_name_lookup[converted_feature_symbol]['uniquename']
             except KeyError:
+                self.log.debug(f'BILLYBOBGIL: Could not find {converted_feature_symbol} in gene feature lookup.')
                 pass
         else:
             e = f'find_feature_uniquename_from_name() method does not support {fb_id_rgx} yet'
@@ -804,7 +806,7 @@ class AGMDiseaseHandler(DataHandler):
                 # Attributes synthesized from the above.
                 'modeled_by': [],
                 'is_not': False,
-                'modifier_id': None,
+                'modifier_curie': None,
                 'modifier_role': None,
                 'eco_abbr': None,
                 'unique_key': None,
@@ -864,7 +866,7 @@ class AGMDiseaseHandler(DataHandler):
 
             # Map info to annotation.
             if driver_info['qualifier'] in self.disease_genetic_modifier_terms.keys():
-                driver_info['modifier_id'] = driver_info['allele_feature_curie']
+                driver_info['modifier_curie'] = driver_info['allele_feature_curie']
                 driver_info['modifier_role'] = self.disease_genetic_modifier_terms[driver_info['qualifier']]
                 driver_info['modeled_by'].extend(driver_info['additional_allele_curies'])
                 driver_info['eco_abbr'] = 'CEC'    # The default.
@@ -885,8 +887,8 @@ class AGMDiseaseHandler(DataHandler):
             driver_info['unique_key'] += f'model={"|".join(sorted(driver_info["modeled_by"]))}_'
             driver_info['unique_key'] += f'disease_term={driver_info["doid_term_curie"]}_'
             driver_info['unique_key'] += f'eco_code={driver_info["eco_abbr"]}'
-            if driver_info['modifier_id']:
-                driver_info['unique_key'] += f'_{driver_info["modifier_role"]}={driver_info["modifier_id"]}'
+            if driver_info['modifier_curie']:
+                driver_info['unique_key'] += f'_{driver_info["modifier_role"]}={driver_info["modifier_curie"]}'
             self.log.debug(f'Line={line_number}; ukey={driver_info["unique_key"]}')
 
             # Look for matches between input file annotations and chado annotations.
@@ -1085,7 +1087,7 @@ class AGMDiseaseHandler(DataHandler):
                 # Attributes synthesized from the above.
                 'modeled_by': [],
                 'is_not': False,
-                'modifier_id': None,
+                'modifier_curie': None,
                 'modifier_role': None,
                 'eco_abbr': None,
                 'unique_key': None,
@@ -1164,19 +1166,19 @@ class AGMDiseaseHandler(DataHandler):
             for gene_symbol in asserted_gene_symbols:
                 if gene_symbol == '' or gene_symbol == '***':
                     continue
-                try:
-                    gene_curie = self.find_feature_uniquename_from_name(session, gene_symbol, self.regex['gene'])
+                gene_curie = self.find_feature_uniquename_from_name(session, gene_symbol, self.regex['gene'])
+                if gene_curie:
                     self.log.debug(f'Line={line_number}: found gene curie {gene_curie} for "{gene_symbol}"')
                     gene_feature_id = self.uname_feature_lookup[gene_curie]['feature_id']
                     aberr_info['gene_feature_ids'].append(gene_feature_id)
-                except KeyError:
+                else:
                     self.log.error(f'Line={line_number}: could not find gene "{gene_symbol}" in chado.')
                     prob_msg = 'bad gene symbol'
                     aberr_info['problems'].append(prob_msg)
 
             # Map info to annotation.
             if aberr_info['qualifier'] in self.disease_genetic_modifier_terms.keys():
-                aberr_info['modifier_id'] = aberr_info['subject_curie']
+                aberr_info['modifier_curie'] = aberr_info['subject_curie']
                 aberr_info['modifier_role'] = self.disease_genetic_modifier_terms[aberr_info['qualifier']]
                 aberr_info['modeled_by'].extend(aberr_info['object_curies'])
                 aberr_info['eco_abbr'] = 'CEC'    # The default.
@@ -1197,8 +1199,8 @@ class AGMDiseaseHandler(DataHandler):
             aberr_info['unique_key'] += f'model={"|".join(sorted(aberr_info["modeled_by"]))}_'
             aberr_info['unique_key'] += f'disease_term={aberr_info["doid_term_curie"]}_'
             aberr_info['unique_key'] += f'eco_code={aberr_info["eco_abbr"]}'
-            if aberr_info['modifier_id']:
-                aberr_info['unique_key'] += f'_{aberr_info["modifier_role"]}={aberr_info["modifier_id"]}'
+            if aberr_info['modifier_curie']:
+                aberr_info['unique_key'] += f'_{aberr_info["modifier_role"]}={aberr_info["modifier_curie"]}'
             if not aberr_info['driver_curies']:
                 aberr_info['unique_key'] += '_driver_curies=None'
             else:
@@ -1216,7 +1218,7 @@ class AGMDiseaseHandler(DataHandler):
             new_dis_anno.pub_curie = self.lookup_single_pub_curie(aberr_info['pub_id'])
             new_dis_anno.do_term_curie = aberr_info['doid_term_curie']
             new_dis_anno.eco_abbr = aberr_info['eco_abbr']
-            new_dis_anno.modifier_id = aberr_info['modifier_id']
+            new_dis_anno.modifier_curie = aberr_info['modifier_curie']
             new_dis_anno.modifier_role = aberr_info['modifier_role']
             new_dis_anno.asserted_genes = aberr_info['asserted_gene_feature_ids']
             self.fb_data_entities[new_dis_anno.unique_key] = new_dis_anno
@@ -1400,9 +1402,9 @@ class AGMDiseaseHandler(DataHandler):
             if geno_dis_anno.is_not is True:
                 agr_dis_anno.negated = True
             agr_dis_anno.evidence_code_curies.append(self.evidence_code_xrefs[geno_dis_anno.eco_abbr])
-            if geno_dis_anno.modifier_id:
+            if geno_dis_anno.modifier_curie:
                 agr_dis_anno.disease_genetic_modifier_relation_name = geno_dis_anno.modifier_role
-                agr_dis_anno.disease_genetic_modifier_identifiers = [f'FB:{geno_dis_anno.modifier_id}']
+                agr_dis_anno.disease_genetic_modifier_identifiers = [f'FB:{geno_dis_anno.modifier_curie}']
             geno_dis_anno.linkmldto = agr_dis_anno
         return
 
@@ -1669,9 +1671,9 @@ class AlleleDiseaseHandler(DataHandler):
         """Extract modifiers from annotation text."""
         self.log.info('Extract modifiers from annotation text.')
         allele_regex = r'FBal[0-9]{7}'
-        current_modifier_id_counter = 0
-        updated_modifier_id_counter = 0
-        cannot_update_modifier_id_counter = 0
+        current_modifier_curie_counter = 0
+        updated_modifier_curie_counter = 0
+        cannot_update_modifier_curie_counter = 0
         modifier_prob_counter = 0
         for dis_anno in self.fb_data_entities.values():
             for fb_term in self.disease_genetic_modifier_terms.keys():
@@ -1681,22 +1683,22 @@ class AlleleDiseaseHandler(DataHandler):
                         allele_id = re.search(allele_regex, dis_anno.evidence_code.value).group(0)
                     if self.confirm_current_allele_by_uniquename(session, allele_id):
                         dis_anno.fb_modifier_id = allele_id
-                        current_modifier_id_counter += 1
+                        current_modifier_curie_counter += 1
                     else:
                         # Look up current allele by 2o ID. Use that.
                         curr_allele_id = self.get_current_id_for_allele(session, allele_id)
                         if curr_allele_id:
                             dis_anno.fb_modifier_id = ['FB:{}'.format(curr_allele_id)]
-                            dis_anno.modifier_id_was_updated = True
-                            updated_modifier_id_counter += 1
+                            dis_anno.modifier_curie_was_updated = True
+                            updated_modifier_curie_counter += 1
                         else:
                             dis_anno.modifier_problem = True
-                            cannot_update_modifier_id_counter += 1
+                            cannot_update_modifier_curie_counter += 1
             if dis_anno.modifier_problem is True:
                 modifier_prob_counter += 1
-        self.log.info(f'{current_modifier_id_counter} allele modifiers mentioned use a current allele ID.')
-        self.log.info(f'{updated_modifier_id_counter} allele modifiers mentioned use a non-current allele ID mapped to a current allele.')
-        self.log.info(f'{cannot_update_modifier_id_counter} allele modifiers mentioned use a non-current allele ID not mappable to a current allele.')
+        self.log.info(f'{current_modifier_curie_counter} allele modifiers mentioned use a current allele ID.')
+        self.log.info(f'{updated_modifier_curie_counter} allele modifiers mentioned use a non-current allele ID mapped to a current allele.')
+        self.log.info(f'{cannot_update_modifier_curie_counter} allele modifiers mentioned use a non-current allele ID not mappable to a current allele.')
         self.log.info(f'{modifier_prob_counter} disease annotations have one or more problematic allele modifiers.')
         return
 
@@ -1790,7 +1792,7 @@ class AlleleDiseaseHandler(DataHandler):
                 dis_anno.qualifier.value not in self.relevant_qualifiers: 'Not model annotation',
                 ' with FLYBASE' in dis_anno.evidence_code.value: 'Multi-allele model',
                 dis_anno.modifier_problem is True: 'Obsolete modifier ID',
-                dis_anno.modifier_id_was_updated is True: 'Obsolete modifier ID',
+                dis_anno.modifier_curie_was_updated is True: 'Obsolete modifier ID',
             }
             for check, msg in export_checks.items():
                 if check:
