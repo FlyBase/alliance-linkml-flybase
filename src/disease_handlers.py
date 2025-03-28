@@ -1170,7 +1170,7 @@ class AGMDiseaseHandler(DataHandler):
                 if gene_curie:
                     self.log.debug(f'Line={line_number}: found gene curie {gene_curie} for "{gene_symbol}"')
                     gene_feature_id = self.uname_feature_lookup[gene_curie]['feature_id']
-                    aberr_info['gene_feature_ids'].append(gene_feature_id)
+                    aberr_info['asserted_gene_feature_ids'].append(gene_feature_id)
                 else:
                     self.log.error(f'Line={line_number}: could not find gene "{gene_symbol}" in chado.')
                     prob_msg = 'bad gene symbol'
