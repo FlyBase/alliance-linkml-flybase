@@ -455,8 +455,8 @@ class FBGenotypeDiseaseAnnotation(FBExportEntity):
         self.driver_combos = set()      # Each item is a driver combo (ID concatenation) to be integrated into this genotype-level annotation.
         self.aberr_trans = False        # True if two aberr/alleles in model are trans from each other.
         self.genotype_name = ''         # Will be genotype.uniquename to use in get/create.
-        # self.genotype_curie = None      # Will be the FBgo of the final genotype.    # BOB - suppress while debugging other steps.
-        self.genotype_curie = 'na'      # BOB: placeholder for faster debugging of upstream steps.
+        self.genotype_curie = None      # Will be the FBgo of the final genotype.
+        # self.genotype_curie = 'na'      # BOB: placeholder for faster debugging of upstream steps.
         self.asserted_gene_ids = []     # List of affected gene feature_ids for aberrations in the disease model.
         # Other information
         self.pub_curie = None           # The pub curie (PMID or FBrf) for the reference.

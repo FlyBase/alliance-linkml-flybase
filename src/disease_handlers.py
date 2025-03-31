@@ -8,13 +8,6 @@ Author(s):
 
 """
 
-# NOTES:
-# 1. There are hdm_comment featureprops for alleles that might be relevant.
-#    a. No explicit connection to annotations, or even to specific disease terms.
-#    b. But it might be possible to find relevant annotations by matching feature and pub.
-#    c. Consider adding hdm_comment as notes to disease annotations if 1:1 match.
-#    d. Consider giving curators a report of non-transferred comments for manual addition.
-
 import csv
 import re
 from collections import defaultdict
@@ -32,7 +25,20 @@ from handler import DataHandler
 
 
 class AGMDiseaseHandler(DataHandler):
-    """A data handler that converts allele-based disease annotations into genotype (AGM) annotations."""
+    """A data handler that converts allele-based disease annotations into genotype (AGM) annotations.
+
+    Note that the path from chado annotations to final Alliance AGM-level annotations is complicated.
+    1. This handler gets allele-level disease annotations from chado (self.allele_dis_annos).
+       Note that there are duplicated allele-level annotations in chado.
+    2. Those allele-level annotations are converted into genotype-level annotations (self.genotype_dis_annos).
+       Note that distinct allele-level annotations can represent the same genotype from different perspectives.
+    3. So, genotype-level annotations are grouped to deal with duplications and redundancies.
+    4. This object processes driver line info (from TSV file) and folds it into genotype-level annotations.
+    5. Because there can be many driver combinations for a given genotype, there can be an expansion of annotations.
+       So, new annotations (for each genotype-driver combination) are created (self.fb_data_entities).
+    6. Then, a separate aberration TSV file is processed to add even more genotype-level annotations to self.fb_data_entities.
+
+    """
     def __init__(self, log: Logger, testing: bool):
         """Create the AGMDiseaseHandler object."""
         super().__init__(log, testing)
@@ -1371,7 +1377,7 @@ class AGMDiseaseHandler(DataHandler):
         self.propagate_allele_to_genotype_attributes()
         self.parse_aberration_info(session)
         self.derive_genotypes()
-        # self.get_genotypes(session)    # BOB: suppress while working on aberr processing.
+        self.get_genotypes(session)
         return
 
     # Add methods to be run by synthesize_info() below.
