@@ -1038,7 +1038,9 @@ class AGMDiseaseHandler(DataHandler):
                 continue
             al_dis_anno = dis_anno.allele_annotations[0]
             dis_anno.modeled_by = al_dis_anno.modeled_by
+            dis_anno.pub_fbrf_id = al_dis_anno.feature_cvterm.pub.uniquename
             dis_anno.pub_curie = self.lookup_single_pub_curie(al_dis_anno.feature_cvterm.pub_id)
+            dis_anno.do_term_name = self.cvterm_lookup[al_dis_anno.feature_cvterm.cvterm_id]['name']
             dis_anno.do_term_curie = self.cvterm_lookup[al_dis_anno.feature_cvterm.cvterm_id]['curie']
             dis_anno.is_not = al_dis_anno.is_not
             dis_anno.eco_abbr = al_dis_anno.eco_abbr
@@ -1244,7 +1246,9 @@ class AGMDiseaseHandler(DataHandler):
             new_dis_anno.is_not = aberr_info['is_not']
             if aberr_info['df_across_allele'] == 'trans':
                 new_dis_anno.aberr_trans = True
+            new_dis_anno.pub_fbrf_id = aberr_info['pub_id']
             new_dis_anno.pub_curie = self.lookup_single_pub_curie(aberr_info['pub_id'])
+            new_dis_anno.do_term_name = aberr_info['do_term']
             new_dis_anno.do_term_curie = aberr_info['doid_term_curie']
             new_dis_anno.eco_abbr = aberr_info['eco_abbr']
             new_dis_anno.modifier_curie = aberr_info['modifier_curie']
@@ -1381,11 +1385,76 @@ class AGMDiseaseHandler(DataHandler):
         return
 
     # Add methods to be run by synthesize_info() below.
+    def add_asserted_genes_alleles(self):
+        """Add asserted genes and alleles."""
+        self.log.info('Add asserted genes and alleles.')
+        for dis_anno in self.fb_data_entities.values():
+            if dis_anno.for_export is False:
+                continue
+            # Determine asserted alleles.
+            for fbal_id in dis_anno.modeled_by:
+                dis_anno.asserted_allele_ids.append(self.uname_feature_lookup[fbal_id]['feature_id'])
+            dis_anno.asserted_allele_ids = list(set(dis_anno.asserted_allele_ids))
+            # Determine asserted genes.
+            for fbal_id in dis_anno.modeled_by:
+                if not fbal_id.startswith('FBal'):
+                    continue
+                allele_feature_id = self.uname_feature_lookup[fbal_id]['feature_id']
+                parent_gene_feature_id = self.feature_lookup[self.allele_gene_lookup[allele_feature_id]]['feature_id']
+                dis_anno.gene_feature_ids.append(parent_gene_feature_id)
+            dis_anno.asserted_gene_ids = list(set(dis_anno.asserted_gene_ids))
+        return
+
+    def print_curator_report(self):
+        """Print a curator report."""
+        self.log.info('Print a curator report.')
+        # Open up the report.
+        curator_report = open('/src/output/exported_annotations.tsv', 'w')
+        headers = [
+            'model_curie',
+            'model_name',
+            'negated',
+            'do_term_id',
+            'do_term_name',
+            'evidence_code',
+            'modifier_id',
+            'modifier_name',
+            'modifier_role',
+            'asserted_alleles',
+            'asserted_genes'
+        ]
+        curator_report.write('#')
+        csv_writer = csv.DictWriter(curator_report, fieldnames=headers, delimiter='\t', extrasaction='ignore', lineterminator='\n')
+        csv_writer.writeheader()
+        # Process export data into a readable format.
+        data_list = []
+        for geno_dis_anno in self.fb_data_entities.values():
+            if geno_dis_anno.for_export is False:
+                continue
+            dis_anno = {
+                'model_curie': geno_dis_anno.genotype_curie,
+                'model_name': geno_dis_anno.genotype_name,
+                'negated': geno_dis_anno.is_not,
+                'do_term_id': geno_dis_anno.do_term_curie,
+                'do_term_name': geno_dis_anno.do_term_name,
+                'evidence_code': geno_dis_anno.eco_abbr,
+                'modifier_id': geno_dis_anno.modifier_curie,
+                'modifier_name': self.uname_feature_lookup[geno_dis_anno.modifier_curie]['name'],
+                'modifier_role': geno_dis_anno.modifier_role,
+                'asserted_alleles': [self.feature_lookup[i]['name'] for i in geno_dis_anno.asserted_allele_ids],
+                'asserted_genes': [self.feature_lookup[i]['name'] for i in geno_dis_anno.asserted_gene_ids],
+            }
+            data_list.append(dis_anno)
+        # Print things out.
+        for i in data_list:
+            csv_writer.writerow(i)
+        return
 
     # Elaborate on synthesize_info() for the AGMDiseaseHandler.
     def synthesize_info(self):
         """Extend the method for the AGMDiseaseHandler."""
         super().synthesize_info()
+        self.print_curator_report()
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
@@ -1405,31 +1474,22 @@ class AGMDiseaseHandler(DataHandler):
             geno_dis_anno.linkmldto = agr_dis_anno
         return
 
-    def add_asserted_genes_alleles(self):
-        """Add asserted genes and alleles."""
+    def map_asserted_genes_alleles(self):
+        """Map asserted genes and alleles."""
         self.log.info('Add asserted genes and alleles.')
         for dis_anno in self.fb_data_entities.values():
             if dis_anno.for_export is False:
                 continue
-            # Determine asserted alleles.
-            asserted_fbal_ids = []
-            for fbal_id in dis_anno.modeled_by:
-                asserted_fbal_ids.append(fbal_id)
-            dis_anno.linkmldto.asserted_allele_identifier = f'FB:{asserted_fbal_ids[0]}'                # BOB - temp, want many.
-            # dis_anno.linkmldto.asserted_allele_identifiers = [f'FB:{i}' for i in asserted_fbal_ids]    # BOB - what we want eventually.
-            # Determine asserted genes.
-            asserted_gene_feature_ids = []
-            asserted_gene_feature_ids.extend(dis_anno.asserted_gene_ids)
-            for fbal_id in asserted_fbal_ids:
-                if not fbal_id.startswith('FBal'):
-                    continue
-                allele_feature_id = self.uname_feature_lookup[fbal_id]['feature_id']
-                parent_gene_feature_id = self.feature_lookup[self.allele_gene_lookup[allele_feature_id]]['feature_id']
-                asserted_gene_feature_ids.append(parent_gene_feature_id)
-            asserted_gene_feature_ids = set(asserted_gene_feature_ids)
-            for gene_feature_id in asserted_gene_feature_ids:
+            # Asserted alleles.
+            dis_anno.asserted_allele_ids.sort()
+            # BOB: for now, we specify one asserted allele, but this needs to change to a list (in progress at Alliance).
+            dis_anno.linkmldto.asserted_allele_identifier = self.feature_lookup[dis_anno.asserted_allele_ids[0]]['curie']
+            # dis_anno.linkmldto.asserted_allele_identifiers = [self.feature_lookup[i]['curie'] for i in dis_anno.asserted_allele_ids]    # BOB: for later.
+            # Asserted genes.
+            for gene_feature_id in dis_anno.asserted_gene_ids:
                 gene = self.feature_lookup[gene_feature_id]
                 gene_organism = self.organism_lookup[gene['organism_id']]
+                # This is a filter to ensure we report only Drosophild or MOD genes.
                 if gene_organism['is_drosophilid'] is True:
                     dis_anno.linkmldto.asserted_gene_identifiers.append(gene['curie'])
                 elif not gene['curie'].startswith('FB') and gene_organism['official_db']:
@@ -1451,7 +1511,7 @@ class AGMDiseaseHandler(DataHandler):
         """Extend the method for the AGMDiseaseHandler."""
         super().map_fb_data_to_alliance()
         self.map_genotype_disease_annotation_basic()
-        self.add_asserted_genes_alleles()
+        self.map_asserted_genes_alleles()
         self.map_data_provider_dto()
         return
 

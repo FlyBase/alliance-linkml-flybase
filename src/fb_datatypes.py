@@ -449,22 +449,25 @@ class FBGenotypeDiseaseAnnotation(FBExportEntity):
         super().__init__()
         self.unique_key = unique_key
         self.entity_desc = unique_key
-        self.allele_annotations = []    # Allele-level annotations that map to this genotype-level annotation.
+        self.allele_annotations = []     # Allele-level annotations that map to this genotype-level annotation.
         # Information for model genotype.
-        self.modeled_by = []            # Will be a list of all allele FBal IDs that model the disease.
-        self.driver_combos = set()      # Each item is a driver combo (ID concatenation) to be integrated into this genotype-level annotation.
-        self.aberr_trans = False        # True if two aberr/alleles in model are trans from each other.
-        self.genotype_name = ''         # Will be genotype.uniquename to use in get/create.
-        self.genotype_curie = None      # Will be the FBgo of the final genotype.
+        self.modeled_by = []             # Will be a list of all allele FBal IDs that model the disease.
+        self.driver_combos = set()       # Each item is a driver combo (ID concatenation) to be integrated into this genotype-level annotation.
+        self.aberr_trans = False         # True if two aberr/alleles in model are trans from each other.
+        self.genotype_name = ''          # Will be genotype.uniquename to use in get/create.
+        self.genotype_curie = None       # Will be the FBgo of the final genotype.
         # self.genotype_curie = 'na'      # BOB: placeholder for faster debugging of upstream steps.
-        self.asserted_gene_ids = []     # List of affected gene feature_ids for aberrations in the disease model.
+        self.asserted_allele_ids = []    # List of asserted allele feature_ids.
+        self.asserted_gene_ids = []      # List of affected gene feature_ids for aberrations in the disease model.
         # Other information
-        self.pub_curie = None           # The pub curie (PMID or FBrf) for the reference.
-        self.do_term_curie = None       # The DO term curie.
-        self.is_not = False             # Becomes True for "DOES NOT model" annotations.
-        self.eco_abbr = ''              # Will be CEA or CEC, as appropriate.
-        self.modifier_curie = None      # Will be FBal ID of the modifier, if applicable.
-        self.modifier_role = None       # Will be Alliance role for a modifier.
+        self.pub_fbrf_id = None          # The pub FBrf ID.
+        self.pub_curie = None            # The pub curie (PMID or FBrf) for the reference.
+        self.do_term_name = None         # The DO term name.
+        self.do_term_curie = None        # The DO term curie.
+        self.is_not = False              # Becomes True for "DOES NOT model" annotations.
+        self.eco_abbr = ''               # Will be CEA or CEC, as appropriate.
+        self.modifier_curie = None       # Will be FBal ID of the modifier, if applicable.
+        self.modifier_role = None        # Will be Alliance role for a modifier.
 
 
 class FBRelationship(FBExportEntity):
