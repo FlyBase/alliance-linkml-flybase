@@ -1438,12 +1438,15 @@ class AGMDiseaseHandler(DataHandler):
                 'do_term_id': geno_dis_anno.do_term_curie,
                 'do_term_name': geno_dis_anno.do_term_name,
                 'evidence_code': geno_dis_anno.eco_abbr,
-                'modifier_id': geno_dis_anno.modifier_curie,
-                'modifier_name': self.uname_feature_lookup[geno_dis_anno.modifier_curie]['name'],
-                'modifier_role': geno_dis_anno.modifier_role,
-                'asserted_alleles': [self.feature_lookup[i]['name'] for i in geno_dis_anno.asserted_allele_ids],
-                'asserted_genes': [self.feature_lookup[i]['name'] for i in geno_dis_anno.asserted_gene_ids],
             }
+            if geno_dis_anno.asserted_allele_ids:
+                dis_anno['asserted_alleles'] = [self.feature_lookup[i]['name'] for i in geno_dis_anno.asserted_allele_ids]
+            if geno_dis_anno.asserted_gene_ids:
+                dis_anno['asserted_genes'] = [self.feature_lookup[i]['name'] for i in geno_dis_anno.asserted_gene_ids]
+            if geno_dis_anno.modifier_curie:
+                dis_anno['modifier_id'] = geno_dis_anno.modifier_curie
+                dis_anno['modifier_name'] = self.uname_feature_lookup[geno_dis_anno.modifier_curie]['name']
+                dis_anno['modifier_role'] = geno_dis_anno.modifier_role
             data_list.append(dis_anno)
         # Print things out.
         for i in data_list:
