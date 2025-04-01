@@ -1401,7 +1401,7 @@ class AGMDiseaseHandler(DataHandler):
                     continue
                 allele_feature_id = self.uname_feature_lookup[fbal_id]['feature_id']
                 parent_gene_feature_id = self.feature_lookup[self.allele_gene_lookup[allele_feature_id]]['feature_id']
-                dis_anno.gene_feature_ids.append(parent_gene_feature_id)
+                dis_anno.asserted_gene_ids.append(parent_gene_feature_id)
             dis_anno.asserted_gene_ids = list(set(dis_anno.asserted_gene_ids))
         return
 
