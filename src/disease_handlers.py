@@ -1197,7 +1197,7 @@ class AGMDiseaseHandler(DataHandler):
                     continue
                 gene_curie = self.find_feature_uniquename_from_name(session, gene_symbol, self.regex['gene'])
                 if gene_curie:
-                    self.log.debug(f'Line={line_number}: found gene curie {gene_curie} for "{gene_symbol}"')
+                    # self.log.debug(f'Line={line_number}: found gene curie {gene_curie} for "{gene_symbol}"')
                     gene_feature_id = self.uname_feature_lookup[gene_curie]['feature_id']
                     aberr_info['asserted_gene_feature_ids'].append(gene_feature_id)
                 else:
