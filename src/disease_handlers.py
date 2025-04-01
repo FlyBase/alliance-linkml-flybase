@@ -1350,6 +1350,7 @@ class AGMDiseaseHandler(DataHandler):
             genotype.get_known_or_create_new_genotype(session)
             self.log.debug(f'Got this curie: {genotype.curie}')
             dis_anno.genotype_curie = genotype.curie
+            dis_anno.genotype_desc = genotype.description
             if genotype.curie is None:
                 no_counter += 1
             else:
@@ -1413,6 +1414,7 @@ class AGMDiseaseHandler(DataHandler):
         headers = [
             'pub_id',
             'model_curie',
+            'model_desc',
             'model_name',
             'negated',
             'do_term_id',
@@ -1435,6 +1437,7 @@ class AGMDiseaseHandler(DataHandler):
             dis_anno = {
                 'pub_id': geno_dis_anno.pub_fbrf_id,
                 'model_curie': geno_dis_anno.genotype_curie,
+                'model_desc': geno_dis_anno.genotype_desc,
                 'model_name': geno_dis_anno.genotype_name,
                 'negated': geno_dis_anno.is_not,
                 'do_term_id': geno_dis_anno.do_term_curie,

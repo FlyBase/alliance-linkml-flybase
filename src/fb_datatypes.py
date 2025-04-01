@@ -457,6 +457,7 @@ class FBGenotypeDiseaseAnnotation(FBExportEntity):
         self.genotype_name = ''          # Will be genotype.uniquename to use in get/create.
         self.genotype_curie = None       # Will be the FBgo of the final genotype.
         # self.genotype_curie = 'na'      # BOB: placeholder for faster debugging of upstream steps.
+        self.genotype_desc = None        # Will be genotype.description (concatenation of component IDs).
         self.asserted_allele_ids = []    # List of asserted allele feature_ids.
         self.asserted_gene_ids = []      # List of affected gene feature_ids for aberrations in the disease model.
         # Other information
