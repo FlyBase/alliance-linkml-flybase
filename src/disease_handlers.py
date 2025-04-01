@@ -1411,15 +1411,16 @@ class AGMDiseaseHandler(DataHandler):
         # Open up the report.
         curator_report = open('/src/output/exported_annotations.tsv', 'w')
         headers = [
+            'pub_id',
             'model_curie',
             'model_name',
             'negated',
             'do_term_id',
             'do_term_name',
             'evidence_code',
+            'modifier_role',
             'modifier_id',
             'modifier_name',
-            'modifier_role',
             'asserted_alleles',
             'asserted_genes'
         ]
@@ -1432,6 +1433,7 @@ class AGMDiseaseHandler(DataHandler):
             if geno_dis_anno.for_export is False:
                 continue
             dis_anno = {
+                'pub_id': geno_dis_anno.pub_fbrf_id,
                 'model_curie': geno_dis_anno.genotype_curie,
                 'model_name': geno_dis_anno.genotype_name,
                 'negated': geno_dis_anno.is_not,
@@ -1444,9 +1446,9 @@ class AGMDiseaseHandler(DataHandler):
             if geno_dis_anno.asserted_gene_ids:
                 dis_anno['asserted_genes'] = [self.feature_lookup[i]['name'] for i in geno_dis_anno.asserted_gene_ids]
             if geno_dis_anno.modifier_curie:
+                dis_anno['modifier_role'] = geno_dis_anno.modifier_role
                 dis_anno['modifier_id'] = geno_dis_anno.modifier_curie
                 dis_anno['modifier_name'] = self.uname_feature_lookup[geno_dis_anno.modifier_curie]['name']
-                dis_anno['modifier_role'] = geno_dis_anno.modifier_role
             data_list.append(dis_anno)
         # Print things out.
         for i in data_list:
