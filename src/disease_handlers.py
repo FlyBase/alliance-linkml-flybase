@@ -1454,6 +1454,7 @@ class AGMDiseaseHandler(DataHandler):
     def synthesize_info(self):
         """Extend the method for the AGMDiseaseHandler."""
         super().synthesize_info()
+        self.add_asserted_genes_alleles()
         self.print_curator_report()
         return
 
