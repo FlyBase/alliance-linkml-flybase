@@ -1287,7 +1287,7 @@ class AGMDiseaseHandler(DataHandler):
                 prespecified_pair.extend(dis_anno.modeled_by)
                 prespecified_pair.sort()
             elif aberr_anno and dis_anno.aberr_trans:
-                self.log.error(f'For {dis_anno}, have "trans" specified for a model with {len(dis_anno)} components.')
+                self.log.error(f'For {dis_anno}, have "trans" specified for a model with {len(dis_anno.modeled_by)} components.')
             # Sort things into complementation groups.
             cgroup_dict = {}
             # Start with the prespecified pair, if present.
