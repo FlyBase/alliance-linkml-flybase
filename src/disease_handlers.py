@@ -1246,7 +1246,7 @@ class AGMDiseaseHandler(DataHandler):
             new_dis_anno.is_not = aberr_info['is_not']
             if aberr_info['df_across_allele'] == 'trans':
                 new_dis_anno.aberr_trans = True
-            new_dis_anno.pub_fbrf_id = aberr_info['pub_id']
+            new_dis_anno.pub_fbrf_id = aberr_info['pub_given']
             new_dis_anno.pub_curie = self.lookup_single_pub_curie(aberr_info['pub_id'])
             new_dis_anno.do_term_name = aberr_info['do_term']
             new_dis_anno.do_term_curie = aberr_info['doid_term_curie']
