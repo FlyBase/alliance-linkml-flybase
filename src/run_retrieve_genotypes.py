@@ -83,6 +83,7 @@ try:
 except psycopg2.OperationalError as e:
     print('An error occurred while trying to connect to the database.')
     print(f'Error message: {e}')
+    raise
 
 # Construct command for running script in docker.
 command = 'rm -f ./genotypes_retrieved*.report && '
