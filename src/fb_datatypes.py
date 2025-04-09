@@ -463,6 +463,7 @@ class FBGenotypeDiseaseAnnotation(FBExportEntity):
         self.asserted_gene_ids = []      # List of affected gene feature_ids for aberrations in the disease model.
         # Other information
         self.pub_fbrf_id = None          # The pub FBrf ID.
+        self.internal_pub_id = None      # The internal pub.pub_id for a FlyBase publication.
         self.pub_curie = None            # The pub curie (PMID or FBrf) for the reference.
         self.do_term_name = None         # The DO term name.
         self.do_term_curie = None        # The DO term curie.

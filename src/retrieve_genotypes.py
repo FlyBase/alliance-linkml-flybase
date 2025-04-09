@@ -188,7 +188,7 @@ class GenotypeHandler(object):
         log.info('Parse input genotype names into GenotypeAnnotation objects.\n\n\n')
         log.info(f'Have {len(self.genotype_input_list)} genotypes to process.')
         for name in self.genotype_input_list:
-            geno_anno = GenotypeAnnotation(name, session, log)
+            geno_anno = GenotypeAnnotation(name, session, log, self.pub_id)
             self.genotype_annotations.append(geno_anno)
         return
 

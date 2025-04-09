@@ -1038,6 +1038,7 @@ class AGMDiseaseHandler(DataHandler):
                 continue
             al_dis_anno = dis_anno.allele_annotations[0]
             dis_anno.modeled_by = al_dis_anno.modeled_by
+            dis_anno.internal_pub_id = al_dis_anno.feature_cvterm.pub_id
             dis_anno.pub_fbrf_id = al_dis_anno.feature_cvterm.pub.uniquename
             dis_anno.pub_curie = self.lookup_single_pub_curie(al_dis_anno.feature_cvterm.pub_id)
             dis_anno.do_term_name = self.cvterm_lookup[al_dis_anno.feature_cvterm.cvterm_id]['name']
@@ -1247,6 +1248,7 @@ class AGMDiseaseHandler(DataHandler):
             if aberr_info['df_across_allele'] == 'trans':
                 new_dis_anno.aberr_trans = True
             new_dis_anno.pub_fbrf_id = aberr_info['pub_given']
+            new_dis_anno.internal_pub_id = aberr_info['pub_id']
             new_dis_anno.pub_curie = self.lookup_single_pub_curie(aberr_info['pub_id'])
             new_dis_anno.do_term_name = aberr_info['do_term']
             new_dis_anno.do_term_curie = aberr_info['doid_term_curie']
@@ -1346,7 +1348,7 @@ class AGMDiseaseHandler(DataHandler):
                 self.log.error(f'No input_genotype_name for {dis_anno}')
                 prob_counter += 1
                 continue
-            genotype = GenotypeAnnotation(dis_anno.input_genotype_name, session, self.log)
+            genotype = GenotypeAnnotation(dis_anno.input_genotype_name, session, self.log, dis_anno.internal_pub_id)
             genotype.get_known_or_create_new_genotype(session)
             self.log.debug(f'Got this curie: {genotype.curie}')
             dis_anno.genotype_uniquename = genotype.uniquename.replace('<up>', '[').replace('</up>', ']')
