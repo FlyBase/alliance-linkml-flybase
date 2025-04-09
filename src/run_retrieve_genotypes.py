@@ -38,6 +38,7 @@ import subprocess
 import sys
 
 
+# Small functions to check that the system is ready for use.
 def check_db_connection(server, database, user, pg_pwd):
     """Confirm that the database can be connected to."""
     conn_string = f"host={server} dbname={database} user={user} password='{pg_pwd}'"
@@ -50,6 +51,25 @@ def check_db_connection(server, database, user, pg_pwd):
         sys.exit(1)
     db_connection.close()
     return
+
+
+def check_docker_image_exists(image_name):
+    """Check for the necessary docker image."""
+    try:
+        # Run `docker image inspect` command to check if the image exists
+        result = subprocess.run(
+            ['docker', 'image', 'inspect', image_name],
+            stdout=subprocess.PIPE,    # Capture standard output
+            stderr=subprocess.PIPE     # Capture standard error
+        )
+
+        # Check the return code to see if the command was successful
+        if result.returncode == 0:
+            print(f"Image '{image_name}' exists.")
+        else:
+            raise RuntimeError(f"Image '{image_name}' does not exist.")
+    except Exception as e:
+        raise RuntimeError(f"An error occurred while checking the image: {str(e)}")
 
 
 # Process input parameters.
@@ -91,7 +111,13 @@ pg_pwd = config['chiacur']['PGPassword']
 agr_token = config['chiacur']['AllianceCurationAPIToken']
 check_db_connection(server, database, user, pg_pwd)
 if database != 'production_chado':
-    print(f'WARNING: Script running on test database {database}, not "production_chado". Contact devs if trying to use this script for real.')
+    print(f'WARNING: Script is running on test database {database}, not "production_chado". Contact devs if trying to use this script for real.')
+
+# Check for the necessary docker image.
+image_name = 'test_export_to_linkml'
+check_docker_image_exists(image_name)
+if image_name != 'export_to_linkml':
+    print(f'WARNING: Script is using a test docker image {image_name}, not "export_to_linkml". Contact devs if trying to use this script for real.')
 
 # Construct command for running script in docker.
 command = 'rm -f ./genotypes_retrieved*.report && '
@@ -106,7 +132,7 @@ command += f'-e USER={user} '
 command += f'-e PGPASSWORD={pg_pwd} '
 command += '-e RELEASE=production '
 command += f'-e ALLIANCETOKEN={agr_token} '
-command += '--entrypoint /usr/bin/python3 test_export_to_linkml '    # BOB: change export_to_linkml when ready to implement for real.
+command += f'--entrypoint /usr/bin/python3 {image_name} '    # BOB: change export_to_linkml when ready to implement for real.
 command += f'/src/retrieve_genotypes.py -v -p {fbrf_pub_id} '
 if genotype_input_file:
     command += f'-f /src/input/{genotype_input_file} '
