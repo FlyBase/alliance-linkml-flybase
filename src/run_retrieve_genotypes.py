@@ -44,7 +44,7 @@ def check_db_connection(server, database, user, pg_pwd):
     conn_string = f"host={server} dbname={database} user={user} password='{pg_pwd}'"
     try:
         db_connection = psycopg2.connect(conn_string)
-        print(f'INFO: Can connect to database {database} on {server}.')
+        print(f'INFO   : Can connect to database {database} on {server}.')
     except psycopg2.OperationalError as e:
         print(f'ERROR  : An error occurred while trying to connect to the database: {e}')
         print('EXITING SCRIPT')
