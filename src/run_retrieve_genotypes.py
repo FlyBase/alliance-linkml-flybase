@@ -37,6 +37,21 @@ import psycopg2
 import subprocess
 import sys
 
+
+def check_db_connection(server, database, user, pg_pwd):
+    """Confirm that the database can be connected to."""
+    conn_string = f"host={server} dbname={database} user={user} password='{pg_pwd}'"
+    try:
+        db_connection = psycopg2.connect(conn_string)
+    except psycopg2.OperationalError as e:
+        print('An error occurred while trying to connect to the database.')
+        print(f'Error message: {e}')
+        print('EXITING SCRIPT')
+        sys.exit(1)
+    db_connection.close()
+    return
+
+
 # Process input parameters.
 parser = argparse.ArgumentParser(
     description='The "run_retrieve_genotypes.py" script gets IDs for genotypes during curation. It creates them as needed.',
@@ -70,21 +85,13 @@ except SystemExit as e:
 config = configparser.ConfigParser()
 config.read('/data/credentials/production/config.cfg')
 server = config['chiacur']['Server']
-database = config['chiacur']['Database']    # BOB: Update this value to production_chado when ready to implement for real.
+database = config['chiacur']['Database']    # BOB: Update config file to point to production_chado when ready to implement for real.
 user = config['chiacur']['User']
 pg_pwd = config['chiacur']['PGPassword']
 agr_token = config['chiacur']['AllianceCurationAPIToken']
-# Confirm that the database is available.
-print(f'Try connecting to {server} {database}')
-conn_string = f"host={server} dbname={database} user={user} password='{pg_pwd}'"
-try:
-    db_connection = psycopg2.connect(conn_string)
-    conn_description = f'Can connect to the {database} database on the {server} server.'
-except psycopg2.OperationalError as e:
-    print('An error occurred while trying to connect to the database.')
-    print(f'Error message: {e}')
-    print('EXITING SCRIPT')
-    sys.exit(1)
+check_db_connection(server, database, user, pg_pwd)
+if database != 'production_chado':
+    print(f'WARNING: Script running on test database {database}, not "production_chado". Contact devs if trying to use this script for real.')
 
 # Construct command for running script in docker.
 command = 'rm -f ./genotypes_retrieved*.report && '
