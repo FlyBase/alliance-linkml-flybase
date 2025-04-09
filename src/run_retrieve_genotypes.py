@@ -105,22 +105,24 @@ except SystemExit as e:
     sys.exit(e.code)
 
 # Open config for chado communication.
+# BOB: Ensure database is "production_chado" for real production implementation.
 config = configparser.ConfigParser()
 config.read('/data/credentials/production/config.cfg')
 server = config['chiacur']['Server']
-database = config['chiacur']['Database']    # BOB: Update config file to point to production_chado when ready to implement for real.
+database = config['chiacur']['Database']
 user = config['chiacur']['User']
 pg_pwd = config['chiacur']['PGPassword']
 agr_token = config['chiacur']['AllianceCurationAPIToken']
 check_db_connection(server, database, user, pg_pwd)
 if database != 'production_chado':
-    print(f'WARNING: Script is running on test database {database}, not "production_chado". Contact devs if trying to use this script for real.')
+    print(f'WARNING: Script is running on test database {database}, not "production_chado". Contact HarvDev if trying to use this script for real.')
 
 # Check for the necessary docker image.
+# BOB: Ensure image_name is "export_to_linkml" for real production implementation.
 image_name = 'test_export_to_linkml'
 check_docker_image_exists(image_name)
 if image_name != 'export_to_linkml':
-    print(f'WARNING: Script is using a test docker image {image_name}, not "export_to_linkml". Contact devs if trying to use this script for real.')
+    print(f'WARNING: Script is using a test docker image {image_name}, not "export_to_linkml". Contact HarvDev if trying to use this script for real.')
 
 # Construct command for running script in docker.
 command = 'rm -f ./genotypes_retrieved*.report && '
