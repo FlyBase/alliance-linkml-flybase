@@ -35,6 +35,7 @@ import configparser
 import os
 import subprocess
 import sys
+from harvdev_utils.psycopg_functions import establish_db_connection
 
 # Process input parameters.
 parser = argparse.ArgumentParser(
@@ -67,12 +68,15 @@ except SystemExit as e:
 
 # Open config for chado communication.
 config = configparser.ConfigParser()
-config.read('/data/credentials/production/config.cfg')    # BOB: Point config to production_chado for prod
+config.read('/data/credentials/production/config.cfg')
 server = config['chiacur']['Server']
-database = config['chiacur']['Database']
+database = config['chiacur']['Database']    # BOB: Update this value to production_chado when ready to implement for real.
 user = config['chiacur']['User']
 pg_pwd = config['chiacur']['PGPassword']
 agr_token = config['chiacur']['AllianceCurationAPIToken']
+# Confirm that the database is available.
+conn, conn_description = establish_db_connection(server, database, user, pg_pwd)
+print(f'Can connect to this database: {conn_description}')
 
 # Construct command for running script in docker.
 command = 'rm -f ./genotypes_retrieved*.report && '
@@ -87,7 +91,7 @@ command += f'-e USER={user} '
 command += f'-e PGPASSWORD={pg_pwd} '
 command += '-e RELEASE=production '
 command += f'-e ALLIANCETOKEN={agr_token} '
-command += '--entrypoint /usr/bin/python3 test_export_to_linkml '    # BOB: change bulk_update docker image for prod
+command += '--entrypoint /usr/bin/python3 test_export_to_linkml '    # BOB: change export_to_linkml when ready to implement for real.
 command += f'/src/retrieve_genotypes.py -v -p {fbrf_pub_id} '
 if genotype_input_file:
     command += f'-f /src/input/{genotype_input_file} '
