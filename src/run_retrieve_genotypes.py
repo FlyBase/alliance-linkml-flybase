@@ -77,8 +77,12 @@ agr_token = config['chiacur']['AllianceCurationAPIToken']
 # Confirm that the database is available.
 print(f'Try connecting to {server} {database}')
 conn_string = f"host={server} dbname={database} user={user} password='{pg_pwd}'"
-db_connection = psycopg2.connect(conn_string)
-conn_description = f'Can connect to the {database} database on the {server} server.'
+try:
+    db_connection = psycopg2.connect(conn_string)
+    conn_description = f'Can connect to the {database} database on the {server} server.'
+except psycopg2.OperationalError as e:
+    print('An error occurred while trying to connect to the database.')
+    print(f'Error message: {e}')
 
 # Construct command for running script in docker.
 command = 'rm -f ./genotypes_retrieved*.report && '
