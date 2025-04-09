@@ -1329,8 +1329,8 @@ class AGMDiseaseHandler(DataHandler):
             for cgroup in cgroup_dict.values():
                 cgroup_name = '/'.join([i['name'] for i in cgroup])
                 cgroup_names.append(cgroup_name)
-            dis_anno.genotype_name = ' '.join(cgroup_names)
-            self.log.debug(f'For {dis_anno}:\n\tgenotype name: {dis_anno.genotype_name}')
+            dis_anno.input_genotype_name = ' '.join(cgroup_names)
+            self.log.debug(f'For {dis_anno}:\n\tgenotype input name: {dis_anno.input_genotype_name}')
             counter += 1
         self.log.info(f'Derived genotype names for {counter} disease annotations.')
         return
@@ -1342,13 +1342,14 @@ class AGMDiseaseHandler(DataHandler):
         prob_counter = 0
         no_counter = 0
         for dis_anno in self.fb_data_entities.values():
-            if not dis_anno.genotype_name:
-                self.log.error(f'No genotype_name for {dis_anno}')
+            if not dis_anno.input_genotype_name:
+                self.log.error(f'No input_genotype_name for {dis_anno}')
                 prob_counter += 1
                 continue
-            genotype = GenotypeAnnotation(dis_anno.genotype_name, session, self.log)
+            genotype = GenotypeAnnotation(dis_anno.input_genotype_name, session, self.log)
             genotype.get_known_or_create_new_genotype(session)
             self.log.debug(f'Got this curie: {genotype.curie}')
+            dis_anno.genotype_uniquename = genotype.uniquename
             dis_anno.genotype_curie = genotype.curie
             dis_anno.genotype_desc = genotype.description
             if genotype.curie is None:
@@ -1413,6 +1414,8 @@ class AGMDiseaseHandler(DataHandler):
         curator_report = open('/src/output/exported_annotations.tsv', 'w')
         headers = [
             'pub_id',
+            'model_input_genotype',
+            'model_final_genotype',
             'model_curie',
             'model_desc',
             'model_name',
@@ -1436,6 +1439,8 @@ class AGMDiseaseHandler(DataHandler):
                 continue
             dis_anno = {
                 'pub_id': geno_dis_anno.pub_fbrf_id,
+                'model_input_genotype': geno_dis_anno.input_genotype_name,
+                'model_final_genotype': geno_dis_anno.genotype_uniquename,
                 'model_curie': geno_dis_anno.genotype_curie,
                 'model_desc': geno_dis_anno.genotype_desc,
                 'model_name': geno_dis_anno.genotype_name,
