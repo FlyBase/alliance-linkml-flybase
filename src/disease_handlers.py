@@ -1349,7 +1349,7 @@ class AGMDiseaseHandler(DataHandler):
             genotype = GenotypeAnnotation(dis_anno.input_genotype_name, session, self.log)
             genotype.get_known_or_create_new_genotype(session)
             self.log.debug(f'Got this curie: {genotype.curie}')
-            dis_anno.genotype_uniquename = genotype.uniquename
+            dis_anno.genotype_uniquename = genotype.uniquename.replace('<up>', '[').replace('</up>', ']')
             dis_anno.genotype_curie = genotype.curie
             dis_anno.genotype_desc = genotype.description
             if genotype.curie is None:
