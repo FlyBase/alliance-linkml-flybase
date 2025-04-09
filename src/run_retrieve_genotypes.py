@@ -67,10 +67,11 @@ def check_docker_image_exists(image_name):
         if result.returncode == 0:
             print(f"Image '{image_name}' exists.")
         else:
-            raise RuntimeError(f"Image '{image_name}' does not exist.")
-    except Exception as e:
-        raise RuntimeError(f"An error occurred while checking the image: {str(e)}")
-
+            print(f'ERROR: Image "{image_name}" does not exist.')
+            sys.exit(1)
+    except RuntimeError as e:
+        print(f'ERROR: An error occurred while checking the image: {str(e)}')
+        sys.exit(1)
 
 # Process input parameters.
 parser = argparse.ArgumentParser(
