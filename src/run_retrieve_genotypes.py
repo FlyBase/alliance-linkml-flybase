@@ -33,9 +33,9 @@ Notes:
 import argparse
 import configparser
 import os
+import psycopg2
 import subprocess
 import sys
-from harvdev_utils.psycopg_functions import establish_db_connection
 
 # Process input parameters.
 parser = argparse.ArgumentParser(
@@ -76,8 +76,9 @@ pg_pwd = config['chiacur']['PGPassword']
 agr_token = config['chiacur']['AllianceCurationAPIToken']
 # Confirm that the database is available.
 print(f'Try connecting to {server} {database}')
-conn, conn_description = establish_db_connection(server, database, user, pg_pwd)
-print(f'Can connect to this database: {conn_description}')
+conn_string = f"host={server} dbname={database} user={user} password='{pg_pwd}'"
+db_connection = psycopg2.connect(conn_string)
+conn_description = f'Can connect to the {database} database on the {server} server.'
 
 # Construct command for running script in docker.
 command = 'rm -f ./genotypes_retrieved*.report && '
