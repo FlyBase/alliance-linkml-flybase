@@ -46,8 +46,7 @@ def check_db_connection(server, database, user, pg_pwd):
         db_connection = psycopg2.connect(conn_string)
         print(f'INFO: Can connect to database {database} on {server}.')
     except psycopg2.OperationalError as e:
-        print('An error occurred while trying to connect to the database.')
-        print(f'Error message: {e}')
+        print(f'ERROR  : An error occurred while trying to connect to the database: {e}')
         print('EXITING SCRIPT')
         sys.exit(1)
     db_connection.close()
@@ -66,13 +65,13 @@ def check_docker_image_exists(image_name):
 
         # Check the return code to see if the command was successful
         if result.returncode == 0:
-            print(f"INFO: Image '{image_name}' exists.")
+            print(f"INFO   : Image '{image_name}' exists.")
         else:
-            print(f'ERROR: Image "{image_name}" does not exist.')
+            print(f'ERROR  : Image "{image_name}" does not exist.')
             print('EXITING SCRIPT')
             sys.exit(1)
     except RuntimeError as e:
-        print(f'ERROR: An error occurred while checking the image: {str(e)}')
+        print(f'ERROR  : An error occurred while checking the image: {str(e)}')
         print('EXITING SCRIPT')
         sys.exit(1)
 
@@ -103,7 +102,7 @@ try:
     genotype_input_file = args.genotypes_file
     fbrf_pub_id = args.pub
 except SystemExit as e:
-    print('ERROR: Must supply two arguments: -p/--pub (FBrf ID), and one of -i/--genotype_input or -f/--genotypes_file.')
+    print('ERROR  : Must supply two arguments: -p/--pub (FBrf ID), and one of -i/--genotype_input or -f/--genotypes_file.')
     sys.exit(e.code)
 
 # Open config for chado communication.
