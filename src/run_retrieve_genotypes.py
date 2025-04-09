@@ -44,7 +44,7 @@ def check_db_connection(server, database, user, pg_pwd):
     conn_string = f"host={server} dbname={database} user={user} password='{pg_pwd}'"
     try:
         db_connection = psycopg2.connect(conn_string)
-        print(f'Can connect to database {database} on {server}.')
+        print(f'INFO: Can connect to database {database} on {server}.')
     except psycopg2.OperationalError as e:
         print('An error occurred while trying to connect to the database.')
         print(f'Error message: {e}')
@@ -66,7 +66,7 @@ def check_docker_image_exists(image_name):
 
         # Check the return code to see if the command was successful
         if result.returncode == 0:
-            print(f"Image '{image_name}' exists.")
+            print(f"INFO: Image '{image_name}' exists.")
         else:
             print(f'ERROR: Image "{image_name}" does not exist.')
             print('EXITING SCRIPT')
