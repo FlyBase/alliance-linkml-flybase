@@ -76,6 +76,7 @@ def check_docker_image_exists(image_name):
         print('EXITING SCRIPT')
         sys.exit(1)
 
+
 # Process input parameters.
 parser = argparse.ArgumentParser(
     description='The "run_retrieve_genotypes.py" script gets IDs for genotypes during curation. It creates them as needed.',
