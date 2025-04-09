@@ -68,9 +68,11 @@ def check_docker_image_exists(image_name):
             print(f"Image '{image_name}' exists.")
         else:
             print(f'ERROR: Image "{image_name}" does not exist.')
+            print('EXITING SCRIPT')
             sys.exit(1)
     except RuntimeError as e:
         print(f'ERROR: An error occurred while checking the image: {str(e)}')
+        print('EXITING SCRIPT')
         sys.exit(1)
 
 # Process input parameters.
