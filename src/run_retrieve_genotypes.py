@@ -75,6 +75,7 @@ user = config['chiacur']['User']
 pg_pwd = config['chiacur']['PGPassword']
 agr_token = config['chiacur']['AllianceCurationAPIToken']
 # Confirm that the database is available.
+print(f'Try connecting to {server} {database}')
 conn, conn_description = establish_db_connection(server, database, user, pg_pwd)
 print(f'Can connect to this database: {conn_description}')
 
