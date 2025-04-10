@@ -73,11 +73,11 @@ class AlleleMapper(DataHandler):
     def __init__(self, log, testing):
         """Create the AlleleMapper object."""
         super().__init__(log, testing)
-        self.log.info('TEST PRINT FROM AlleleMapper OBJECT.')
 
     def test_query(self, session):
         counter = 0
         filters = (
+            Feature.uniquename.op('~')(self.regex['gene']),
             Feature.uniquename == 'FBgn0284084',
             Feature.name == 'wg',
         )
@@ -92,6 +92,7 @@ class AlleleMapper(DataHandler):
 
     def run(self, session):
         self.test_query(session)
+        return
 
 
 def run_mapper(object_to_execute):
