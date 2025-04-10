@@ -1,0 +1,131 @@
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Map alleles to more representative insertions for Alliance reporting in genotypes.
+
+Author(s):
+    Gil dos Santos dossantos@morgan.harvard.edu
+
+Usage:
+    map_alleles_to_insertions_for_alliance_genotypes.py [-h] [-v VERBOSE] [-c CONFIG] [-t TESTING]
+
+Example:
+    python map_alleles_to_insertions_for_alliance_genotypes.py -v -t 
+    -c /path/to/config.cfg
+
+Notes:
+    This script reviews alleles and determines if each one is better represented
+    in a genotype by an associated FBti insertion. If so, it makes a
+    feature_relationships (FBal - TBD - FBti). This script should be run after
+    each epicycle proforma load.
+
+"""
+
+import argparse
+import csv
+import re
+from sqlalchemy import create_engine, inspect
+from sqlalchemy.orm import sessionmaker, aliased
+from harvdev_utils.psycopg_functions import set_up_db_reading
+from harvdev_utils.char_conversions import sgml_to_plain_text
+from harvdev_utils.production import (
+    Cv, Cvterm, Cvtermsynonym, Db, Dbxref, Feature, FeatureCvterm, FeatureCvtermprop,
+    FeatureDbxref, FeaturePub, FeatureRelationship, FeatureSynonym, Pub, Synonym
+)
+from handler import DataHandler
+
+# Data types handled by this script.
+REPORT_LABEL = 'map_alleles_to_insertions_for_alliance_genotypes'
+
+# Now proceed with generic setup.
+set_up_dict = set_up_db_reading(REPORT_LABEL)
+server = set_up_dict['server']
+database = set_up_dict['database']
+username = set_up_dict['username']
+password = set_up_dict['password']
+log = set_up_dict['log']
+TESTING = set_up_dict['testing']
+
+# Process additional input parameters not handled by the set_up_db_reading() function above.
+parser = argparse.ArgumentParser(description='inputs')
+args, extra_args = parser.parse_known_args()
+log.info(f'These args are handled by this specific script: {args}')
+log.info(f'These args are handled by modules: {extra_args}')
+
+# Create SQL Alchemy engines from environmental variables.
+engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server + '/' + database
+ENGINE = create_engine(engine_var_rep)
+inspect(ENGINE)
+
+
+# The main process.
+def main():
+    """Run the main function."""
+    log.info(f'Running script "{__file__}"')
+    log.info('Started main function.')
+    allele_mapper = AlleleMapper(log, TESTING)
+    run_mapper(allele_mapper)
+    log.info('Ended main function.\n')
+
+
+class AlleleMapper(DataHandler):
+    """An object that maps alleles to insertions for Alliance genotype reporting."""
+
+    def __init__(self, log, testing):
+        """Create the AlleleMapper object."""
+        super().__init__(log, testing)
+        self.log.info('TEST PRINT FROM AlleleMapper OBJECT.')
+
+    def test_query(self, session):
+        counter = 0
+        filters = (
+            Feature.uniquename == 'FBgn0284084',
+            Feature.name == 'wg',
+        )
+        results = session.query(Feature).\
+            filter(*filters).\
+            distinct()
+        counter == 1
+        for result in results:
+            self.log.info(f'Found this gene: name={result.name}, uniquename={result.uniquename}')
+        self.log.info(f'Found {counter} results.')
+        return
+
+    def run(self, session):
+        self.test_query(session)
+
+
+def run_mapper(object_to_execute):
+    """Run the handler.
+
+    Args:
+        object_to_execute (DataHandler): An object having a query_chado_and_export() method.
+
+    Raises:
+        Raises a RuntimeError if there are problems with executing the query.
+
+    """
+    global log
+    global TESTING
+    global ENGINE
+    Session = sessionmaker(bind=ENGINE)
+    inspect(ENGINE)
+    session = Session()
+    try:
+        object_to_execute.run(session)
+        session.flush()
+    except RuntimeError:
+        session.rollback()
+        log.critical('Critical transaction error occurred during main chado query; rolling back and exiting.')
+        raise
+    if TESTING is True:
+        log.info('Since "testing" is True, rolling back all transactions.')
+        session.rollback()
+    else:
+        log.info('Since "testing" is False, committing transactions.')
+        session.commit()
+    return
+
+
+
+if __name__ == "__main__":
+    main()
