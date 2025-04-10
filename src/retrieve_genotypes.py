@@ -349,7 +349,7 @@ class GenotypeHandler(object):
         # now = datetime.datetime.now().strftime("%a %b %d %Y at %H:%M:%S")
         lines_to_write = []
         for geno_anno in self.genotype_annotations:
-            lines_to_write.append(f'INPUT: {geno_anno.input_genotype_name}')
+            lines_to_write.append(f'\nINPUT GENOTYPE NAME: {geno_anno.input_genotype_name}')
             if geno_anno.curie:
                 lines_to_write.append(f'\tCURIE: FB:{geno_anno.curie}')
             else:
@@ -367,11 +367,14 @@ class GenotypeHandler(object):
                 uniquename_output = ''
             lines_to_write.append(f'\tUNIQUENAME: {uniquename_output}')
             lines_to_write.append(f'\tDESCRIPTION: {geno_anno.description}')
+            for note in geno_anno.notes:
+                lines_to_write.append(f'\tNOTE: {error}')
+
             for error in geno_anno.errors:
                 lines_to_write.append(f'\tERROR: {error}')
             lines_to_write.append('')
         for line in lines_to_write:
-            report.write(f'{line}\n')
+            report.write(f'{line}')
         return
 
     def run(self, session):
