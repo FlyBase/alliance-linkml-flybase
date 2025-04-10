@@ -20,6 +20,9 @@ Notes:
 
 """
 
+# Notes:
+# feature_lookup dicts have these keys: feature_id, uniquename, curie, is_obsolete, type, organism_id, name, symbol, exported.
+
 import argparse
 import csv
 import re
@@ -31,7 +34,7 @@ from harvdev_utils.production import (
     Cv, Cvterm, Cvtermsynonym, Db, Dbxref, Feature, FeatureCvterm, FeatureCvtermprop,
     FeatureDbxref, FeaturePub, FeatureRelationship, FeatureSynonym, Pub, Synonym
 )
-from handler import DataHandler
+from allele_handlers import AlleleHandler
 
 # Data types handled by this script.
 REPORT_LABEL = 'map_alleles_to_insertions_for_alliance_genotypes'
@@ -67,7 +70,7 @@ def main():
     log.info('Ended main function.\n')
 
 
-class AlleleMapper(DataHandler):
+class AlleleMapper(AlleleHandler):
     """An object that maps alleles to insertions for Alliance genotype reporting."""
 
     def __init__(self, log, testing):
@@ -104,9 +107,18 @@ class AlleleMapper(DataHandler):
         self.get_in_vitro_allele_ids(session)
         return
 
+    # Add methods to be run by get_datatype_data() below.
+    # Placeholder
+
+    # Elaborate on get_datatype_data() for the AGMDiseaseHandler.
+    def get_datatype_data(self, session):
+        super().get_datatype_data(session)
+        return
+
     def run(self, session):
         self.test_query(session)
         self.get_general_data(session)
+        self.get_datatype_data(session)
         return
 
 
