@@ -810,7 +810,7 @@ class DataHandler(object):
         self.log.info('Get feature_ids for alleles related to FBtp constructs.')
         construct = aliased(Feature, name='construct')
         allele = aliased(Feature, name='allele')
-        fr_types = ['derived_tp_assoc_alleles', 'associated_with', 'gets_expression_data_from']
+        fr_types = ['derived_tp_assoc_alleles', 'associated_with']
         filters = (
             construct.is_obsolete.is_(False),
             construct.uniquename.op('~')(self.regex['construct']),

@@ -35,6 +35,7 @@ from harvdev_utils.production import (
     FeatureDbxref, FeaturePub, FeatureRelationship, FeatureSynonym, Pub, Synonym
 )
 from allele_handlers import AlleleHandler
+import fb_datatypes
 
 # Data types handled by this script.
 REPORT_LABEL = 'map_alleles_to_insertions_for_alliance_genotypes'
@@ -96,23 +97,74 @@ class AlleleMapper(AlleleHandler):
     # Add methods to be run by get_general_data() below.
     # Placeholder
 
-    # Elaborate on get_general_data() for the AGMDiseaseHandler.
+    # Define get_general_data() for the AlleleMapper.
     def get_general_data(self, session):
         """Extend the method for the AGMDiseaseHandler."""
-        super().get_general_data(session)
+        self.log.info('GET GENERAL FLYBASE DATA FROM CHADO.')
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
-        self.build_feature_lookup(session, feature_types=['aberration', 'allele', 'gene', 'insertion', 'construct'])
+        self.build_organism_lookup(session)
+        self.get_key_cvterm_sets(session)
+        self.build_feature_lookup(session, feature_types=['aberration', 'allele', 'gene', 'insertion', 'construct', 'variation'])
         self.get_transgenic_allele_ids(session)
         self.get_in_vitro_allele_ids(session)
         return
 
     # Add methods to be run by get_datatype_data() below.
-    # Placeholder
+    def get_indirect_progenitor_insertions(self, session):
+        """Find FBti insertions associated_with the progenitor allele of an allele."""
+        allele = aliased(Feature, name='allele')
+        progenitor_allele = aliased(Feature, name='progenitor_allele')
+        insertion = aliased(Feature, name='insertion')
+        allele_rel_type = aliased(Cvterm, name='allele_rel_type')
+        ins_rel_type = aliased(Cvterm, name='ins_rel_type')
+        al_al = aliased(FeatureRelationship, name='al_al')
+        al_ti = aliased(FeatureRelationship, name='al_ti')
+        filters = (
+            allele.is_obsolete.is_(False),
+            allele.uniquename.op('~')(self.regex['allele']),
+            progenitor_allele.is_obsolete.is_(False),
+            progenitor_allele.uniquename.op('~')(self.regex['allele']),
+            insertion.is_obsolete.is_(False),
+            insertion.uniquename.op('~')(self.regex['insertion']),
+            allele_rel_type.name == 'progenitor',
+            ins_rel_type.name == 'associated_with',
+        )
+        results = session.query(allele, al_ti).\
+            select_from(allele).\
+            join(al_al, (al_al.subject_id == allele.feature_id)).\
+            join(progenitor_allele, (progenitor_allele.feature_id == al_al.object_id)).\
+            join(allele_rel_type, (allele_rel_type.cvterm_id == al_al.type_id)).\
+            join(al_ti, (al_ti.subject_id == progenitor_allele.feature_id)).\
+            join(insertion, (insertion.feature_id == al_ti.object_id)).\
+            join(ins_rel_type, (ins_rel_type.cvterm_id == al_ti.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            rel = fb_datatypes.FBRelationship(result.al_ti, 'feature_relationship')
+            rel_type = 'indirect_progenitor_insertion_rels'
+            rel_id = result.al_ti.feature_relationship_id
+            # Index the feature_relationship by id.
+            self.fb_data_entities[result.allele.feature_id].rels_by_id[rel_id] = rel
+            # Index the feature_relationship_id by type.
+            try:
+                self.fb_data_entities[result.allele.feature_id]['sbj_rel_ids_by_type'][rel_type].append(rel_id)
+            except:
+                self.fb_data_entities[result.allele.feature_id]['sbj_rel_ids_by_type'][rel_type] = [rel_id]
+            counter += 1
+            self.log.info(f'Found {counter} indirect FBal-FBti associations via progenitor alleles.')
+        return
 
-    # Elaborate on get_datatype_data() for the AGMDiseaseHandler.
+    # Define get_datatype_data() for the AGMDiseaseHandler.
     def get_datatype_data(self, session):
-        super().get_datatype_data(session)
+        self.log.info(f'GET FLYBASE {self.datatype.upper()} DATA FROM CHADO.')
+        self.get_entities(session)
+        self.get_indirect_progenitor_insertions(session)
+        self.get_entity_relationships(session, 'object', rel_type='partof', entity_type='variation')
+        self.get_entity_relationships(session, 'subject', rel_type='associated_with', entity_type='construct', entity_regex=self.regex['construct'])
+        self.get_entity_relationships(session, 'subject', rel_type='associated_with', entity_type='insertion', entity_regex=self.regex['insertion'])
+        self.get_entity_relationships(session, 'subject', rel_type='progenitor', entity_type='insertion', entity_regex=self.regex['insertion'])
         return
 
     def run(self, session):
@@ -133,8 +185,8 @@ def run_mapper(object_to_execute):
 
     """
     global log
-    global TESTING
     global ENGINE
+    load_testing = True    # Hard-coding this because "testing" means something different for Alliance data handlers.
     Session = sessionmaker(bind=ENGINE)
     inspect(ENGINE)
     session = Session()
@@ -145,14 +197,13 @@ def run_mapper(object_to_execute):
         session.rollback()
         log.critical('Critical transaction error occurred during main chado query; rolling back and exiting.')
         raise
-    if TESTING is True:
+    if load_testing is True:
         log.info('Since "testing" is True, rolling back all transactions.')
         session.rollback()
     else:
         log.info('Since "testing" is False, committing transactions.')
         session.commit()
     return
-
 
 
 if __name__ == "__main__":
