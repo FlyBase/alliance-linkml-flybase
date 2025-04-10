@@ -212,7 +212,7 @@ class AlleleMapper(AlleleHandler):
                 self.log.debug(f'Found {len(prog_fbti_rels)} progenitor FBti relationships.')
                 if allele.single_fbti_feature_id:
                     mapping_insertion = self.feature_lookup[allele.single_fbti_feature_id]
-                    self.log.debug(f'BOB: {allele} maps to {mapping_insertion['name']} ({mapping_insertion['uniquename']})')
+                    self.log.debug(f'BOB: {allele} maps to {mapping_insertion["name"]} ({mapping_insertion["uniquename"]})')
                 else:
                     self.log.debug(f'BOB: {allele} could not be mapped to an associated insertion: {"; ".join(notes)})')
         self.log.info(f'Mapped {mapped_counter}/{input_counter} alleles to a single FBti insertion unambiguously.')
