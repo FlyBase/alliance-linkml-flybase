@@ -149,9 +149,9 @@ class AlleleMapper(AlleleHandler):
             self.fb_data_entities[result.allele.feature_id].rels_by_id[rel_id] = rel
             # Index the feature_relationship_id by type.
             try:
-                self.fb_data_entities[result.allele.feature_id]['sbj_rel_ids_by_type'][rel_type].append(rel_id)
+                self.fb_data_entities[result.allele.feature_id].sbj_rel_ids_by_type[rel_type].append(rel_id)
             except:
-                self.fb_data_entities[result.allele.feature_id]['sbj_rel_ids_by_type'][rel_type] = [rel_id]
+                self.fb_data_entities[result.allele.feature_id].sbj_rel_ids_by_type[rel_type] = [rel_id]
             counter += 1
             self.log.info(f'Found {counter} indirect FBal-FBti associations via progenitor alleles.')
         return
