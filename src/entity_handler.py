@@ -281,7 +281,7 @@ class PrimaryEntityHandler(DataHandler):
             self.log.info(f'Use this regex for primary entities: {self.regex[self.datatype]}')
             filters += (primary_entity.uniquename.op('~')(self.regex[self.datatype]), )
         if self.datatype in self.feature_subtypes.keys():
-            self.log.info(f'Filter main table for primary entities of these feature_subtypes: {self.feature_subtypes[self.datatype]}')
+            self.log.debug(f'Filter main table for primary entities of these feature_subtypes: {self.feature_subtypes[self.datatype]}')
             filters += (primary_entity_type.name.in_((self.feature_subtypes[self.datatype])), )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
@@ -424,7 +424,7 @@ class PrimaryEntityHandler(DataHandler):
                 rel_type_tally[rel_type] += 1
             except KeyError:
                 rel_type_tally[rel_type] = 1
-        self.log.info(f'Indexed {assignment_counter} {chado_type}_relationships by relationship type where the {self.datatype} is the {role}.')
+        self.log.debug(f'Indexed {assignment_counter} {chado_type}_relationships by relationship type where the {self.datatype} is the {role}.')
         self.log.debug(f'Found these types of {chado_type}_relationship types where the {self.datatype} is the {role}:')
         ordered_rel_types = sorted(list(rel_type_tally.keys()))
         for rel_type in ordered_rel_types:
@@ -455,8 +455,8 @@ class PrimaryEntityHandler(DataHandler):
                 feature_type_tally[rel_feat_type] += 1
             except KeyError:
                 feature_type_tally[rel_feat_type] = 1
-        self.log.info(f'Indexed {new_assignment_counter} {chado_type}_relationships by {role_inverse[role]} type where the {self.datatype} is the {role}.')
-        self.log.info(f'Skipped {feat_type_skipped} feature_relationships to non-FB-curie features.')
+        self.log.debug(f'Indexed {new_assignment_counter} {chado_type}_relationships by {role_inverse[role]} type where the {self.datatype} is the {role}.')
+        self.log.debug(f'Skipped {feat_type_skipped} feature_relationships to non-FB-curie features.')
         self.log.debug(f'Found these types of features in {chado_type}_relationship, with a/an {self.datatype} as the {role}:')
         ordered_feat_types = sorted(list(feature_type_tally.keys()))
         for feat_type in ordered_feat_types:
@@ -583,7 +583,7 @@ class PrimaryEntityHandler(DataHandler):
                 else:
                     self.fb_data_entities[entity_id].cvt_anno_ids_by_prop[prop_type_name] = [cvt_anno_id]
             assignment_counter += 1
-        self.log.info(f'Indexed {assignment_counter} {chado_type}_cvterm annotations.')
+        self.log.debug(f'Indexed {assignment_counter} {chado_type}_cvterm annotations.')
         return
 
     def get_entityprops(self, session):
