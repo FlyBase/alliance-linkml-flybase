@@ -99,7 +99,6 @@ class AlleleMapper(DataHandler):
         super().get_general_data(session)
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
-        self.build_organism_lookup(session)
         self.build_feature_lookup(session, feature_types=['aberration', 'allele', 'gene', 'insertion', 'construct'])
         self.get_transgenic_allele_ids(session)
         self.get_in_vitro_allele_ids(session)
