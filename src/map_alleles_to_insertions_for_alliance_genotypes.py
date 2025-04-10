@@ -9,7 +9,7 @@ Usage:
     map_alleles_to_insertions_for_alliance_genotypes.py [-h] [-v VERBOSE] [-c CONFIG] [-t TESTING]
 
 Example:
-    python map_alleles_to_insertions_for_alliance_genotypes.py -v -t 
+    python map_alleles_to_insertions_for_alliance_genotypes.py -v -t
     -c /path/to/config.cfg
 
 Notes:
@@ -24,15 +24,12 @@ Notes:
 # feature_lookup dicts have these keys: feature_id, uniquename, curie, is_obsolete, type, organism_id, name, symbol, exported.
 
 import argparse
-import csv
-import re
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker, aliased
 from harvdev_utils.psycopg_functions import set_up_db_reading
-from harvdev_utils.char_conversions import sgml_to_plain_text
+# from harvdev_utils.char_conversions import sgml_to_plain_text
 from harvdev_utils.production import (
-    Cv, Cvterm, Cvtermsynonym, Db, Dbxref, Feature, FeatureCvterm, FeatureCvtermprop,
-    FeatureDbxref, FeaturePub, FeatureRelationship, FeatureSynonym, Pub, Synonym
+    Cvterm, Feature, FeatureRelationship
 )
 from allele_handlers import AlleleHandler
 import fb_datatypes
@@ -78,22 +75,6 @@ class AlleleMapper(AlleleHandler):
         """Create the AlleleMapper object."""
         super().__init__(log, testing)
 
-    def test_query(self, session):
-        counter = 0
-        filters = (
-            Feature.uniquename.op('~')(self.regex['gene']),
-            Feature.uniquename == 'FBgn0284084',
-            Feature.name == 'wg',
-        )
-        results = session.query(Feature).\
-            filter(*filters).\
-            distinct()
-        for result in results:
-            self.log.info(f'Found this gene: name={result.name}, uniquename={result.uniquename}')
-            counter += 1
-        self.log.info(f'Found {counter} results.')
-        return
-
     # Add methods to be run by get_general_data() below.
     # Placeholder
 
@@ -106,13 +87,12 @@ class AlleleMapper(AlleleHandler):
         self.build_organism_lookup(session)
         self.get_key_cvterm_sets(session)
         self.build_feature_lookup(session, feature_types=['aberration', 'allele', 'gene', 'insertion', 'construct', 'variation'])
-        self.get_transgenic_allele_ids(session)
-        self.get_in_vitro_allele_ids(session)
         return
 
     # Add methods to be run by get_datatype_data() below.
-    def get_indirect_progenitor_insertions(self, session):
+    def get_indirect_progenitor_insertion_relationships(self, session):
         """Find FBti insertions associated_with the progenitor allele of an allele."""
+        self.log.info('Find FBti insertions associated_with the progenitor allele of an allele.')
         allele = aliased(Feature, name='allele')
         progenitor_allele = aliased(Feature, name='progenitor_allele')
         insertion = aliased(Feature, name='insertion')
@@ -150,17 +130,18 @@ class AlleleMapper(AlleleHandler):
             # Index the feature_relationship_id by type.
             try:
                 self.fb_data_entities[result.allele.feature_id].sbj_rel_ids_by_type[rel_type].append(rel_id)
-            except:
+            except KeyError:
                 self.fb_data_entities[result.allele.feature_id].sbj_rel_ids_by_type[rel_type] = [rel_id]
             counter += 1
-            self.log.info(f'Found {counter} indirect FBal-FBti associations via progenitor alleles.')
+        self.log.info(f'Found {counter} indirect FBal-FBti associations via progenitor alleles.')
         return
 
     # Define get_datatype_data() for the AGMDiseaseHandler.
     def get_datatype_data(self, session):
-        self.log.info(f'GET FLYBASE {self.datatype.upper()} DATA FROM CHADO.')
+        """Get FlyBase data from chado."""
+        self.log.info('GET FLYBASE DATA FROM CHADO.')
         self.get_entities(session)
-        self.get_indirect_progenitor_insertions(session)
+        self.get_indirect_progenitor_insertion_relationships(session)
         self.get_entity_relationships(session, 'object', rel_type='partof', entity_type='variation')
         self.get_entity_relationships(session, 'subject', rel_type='associated_with', entity_type='construct', entity_regex=self.regex['construct'])
         self.get_entity_relationships(session, 'subject', rel_type='associated_with', entity_type='insertion', entity_regex=self.regex['insertion'])
@@ -168,7 +149,8 @@ class AlleleMapper(AlleleHandler):
         return
 
     def run(self, session):
-        self.test_query(session)
+        """Run all methods in sequence."""
+        self.log.info('Run all methods in sequence.')
         self.get_general_data(session)
         self.get_datatype_data(session)
         return
