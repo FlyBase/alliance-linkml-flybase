@@ -368,8 +368,7 @@ class GenotypeHandler(object):
             lines_to_write.append(f'\tUNIQUENAME: {uniquename_output}')
             lines_to_write.append(f'\tDESCRIPTION: {geno_anno.description}')
             for note in geno_anno.notes:
-                lines_to_write.append(f'\tNOTE: {error}')
-
+                lines_to_write.append(f'\tNOTE: {note}')
             for error in geno_anno.errors:
                 lines_to_write.append(f'\tERROR: {error}')
             lines_to_write.append('')
