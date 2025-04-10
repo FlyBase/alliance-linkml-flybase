@@ -90,8 +90,24 @@ class AlleleMapper(DataHandler):
         self.log.info(f'Found {counter} results.')
         return
 
+    # Add methods to be run by get_general_data() below.
+    # Placeholder
+
+    # Elaborate on get_general_data() for the AGMDiseaseHandler.
+    def get_general_data(self, session):
+        """Extend the method for the AGMDiseaseHandler."""
+        super().get_general_data(session)
+        self.build_bibliography(session)
+        self.build_cvterm_lookup(session)
+        self.build_organism_lookup(session)
+        self.build_feature_lookup(session, feature_types=['aberration', 'allele', 'gene', 'insertion', 'construct'])
+        self.get_transgenic_allele_ids(session)
+        self.get_in_vitro_allele_ids(session)
+        return
+
     def run(self, session):
         self.test_query(session)
+        self.get_general_data(session)
         return
 
 
