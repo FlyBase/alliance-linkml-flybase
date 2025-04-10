@@ -427,7 +427,7 @@ class PrimaryEntityHandler(DataHandler):
                 rel_type_tally[rel_type] += 1
             except KeyError:
                 rel_type_tally[rel_type] = 1
-        self.log.debug(f'Indexed {assignment_counter} {chado_type}_relationships by relationship type where the {self.datatype} is the {role}.')
+        self.log.info(f'Indexed {assignment_counter} {chado_type}_relationships by relationship type where the {self.datatype} is the {role}.')
         self.log.debug(f'Found these types of {chado_type}_relationship types where the {self.datatype} is the {role}:')
         ordered_rel_types = sorted(list(rel_type_tally.keys()))
         for rel_type in ordered_rel_types:
