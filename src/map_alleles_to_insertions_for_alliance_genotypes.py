@@ -84,9 +84,9 @@ class AlleleMapper(DataHandler):
         results = session.query(Feature).\
             filter(*filters).\
             distinct()
-        counter == 1
         for result in results:
             self.log.info(f'Found this gene: name={result.name}, uniquename={result.uniquename}')
+            counter += 1
         self.log.info(f'Found {counter} results.')
         return
 
