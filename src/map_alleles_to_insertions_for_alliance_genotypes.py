@@ -136,10 +136,10 @@ class AlleleMapper(AlleleHandler):
         self.log.info(f'Found {counter} indirect FBal-FBti associations via progenitor alleles.')
         return
 
-    # Define get_datatype_data() for the AGMDiseaseHandler.
+    # Define get_datatype_data() for the AlleleMapper.
     def get_datatype_data(self, session):
         """Get FlyBase data from chado."""
-        self.log.info('GET FLYBASE DATA FROM CHADO.')
+        self.log.info('GET RELEVANT ALLELE DATA FROM CHADO.')
         self.get_entities(session)
         self.get_indirect_progenitor_insertion_relationships(session)
         self.get_entity_relationships(session, 'object', rel_type='partof', entity_type='variation')
@@ -148,11 +148,89 @@ class AlleleMapper(AlleleHandler):
         self.get_entity_relationships(session, 'subject', rel_type='progenitor', entity_type='insertion', entity_regex=self.regex['insertion'])
         return
 
+    # Add methods to be run by synthesize_data() below.
+    def map_allele_to_insertion(self):
+        """Map alleles to insertions, if applicable."""
+        self.log.info('Map alleles to insertions, if applicable.')
+        sample_alleles = [
+            'Mkp3[5]',              # FBti + ARG.
+            'mei-P26[fs1]',         # FBti + ARG.
+            'TrpA1[-ACD-G4]',       # FBti is both associated_with and progenitor.
+            'Nmnat[W129G.EGFP]',    # FBti is both associated_with and progenitor.
+            'chrb[180]',            # Many FBti.
+            'sd[ETX81]',            # Many FBti.
+            'neb[k06334]',          # Many FBti.
+            'Gpdh1[AKO107]',        # Many FBti.
+            'gt[1]',                # Many FBti.
+            'ac[Hw-BS]',            # Many FBti.
+            'ovo[yct]',             # Many FBti.
+            'sn[w]',                # Many FBti.
+            'eyg[P20MD1]',          # Many FBti.
+            'twin[KG00877]',        # Many FBti.
+            'sd[+58b]',             # Many FBti.
+            'bmm[EY06577]',         # Simple at-locus FBti.
+            'Scer\GAL4[sLNvs]',     # Simple trap FBti.
+            'Arf6[EP2612]',         # Shared trap FBti.
+            'CG8155[EP2612]',       # Shared trap FBti.
+            'lbe[UAS.cJa]',         # Allele should be mapped to construct-insertion.
+            'wg[l-12]',             # Classical mutation.
+        ]
+        input_counter = 0
+        mapped_counter = 0
+        for allele in self.fb_data_entities.values():
+            input_counter += 1
+            arg_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='partof', rel_entity_types='variation')
+            fbtp_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='associated_with', rel_entity_types='construct')
+            fbti_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='associated_with', rel_entity_types='insertion')
+            prog_fbti_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='progenitor', rel_entity_types='insertion')
+            prog_fbti_rels.extend(allele.recall_relationships(self.log, entity_role='subject', rel_types='indirect_progenitor_insertion_rels', rel_entity_types='insertion'))
+            single_fbti_feature_id = None
+            notes = []
+            if arg_rels:
+                notes.append('Has ARG(s)')
+            if fbtp_rels:
+                notes.append('Has FBtp(s)')
+            if fbti_rels:
+                distinct_fbti_feature_ids = set([i.chado_obj.object_id for i in fbti_rels])
+                if len(distinct_fbti_feature_ids) > 1:
+                    notes.append('Has MANY FBti(s)')
+                distinct_fbti_progenitor_feature_ids = set([i.chado_obj.object_id for i in prog_fbti_rels])
+                if distinct_fbti_feature_ids[0] in distinct_fbti_progenitor_feature_ids:
+                    notes.append('Associated FBti is also a progenitor FBti')
+                else:
+                    single_fbti_feature_id = distinct_fbti_feature_ids[0]
+            else:
+                notes.append('No FBti')
+            if single_fbti_feature_id:
+                mapped_counter += 1
+            allele.single_fbti_feature_id = single_fbti_feature_id
+            if allele.chado_obj.name in sample_alleles:
+                self.log.debug(f'Assessing "{allele.chado_obj.name}" ({allele.chado_obj.uniquename}).')
+                self.log.debug(f'Found {len(arg_rels)} ARG relationships.')
+                self.log.debug(f'Found {len(fbtp_rels)} FBtp relationships.')
+                self.log.debug(f'Found {len(fbti_rels)} FBti relationships.')
+                self.log.debug(f'Found {len(prog_fbti_rels)} progenitor FBti relationships.')
+                if allele.single_fbti_feature_id:
+                    mapping_insertion = self.feature_lookup[allele.single_fbti_feature_id]
+                    self.log.debug(f'BOB: {allele} maps to {mapping_insertion['name']} ({mapping_insertion['uniquename']})')
+                else:
+                    self.log.debug(f'BOB: {allele} could not be mapped to an associated insertion: {"; ".join(notes)})')
+        self.log.info(f'Mapped {mapped_counter}/{input_counter} alleles to a single FBti insertion unambiguously.')
+        return
+
+    # Define synthesize_data() for the AlleleMapper.
+    def synthesize_data(self):
+        """Synthesize data."""
+        self.log.info('SYNTHESIZE DATA.')
+        self.map_allele_to_insertion()
+        return
+
     def run(self, session):
         """Run all methods in sequence."""
         self.log.info('Run all methods in sequence.')
         self.get_general_data(session)
         self.get_datatype_data(session)
+        self.synthesize_data()
         return
 
 
