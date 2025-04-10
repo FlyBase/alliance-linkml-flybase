@@ -169,7 +169,7 @@ class AlleleMapper(AlleleHandler):
             'twin[KG00877]',        # Many FBti.
             'sd[+58b]',             # Many FBti.
             'bmm[EY06577]',         # Simple at-locus FBti.
-            'Scer\GAL4[sLNvs]',     # Simple trap FBti.
+            'Scer_GAL4[sLNvs]',     # Simple trap FBti.
             'Arf6[EP2612]',         # Shared trap FBti.
             'CG8155[EP2612]',       # Shared trap FBti.
             'lbe[UAS.cJa]',         # Allele should be mapped to construct-insertion.
@@ -182,8 +182,8 @@ class AlleleMapper(AlleleHandler):
             arg_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='partof', rel_entity_types='variation')
             fbtp_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='associated_with', rel_entity_types='construct')
             fbti_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='associated_with', rel_entity_types='insertion')
-            prog_fbti_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='progenitor', rel_entity_types='insertion')
-            prog_fbti_rels.extend(allele.recall_relationships(self.log, entity_role='subject', rel_types='indirect_progenitor_insertion_rels', rel_entity_types='insertion'))
+            prog_rel_types = ['progenitor', 'indirect_progenitor_insertion_rels']
+            prog_fbti_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types=prog_rel_types, rel_entity_types='insertion')
             single_fbti_feature_id = None
             notes = []
             if arg_rels:
@@ -201,9 +201,12 @@ class AlleleMapper(AlleleHandler):
                     single_fbti_feature_id = distinct_fbti_feature_ids[0]
             else:
                 notes.append('No FBti')
+            allele.single_fbti_feature_id = single_fbti_feature_id
             if single_fbti_feature_id:
                 mapped_counter += 1
-            allele.single_fbti_feature_id = single_fbti_feature_id
+                insertion = self.feature_lookup[allele.single_fbti_feature_id]
+                mapping_str = f'\t{allele.chado_obj.uniquename}\t{allele.chado_obj.name}\t{insertion["uniquename"]}\t{insertion["name"]}'
+                # self.log.debug(f'BOB MAPPING: {mapping_str})')
             if allele.chado_obj.name in sample_alleles:
                 self.log.debug(f'Assessing "{allele.chado_obj.name}" ({allele.chado_obj.uniquename}).')
                 self.log.debug(f'Found {len(arg_rels)} ARG relationships.')
@@ -211,10 +214,9 @@ class AlleleMapper(AlleleHandler):
                 self.log.debug(f'Found {len(fbti_rels)} FBti relationships.')
                 self.log.debug(f'Found {len(prog_fbti_rels)} progenitor FBti relationships.')
                 if allele.single_fbti_feature_id:
-                    mapping_insertion = self.feature_lookup[allele.single_fbti_feature_id]
-                    self.log.debug(f'BOB: {allele} maps to {mapping_insertion["name"]} ({mapping_insertion["uniquename"]})')
+                    self.log.debug(f'BOB MAPPING: {mapping_str})')
                 else:
-                    self.log.debug(f'BOB: {allele} could not be mapped to an associated insertion: {"; ".join(notes)})')
+                    self.log.debug(f'BOB NOPE: {allele} could not be mapped to an associated insertion: {"; ".join(notes)})')
         self.log.info(f'Mapped {mapped_counter}/{input_counter} alleles to a single FBti insertion unambiguously.')
         return
 

@@ -276,7 +276,10 @@ class PrimaryEntityHandler(DataHandler):
             return
         chado_rel_pub_table = self.chado_tables['relationship_pubs'][chado_type]
         # Phase 1: Get all relationships.
-        filters = ()
+        filters = (
+            primary_entity.is_obsolete.is_(False),
+            secondary_entity.is_obsolete.is_(False),
+        )
         if self.datatype in self.regex.keys():
             self.log.info(f'Use this regex for primary entities: {self.regex[self.datatype]}')
             filters += (primary_entity.uniquename.op('~')(self.regex[self.datatype]), )
