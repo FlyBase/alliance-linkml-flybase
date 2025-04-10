@@ -326,7 +326,7 @@ class PrimaryEntityHandler(DataHandler):
             rel_id = getattr(rel_result, f'{chado_type}_relationship_id')
             rel_dict[rel_id] = fb_datatypes.FBRelationship(rel_result, f'{chado_type}_relationship')
             rel_counter += 1
-        self.log.info(f'Found {rel_counter} {chado_type}_relationships where the {self.datatype} is the {role}.')
+        self.log.debug(f'Found {rel_counter} {chado_type}_relationships where the {self.datatype} is the {role}.')
         # Phase 2. Get pubs supporting relationships.
         if chado_rel_pub_table is None:
             rel_pub_results = []
@@ -358,7 +358,7 @@ class PrimaryEntityHandler(DataHandler):
                 rel_pub_counter += 1
             except KeyError:
                 pass
-        self.log.info(f'Found {rel_pub_counter} {chado_type}_relationship_pubs where the {self.datatype} is the {role}.')
+        self.log.debug(f'Found {rel_pub_counter} {chado_type}_relationship_pubs where the {self.datatype} is the {role}.')
         # Phase 3. Get rel props/prop_pubs (for feature only).
         if chado_type == 'feature':
             # First get feature_relationshipprops.
@@ -378,7 +378,7 @@ class PrimaryEntityHandler(DataHandler):
             for rel_prop_result in rel_prop_results:
                 rel_prop_dict[rel_prop_result.feature_relationshipprop_id] = fb_datatypes.FBProp(rel_prop_result)
                 rel_prop_counter += 1
-            self.log.info(f'Found {rel_prop_counter} relevant feature_relationshipprops.')
+            self.log.debug(f'Found {rel_prop_counter} relevant feature_relationshipprops.')
             # Second, get pubs for these feature_relationshipprops.
             rel_prop_pub_results = session.query(FeatureRelationshippropPub).distinct()
             rel_prop_pub_counter = 0
@@ -387,7 +387,7 @@ class PrimaryEntityHandler(DataHandler):
                 if feat_relprop_id in rel_prop_dict.keys():
                     rel_prop_dict[feat_relprop_id].pubs.append(rel_prop_pub_result.pub_id)
                     rel_prop_pub_counter += 1
-            self.log.info(f'Found {rel_prop_pub_counter} relevant feature_relationshipprop pubs.')
+            self.log.debug(f'Found {rel_prop_pub_counter} relevant feature_relationshipprop pubs.')
             # Third, integrate relationshipprops with relationships.
             props_for_rel_counter = 0
             rel_with_prop_counter = 0
@@ -401,11 +401,11 @@ class PrimaryEntityHandler(DataHandler):
                     except KeyError:
                         rel_dict[feat_rel_id].props_by_type[rel_prop_type_name] = [rel_prop]
                         rel_with_prop_counter += 1
-            self.log.info(f'Found {props_for_rel_counter} relevant props for {rel_with_prop_counter} relevant feature_relationships.')
+            self.log.debug(f'Found {props_for_rel_counter} relevant props for {rel_with_prop_counter} relevant feature_relationships.')
         # Phase 4. Add rel info to entities.
         assignment_counter = 0
         rel_type_tally = {}
-        # Assign the prop to the appropriate entity.
+        # Assign the rel to the appropriate entity.
         for rel_id, rel in rel_dict.items():
             # First associate the relationship with the entity.
             entity_id = getattr(rel.chado_obj, f'{role}_id')
@@ -425,7 +425,7 @@ class PrimaryEntityHandler(DataHandler):
             except KeyError:
                 rel_type_tally[rel_type] = 1
         self.log.info(f'Indexed {assignment_counter} {chado_type}_relationships by relationship type where the {self.datatype} is the {role}.')
-        self.log.info(f'Found these types of {chado_type}_relationship types where the {self.datatype} is the {role}:')
+        self.debug.info(f'Found these types of {chado_type}_relationship types where the {self.datatype} is the {role}:')
         ordered_rel_types = sorted(list(rel_type_tally.keys()))
         for rel_type in ordered_rel_types:
             self.log.debug(f'table={chado_type}_relationship, role={role}, rel_type={rel_type}, count={rel_type_tally[rel_type]}.')
@@ -457,7 +457,7 @@ class PrimaryEntityHandler(DataHandler):
                 feature_type_tally[rel_feat_type] = 1
         self.log.info(f'Indexed {new_assignment_counter} {chado_type}_relationships by {role_inverse[role]} type where the {self.datatype} is the {role}.')
         self.log.info(f'Skipped {feat_type_skipped} feature_relationships to non-FB-curie features.')
-        self.log.info(f'Found these types of features in {chado_type}_relationship, with a/an {self.datatype} as the {role}:')
+        self.log.debug(f'Found these types of features in {chado_type}_relationship, with a/an {self.datatype} as the {role}:')
         ordered_feat_types = sorted(list(feature_type_tally.keys()))
         for feat_type in ordered_feat_types:
             self.log.debug(f'table={chado_type}_relationship, feat_type={feat_type}, count={feature_type_tally[feat_type]}.')
@@ -486,13 +486,13 @@ class PrimaryEntityHandler(DataHandler):
             Cv.name.not_in((excluded_cv_names)),
         )
         if self.datatype in self.regex.keys():
-            self.log.info(f'Use this regex for primary entities: {self.regex[self.datatype]}')
+            self.log.debug(f'Use this regex for primary entities: {self.regex[self.datatype]}')
             filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
         if self.datatype in self.feature_subtypes.keys():
-            self.log.info(f'Filter main table for entities of these feature_subtypes: {self.feature_subtypes[self.datatype]}')
+            self.log.debug(f'Filter main table for entities of these feature_subtypes: {self.feature_subtypes[self.datatype]}')
             filters += (entity_type.name.in_((self.feature_subtypes[self.datatype])), )
         if self.testing:
-            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            self.log.debug(f'TESTING: limit to these entities: {self.test_set}')
             if self.datatype == 'genotype':
                 filters += (chado_table.genotype_id.in_((self.test_set.keys())), )
             else:
