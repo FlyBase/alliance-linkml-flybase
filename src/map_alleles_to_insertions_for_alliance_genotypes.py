@@ -189,7 +189,8 @@ class AlleleMapper(AlleleHandler):
             fbti_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='associated_with',
                                                     rel_entity_types=self.feature_subtypes['insertion'])
             prog_rel_types = ['progenitor', 'indirect_progenitor_insertion_rels']
-            prog_fbti_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types=prog_rel_types, rel_entity_types='insertion')
+            prog_fbti_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types=prog_rel_types,
+                                                         rel_entity_types=self.feature_subtypes['insertion'])
             single_fbti_feature_id = None
             notes = []
             if arg_rels:
