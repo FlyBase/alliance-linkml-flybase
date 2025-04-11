@@ -153,31 +153,39 @@ class AlleleMapper(AlleleHandler):
         """Map alleles to insertions, if applicable."""
         self.log.info('Map alleles to insertions, if applicable.')
         sample_alleles = [
-            'Mkp3[5]',              # FBti + ARG.
-            'mei-P26[fs1]',         # FBti + ARG.
-            'TrpA1[-ACD-G4]',       # FBti is both associated_with and progenitor.
             'Nmnat[W129G.EGFP]',    # FBti is both associated_with and progenitor.
-            'chrb[180]',            # Many FBti.
-            'sd[ETX81]',            # Many FBti.
-            'neb[k06334]',          # Many FBti.
-            'Gpdh1[AKO107]',        # Many FBti.
-            'gt[1]',                # Many FBti.
-            'ac[Hw-BS]',            # Many FBti.
-            'ovo[yct]',             # Many FBti.
-            'sn[w]',                # Many FBti.
-            'eyg[P20MD1]',          # Many FBti.
-            'twin[KG00877]',        # Many FBti.
-            'sd[+58b]',             # Many FBti.
-            'bmm[EY06577]',         # Simple at-locus FBti.
-            'Scer_GAL4[sLNvs]',     # Simple trap FBti.
-            'Arf6[EP2612]',         # Shared trap FBti.
-            'CG8155[EP2612]',       # Shared trap FBti.
-            'lbe[UAS.cJa]',         # Allele should be mapped to construct-insertion.
-            'wg[l-12]',             # Classical mutation.
+            # 'Mkp3[5]',              # FBti + ARG.
+            # 'mei-P26[fs1]',         # FBti + ARG.
+            # 'TrpA1[-ACD-G4]',       # FBti is both associated_with and progenitor (indirectly via "TrpA1[-CD-G4]").
+            # 'chrb[180]',            # Many FBti.
+            # 'sd[ETX81]',            # Many FBti.
+            # 'neb[k06334]',          # Many FBti.
+            # 'Gpdh1[AKO107]',        # Many FBti.
+            # 'gt[1]',                # Many FBti.
+            # 'ac[Hw-BS]',            # Many FBti.
+            # 'ovo[yct]',             # Many FBti.
+            # 'sn[w]',                # Many FBti.
+            # 'eyg[P20MD1]',          # Many FBti.
+            # 'twin[KG00877]',        # Many FBti.
+            # 'sd[+58b]',             # Many FBti.
+            # 'bmm[EY06577]',         # Simple at-locus FBti.
+            # 'Scer_GAL4[sLNvs]',     # Simple trap FBti.
+            # 'Arf6[EP2612]',         # Shared trap FBti.
+            # 'CG8155[EP2612]',       # Shared trap FBti.
+            # 'lbe[UAS.cJa]',         # Allele should be mapped to construct-insertion.
+            # 'wg[l-12]',             # Classical mutation.
         ]
         input_counter = 0
         mapped_counter = 0
         for allele in self.fb_data_entities.values():
+            # BOB - just for testing.
+            if allele.chado_obj.name not in sample_alleles:
+                continue
+            self.log.info(f'GILLY: {allele} has this many f_r: {len(allele.rels_by_id)}')
+            self.log.info(f'GILLY: {allele} is sbj for these types of rels: {allele.sbj_rel_ids_by_type.keys()}')
+            self.log.info(f'GILLY: {allele} is obj for these types of rels: {allele.obj_rel_ids_by_type.keys()}')
+            return    # BOB
+
             input_counter += 1
             arg_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='partof', rel_entity_types='variation')
             fbtp_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='associated_with', rel_entity_types='construct')
@@ -206,17 +214,15 @@ class AlleleMapper(AlleleHandler):
                 mapped_counter += 1
                 insertion = self.feature_lookup[allele.single_fbti_feature_id]
                 mapping_str = f'\t{allele.chado_obj.uniquename}\t{allele.chado_obj.name}\t{insertion["uniquename"]}\t{insertion["name"]}'
-                # self.log.debug(f'BOB MAPPING: {mapping_str})')
-            if allele.chado_obj.name in sample_alleles:
-                self.log.debug(f'Assessing "{allele.chado_obj.name}" ({allele.chado_obj.uniquename}).')
-                self.log.debug(f'Found {len(arg_rels)} ARG relationships.')
-                self.log.debug(f'Found {len(fbtp_rels)} FBtp relationships.')
-                self.log.debug(f'Found {len(fbti_rels)} FBti relationships.')
-                self.log.debug(f'Found {len(prog_fbti_rels)} progenitor FBti relationships.')
-                if allele.single_fbti_feature_id:
-                    self.log.debug(f'BOB MAPPING: {mapping_str})')
-                else:
-                    self.log.debug(f'BOB NOPE: {allele} could not be mapped to an associated insertion: {"; ".join(notes)})')
+            self.log.debug(f'Assessing "{allele.chado_obj.name}" ({allele.chado_obj.uniquename}).')
+            self.log.debug(f'Found {len(arg_rels)} ARG relationships.')
+            self.log.debug(f'Found {len(fbtp_rels)} FBtp relationships.')
+            self.log.debug(f'Found {len(fbti_rels)} FBti relationships.')
+            self.log.debug(f'Found {len(prog_fbti_rels)} progenitor FBti relationships.')
+            if allele.single_fbti_feature_id:
+                self.log.debug(f'BOB MAPPING: {mapping_str})')
+            else:
+                self.log.debug(f'BOB NOPE: {allele} could not be mapped to an associated insertion: {"; ".join(notes)})')
         self.log.info(f'Mapped {mapped_counter}/{input_counter} alleles to a single FBti insertion unambiguously.')
         return
 
