@@ -199,14 +199,12 @@ class AlleleMapper(AlleleHandler):
                 notes.append('Has FBtp(s)')
             if fbti_rels:
                 distinct_fbti_feature_ids = list(set([i.chado_obj.object_id for i in fbti_rels]))
-                self.log.debug(f'{allele} has these "associted_with" FBti feature_ids: {distinct_fbti_feature_ids}')
+                self.log.debug(f'{allele} has these "associated_with" FBti feature_ids: {distinct_fbti_feature_ids}')
                 distinct_fbti_progenitor_feature_ids = set([i.chado_obj.object_id for i in prog_fbti_rels])
-                self.log.debug(f'{allele} has these "prog" FBti feature_ids: {distinct_fbti_progenitor_feature_ids}')
-
-
+                self.log.debug(f'{allele} has these "progenitor" FBti feature_ids: {distinct_fbti_progenitor_feature_ids}')
                 if len(distinct_fbti_feature_ids) > 1:
                     notes.append('Has MANY FBti(s)')
-                if distinct_fbti_feature_ids[0] in distinct_fbti_progenitor_feature_ids:
+                elif distinct_fbti_feature_ids[0] in distinct_fbti_progenitor_feature_ids:
                     notes.append('Associated FBti is also a progenitor FBti')
                 else:
                     single_fbti_feature_id = distinct_fbti_feature_ids[0]
