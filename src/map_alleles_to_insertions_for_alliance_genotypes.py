@@ -206,16 +206,19 @@ class AlleleMapper(AlleleHandler):
                     notes.append('ERROR: Has ZERO FBti(s)')
                 elif len(distinct_fbti_feature_ids) > 1:
                     notes.append('Has MANY FBti(s)')
-                elif distinct_fbti_feature_ids[0] in distinct_fbti_progenitor_feature_ids:
-                    notes.append('Associated FBti is also a progenitor FBti')
                 else:
                     single_fbti_feature_id = distinct_fbti_feature_ids[0]
-                    notes.append(f'Found one FBti: {single_fbti_feature_id}')
+                    self.log.debug(f'GILLY: Have this feature_id: {single_fbti_feature_id}')
+                    self.log.debug(f'GILLY: Have these prog ids: {distinct_fbti_progenitor_feature_ids}')
+                    eval = single_fbti_feature_id in distinct_fbti_progenitor_feature_ids
+                    self.log.debug(f'GILLY: feature_id in prog ids? {eval}')
+                    if eval is True:
+                        notes.append('Associated FBti is also a progenitor FBti')
+                    else:
+                        notes.append(f'Found one FBti: {single_fbti_feature_id}')
             else:
                 notes.append('No FBti')
-
             self.log.debug(f'GILLY: {allele} has these notes: {notes}')
-
             allele.single_fbti_feature_id = single_fbti_feature_id
             if single_fbti_feature_id:
                 mapped_counter += 1
