@@ -197,7 +197,7 @@ class AlleleMapper(AlleleHandler):
             if fbtp_rels:
                 notes.append('Has FBtp(s)')
             if fbti_rels:
-                distinct_fbti_feature_ids = set([i.chado_obj.object_id for i in fbti_rels])
+                distinct_fbti_feature_ids = list(set([i.chado_obj.object_id for i in fbti_rels]))
                 if len(distinct_fbti_feature_ids) > 1:
                     notes.append('Has MANY FBti(s)')
                 distinct_fbti_progenitor_feature_ids = set([i.chado_obj.object_id for i in prog_fbti_rels])
