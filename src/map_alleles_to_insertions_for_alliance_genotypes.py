@@ -181,15 +181,13 @@ class AlleleMapper(AlleleHandler):
             # BOB - just for testing.
             if allele.chado_obj.name not in sample_alleles:
                 continue
-            self.log.info(f'GILLY: {allele} has this many f_r: {len(allele.rels_by_id)}')
-            self.log.info(f'GILLY: {allele} is sbj for these types of rels: {allele.sbj_rel_ids_by_type.keys()}')
-            self.log.info(f'GILLY: {allele} is obj for these types of rels: {allele.obj_rel_ids_by_type.keys()}')
-            return    # BOB
-
             input_counter += 1
-            arg_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='partof', rel_entity_types='variation')
-            fbtp_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='associated_with', rel_entity_types='construct')
-            fbti_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='associated_with', rel_entity_types='insertion')
+            arg_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='partof',
+                                                   rel_entity_types=self.feature_subtypes['variation'])
+            fbtp_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='associated_with',
+                                                    rel_entity_types=self.feature_subtypes['construct'])
+            fbti_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='associated_with',
+                                                    rel_entity_types=self.feature_subtypes['insertion'])
             prog_rel_types = ['progenitor', 'indirect_progenitor_insertion_rels']
             prog_fbti_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types=prog_rel_types, rel_entity_types='insertion')
             single_fbti_feature_id = None
