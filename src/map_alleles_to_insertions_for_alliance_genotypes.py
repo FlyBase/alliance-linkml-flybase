@@ -179,10 +179,13 @@ class AlleleMapper(AlleleHandler):
         """Map alleles to insertions, if applicable."""
         self.log.info('Map alleles to insertions, if applicable.')
         sample_alleles = [
+            'bmm[EY06577]',         # Simple at-locus FBti.
+            'Scer\\GAL4[sLNvs]',    # Simple trap FBti.
+            'Arf6[EP2612]',         # Shared trap FBti.
+            'CG8155[EP2612]',       # Shared trap FBti.
             'Antp[Doc]',            # FBal0028935 associated_with+prognitor FBti0014085
             'Nedd4[Y741H]',         # FBal0182535 associated_with+prognitor FBti0072339, also has ARG.
             'TrpA1[-ACD-G4]',       # FBal0323539 associated_with+prognitor FBti0185284 (progenitor indirectly via "TrpA1[-CD-G4]").
-            'Arf6[EP2612]',         # ; should not trip the check for non-allele-related FBti name.
             'Mkp3[5]',              # FBti + ARG.
             'mei-P26[fs1]',         # FBti + ARG.
             'chrb[180]',            # Many FBti.
@@ -196,10 +199,6 @@ class AlleleMapper(AlleleHandler):
             'eyg[P20MD1]',          # Many FBti.
             'twin[KG00877]',        # Many FBti.
             'sd[+58b]',             # Many FBti.
-            'bmm[EY06577]',         # Simple at-locus FBti.
-            'Scer_GAL4[sLNvs]',     # Simple trap FBti.
-            'Arf6[EP2612]',         # Shared trap FBti.
-            'CG8155[EP2612]',       # Shared trap FBti.
             'lbe[UAS.cJa]',         # Allele should be mapped to construct-insertion.
             'wg[l-12]',             # Classical mutation.
         ]
@@ -267,7 +266,7 @@ class AlleleMapper(AlleleHandler):
                 mapping_str = f'\t{allele.chado_obj.uniquename}\t{allele.chado_obj.name}\t{insertion["uniquename"]}\t{insertion["name"]}'
                 self.log.debug(f'BOB MAPPING: {mapping_str})')
             else:
-                self.log.debug(f'BOB NOPE: {allele} could not be mapped to an associated insertion: {"; ".join(notes)})')
+                self.log.debug(f'BOB NOPE: {allele} could not be mapped to an associated insertion: {"; ".join(notes)}')
         self.log.info(f'Mapped {mapped_counter}/{input_counter} alleles to a single FBti insertion unambiguously.')
         return
 
