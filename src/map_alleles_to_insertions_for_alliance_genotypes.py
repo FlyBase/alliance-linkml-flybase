@@ -255,10 +255,11 @@ class AlleleMapper(AlleleHandler):
                     notes.append('Associated FBti is also a progenitor FBti')
                 # 2. Ensure FBti is not also a progenitor.
                 single_fbti_name = self.feature_lookup[distinct_fbti_feature_ids[0]]['name']
+                single_fbti_uniquename = self.feature_lookup[distinct_fbti_feature_ids[0]]['uniquename']
                 allele_suffix = self.extract_allele_suffix_from_insertion_name(single_fbti_name)
                 if allele_suffix not in self.allele_name_lookup.keys():
                     fbti_mappable = False
-                    notes.append(f'FBti has a complex name, suffix "{allele_suffix}" is not an allele name')
+                    notes.append(f'For {allele}, {single_fbti_name} ({single_fbti_uniquename}) has a complex name: "{allele_suffix}" is not an allele name')
             if fbti_mappable is True:
                 allele.single_fbti_feature_id = distinct_fbti_feature_ids[0]
                 mapped_counter += 1
