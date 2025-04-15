@@ -135,7 +135,7 @@ class AlleleMapper(AlleleHandler):
             result_str = f'Allele {result.allele.name} ({result.allele.uniquename}) has progenitor '
             result_str += f'allele {result.progenitor_allele.name} ({result.progenitor_allele.uniquename}) '
             result_str += f'which is associated_with {result.insertion.name} ({result.insertion.uniquename})'
-            self.log.debug(f'BILLYBOB: {result_str}')
+            # self.log.debug(f'{result_str}')
             rel = fb_datatypes.FBRelationship(result.al_ti, 'feature_relationship')
             rel_type = 'indirect_progenitor_insertion_rels'
             rel_id = result.al_ti.feature_relationship_id
@@ -207,12 +207,13 @@ class AlleleMapper(AlleleHandler):
             'lbe[UAS.cJa]',         # Allele should be mapped to construct-insertion.
             'wg[l-12]',             # Classical mutation.
         ]
+        self.log.debug(f'Have these test allele: {sample_alleles}')
         input_counter = 0
         mapped_counter = 0
         for allele in self.fb_data_entities.values():
-            # BOB - just for testing.
-            if allele.chado_obj.name not in sample_alleles:
-                continue
+            # # BOB - just for testing.
+            # if allele.chado_obj.name not in sample_alleles:
+            #     continue
             self.log.debug(f'Assessing "{allele.chado_obj.name}" ({allele.chado_obj.uniquename}).')
             input_counter += 1
             # Gather feature_relationship info.
