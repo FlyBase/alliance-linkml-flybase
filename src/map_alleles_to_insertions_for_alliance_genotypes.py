@@ -230,6 +230,7 @@ class AlleleMapper(AlleleHandler):
             self.log.debug(f'Found {len(prog_fbti_rels)} progenitor FBti relationships.')
             # Start assessment
             fbti_mappable = True
+            simple_name = True
             notes = []
             if arg_rels:
                 fbti_mappable = False
@@ -258,16 +259,18 @@ class AlleleMapper(AlleleHandler):
                 single_fbti_uniquename = self.feature_lookup[distinct_fbti_feature_ids[0]]['uniquename']
                 allele_suffix = self.extract_allele_suffix_from_insertion_name(single_fbti_name)
                 if allele_suffix not in self.allele_name_lookup.keys():
-                    fbti_mappable = False
+                    simple_name = False
                     notes.append(f'For {allele}, {single_fbti_name} ({single_fbti_uniquename}) has a complex name: "{allele_suffix}" is not an allele name')
-            if fbti_mappable is True:
+            if fbti_mappable is True and simple_name is True:
                 allele.single_fbti_feature_id = distinct_fbti_feature_ids[0]
                 mapped_counter += 1
                 insertion = self.feature_lookup[allele.single_fbti_feature_id]
                 mapping_str = f'\t{allele.chado_obj.uniquename}\t{allele.chado_obj.name}\t{insertion["uniquename"]}\t{insertion["name"]}'
                 self.log.debug(f'BOB MAPPING: {mapping_str})')
-            else:
-                self.log.debug(f'BOB NOPE: {allele} could not be mapped to an associated insertion: {"; ".join(notes)}')
+            elif fbti_mappable is False:
+                self.log.debug(f'BOB NOPE1: {allele} could not be mapped to an associated insertion: {"; ".join(notes)}')
+            elif simple_name is False:
+                self.log.debug(f'BOB NOPE2: {allele} could not be mapped to an associated insertion: {"; ".join(notes)}')
         self.log.info(f'Mapped {mapped_counter}/{input_counter} alleles to a single FBti insertion unambiguously.')
         return
 
