@@ -300,6 +300,7 @@ class FBAllele(FBFeature):
         self.arg_rels = []                      # List of current ARG FBRelationships.
         self.in_vitro = False                   # Change to True if the allele is associated with an "in vitro%" term.
         self.allele_of_internal_gene = False    # Change to True if the allele is related to an internal-type gene (e.g., origin of replication).
+        self.single_fbti_feature_id = None      # The feature_id for an FBti insertion that should be reported to the Alliance in place of this allele.
 
 
 class FBBalancer(FBFeature):

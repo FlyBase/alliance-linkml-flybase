@@ -163,7 +163,7 @@ class DataHandler(object):
         'chemical': ['chemical entity'],
         'construct': ['engineered_transposable_element', 'engineered_region', 'transgenic_transposable_element'],
         'gene': ['gene'],
-        'insertion': ['insertion_site', 'transposable_element', 'transposable_element_insertion_site'],
+        'insertion': ['insertion_site', 'transposable_element', 'transposable_element_insertion_site'],    # Excludes internal "match" (name=FBti ID).
         'seqfeat': None,    # The list is too long, so for this case let the code be flexible.
         'tool': ['engineered_region'],
         'transposon': ['natural_transposable_element'],

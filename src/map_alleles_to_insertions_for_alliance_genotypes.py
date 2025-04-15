@@ -24,6 +24,7 @@ Notes:
 # feature_lookup dicts have these keys: feature_id, uniquename, curie, is_obsolete, type, organism_id, name, symbol, exported.
 
 import argparse
+import re
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker, aliased
 from harvdev_utils.psycopg_functions import set_up_db_reading
@@ -74,9 +75,17 @@ class AlleleMapper(AlleleHandler):
     def __init__(self, log, testing):
         """Create the AlleleMapper object."""
         super().__init__(log, testing)
+        self.allele_name_lookup = {}    # Allele-name-keyed dict of feature dicts.
 
     # Add methods to be run by get_general_data() below.
-    # Placeholder
+    def build_allele_name_lookup(self):
+        """Build name-keyed dict of alleles."""
+        self.log.info('Build name-keyed dict of alleles.')
+        for feature in self.feature_lookup.values():
+            if feature['type'] == 'allele' and feature['is_obsolete'] is False:
+                self.allele_name_lookup[feature['name']] = feature
+        self.log.info(f'Have {len(self.allele_name_lookup)} current alleles in the allele-by-name lookup.')
+        return
 
     # Define get_general_data() for the AlleleMapper.
     def get_general_data(self, session):
@@ -87,6 +96,7 @@ class AlleleMapper(AlleleHandler):
         self.build_organism_lookup(session)
         self.get_key_cvterm_sets(session)
         self.build_feature_lookup(session, feature_types=['aberration', 'allele', 'gene', 'insertion', 'construct', 'variation'])
+        self.build_allele_name_lookup()
         return
 
     # Add methods to be run by get_datatype_data() below.
@@ -149,31 +159,49 @@ class AlleleMapper(AlleleHandler):
         return
 
     # Add methods to be run by synthesize_data() below.
-    def map_allele_to_insertion(self):
+    def extract_allele_suffix_from_insertion_name(insertion_name):
+        """Extract allele name from the insertion name."""
+        allele_name = None
+        # Return None for FBti insertion names having many curly bracket sets.
+        double_curly_rgx = r'}.*}'
+        if re.search(double_curly_rgx, insertion_name):
+            return allele_name
+        # Return None for FBti insertion names missing any curly bracket set.
+        curly_rgx = r'{.*}'
+        if not re.search(curly_rgx, insertion_name):
+            return allele_name
+        # Return post-curly bracket name suffix.
+        name_parts = insertion_name.split('}')
+        return name_parts[-1]
+
+    # Add methods to be run by synthesize_data() below.
+    def map_alleles_to_insertions(self):
         """Map alleles to insertions, if applicable."""
         self.log.info('Map alleles to insertions, if applicable.')
         sample_alleles = [
-            'Nmnat[W129G.EGFP]',    # FBti is both associated_with and progenitor.
-            # 'Mkp3[5]',              # FBti + ARG.
-            # 'mei-P26[fs1]',         # FBti + ARG.
-            # 'TrpA1[-ACD-G4]',       # FBti is both associated_with and progenitor (indirectly via "TrpA1[-CD-G4]").
-            # 'chrb[180]',            # Many FBti.
-            # 'sd[ETX81]',            # Many FBti.
-            # 'neb[k06334]',          # Many FBti.
-            # 'Gpdh1[AKO107]',        # Many FBti.
-            # 'gt[1]',                # Many FBti.
-            # 'ac[Hw-BS]',            # Many FBti.
-            # 'ovo[yct]',             # Many FBti.
-            # 'sn[w]',                # Many FBti.
-            # 'eyg[P20MD1]',          # Many FBti.
-            # 'twin[KG00877]',        # Many FBti.
-            # 'sd[+58b]',             # Many FBti.
-            # 'bmm[EY06577]',         # Simple at-locus FBti.
-            # 'Scer_GAL4[sLNvs]',     # Simple trap FBti.
-            # 'Arf6[EP2612]',         # Shared trap FBti.
-            # 'CG8155[EP2612]',       # Shared trap FBti.
-            # 'lbe[UAS.cJa]',         # Allele should be mapped to construct-insertion.
-            # 'wg[l-12]',             # Classical mutation.
+            'Antp[Doc]',            # FBal0028935 associated_with+prognitor FBti0014085
+            'Nedd4[Y741H]',         # FBal0182535 associated_with+prognitor FBti0072339, also has ARG.
+            'TrpA1[-ACD-G4]',       # FBal0323539 associated_with+prognitor FBti0185284 (progenitor indirectly via "TrpA1[-CD-G4]").
+            'Arf6[EP2612]',         # ; should not trip the check for non-allele-related FBti name.
+            'Mkp3[5]',              # FBti + ARG.
+            'mei-P26[fs1]',         # FBti + ARG.
+            'chrb[180]',            # Many FBti.
+            'sd[ETX81]',            # Many FBti.
+            'neb[k06334]',          # Many FBti.
+            'Gpdh1[AKO107]',        # Many FBti.
+            'gt[1]',                # Many FBti.
+            'ac[Hw-BS]',            # Many FBti.
+            'ovo[yct]',             # Many FBti.
+            'sn[w]',                # Many FBti.
+            'eyg[P20MD1]',          # Many FBti.
+            'twin[KG00877]',        # Many FBti.
+            'sd[+58b]',             # Many FBti.
+            'bmm[EY06577]',         # Simple at-locus FBti.
+            'Scer_GAL4[sLNvs]',     # Simple trap FBti.
+            'Arf6[EP2612]',         # Shared trap FBti.
+            'CG8155[EP2612]',       # Shared trap FBti.
+            'lbe[UAS.cJa]',         # Allele should be mapped to construct-insertion.
+            'wg[l-12]',             # Classical mutation.
         ]
         input_counter = 0
         mapped_counter = 0
@@ -181,7 +209,9 @@ class AlleleMapper(AlleleHandler):
             # BOB - just for testing.
             if allele.chado_obj.name not in sample_alleles:
                 continue
+            self.log.debug(f'Assessing "{allele.chado_obj.name}" ({allele.chado_obj.uniquename}).')
             input_counter += 1
+            # Gather feature_relationship info.
             arg_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='partof',
                                                    rel_entity_types=self.feature_subtypes['variation'])
             fbtp_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='associated_with',
@@ -191,45 +221,50 @@ class AlleleMapper(AlleleHandler):
             prog_rel_types = ['progenitor', 'indirect_progenitor_insertion_rels']
             prog_fbti_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types=prog_rel_types,
                                                          rel_entity_types=self.feature_subtypes['insertion'])
-            single_fbti_feature_id = None
-            notes = []
-            if arg_rels:
-                notes.append('Has ARG(s)')
-            if fbtp_rels:
-                notes.append('Has FBtp(s)')
-            if fbti_rels:
-                distinct_fbti_feature_ids = list(set([i.chado_obj.object_id for i in fbti_rels]))
-                self.log.debug(f'{allele} has these "associated_with" FBti feature_ids: {distinct_fbti_feature_ids}')
-                distinct_fbti_progenitor_feature_ids = set([i.chado_obj.object_id for i in prog_fbti_rels])
-                self.log.debug(f'{allele} has these "progenitor" FBti feature_ids: {distinct_fbti_progenitor_feature_ids}')
-                if len(distinct_fbti_feature_ids) == 0:
-                    notes.append('ERROR: Has ZERO FBti(s)')
-                elif len(distinct_fbti_feature_ids) > 1:
-                    notes.append('Has MANY FBti(s)')
-                else:
-                    single_fbti_feature_id = distinct_fbti_feature_ids[0]
-                    self.log.debug(f'GILLY: Have this feature_id: {single_fbti_feature_id}')
-                    self.log.debug(f'GILLY: Have these prog ids: {distinct_fbti_progenitor_feature_ids}')
-                    eval = single_fbti_feature_id in distinct_fbti_progenitor_feature_ids
-                    self.log.debug(f'GILLY: feature_id in prog ids? {eval}')
-                    if eval is True:
-                        notes.append('Associated FBti is also a progenitor FBti')
-                    else:
-                        notes.append(f'Found one FBti: {single_fbti_feature_id}')
-            else:
-                notes.append('No FBti')
-            self.log.debug(f'GILLY: {allele} has these notes: {notes}')
-            allele.single_fbti_feature_id = single_fbti_feature_id
-            if single_fbti_feature_id:
-                mapped_counter += 1
-                insertion = self.feature_lookup[allele.single_fbti_feature_id]
-                mapping_str = f'\t{allele.chado_obj.uniquename}\t{allele.chado_obj.name}\t{insertion["uniquename"]}\t{insertion["name"]}'
-            self.log.debug(f'Assessing "{allele.chado_obj.name}" ({allele.chado_obj.uniquename}).')
             self.log.debug(f'Found {len(arg_rels)} ARG relationships.')
             self.log.debug(f'Found {len(fbtp_rels)} FBtp relationships.')
             self.log.debug(f'Found {len(fbti_rels)} FBti relationships.')
             self.log.debug(f'Found {len(prog_fbti_rels)} progenitor FBti relationships.')
-            if allele.single_fbti_feature_id:
+            # Start assessment
+            fbti_mappable = True
+            notes = []
+            if arg_rels:
+                fbti_mappable = False
+                notes.append('Has ARGS')
+            if fbtp_rels:
+                fbti_mappable = False
+                notes.append('Has FBtp')
+            if not fbti_rels:
+                fbti_mappable = False
+                notes.append('Has ZERO FBti')
+            distinct_fbti_feature_ids = list(set([i.chado_obj.object_id for i in fbti_rels]))
+            self.log.debug(f'{allele} has these "associated_with" FBti feature_ids: {distinct_fbti_feature_ids}')
+            distinct_fbti_progenitor_feature_ids = set([i.chado_obj.object_id for i in prog_fbti_rels])
+            self.log.debug(f'{allele} has these "progenitor" FBti feature_ids: {distinct_fbti_progenitor_feature_ids}')
+            if len(distinct_fbti_feature_ids) == 0:
+                fbti_mappable = False
+                notes.append('Has ZERO FBti')
+                self.log.error(f'For {allele}, has FBti rels, but no "distinct_fbti_feature_id"?')
+            elif len(distinct_fbti_feature_ids) > 1:
+                fbti_mappable = False
+                notes.append('Has MANY FBti(s)')
+            # If there is a single FBti, apply two more tests.
+            else:
+                # 1. Ensure FBti is not also a progenitor.
+                if distinct_fbti_feature_ids[0] in distinct_fbti_progenitor_feature_ids:
+                    fbti_mappable = False
+                    notes.append('Associated FBti is also a progenitor FBti')
+                # 2. Ensure FBti is not also a progenitor.
+                single_fbti_name = self.feature_lookup[distinct_fbti_feature_ids[0]]['name']
+                allele_suffix = self.extract_allele_suffix_from_insertion_name(single_fbti_name)
+                if allele_suffix not in self.allele_name_lookup.keys():
+                    fbti_mappable = False
+                    notes.append(f'FBti has a complex name, suffix "{allele_suffix}" is not an allele name')
+            if fbti_mappable is True:
+                allele.single_fbti_feature_id = distinct_fbti_feature_ids[0]
+                mapped_counter += 1
+                insertion = self.feature_lookup[allele.single_fbti_feature_id]
+                mapping_str = f'\t{allele.chado_obj.uniquename}\t{allele.chado_obj.name}\t{insertion["uniquename"]}\t{insertion["name"]}'
                 self.log.debug(f'BOB MAPPING: {mapping_str})')
             else:
                 self.log.debug(f'BOB NOPE: {allele} could not be mapped to an associated insertion: {"; ".join(notes)})')
@@ -240,7 +275,7 @@ class AlleleMapper(AlleleHandler):
     def synthesize_data(self):
         """Synthesize data."""
         self.log.info('SYNTHESIZE DATA.')
-        self.map_allele_to_insertion()
+        self.map_alleles_to_insertions()
         return
 
     def run(self, session):
