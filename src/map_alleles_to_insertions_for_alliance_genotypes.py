@@ -120,7 +120,7 @@ class AlleleMapper(AlleleHandler):
             allele_rel_type.name == 'progenitor',
             ins_rel_type.name == 'associated_with',
         )
-        results = session.query(allele, al_ti).\
+        results = session.query(allele, progenitor_allele, al_ti, insertion).\
             select_from(allele).\
             join(al_al, (al_al.subject_id == allele.feature_id)).\
             join(progenitor_allele, (progenitor_allele.feature_id == al_al.object_id)).\
@@ -132,6 +132,10 @@ class AlleleMapper(AlleleHandler):
             distinct()
         counter = 0
         for result in results:
+            result_str = f'Allele {result.allele.name} ({result.allele.uniquename}) has progenitor '
+            result_str += f'allele {result.progenitor_allele.name} ({result.progenitor_allele.uniquename}) '
+            result_str += f'which is associated_with {result.insertion.name} ({result.insertion.uniquename})'
+            self.log.debug(f'BILLYBOB: {result_str}')
             rel = fb_datatypes.FBRelationship(result.al_ti, 'feature_relationship')
             rel_type = 'indirect_progenitor_insertion_rels'
             rel_id = result.al_ti.feature_relationship_id
@@ -180,25 +184,26 @@ class AlleleMapper(AlleleHandler):
         self.log.info('Map alleles to insertions, if applicable.')
         sample_alleles = [
             'bmm[EY06577]',         # Simple at-locus FBti.
-            'Scer\\GAL4[sLNvs]',    # Simple trap FBti.
+            'Scer\\GAL4[sLNvs]',    # Simple trap FBti. ***Name check is misflagging this one.
             'Arf6[EP2612]',         # Shared trap FBti.
             'CG8155[EP2612]',       # Shared trap FBti.
+            'chrb[180]',            # Many FBti.
+            'Mkp3[5]',              # FBti + ARG.
             'Antp[Doc]',            # FBal0028935 associated_with+prognitor FBti0014085
             'Nedd4[Y741H]',         # FBal0182535 associated_with+prognitor FBti0072339, also has ARG.
+            'TrpA1-CD-G4',          # FBal0323539 associated_with FBti0185284 - should be mapped?
             'TrpA1[-ACD-G4]',       # FBal0323539 associated_with+prognitor FBti0185284 (progenitor indirectly via "TrpA1[-CD-G4]").
-            'Mkp3[5]',              # FBti + ARG.
-            'mei-P26[fs1]',         # FBti + ARG.
-            'chrb[180]',            # Many FBti.
-            'sd[ETX81]',            # Many FBti.
-            'neb[k06334]',          # Many FBti.
-            'Gpdh1[AKO107]',        # Many FBti.
-            'gt[1]',                # Many FBti.
-            'ac[Hw-BS]',            # Many FBti.
-            'ovo[yct]',             # Many FBti.
-            'sn[w]',                # Many FBti.
-            'eyg[P20MD1]',          # Many FBti.
-            'twin[KG00877]',        # Many FBti.
-            'sd[+58b]',             # Many FBti.
+            # 'mei-P26[fs1]',         # Many FBti.
+            # 'sd[ETX81]',            # Many FBti.
+            # 'neb[k06334]',          # Many FBti.
+            # 'Gpdh1[AKO107]',        # Many FBti.
+            # 'gt[1]',                # Many FBti.
+            # 'ac[Hw-BS]',            # Many FBti.
+            # 'ovo[yct]',             # Many FBti.
+            # 'sn[w]',                # Many FBti.
+            # 'eyg[P20MD1]',          # Many FBti.
+            # 'twin[KG00877]',        # Many FBti.
+            # 'sd[+58b]',             # Many FBti.
             'lbe[UAS.cJa]',         # Allele should be mapped to construct-insertion.
             'wg[l-12]',             # Classical mutation.
         ]
@@ -211,6 +216,9 @@ class AlleleMapper(AlleleHandler):
             self.log.debug(f'Assessing "{allele.chado_obj.name}" ({allele.chado_obj.uniquename}).')
             input_counter += 1
             # Gather feature_relationship info.
+
+            self.log.debug(f'For {allele}, has these rel_types indexed: {allele.sbj.keys()}')
+
             arg_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='partof',
                                                    rel_entity_types=self.feature_subtypes['variation'])
             fbtp_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='associated_with',
@@ -218,8 +226,7 @@ class AlleleMapper(AlleleHandler):
             fbti_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='associated_with',
                                                     rel_entity_types=self.feature_subtypes['insertion'])
             prog_rel_types = ['progenitor', 'indirect_progenitor_insertion_rels']
-            prog_fbti_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types=prog_rel_types,
-                                                         rel_entity_types=self.feature_subtypes['insertion'])
+            prog_fbti_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types=prog_rel_types)
             self.log.debug(f'Found {len(arg_rels)} ARG relationships.')
             self.log.debug(f'Found {len(fbtp_rels)} FBtp relationships.')
             self.log.debug(f'Found {len(fbti_rels)} FBti relationships.')
@@ -233,9 +240,6 @@ class AlleleMapper(AlleleHandler):
             if fbtp_rels:
                 fbti_mappable = False
                 notes.append('Has FBtp')
-            if not fbti_rels:
-                fbti_mappable = False
-                notes.append('Has ZERO FBti')
             distinct_fbti_feature_ids = list(set([i.chado_obj.object_id for i in fbti_rels]))
             self.log.debug(f'{allele} has these "associated_with" FBti feature_ids: {distinct_fbti_feature_ids}')
             distinct_fbti_progenitor_feature_ids = set([i.chado_obj.object_id for i in prog_fbti_rels])
@@ -243,7 +247,6 @@ class AlleleMapper(AlleleHandler):
             if len(distinct_fbti_feature_ids) == 0:
                 fbti_mappable = False
                 notes.append('Has ZERO FBti')
-                self.log.error(f'For {allele}, has FBti rels, but no "distinct_fbti_feature_id"?')
             elif len(distinct_fbti_feature_ids) > 1:
                 fbti_mappable = False
                 notes.append('Has MANY FBti(s)')
