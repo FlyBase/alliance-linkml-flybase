@@ -159,7 +159,7 @@ class AlleleMapper(AlleleHandler):
         return
 
     # Add methods to be run by synthesize_data() below.
-    def extract_allele_suffix_from_insertion_name(insertion_name):
+    def extract_allele_suffix_from_insertion_name(self, insertion_name):
         """Extract allele name from the insertion name."""
         allele_name = None
         # Return None for FBti insertion names having many curly bracket sets.
