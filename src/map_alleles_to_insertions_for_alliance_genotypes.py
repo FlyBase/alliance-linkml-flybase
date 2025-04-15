@@ -216,9 +216,6 @@ class AlleleMapper(AlleleHandler):
             self.log.debug(f'Assessing "{allele.chado_obj.name}" ({allele.chado_obj.uniquename}).')
             input_counter += 1
             # Gather feature_relationship info.
-
-            self.log.debug(f'For {allele}, has these rel_types indexed: {allele.sbj.keys()}')
-
             arg_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='partof',
                                                    rel_entity_types=self.feature_subtypes['variation'])
             fbtp_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='associated_with',
