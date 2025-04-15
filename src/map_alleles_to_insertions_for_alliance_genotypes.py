@@ -262,8 +262,8 @@ class AlleleMapper(AlleleHandler):
                 single_fbti_uniquename = self.feature_lookup[distinct_fbti_feature_ids[0]]['uniquename']
                 allele_suffix = self.extract_allele_suffix_from_insertion_name(single_fbti_name)
                 # BOB - need to refine this step?
-                # if allele_suffix not in self.allele_name_lookup.keys():
-                if allele_suffix not in allele.chado_obj.name:
+                # if allele_suffix not in self.allele_name_lookup.keys():    # BOB: option1
+                if allele_suffix not in allele.chado_obj.name:               # BOB: option2
                     simple_name = False
                     notes.append(f'For {allele}, {single_fbti_name} ({single_fbti_uniquename}) has a complex name: "{allele_suffix}" is not an allele name')
             if fbti_mappable is True and simple_name is True:
