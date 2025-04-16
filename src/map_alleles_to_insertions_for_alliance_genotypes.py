@@ -97,7 +97,7 @@ class AlleleMapper(AlleleHandler):
         self.get_key_cvterm_sets(session)
         self.build_feature_lookup(session, feature_types=['aberration', 'allele', 'gene', 'insertion', 'construct', 'variation'])
         self.build_allele_name_lookup()
-        self.build_allele_gene_lookup()
+        self.build_allele_gene_lookup(session)
         return
 
     # Add methods to be run by get_datatype_data() below.
