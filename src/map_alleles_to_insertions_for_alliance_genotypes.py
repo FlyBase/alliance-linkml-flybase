@@ -181,7 +181,7 @@ class AlleleMapper(AlleleHandler):
             conventional_name (bool): True if the allele name is conventional.
 
         """
-        conventional_name = False
+        conventional_name = True
         # Gather allele and insertion names and name parts.
         allele = self.feature_lookup[allele_feature_id]
         allele_name = allele['name']
@@ -203,14 +203,18 @@ class AlleleMapper(AlleleHandler):
         initial_msg += f'insertion_suffix="{insertion_suffix}", '
         initial_msg += f'gene_name="{gene_name}".'
         self.log.debug(f'BOB: Assess allele name. {initial_msg}')
-        # Check 1. Return None for FBti insertion names having many curly bracket sets.
+        # Record reasons for unconventional name.
+        notes = []
         double_curly_rgx = r'}.*}'
-        if re.search(double_curly_rgx, insertion_name):
-            return allele_name
-        # Check 2. Return None for FBti insertion names missing any curly bracket set.
         curly_rgx = r'{.*}'
+        # Check 1. Return None for FBti insertion names having many curly bracket sets.
+        if re.search(double_curly_rgx, insertion_name):
+            conventional_name = False
+            notes.append('Double curly bracket in insertion name')
+        # Check 2. Return None for FBti insertion names missing any curly bracket set.
         if not re.search(curly_rgx, insertion_name):
-            return allele_name
+            conventional_name = False
+            notes.append('No curly bracket in insertion name')
         # Check 3. Start Gillian's checks here.
         # BILLY BOB BOB BOB BOB
         # BILLY BOB BOB BOB BOB
@@ -228,7 +232,7 @@ class AlleleMapper(AlleleHandler):
             self.log.debug(msg)
         else:
             msg = f'BOBb: UNCONVENTIONAL name for {allele_name} ({allele["uniquename"]}) '
-            msg += f'associated with {insertion_name} {insertion["uniquename"]}'
+            msg += f'associated with {insertion_name} {insertion["uniquename"]}. Reasons: {";".join(notes)}'
             self.log.debug(msg)
         return conventional_name
 
