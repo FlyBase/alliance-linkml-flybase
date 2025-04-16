@@ -161,7 +161,7 @@ class SingleReferenceAssociationDTO(AuditedObjectDTO):
     def __init__(self):
         """Create SingleReferenceAssociationDTO for FlyBase object."""
         super().__init__()
-        self.reference_curie = None
+        self.evidence_curie = None
         self.required_fields.extend([])
 
 
