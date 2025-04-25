@@ -219,6 +219,7 @@ class AlleleMapper(AlleleHandler):
             notes.append('No curly bracket in insertion name')
         # Check 3. Start Gillian's checks here.
         if insertion_suffix in self.allele_name_lookup.keys():
+            insertion_suffix_matches_allele_symbol = True
             # Mask double square brackets to make it easier to draw out the allele superscript.
             masked_insertion_suffix = insertion_suffix.replace('[[', 'SUBSCRIPT_START').replace(']]', 'SUBSCRIPT_END')
             masked_insertion_superscript = re.search(superscript_rgx, masked_insertion_suffix).group(2).lstrip('[').rstrip(']')    # Remove flanking brackets.
@@ -235,6 +236,7 @@ class AlleleMapper(AlleleHandler):
                 self.log.debug(f'FAIL1: allele_superscript does not contain insertion_superscript: allele_name={allele_name}, ins_name={insertion_name}')
                 notes.append('insertion-allele name mismatch A')
         else:
+            insertion_suffix_matches_allele_symbol = False
             if allele_superscript == insertion_suffix:
                 # self.log.debug(f'PASS3: insertion_suffix == allele_superscript: allele_name={allele_name}, ins_name={insertion_name}')
                 pass
@@ -249,12 +251,14 @@ class AlleleMapper(AlleleHandler):
         if conventional_name:
             msg = f'Conventional name for {allele_name} ({allele["uniquename"]}) '
             msg += f'associated with {insertion_name} {insertion["uniquename"]}'
+            msg2 = None
             # self.log.debug(msg)
         else:
             msg = f'UNCONVENTIONAL name for {allele_name} ({allele["uniquename"]}) '
             msg += f'associated with {insertion_name} {insertion["uniquename"]}. Reasons: {";".join(notes)}'
             self.log.warning(msg)
-        return conventional_name
+            msg2 = f'BILLYBOB:\t{allele_name}\t{allele["uniquename"]}\t{insertion_name}\t{insertion["uniquename"]}\t{insertion_suffix_matches_allele_symbol}'
+        return conventional_name, msg2
 
     # Add methods to be run by synthesize_data() below.
     def map_alleles_to_insertions(self):
@@ -307,8 +311,9 @@ class AlleleMapper(AlleleHandler):
                     fbti_mappable = False
                     notes.append('Associated FBti is also a progenitor FBti')
                 # 2. Ensure FBti is not also a progenitor.
-                conventional_name = self.extract_allele_suffix_from_insertion_name(allele.chado_obj.feature_id, distinct_fbti_feature_ids[0])
+                conventional_name, name_check_msg = self.extract_allele_suffix_from_insertion_name(allele.chado_obj.feature_id, distinct_fbti_feature_ids[0])
                 if conventional_name is False:
+                    self.log.debug(f'{name_check_msg}\t{"; ".join(notes)}')
                     notes.append('Unconventional allele name')
             if fbti_mappable is True and conventional_name is True:
                 allele.single_fbti_feature_id = distinct_fbti_feature_ids[0]
