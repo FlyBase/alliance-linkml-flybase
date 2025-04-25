@@ -345,12 +345,8 @@ class AlleleMapper(AlleleHandler):
                 insertion = self.feature_lookup[allele.single_fbti_feature_id]
                 mapping_str = f'\t{allele.chado_obj.uniquename}\t{allele.chado_obj.name}\t{insertion["uniquename"]}\t{insertion["name"]}'
                 self.log.debug(f'BOB MAPPING: {mapping_str})')
-            elif fbti_mappable is False:
-                self.log.debug(f'BOB NOPE1: {allele} could not be mapped to an associated insertion: {"; ".join(notes)}')
             else:
-                insertion = self.feature_lookup[distinct_fbti_feature_ids[0]]
-                ins_info = f'{insertion["name"]} ({insertion["uniquename"]})'
-                self.log.debug(f'BOB NOPE2: Unconventional name for {allele} associated_with {ins_info}: {"; ".join(notes)}')
+                self.log.debug(f'BOB NOPE: {allele} could not be mapped to an associated insertion: {"; ".join(notes)}')
         self.log.info(f'Mapped {mapped_counter}/{input_counter} current alleles to a single FBti insertion unambiguously.')
         return
 
