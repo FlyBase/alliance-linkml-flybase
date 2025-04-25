@@ -189,13 +189,13 @@ class AlleleMapper(AlleleHandler):
         insertion = self.feature_lookup[insertion_feature_id]
         insertion_name = insertion['name']
         insertion_suffix = insertion_name.split('}')[1]
+        # Getting the allele superscript is tricky.
+        # The allele superscript is stuff in the square brackets after the gene name.
+        # So, we remove the first instance of the gene name in the string.
+        # Note that the gene name can itself have square brackets, hence the approach here.
         gene = self.feature_lookup[self.allele_gene_lookup[allele_feature_id]]
         gene_name = gene['name']
         allele_parts = allele_name.split(gene_name)
-        # The allele superscript is stuff in the square brackets after the gene name.
-        # So, we remove the first instance of the gene name in the string.
-        # Note that the gene name can itself have square brackets.
-        # Equals the allele name minus the gene name.
         allele_superscript = gene_name.join(allele_parts[1:])
         initial_msg = 'Have these parts to assess: '
         initial_msg += f'allele_name="{allele_name}", '
@@ -208,6 +208,7 @@ class AlleleMapper(AlleleHandler):
         notes = []
         double_curly_rgx = r'}.*}'
         curly_rgx = r'{.*}'
+        superscript_rgx = r'(^.+)(\[[^\[]+\]$)'
         # Check 1. Return None for FBti insertion names having many curly bracket sets.
         if re.search(double_curly_rgx, insertion_name):
             conventional_name = False
@@ -217,15 +218,33 @@ class AlleleMapper(AlleleHandler):
             conventional_name = False
             notes.append('No curly bracket in insertion name')
         # Check 3. Start Gillian's checks here.
-        # BILLY BOB BOB BOB BOB
-        # BILLY BOB BOB BOB BOB
-        # BILLY BOB BOB BOB BOB
-        # BILLY BOB BOB BOB BOB
-        # BILLY BOB BOB BOB BOB
-        # BILLY BOB BOB BOB BOB
-        # BILLY BOB BOB BOB BOB
-        # BILLY BOB BOB BOB BOB
-        # BILLY BOB BOB BOB BOB
+        if insertion_suffix in self.allele_name_lookup.keys():
+            # Mask double square brackets to make it easier to draw out the allele superscript.
+            masked_insertion_suffix = insertion_suffix.replace('[[', 'SUBSCRIPT_START').replace(']]', 'SUBSCRIPT_END')
+            masked_insertion_superscript = re.search(superscript_rgx, masked_insertion_suffix).group(2)
+            insertion_superscript = masked_insertion_superscript.replace('SUBSCRIPT_START', '[[').replace('SUBSCRIPT_END', ']]')
+            self.log.debug(f'BILLY0: {insertion_name} has this superscript: {insertion_superscript}')
+            if allele_superscript == insertion_superscript:
+                self.log.debug(f'BILLYPASS1: insertion_superscript == allele_superscript: allele_name={allele_name}, ins_name={insertion_name}')
+                pass
+            elif allele_superscript.endswith(f'-{insertion_superscript[1:]}'):
+                self.log.debug(f'BILLYPASS2: allele_superscript endswith insertion_superscript: allele_name={allele_name}, ins_name={insertion_name}')
+                pass
+            else:
+                conventional_name = False
+                self.log.debug(f'BILLYFAIL1: allele_superscript does not contain insertion_superscript: allele_name={allele_name}, ins_name={insertion_name}')
+                notes.append('insertion-allele name mismatch I')
+        else:
+            if allele_superscript == insertion_suffix:
+                self.log.debug(f'BILLYPASS3: insertion_suffix == allele_superscript: allele_name={allele_name}, ins_name={insertion_name}')
+                pass
+            elif allele_superscript.endswith(f'-{insertion_suffix[1:]}'):
+                self.log.debug(f'BILLYPASS4: allele_superscript endswith insertion_suffix: allele_name={allele_name}, ins_name={insertion_name}')
+                pass
+            else:
+                conventional_name = False
+                self.log.debug(f'BILLYFAIL2: allele_superscript does not contain insertion_superscript: allele_name={allele_name}, ins_name={insertion_name}')
+                notes.append('insertion-allele name mismatch II')
         # Once all checks are done, print out unconventional names for debug and curator review.
         if conventional_name:
             msg = f'BOBa: Conventional name for {allele_name} ({allele["uniquename"]}) '
