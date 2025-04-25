@@ -223,77 +223,48 @@ class AlleleMapper(AlleleHandler):
             masked_insertion_suffix = insertion_suffix.replace('[[', 'SUBSCRIPT_START').replace(']]', 'SUBSCRIPT_END')
             masked_insertion_superscript = re.search(superscript_rgx, masked_insertion_suffix).group(2).lstrip('[').rstrip(']')    # Remove flanking brackets.
             insertion_superscript = masked_insertion_superscript.replace('SUBSCRIPT_START', '[[').replace('SUBSCRIPT_END', ']]')
-            self.log.debug(f'BILLY0: {insertion_name} has this superscript: {insertion_superscript}')
+            # self.log.debug(f'{insertion_name} has this superscript: {insertion_superscript}')
             if allele_superscript == insertion_superscript:
-                self.log.debug(f'BILLYPASS1: insertion_superscript == allele_superscript: allele_name={allele_name}, ins_name={insertion_name}')
+                # self.log.debug(f'PASS1: insertion_superscript == allele_superscript: allele_name={allele_name}, ins_name={insertion_name}')
                 pass
             elif allele_superscript.endswith(f'-{insertion_superscript}'):
-                self.log.debug(f'BILLYPASS2: allele_superscript endswith insertion_superscript: allele_name={allele_name}, ins_name={insertion_name}')
+                # self.log.debug(f'PASS2: allele_superscript endswith insertion_superscript: allele_name={allele_name}, ins_name={insertion_name}')
                 pass
             else:
                 conventional_name = False
-                self.log.debug(f'BILLYFAIL1: allele_superscript does not contain insertion_superscript: allele_name={allele_name}, ins_name={insertion_name}')
+                self.log.debug(f'FAIL1: allele_superscript does not contain insertion_superscript: allele_name={allele_name}, ins_name={insertion_name}')
                 notes.append('insertion-allele name mismatch A')
         else:
             if allele_superscript == insertion_suffix:
-                self.log.debug(f'BILLYPASS3: insertion_suffix == allele_superscript: allele_name={allele_name}, ins_name={insertion_name}')
+                # self.log.debug(f'PASS3: insertion_suffix == allele_superscript: allele_name={allele_name}, ins_name={insertion_name}')
                 pass
             elif allele_superscript.endswith(f'-{insertion_suffix}'):
-                self.log.debug(f'BILLYPASS4: allele_superscript endswith insertion_suffix: allele_name={allele_name}, ins_name={insertion_name}')
+                # self.log.debug(f'PASS4: allele_superscript endswith insertion_suffix: allele_name={allele_name}, ins_name={insertion_name}')
                 pass
             else:
                 conventional_name = False
-                self.log.debug(f'BILLYFAIL2: allele_superscript does not contain insertion_superscript: allele_name={allele_name}, ins_name={insertion_name}')
+                self.log.debug(f'FAIL2: allele_superscript does not contain insertion_superscript: allele_name={allele_name}, ins_name={insertion_name}')
                 notes.append('insertion-allele name mismatch B')
         # Once all checks are done, print out unconventional names for debug and curator review.
         if conventional_name:
-            msg = f'BOBa: Conventional name for {allele_name} ({allele["uniquename"]}) '
+            msg = f'Conventional name for {allele_name} ({allele["uniquename"]}) '
             msg += f'associated with {insertion_name} {insertion["uniquename"]}'
-            self.log.debug(msg)
+            # self.log.debug(msg)
         else:
-            msg = f'BOBb: UNCONVENTIONAL name for {allele_name} ({allele["uniquename"]}) '
+            msg = f'UNCONVENTIONAL name for {allele_name} ({allele["uniquename"]}) '
             msg += f'associated with {insertion_name} {insertion["uniquename"]}. Reasons: {";".join(notes)}'
-            self.log.debug(msg)
+            self.log.warning(msg)
         return conventional_name
 
     # Add methods to be run by synthesize_data() below.
     def map_alleles_to_insertions(self):
         """Map alleles to insertions, if applicable."""
         self.log.info('Map alleles to insertions, if applicable.')
-        sample_alleles = [
-            'bmm[EY06577]',         # Simple at-locus FBti.
-            'Scer\\GAL4[sLNvs]',    # Simple trap FBti. ***Name check is misflagging this one.
-            'Arf6[EP2612]',         # Shared trap FBti.
-            'CG8155[EP2612]',       # Shared trap FBti.
-            'chrb[180]',            # Many FBti.
-            'Mkp3[5]',              # FBti + ARG.
-            'Antp[Doc]',            # FBal0028935 associated_with+prognitor FBti0014085
-            'Nedd4[Y741H]',         # FBal0182535 associated_with+prognitor FBti0072339, also has ARG.
-            'TrpA1-CD-G4',          # FBal0323539 associated_with FBti0185284 - should be mapped?
-            'TrpA1[-ACD-G4]',       # FBal0323539 associated_with+prognitor FBti0185284 (progenitor indirectly via "TrpA1[-CD-G4]").
-            # 'mei-P26[fs1]',         # Many FBti.
-            # 'sd[ETX81]',            # Many FBti.
-            # 'neb[k06334]',          # Many FBti.
-            # 'Gpdh1[AKO107]',        # Many FBti.
-            # 'gt[1]',                # Many FBti.
-            # 'ac[Hw-BS]',            # Many FBti.
-            # 'ovo[yct]',             # Many FBti.
-            # 'sn[w]',                # Many FBti.
-            # 'eyg[P20MD1]',          # Many FBti.
-            # 'twin[KG00877]',        # Many FBti.
-            # 'sd[+58b]',             # Many FBti.
-            'lbe[UAS.cJa]',         # Allele should be mapped to construct-insertion.
-            'wg[l-12]',             # Classical mutation.
-        ]
-        self.log.debug(f'Have these test allele: {sample_alleles}')
         input_counter = 0
         mapped_counter = 0
         for allele in self.fb_data_entities.values():
             if allele.chado_obj.is_obsolete is True:
                 continue
-            # # BOB - just for testing.
-            # if allele.chado_obj.name not in sample_alleles:
-            #     continue
             self.log.debug(f'Assessing "{allele.chado_obj.name}" ({allele.chado_obj.uniquename}).')
             input_counter += 1
             # Gather feature_relationship info.
