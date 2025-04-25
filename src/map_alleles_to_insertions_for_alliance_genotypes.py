@@ -196,7 +196,7 @@ class AlleleMapper(AlleleHandler):
         gene = self.feature_lookup[self.allele_gene_lookup[allele_feature_id]]
         gene_name = gene['name']
         allele_parts = allele_name.split(gene_name)
-        allele_superscript = gene_name.join(allele_parts[1:])
+        allele_superscript = gene_name.join(allele_parts[1:]).lstrip('[').rstrip(']')    # Remove flanking brackets.
         initial_msg = 'Have these parts to assess: '
         initial_msg += f'allele_name="{allele_name}", '
         initial_msg += f'allele_superscript="{allele_superscript}", '
@@ -221,13 +221,13 @@ class AlleleMapper(AlleleHandler):
         if insertion_suffix in self.allele_name_lookup.keys():
             # Mask double square brackets to make it easier to draw out the allele superscript.
             masked_insertion_suffix = insertion_suffix.replace('[[', 'SUBSCRIPT_START').replace(']]', 'SUBSCRIPT_END')
-            masked_insertion_superscript = re.search(superscript_rgx, masked_insertion_suffix).group(2)
+            masked_insertion_superscript = re.search(superscript_rgx, masked_insertion_suffix).group(2).lstrip('[').rstrip(']')    # Remove flanking brackets.
             insertion_superscript = masked_insertion_superscript.replace('SUBSCRIPT_START', '[[').replace('SUBSCRIPT_END', ']]')
             self.log.debug(f'BILLY0: {insertion_name} has this superscript: {insertion_superscript}')
             if allele_superscript == insertion_superscript:
                 self.log.debug(f'BILLYPASS1: insertion_superscript == allele_superscript: allele_name={allele_name}, ins_name={insertion_name}')
                 pass
-            elif allele_superscript.endswith(f'-{insertion_superscript[1:]}'):
+            elif allele_superscript.endswith(f'-{insertion_superscript}'):
                 self.log.debug(f'BILLYPASS2: allele_superscript endswith insertion_superscript: allele_name={allele_name}, ins_name={insertion_name}')
                 pass
             else:
@@ -238,7 +238,7 @@ class AlleleMapper(AlleleHandler):
             if allele_superscript == insertion_suffix:
                 self.log.debug(f'BILLYPASS3: insertion_suffix == allele_superscript: allele_name={allele_name}, ins_name={insertion_name}')
                 pass
-            elif allele_superscript.endswith(f'-{insertion_suffix[1:]}'):
+            elif allele_superscript.endswith(f'-{insertion_suffix}'):
                 self.log.debug(f'BILLYPASS4: allele_superscript endswith insertion_suffix: allele_name={allele_name}, ins_name={insertion_name}')
                 pass
             else:
