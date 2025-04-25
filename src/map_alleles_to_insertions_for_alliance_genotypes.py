@@ -203,7 +203,7 @@ class AlleleMapper(AlleleHandler):
         initial_msg += f'insertion_name="{insertion_name}", '
         initial_msg += f'insertion_suffix="{insertion_suffix}", '
         initial_msg += f'gene_name="{gene_name}".'
-        self.log.debug(f'BOB: Assess allele name. {initial_msg}')
+        self.log.debug(f'Assess allele name. {initial_msg}')
         # Record reasons for unconventional name.
         notes = []
         double_curly_rgx = r'}.*}'
@@ -227,7 +227,7 @@ class AlleleMapper(AlleleHandler):
             if allele_superscript == insertion_superscript:
                 # self.log.debug(f'PASS1: insertion_superscript == allele_superscript: allele_name={allele_name}, ins_name={insertion_name}')
                 pass
-            elif allele_superscript.endswith(f'-{insertion_superscript}'):
+            elif allele_superscript.endswith(f'-{insertion_superscript}') or allele_superscript.endswith(f'{insertion_superscript}-X'):
                 # self.log.debug(f'PASS2: allele_superscript endswith insertion_superscript: allele_name={allele_name}, ins_name={insertion_name}')
                 pass
             else:
@@ -315,9 +315,9 @@ class AlleleMapper(AlleleHandler):
                 mapped_counter += 1
                 insertion = self.feature_lookup[allele.single_fbti_feature_id]
                 mapping_str = f'\t{allele.chado_obj.uniquename}\t{allele.chado_obj.name}\t{insertion["uniquename"]}\t{insertion["name"]}'
-                self.log.debug(f'BOB MAPPING: {mapping_str})')
+                self.log.debug(f'MAPPING: {mapping_str})')
             else:
-                self.log.debug(f'BOB NOPE: {allele} could not be mapped to an associated insertion: {"; ".join(notes)}')
+                self.log.debug(f'NO MAPPING: {allele} could not be mapped to an associated insertion: {"; ".join(notes)}')
         self.log.info(f'Mapped {mapped_counter}/{input_counter} current alleles to a single FBti insertion unambiguously.')
         return
 
