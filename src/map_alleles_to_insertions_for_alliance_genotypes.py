@@ -233,7 +233,7 @@ class AlleleMapper(AlleleHandler):
             else:
                 conventional_name = False
                 self.log.debug(f'BILLYFAIL1: allele_superscript does not contain insertion_superscript: allele_name={allele_name}, ins_name={insertion_name}')
-                notes.append('insertion-allele name mismatch I')
+                notes.append('insertion-allele name mismatch A')
         else:
             if allele_superscript == insertion_suffix:
                 self.log.debug(f'BILLYPASS3: insertion_suffix == allele_superscript: allele_name={allele_name}, ins_name={insertion_name}')
@@ -244,7 +244,7 @@ class AlleleMapper(AlleleHandler):
             else:
                 conventional_name = False
                 self.log.debug(f'BILLYFAIL2: allele_superscript does not contain insertion_superscript: allele_name={allele_name}, ins_name={insertion_name}')
-                notes.append('insertion-allele name mismatch II')
+                notes.append('insertion-allele name mismatch B')
         # Once all checks are done, print out unconventional names for debug and curator review.
         if conventional_name:
             msg = f'BOBa: Conventional name for {allele_name} ({allele["uniquename"]}) '
@@ -347,7 +347,7 @@ class AlleleMapper(AlleleHandler):
                 self.log.debug(f'BOB MAPPING: {mapping_str})')
             elif fbti_mappable is False:
                 self.log.debug(f'BOB NOPE1: {allele} could not be mapped to an associated insertion: {"; ".join(notes)}')
-            elif conventional_name is False:
+            else:
                 insertion = self.feature_lookup[distinct_fbti_feature_ids[0]]
                 ins_info = f'{insertion["name"]} ({insertion["uniquename"]})'
                 self.log.debug(f'BOB NOPE2: Unconventional name for {allele} associated_with {ins_info}: {"; ".join(notes)}')
