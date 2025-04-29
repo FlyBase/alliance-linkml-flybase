@@ -6,11 +6,12 @@ Author(s):
     Gil dos Santos dossantos@morgan.harvard.edu
 
 Usage:
-    map_alleles_to_insertions_for_alliance_genotypes.py [-h] [-v VERBOSE] [-c CONFIG] [-t TESTING]
+    map_alleles_to_insertions_for_alliance_genotypes.py [-h] [--commit]
+    [-v VERBOSE] [-c CONFIG] [-t TESTING]
 
 Example:
-    python map_alleles_to_insertions_for_alliance_genotypes.py -v -t
-    -c /path/to/config.cfg
+    python map_alleles_to_insertions_for_alliance_genotypes.py --commit
+    -v -t -c /path/to/config.cfg
 
 Notes:
     For each FBal allele, this script determines if it is better represented by
@@ -19,7 +20,8 @@ Notes:
     This script should be run after each epicycle proforma load.
     This script flushes then replaces is_represented_at_alliance_as
     feature_relationships.
-
+    NB - must specify "--commit" in the command line to commit the writing of
+         new feature_relationships!
 """
 
 # Notes:
@@ -31,6 +33,7 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker, aliased
 from harvdev_utils.psycopg_functions import set_up_db_reading
 # from harvdev_utils.char_conversions import sgml_to_plain_text
+from harvdev_utils.chado_functions import get_or_create
 from harvdev_utils.production import (
     Cvterm, Feature, FeatureRelationship
 )
@@ -51,7 +54,7 @@ TESTING = set_up_dict['testing']
 
 # Process additional input parameters not handled by the set_up_db_reading() function above.
 parser = argparse.ArgumentParser(description='inputs')
-parser.add_argument('--commit', action='store_true', help="Commit ")
+parser.add_argument('--commit', action='store_true', help="Commit writing of new feature_relationships")
 args, extra_args = parser.parse_known_args()
 COMMIT = args.commit
 log.info(f'These args are handled by this specific script: {args}')
@@ -83,8 +86,8 @@ class AlleleMapper(AlleleHandler):
 
     # Method to initially flush all "is_represented_at_alliance_as" feature_relationships.
     def initial_flush(self, session):
-        """Flush existing is_represented_at_alliance_as feature_relationships to create a blank slate."""
-        self.log.info('Flush existing is_represented_at_alliance_as feature_relationships to create a blank slate.')
+        """Flush existing "is_represented_at_alliance_as" feature_relationships to create a blank slate."""
+        self.log.info('Flush existing "is_represented_at_alliance_as" feature_relationships to create a blank slate.')
         filters = (
             Cvterm.name == 'is_represented_at_alliance_as',
         )
@@ -185,7 +188,7 @@ class AlleleMapper(AlleleHandler):
         self.get_entity_relationships(session, 'subject', rel_type='progenitor', entity_type='insertion', entity_regex=self.regex['insertion'])
         return
 
-    # Add methods to be run by synthesize_data() below.
+    # Additional methods for making the allele-insertion calls.
     def extract_allele_suffix_from_insertion_name(self, allele_feature_id, insertion_feature_id):
         """Check that the allele name is conventional.
 
@@ -283,7 +286,6 @@ class AlleleMapper(AlleleHandler):
             msg2 += f'\t{insertion_name}\t{insertion["uniquename"]}\t{insertion_suffix_matches_allele_symbol}'
         return conventional_name, msg2
 
-    # Add methods to be run by synthesize_data() below.
     def map_alleles_to_insertions(self):
         """Map alleles to insertions, if applicable."""
         self.log.info('Map alleles to insertions, if applicable.')
@@ -339,9 +341,9 @@ class AlleleMapper(AlleleHandler):
                     self.log.debug(f'{name_check_msg}\t{"; ".join(notes)}')
                     notes.append('Unconventional allele name')
             if fbti_mappable is True and conventional_name is True:
-                allele.single_fbti_feature_id = distinct_fbti_feature_ids[0]
+                allele.maps_to_fbti_feature_ids.append(distinct_fbti_feature_ids[0])
                 mapped_counter += 1
-                insertion = self.feature_lookup[allele.single_fbti_feature_id]
+                insertion = self.feature_lookup[allele.maps_to_fbti_feature_ids[0]]
                 mapping_str = f'\t{allele.chado_obj.uniquename}\t{allele.chado_obj.name}\t{insertion["uniquename"]}\t{insertion["name"]}'
                 self.log.debug(f'MAPPING: {mapping_str})')
             else:
@@ -349,11 +351,18 @@ class AlleleMapper(AlleleHandler):
         self.log.info(f'Mapped {mapped_counter}/{input_counter} current alleles to a single FBti insertion unambiguously.')
         return
 
-    # Define synthesize_data() for the AlleleMapper.
-    def synthesize_data(self):
-        """Synthesize data."""
-        self.log.info('SYNTHESIZE DATA.')
-        self.map_alleles_to_insertions()
+    def write_new_feature_relationships(self, session):
+        """Create new "is_represented_at_alliance_as" feature_relationships."""
+        self.log.info('Create new "is_represented_at_alliance_as" feature_relationships.')
+        new_counter = 0
+        filters = (Cvterm.name == 'is_represented_at_alliance_as', )
+        fr_type_cvterm_id = session.query(Cvterm).filter(*filters).one().cvterm_id
+        self.log.info(f'The "is_represented_at_alliance_as" CV term corresponds to cvterm.cvterm_id={fr_type_cvterm_id}')
+        for allele in self.fb_data_entities.values():
+            for fbti_feature_id in allele.maps_to_fbti_feature_ids:
+                _, _ = get_or_create(session, FeatureRelationship, subject_id=allele.chado_obj.feature_id, object_id=fbti_feature_id, type_id=fr_type_cvterm_id)
+            new_counter += 1
+        self.log.info(f'Created {new_counter} new "is_represented_at_alliance_as" feature_relationships.')
         return
 
     def run(self, session):
@@ -362,7 +371,8 @@ class AlleleMapper(AlleleHandler):
         self.initial_flush(session)
         self.get_general_data(session)
         self.get_datatype_data(session)
-        self.synthesize_data()
+        self.map_alleles_to_insertions()
+        self.write_new_feature_relationships(session)
         return
 
 
