@@ -13,10 +13,12 @@ Example:
     -c /path/to/config.cfg
 
 Notes:
-    This script reviews alleles and determines if each one is better represented
-    in a genotype by an associated FBti insertion. If so, it makes a
-    feature_relationships (FBal - TBD - FBti). This script should be run after
-    each epicycle proforma load.
+    For each FBal allele, this script determines if it is better represented by
+    one of its associated FBti insertions.  If so, this script makes a
+    feature_relationship (FBal-is_represented_at_alliance_as-FBti).
+    This script should be run after each epicycle proforma load.
+    This script flushes then replaces is_represented_at_alliance_as
+    feature_relationships.
 
 """
 
@@ -76,6 +78,20 @@ class AlleleMapper(AlleleHandler):
         """Create the AlleleMapper object."""
         super().__init__(log, testing)
         self.allele_name_lookup = {}    # Allele-name-keyed dict of feature dicts.
+
+    # Method to initially flush all "is_represented_at_alliance_as" feature_relationships.
+    def initial_flush(self, session):
+        """Flush existing is_represented_at_alliance_as feature_relationships to create a blank slate."""
+        self.log.info('Flush existing is_represented_at_alliance_as feature_relationships to create a blank slate.')
+        filters = (
+            Cvterm.name == 'is_represented_at_alliance_as',
+        )
+        results = session.query(FeatureRelationship).filter(*filters).distinct()
+        counter = 0
+        for result in results:
+            counter += 1
+        self.log.info(f'Flushed {counter} "is_represented_at_alliance_as" feature_relationships before updating.')
+        return
 
     # Add methods to be run by get_general_data() below.
     def build_allele_name_lookup(self):
@@ -257,7 +273,7 @@ class AlleleMapper(AlleleHandler):
             msg = f'UNCONVENTIONAL name for {allele_name} ({allele["uniquename"]}) '
             msg += f'associated with {insertion_name} {insertion["uniquename"]}. Reasons: {";".join(notes)}'
             self.log.warning(msg)
-            msg2 = f'BILLYBOB:\t{allele_name}\t{allele["uniquename"]}\t{insertion_name}\t{insertion["uniquename"]}\t{insertion_suffix_matches_allele_symbol}'
+            msg2 = f'UNCONVENTIONAL NAME: {allele_name}\t{allele["uniquename"]}\t{insertion_name}\t{insertion["uniquename"]}\t{insertion_suffix_matches_allele_symbol}'
         return conventional_name, msg2
 
     # Add methods to be run by synthesize_data() below.
@@ -336,6 +352,7 @@ class AlleleMapper(AlleleHandler):
     def run(self, session):
         """Run all methods in sequence."""
         self.log.info('Run all methods in sequence.')
+        self.initial_flush(session)
         self.get_general_data(session)
         self.get_datatype_data(session)
         self.synthesize_data()
