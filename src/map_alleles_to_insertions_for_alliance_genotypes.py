@@ -91,15 +91,20 @@ class AlleleMapper(AlleleHandler):
         filters = (
             Cvterm.name == 'is_represented_at_alliance_as',
         )
-        results = session.query(FeatureRelationship).\
+        session.query(FeatureRelationship).\
             select_from(FeatureRelationship).\
             join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
-            filter(*filters).distinct()
-        counter = 0
-        for result in results:
-            session.query(FeatureRelationship).filter(FeatureRelationship.feature_relationship_id == result.feature_relationship_id).delete()
-            counter += 1
-        self.log.info(f'Flushed {counter} "is_represented_at_alliance_as" feature_relationships before updating.')
+            filter(*filters).\
+            delete()
+        # results = session.query(FeatureRelationship).\
+        #     select_from(FeatureRelationship).\
+        #     join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+        #     filter(*filters).distinct()
+        # counter = 0
+        # for result in results:
+        #     session.query(FeatureRelationship).filter(FeatureRelationship.feature_relationship_id == result.feature_relationship_id).delete()
+        #     counter += 1
+        # self.log.info(f'Flushed {counter} "is_represented_at_alliance_as" feature_relationships before updating.')
         return
 
     # Add methods to be run by get_general_data() below.
