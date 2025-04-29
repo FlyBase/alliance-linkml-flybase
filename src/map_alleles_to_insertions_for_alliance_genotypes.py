@@ -276,7 +276,8 @@ class AlleleMapper(AlleleHandler):
             msg = f'UNCONVENTIONAL name for {allele_name} ({allele["uniquename"]}) '
             msg += f'associated with {insertion_name} {insertion["uniquename"]}. Reasons: {";".join(notes)}'
             self.log.warning(msg)
-            msg2 = f'UNCONVENTIONAL NAME: {allele_name}\t{allele["uniquename"]}\t{insertion_name}\t{insertion["uniquename"]}\t{insertion_suffix_matches_allele_symbol}'
+            msg2 = f'UNCONVENTIONAL NAME: {allele_name}\t{allele["uniquename"]}'
+            msg2 += f'\t{insertion_name}\t{insertion["uniquename"]}\t{insertion_suffix_matches_allele_symbol}'
         return conventional_name, msg2
 
     # Add methods to be run by synthesize_data() below.
