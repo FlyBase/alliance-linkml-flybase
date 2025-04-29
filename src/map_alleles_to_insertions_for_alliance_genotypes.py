@@ -361,7 +361,7 @@ class AlleleMapper(AlleleHandler):
         for allele in self.fb_data_entities.values():
             for fbti_feature_id in allele.maps_to_fbti_feature_ids:
                 _, _ = get_or_create(session, FeatureRelationship, subject_id=allele.chado_obj.feature_id, object_id=fbti_feature_id, type_id=fr_type_cvterm_id)
-            new_counter += 1
+                new_counter += 1
         self.log.info(f'Created {new_counter} new "is_represented_at_alliance_as" feature_relationships.')
         return
 
