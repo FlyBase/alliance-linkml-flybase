@@ -92,7 +92,7 @@ class AlleleMapper(AlleleHandler):
             filter(*filters).distinct()
         counter = 0
         for result in results:
-            result.delete()
+            session.query(FeatureRelationship).filter(FeatureRelationship.feature_relationship_id == result.feature_relationship_id).delete()
             counter += 1
         self.log.info(f'Flushed {counter} "is_represented_at_alliance_as" feature_relationships before updating.')
         return
