@@ -51,7 +51,9 @@ TESTING = set_up_dict['testing']
 
 # Process additional input parameters not handled by the set_up_db_reading() function above.
 parser = argparse.ArgumentParser(description='inputs')
+parser.add_argument('--commit', action='store_true', help="Commit ")
 args, extra_args = parser.parse_known_args()
+COMMIT = args.commit
 log.info(f'These args are handled by this specific script: {args}')
 log.info(f'These args are handled by modules: {extra_args}')
 
@@ -376,7 +378,7 @@ def run_mapper(object_to_execute):
     """
     global log
     global ENGINE
-    load_testing = True    # Hard-coding this because "testing" means something different for Alliance data handlers.
+    global COMMIT
     Session = sessionmaker(bind=ENGINE)
     inspect(ENGINE)
     session = Session()
@@ -387,12 +389,12 @@ def run_mapper(object_to_execute):
         session.rollback()
         log.critical('Critical transaction error occurred during main chado query; rolling back and exiting.')
         raise
-    if load_testing is True:
-        log.info('Since "testing" is True, rolling back all transactions.')
-        session.rollback()
-    else:
-        log.info('Since "testing" is False, committing transactions.')
+    if COMMIT is True:
+        log.info('Since "commit" is True, committing transactions.')
         session.commit()
+    else:
+        log.info('Since "commit" is False, rolling back all transactions.')
+        session.rollback()
     return
 
 
