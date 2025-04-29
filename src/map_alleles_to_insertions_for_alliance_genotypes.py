@@ -86,7 +86,10 @@ class AlleleMapper(AlleleHandler):
         filters = (
             Cvterm.name == 'is_represented_at_alliance_as',
         )
-        results = session.query(FeatureRelationship).filter(*filters).distinct()
+        results = session.query(FeatureRelationship).\
+            select_from(FeatureRelationship).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).distinct()
         counter = 0
         for result in results:
             counter += 1
