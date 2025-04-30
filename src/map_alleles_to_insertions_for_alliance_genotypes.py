@@ -102,7 +102,6 @@ class AlleleMapper(AlleleHandler):
         #     session.query(FeatureRelationship).filter(FeatureRelationship.feature_relationship_id == result.feature_relationship_id).delete()
         #     counter += 1
         self.log.info('Flushed all "is_represented_at_alliance_as" feature_relationships before updating.')
-        quit()
         return
 
     # Add methods to be run by get_general_data() below.
@@ -373,10 +372,10 @@ class AlleleMapper(AlleleHandler):
         """Run all methods in sequence."""
         self.log.info('Run all methods in sequence.')
         self.initial_flush(session)
-        self.get_general_data(session)
-        self.get_datatype_data(session)
-        self.map_alleles_to_insertions()
-        self.write_new_feature_relationships(session)
+        # self.get_general_data(session)
+        # self.get_datatype_data(session)
+        # self.map_alleles_to_insertions()
+        # self.write_new_feature_relationships(session)
         return
 
 
