@@ -92,7 +92,7 @@ class AlleleMapper(AlleleHandler):
         fr_type_cvterm_id = session.query(Cvterm).filter(*filters).one().cvterm_id
         self.log.info(f'The "is_represented_at_alliance_as" CV term corresponds to cvterm.cvterm_id={fr_type_cvterm_id}')
         session.query(FeatureRelationship).filter(FeatureRelationship.type_id == fr_type_cvterm_id).delete()
-
+        # BOB - is below really that slow?
         # results = session.query(FeatureRelationship).\
         #     select_from(FeatureRelationship).\
         #     join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
@@ -372,10 +372,10 @@ class AlleleMapper(AlleleHandler):
         """Run all methods in sequence."""
         self.log.info('Run all methods in sequence.')
         self.initial_flush(session)
-        # self.get_general_data(session)
-        # self.get_datatype_data(session)
-        # self.map_alleles_to_insertions()
-        # self.write_new_feature_relationships(session)
+        self.get_general_data(session)
+        self.get_datatype_data(session)
+        self.map_alleles_to_insertions()
+        self.write_new_feature_relationships(session)
         return
 
 
