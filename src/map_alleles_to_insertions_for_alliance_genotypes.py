@@ -35,7 +35,7 @@ from harvdev_utils.psycopg_functions import set_up_db_reading
 # from harvdev_utils.char_conversions import sgml_to_plain_text
 from harvdev_utils.chado_functions import get_or_create
 from harvdev_utils.production import (
-    Cvterm, Feature, FeatureRelationship
+    Cvterm, Feature, FeatureRelationship, Featureprop
 )
 from allele_handlers import AlleleHandler
 import fb_datatypes
@@ -89,10 +89,14 @@ class AlleleMapper(AlleleHandler):
         """Flush existing "is_represented_at_alliance_as" feature_relationships to create a blank slate."""
         self.log.info('Flush existing "is_represented_at_alliance_as" feature_relationships to create a blank slate.')
         filters = (Cvterm.name == 'is_represented_at_alliance_as', )
+
+        # BOB: Option 1.
         fr_type_cvterm_id = session.query(Cvterm).filter(*filters).one().cvterm_id
         self.log.info(f'The "is_represented_at_alliance_as" CV term corresponds to cvterm.cvterm_id={fr_type_cvterm_id}')
         session.query(FeatureRelationship).filter(FeatureRelationship.type_id == fr_type_cvterm_id).delete()
-        # BOB - is below really that slow?
+        self.log.info('Flushed all "is_represented_at_alliance_as" feature_relationships before updating.')
+
+        # BOB: Option 2.
         # results = session.query(FeatureRelationship).\
         #     select_from(FeatureRelationship).\
         #     join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
@@ -101,7 +105,8 @@ class AlleleMapper(AlleleHandler):
         # for result in results:
         #     session.query(FeatureRelationship).filter(FeatureRelationship.feature_relationship_id == result.feature_relationship_id).delete()
         #     counter += 1
-        self.log.info('Flushed all "is_represented_at_alliance_as" feature_relationships before updating.')
+        # self.log.info(f'Flushed {counter} "is_represented_at_alliance_as" feature_relationships before updating.')
+
         return
 
     # Add methods to be run by get_general_data() below.
@@ -178,6 +183,28 @@ class AlleleMapper(AlleleHandler):
         self.log.info(f'Found {counter} indirect FBal-FBti associations via progenitor alleles.')
         return
 
+    def flag_alleles_for_which_name_check_should_be_ignored(self, session):
+        """Flag alleles for which name check should be ignored."""
+        self.log.info('Flag alleles for which name check should be ignored.')
+        filters = (
+            Feature.is_obsolete.is_(False),
+            Feature.uniquename.op('~')(self.regex['allele']),
+            Cvterm.name == 'internalnotes',
+            Featureprop.value == 'FTA: genotype conversion - ignore unconventional name warning'
+        )
+        results = session.query(Feature).\
+            select_from(Feature).\
+            join(Featureprop, (Featureprop.feature_id == Feature.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == Featureprop.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for allele in results:
+            self.fb_data_entities[allele.feature_id].ignore_atypical_name = True
+            counter += 1
+        self.log.info(f'Flagged {counter} alleles for which name check should be ignored.')
+        return
+
     # Define get_datatype_data() for the AlleleMapper.
     def get_datatype_data(self, session):
         """Get FlyBase data from chado."""
@@ -188,6 +215,7 @@ class AlleleMapper(AlleleHandler):
         self.get_entity_relationships(session, 'subject', rel_type='associated_with', entity_type='construct', entity_regex=self.regex['construct'])
         self.get_entity_relationships(session, 'subject', rel_type='associated_with', entity_type='insertion', entity_regex=self.regex['insertion'])
         self.get_entity_relationships(session, 'subject', rel_type='progenitor', entity_type='insertion', entity_regex=self.regex['insertion'])
+        self.flag_alleles_for_which_name_check_should_be_ignored(session)
         return
 
     # Additional methods for making the allele-insertion calls.
@@ -313,7 +341,7 @@ class AlleleMapper(AlleleHandler):
             self.log.debug(f'Found {len(prog_fbti_rels)} progenitor FBti relationships.')
             # Start assessment
             fbti_mappable = True
-            conventional_name = True
+            allele_name_is_ok = True
             notes = []
             if arg_rels:
                 fbti_mappable = False
@@ -337,12 +365,15 @@ class AlleleMapper(AlleleHandler):
                 if distinct_fbti_feature_ids[0] in distinct_fbti_progenitor_feature_ids:
                     fbti_mappable = False
                     notes.append('Associated FBti is also a progenitor FBti')
-                # 2. Ensure FBti is not also a progenitor.
-                conventional_name, name_check_msg = self.extract_allele_suffix_from_insertion_name(allele.chado_obj.feature_id, distinct_fbti_feature_ids[0])
-                if conventional_name is False:
+                # 2. Look at allele name to detect complex allele.
+                allele_name_is_ok, name_check_msg = self.extract_allele_suffix_from_insertion_name(allele.chado_obj.feature_id, distinct_fbti_feature_ids[0])
+                if allele_name_is_ok is False and allele.ignore_atypical_name is False:
                     self.log.debug(f'{name_check_msg}\t{"; ".join(notes)}')
                     notes.append('Unconventional allele name')
-            if fbti_mappable is True and conventional_name is True:
+                elif allele_name_is_ok is False and allele.ignore_atypical_name is True:
+                    notes.append('Unconventional allele name is ok')
+                    allele_name_is_ok = True
+            if fbti_mappable is True and allele_name_is_ok is True:
                 allele.maps_to_fbti_feature_ids.append(distinct_fbti_feature_ids[0])
                 mapped_counter += 1
                 insertion = self.feature_lookup[allele.maps_to_fbti_feature_ids[0]]
