@@ -89,24 +89,14 @@ class AlleleMapper(AlleleHandler):
         """Flush existing "is_represented_at_alliance_as" feature_relationships to create a blank slate."""
         self.log.info('Flush existing "is_represented_at_alliance_as" feature_relationships to create a blank slate.')
         filters = (Cvterm.name == 'is_represented_at_alliance_as', )
-
-        # BOB: Option 1.
-        # fr_type_cvterm_id = session.query(Cvterm).filter(*filters).one().cvterm_id
-        # self.log.info(f'The "is_represented_at_alliance_as" CV term corresponds to cvterm.cvterm_id={fr_type_cvterm_id}')
-        # session.query(FeatureRelationship).filter(FeatureRelationship.type_id == fr_type_cvterm_id).delete()
-        # self.log.info('Flushed all "is_represented_at_alliance_as" feature_relationships before updating.')
-
-        # BOB: Option 2.
-        results = session.query(FeatureRelationship).\
-            select_from(FeatureRelationship).\
-            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
-            filter(*filters).distinct()
+        fr_type_cvterm_id = session.query(Cvterm).filter(*filters).one().cvterm_id
+        results = session.query(FeatureRelationship).filter(FeatureRelationship.type_id == fr_type_cvterm_id).distinct()
         counter = 0
         for result in results:
-            session.query(FeatureRelationship).filter(FeatureRelationship.feature_relationship_id == result.feature_relationship_id).delete()
             counter += 1
-        self.log.info(f'Flushed {counter} "is_represented_at_alliance_as" feature_relationships before updating.')
-
+        self.log.info(f'There are currently {counter} "is_represented_at_alliance_as" feature_relationships (before updating).')
+        session.query(FeatureRelationship).filter(FeatureRelationship.type_id == fr_type_cvterm_id).delete()
+        self.log.info('Flushed all "is_represented_at_alliance_as" feature_relationships before updating.')
         return
 
     # Add methods to be run by get_general_data() below.
