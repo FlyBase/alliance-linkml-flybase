@@ -15,13 +15,17 @@ Example:
 
 Notes:
     For each FBal allele, this script determines if it is better represented by
-    one of its associated FBti insertions.  If so, this script makes a
+    one or more associated FBti insertions.  If so, this script makes a
     feature_relationship (FBal-is_represented_at_alliance_as-FBti).
+    For construct-based alleles, the FBal may map to many FBti (via many FBtp).
+    For at-locus alleles, an FBal allele is mapped to either zero or one FBti
+    insertions; there is no mapping if there are many insertions, or if the
+    allele has additional lesions in addition to a single FBti insertion.
+    Notes on usage:
     This script should be run after each epicycle proforma load.
     This script flushes then replaces is_represented_at_alliance_as
     feature_relationships.
-    NB - must specify "--commit" in the command line to commit the writing of
-         new feature_relationships!
+    One must specify "--commit" in the command line to commit the changes!
 """
 
 # Notes:
@@ -179,7 +183,7 @@ class AlleleMapper(AlleleHandler):
         filters = (
             Feature.is_obsolete.is_(False),
             Feature.uniquename.op('~')(self.regex['allele']),
-            Cvterm.name == 'internalnotes',
+            Cvterm.name == 'internal_notes',
             Featureprop.value == 'FTA: genotype conversion - ignore unconventional name warning'
         )
         results = session.query(Feature).\
