@@ -377,12 +377,12 @@ class AlleleMapper(AlleleHandler):
                     allele.maps_to_feature_id = aberration['feature_id']
                     mapped_counter += 1
                     mapping_str = f'\t{allele.chado_obj.uniquename}\t{allele.chado_obj.name}\t{aberration["uniquename"]}\t{aberration["name"]}'
-                    self.log.debug(f'MAPPING: {mapping_str})')
+                    self.log.debug(f'MAPPING: {mapping_str}')
                 else:
                     allele.maps_to_feature_id = insertion['feature_id']
                     mapped_counter += 1
                     mapping_str = f'\t{allele.chado_obj.uniquename}\t{allele.chado_obj.name}\t{insertion["uniquename"]}\t{insertion["name"]}'
-                    self.log.debug(f'MAPPING: {mapping_str})')
+                    self.log.debug(f'MAPPING: {mapping_str}')
             else:
                 self.log.debug(f'NO MAPPING: {allele} could not be mapped to an associated insertion: {"; ".join(notes)}')
         self.log.info(f'Mapped {mapped_counter}/{input_counter} current alleles to a single FBti insertion unambiguously.')
