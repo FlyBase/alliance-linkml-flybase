@@ -203,7 +203,7 @@ class AlleleMapper(AlleleHandler):
         self.get_entities(session)
         self.get_indirect_progenitor_insertion_relationships(session)
         self.get_entity_relationships(session, 'object', rel_type='partof', entity_type='variation')
-        self.get_entity_relationships(session, 'object', rel_type='associated_with', entity_type='aberration', entity_regex=self.regex['aberration'])
+        self.get_entity_relationships(session, 'object', rel_type='associated_with', entity_type='aberration', entity_regex=self.regex['construct'])
         self.get_entity_relationships(session, 'subject', rel_type='associated_with', entity_type='construct', entity_regex=self.regex['construct'])
         self.get_entity_relationships(session, 'subject', rel_type='associated_with', entity_type='insertion', entity_regex=self.regex['insertion'])
         self.get_entity_relationships(session, 'subject', rel_type='progenitor', entity_type='insertion', entity_regex=self.regex['insertion'])
@@ -372,7 +372,7 @@ class AlleleMapper(AlleleHandler):
                 # Check for cases where an FBab is appropriate.
                 aberration = None
                 if len(fbab_rels) == 1:
-                    aberration = self.feature_lookup[fbab_rels[0].subject_id]
+                    aberration = self.feature_lookup[fbab_rels[0].chado_obj.subject_id]
                 if aberration and aberration['name'].startswith('Df(') and insertion['name'].startswith('TI{'):
                     allele.maps_to_feature_id = aberration['feature_id']
                     mapped_counter += 1
