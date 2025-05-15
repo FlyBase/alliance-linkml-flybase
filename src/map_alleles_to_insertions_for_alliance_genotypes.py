@@ -15,16 +15,13 @@ Example:
 
 Notes:
     For each FBal allele, this script determines if it is better represented by
-    one or more associated FBti insertions.  If so, this script makes a
-    feature_relationship (FBal-is_represented_at_alliance_as-FBti).
-    For construct-based alleles, the FBal may map to many FBti (via many FBtp).
-    For at-locus alleles, an FBal allele is mapped to either zero or one FBti
-    insertions; there is no mapping if there are many insertions, or if the
-    allele has additional lesions in addition to a single FBti insertion.
+    a single at-locus FBti insertion, or, an FBab aberration. If so, the script
+    makes a feature_relationship (FBal-is_represented_at_alliance_as-FBti).
+    There is no mapping if there are many insertions, or if the allele has other
+    lesions.
     Notes on usage:
     This script should be run after each epicycle proforma load.
-    This script flushes then replaces is_represented_at_alliance_as
-    feature_relationships.
+    This script flushes/replaces of represented_at_alliance_as relationships.
     One must specify "--commit" in the command line to commit the changes!
 """
 
@@ -321,6 +318,8 @@ class AlleleMapper(AlleleHandler):
             self.log.debug(f'Assessing "{allele.chado_obj.name}" ({allele.chado_obj.uniquename}).')
             input_counter += 1
             # Gather feature_relationship info.
+            fbab_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='associated_with',
+                                                    rel_entity_types=self.feature_subtypes['aberration'])
             arg_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='partof',
                                                    rel_entity_types=self.feature_subtypes['variation'])
             fbtp_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='associated_with',
@@ -368,11 +367,21 @@ class AlleleMapper(AlleleHandler):
                     notes.append('Unconventional allele name is ok')
                     allele_name_is_ok = True
             if fbti_mappable is True and allele_name_is_ok is True:
-                allele.maps_to_fbti_feature_ids.append(distinct_fbti_feature_ids[0])
-                mapped_counter += 1
-                insertion = self.feature_lookup[allele.maps_to_fbti_feature_ids[0]]
-                mapping_str = f'\t{allele.chado_obj.uniquename}\t{allele.chado_obj.name}\t{insertion["uniquename"]}\t{insertion["name"]}'
-                self.log.debug(f'MAPPING: {mapping_str})')
+                insertion = self.feature_lookup[distinct_fbti_feature_ids[0]]
+                # Check for cases where an FBab is appropriate.
+                aberration = None
+                if len(fbab_rels) == 1:
+                    aberration = self.feature_lookup[fbab_rels[0].subject_id]
+                if aberration and aberration['name'].startswith('Df(') and insertion['name'].startswith('TI{'):
+                    allele.maps_to_feature_id = aberration['feature_id']
+                    mapped_counter += 1
+                    mapping_str = f'\t{allele.chado_obj.uniquename}\t{allele.chado_obj.name}\t{aberration["uniquename"]}\t{aberration["name"]}'
+                    self.log.debug(f'MAPPING: {mapping_str})')
+                else:
+                    allele.maps_to_feature_id = insertion['feature_id']
+                    mapped_counter += 1
+                    mapping_str = f'\t{allele.chado_obj.uniquename}\t{allele.chado_obj.name}\t{insertion["uniquename"]}\t{insertion["name"]}'
+                    self.log.debug(f'MAPPING: {mapping_str})')
             else:
                 self.log.debug(f'NO MAPPING: {allele} could not be mapped to an associated insertion: {"; ".join(notes)}')
         self.log.info(f'Mapped {mapped_counter}/{input_counter} current alleles to a single FBti insertion unambiguously.')
@@ -386,9 +395,9 @@ class AlleleMapper(AlleleHandler):
         fr_type_cvterm_id = session.query(Cvterm).filter(*filters).one().cvterm_id
         self.log.info(f'The "is_represented_at_alliance_as" CV term corresponds to cvterm.cvterm_id={fr_type_cvterm_id}')
         for allele in self.fb_data_entities.values():
-            for fbti_feature_id in allele.maps_to_fbti_feature_ids:
+            if allele.maps_to_feature_id:
                 _, _ = get_or_create(session, FeatureRelationship, subject_id=allele.chado_obj.feature_id,
-                                     object_id=fbti_feature_id, type_id=fr_type_cvterm_id)
+                                     object_id=allele.maps_to_feature_id, type_id=fr_type_cvterm_id)
                 new_counter += 1
         self.log.info(f'Created {new_counter} new "is_represented_at_alliance_as" feature_relationships.')
         return

@@ -301,7 +301,7 @@ class FBAllele(FBFeature):
         self.in_vitro = False                   # Change to True if the allele is associated with an "in vitro%" term.
         self.allele_of_internal_gene = False    # Change to True if the allele is related to an internal-type gene (e.g., origin of replication).
         self.ignore_atypical_name = False       # Change to True if curator has specified that an unconventional name is intentional (and ok).
-        self.maps_to_fbti_feature_ids = []      # The feature_id(s) for FBti insertion(s) that should be reported to the Alliance in place of this allele.
+        self.maps_to_feature_id = None          # The feature_id for the single FBti insertion or FBab aberration to be reported in place of the allele.
 
 
 class FBBalancer(FBFeature):
