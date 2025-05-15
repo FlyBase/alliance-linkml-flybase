@@ -1374,7 +1374,7 @@ class AGMDiseaseHandler(DataHandler):
         self.extract_text_embedded_alleles(session)
         self.extract_model_and_modifiers()
         self.get_parent_genes()
-        self.find_relevant_aberrations()    # Slow, run only upon request (Jira FTA-46)
+        # self.find_relevant_aberrations()    # Slow, run only upon request (Jira FTA-46)
         self.build_model_eco_lookup()
         self.lookup_eco_codes_for_modifier_annotations()
         self.group_redundant_annotations()
