@@ -10,7 +10,7 @@ Usage:
     [-p PUB] [-i GENOTYPE_INPUT] [-f GENOTYPES_FILE]
 
 Example (-i and -f are mutually exclusive):
-    python run_retrieve_genotypes.py
+    python3 run_retrieve_genotypes.py
     -p FBrf0123456
     -i "&agr;Tub84D[1]/Df(2L)xd Scer\GAL4[wg-Gal4] &agr;Tub84D[UAS.HA]"
     -f ./genotypes_to_make.txt

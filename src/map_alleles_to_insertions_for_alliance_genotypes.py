@@ -372,7 +372,7 @@ class AlleleMapper(AlleleHandler):
                         aberration = self.feature_lookup[fbab_rels[0].chado_obj.subject_id]
                         if not aberration['name'].startswith('Df('):
                             fbti_mappable = False
-                            notes.append('Allele has an deficiency and a TI insertion')
+                            notes.append('Allele has a deficiency and a TI insertion')
                 # 3. Look at allele name to detect complex allele.
                 allele_name_is_ok, name_check_msg = self.extract_allele_suffix_from_insertion_name(allele.chado_obj.feature_id, distinct_fbti_feature_ids[0])
                 if allele_name_is_ok is False and allele.ignore_atypical_name is False:

@@ -374,6 +374,7 @@ class GenotypeHandler(object):
             lines_to_write.append('')
         for line in lines_to_write:
             report.write(f'{line}')
+            log.info(f'REPORT: {line}')
         return
 
     def run(self, session):
