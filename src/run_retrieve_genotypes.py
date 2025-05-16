@@ -137,7 +137,7 @@ command += f'-e USER={user} '
 command += f'-e PGPASSWORD={pg_pwd} '
 command += '-e RELEASE=production '
 command += f'-e ALLIANCETOKEN={agr_token} '
-command += f'--entrypoint /usr/bin/python3 {image_name} '    # BOB: change export_to_linkml when ready to implement for real.
+command += f'--entrypoint /usr/bin/python3 {image_name} '
 command += f'/src/retrieve_genotypes.py -v -p {fbrf_pub_id} '
 if genotype_input_file:
     command += f'-f /src/input/{genotype_input_file} '
