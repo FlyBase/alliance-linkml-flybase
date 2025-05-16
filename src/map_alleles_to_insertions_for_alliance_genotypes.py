@@ -355,11 +355,25 @@ class AlleleMapper(AlleleHandler):
                 notes.append('Has MANY FBti(s)')
             # If there is a single FBti, apply two more tests.
             else:
+                insertion = self.feature_lookup[distinct_fbti_feature_ids[0]]
                 # 1. Ensure FBti is not also a progenitor.
                 if distinct_fbti_feature_ids[0] in distinct_fbti_progenitor_feature_ids:
                     fbti_mappable = False
                     notes.append('Associated FBti is also a progenitor FBti')
-                # 2. Look at allele name to detect complex allele.
+                # 2. Check for aberrations.
+                if len(fbab_rels) > 1:
+                    fbti_mappable = False
+                    notes.append('Associated with many aberrations')
+                elif len(fbab_rels) == 1:
+                    if not insertion['name'].startswith('TI{'):
+                        fbti_mappable = False
+                        notes.append('Allele has an aberration and a non-TI insertion')
+                    else:
+                        aberration = self.feature_lookup[fbab_rels[0].chado_obj.subject_id]
+                        if not aberration['name'].startswith('Df('):
+                            fbti_mappable = False
+                            notes.append('Allele has an deficiency and a TI insertion')
+                # 3. Look at allele name to detect complex allele.
                 allele_name_is_ok, name_check_msg = self.extract_allele_suffix_from_insertion_name(allele.chado_obj.feature_id, distinct_fbti_feature_ids[0])
                 if allele_name_is_ok is False and allele.ignore_atypical_name is False:
                     self.log.debug(f'{name_check_msg}\t{"; ".join(notes)}')
@@ -368,21 +382,11 @@ class AlleleMapper(AlleleHandler):
                     notes.append('Unconventional allele name is ok')
                     allele_name_is_ok = True
             if fbti_mappable is True and allele_name_is_ok is True:
-                insertion = self.feature_lookup[distinct_fbti_feature_ids[0]]
-                # Check for cases where an FBab is appropriate.
-                aberration = None
-                if len(fbab_rels) == 1:
-                    aberration = self.feature_lookup[fbab_rels[0].chado_obj.subject_id]
-                if aberration and aberration['name'].startswith('Df(') and insertion['name'].startswith('TI{'):
-                    allele.maps_to_feature_id = aberration['feature_id']
-                    mapped_counter += 1
-                    mapping_str = f'\t{allele.chado_obj.uniquename}\t{allele.chado_obj.name}\t{aberration["uniquename"]}\t{aberration["name"]}'
-                    self.log.debug(f'MAPPING: {mapping_str}')
-                else:
-                    allele.maps_to_feature_id = insertion['feature_id']
-                    mapped_counter += 1
-                    mapping_str = f'\t{allele.chado_obj.uniquename}\t{allele.chado_obj.name}\t{insertion["uniquename"]}\t{insertion["name"]}'
-                    self.log.debug(f'MAPPING: {mapping_str}')
+                # insertion = self.feature_lookup[distinct_fbti_feature_ids[0]]    # BOB - I _think_ this is unnecessary, but leaving just in case
+                allele.maps_to_feature_id = insertion['feature_id']
+                mapped_counter += 1
+                mapping_str = f'\t{allele.chado_obj.uniquename}\t{allele.chado_obj.name}\t{insertion["uniquename"]}\t{insertion["name"]}'
+                self.log.debug(f'MAPPING: {mapping_str}')
             else:
                 self.log.debug(f'NO MAPPING: {allele} could not be mapped to an associated insertion: {"; ".join(notes)}')
         self.log.info(f'Mapped {mapped_counter}/{input_counter} current alleles to a single FBti insertion unambiguously.')
