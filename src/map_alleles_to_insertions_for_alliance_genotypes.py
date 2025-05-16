@@ -7,11 +7,11 @@ Author(s):
 
 Usage:
     map_alleles_to_insertions_for_alliance_genotypes.py [-h] [--commit]
-    [-v VERBOSE] [-c CONFIG] [-t TESTING]
+    [-v VERBOSE] [-c CONFIG]
 
 Example:
     python map_alleles_to_insertions_for_alliance_genotypes.py --commit
-    -v -t -c /path/to/config.cfg
+    -v -c /path/to/config.cfg
 
 Notes:
     For each FBal allele, this script determines if it is better represented by
@@ -51,7 +51,8 @@ database = set_up_dict['database']
 username = set_up_dict['username']
 password = set_up_dict['password']
 log = set_up_dict['log']
-TESTING = set_up_dict['testing']
+# TESTING = set_up_dict['testing']    # In this repo, testing means exporting a subset of objects.
+TESTING = False                       # Here, force testing to be False to avoid error. Use --commit below instead.
 
 # Process additional input parameters not handled by the set_up_db_reading() function above.
 parser = argparse.ArgumentParser(description='inputs')
@@ -372,7 +373,7 @@ class AlleleMapper(AlleleHandler):
                         aberration = self.feature_lookup[fbab_rels[0].chado_obj.subject_id]
                         if not aberration['name'].startswith('Df('):
                             fbti_mappable = False
-                            notes.append('Allele has a deficiency and a TI insertion')
+                            notes.append('Allele has a non-deficiency aberration and a TI insertion')
                 # 3. Look at allele name to detect complex allele.
                 allele_name_is_ok, name_check_msg = self.extract_allele_suffix_from_insertion_name(allele.chado_obj.feature_id, distinct_fbti_feature_ids[0])
                 if allele_name_is_ok is False and allele.ignore_atypical_name is False:
