@@ -354,8 +354,10 @@ class GenotypeHandler(object):
             lines_to_write.append(f'\nINPUT GENOTYPE NAME: {geno_anno.input_genotype_name}')
             if geno_anno.curie:
                 lines_to_write.append(f'\tCURIE: FB:{geno_anno.curie}')
+                log.info(f'\tCURIE: FB:{geno_anno.curie}')
             else:
                 lines_to_write.append('\tCURIE:')
+                log.info(f'\tCURIE:')
             if geno_anno.errors:
                 status = 'ERRORS FOUND'
             elif geno_anno.is_new is True:
@@ -363,16 +365,21 @@ class GenotypeHandler(object):
             elif geno_anno.is_new is False:
                 status = 'KNOWN CHADO GENOTYPE'
             lines_to_write.append(f'\tSTATUS: {status}')
+            log.info(ff'\tSTATUS: {status}')
             if geno_anno.uniquename:
                 uniquename_output = geno_anno.uniquename.replace('<up>', '[').replace('</up>', ']')
             else:
                 uniquename_output = ''
             lines_to_write.append(f'\tUNIQUENAME: {uniquename_output}')
+            log.info(f'\tUNIQUENAME: {uniquename_output}')
             lines_to_write.append(f'\tDESCRIPTION: {geno_anno.description}')
+            log.info(f'\tDESCRIPTION: {geno_anno.description}')
             for note in geno_anno.notes:
                 lines_to_write.append(f'\tNOTE: {note}')
+                log.info(f'\tNOTE: {note}')
             for error in geno_anno.errors:
                 lines_to_write.append(f'\tERROR: {error}')
+                log.info(f'\tERROR: {error}')
             lines_to_write.append('')
         for line in lines_to_write:
             report.write(f'{line}')
