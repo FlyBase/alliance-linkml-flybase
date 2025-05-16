@@ -365,7 +365,7 @@ class GenotypeHandler(object):
             elif geno_anno.is_new is False:
                 status = 'KNOWN CHADO GENOTYPE'
             lines_to_write.append(f'\tSTATUS: {status}')
-            log.info(ff'\tSTATUS: {status}')
+            log.info(f'\tSTATUS: {status}')
             if geno_anno.uniquename:
                 uniquename_output = geno_anno.uniquename.replace('<up>', '[').replace('</up>', ']')
             else:
