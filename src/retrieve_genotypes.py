@@ -371,7 +371,7 @@ class GenotypeHandler(object):
             for note in geno_anno.notes:
                 lines_to_write.append(f'\tNOTE: {note}')
             for warning in geno_anno.warnings:
-                lines_to_write.append(f'\WARNING: {warning}')
+                lines_to_write.append(f'\tWARNING: {warning}')
             for error in geno_anno.errors:
                 lines_to_write.append(f'\tERROR: {error}')
             lines_to_write.append('')
