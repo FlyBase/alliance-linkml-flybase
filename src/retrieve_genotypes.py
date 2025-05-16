@@ -107,6 +107,7 @@ def main():
     global FBRF_PUB_ID
     global AGR_TOKEN
     log.info('Running script "{}"'.format(__file__))
+    log.info(f'Print genotype report to this file location: {genotype_report_filename}')
     log.info('STARTED MAIN FUNCTION.\n')
     if GENOTYPE_INPUT:
         genotype_input_list = [GENOTYPE_INPUT]
