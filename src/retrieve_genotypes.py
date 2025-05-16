@@ -349,6 +349,7 @@ class GenotypeHandler(object):
         # now = datetime.datetime.now().strftime("%a %b %d %Y at %H:%M:%S")
         lines_to_write = []
         for geno_anno in self.genotype_annotations:
+            log.info(f'BOB: INPUT GENOTYPE NAME: {geno_anno.input_genotype_name}')
             lines_to_write.append(f'\nINPUT GENOTYPE NAME: {geno_anno.input_genotype_name}')
             if geno_anno.curie:
                 lines_to_write.append(f'\tCURIE: FB:{geno_anno.curie}')
