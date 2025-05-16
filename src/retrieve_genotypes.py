@@ -344,7 +344,7 @@ class GenotypeHandler(object):
 
     def print_curator_genotype_report(self):
         """Print out genotype report."""
-        log.info('Print out genotype report.')
+        log.info('BOB: Print out genotype report.')
         report = open(genotype_report_filename, 'w')
         # now = datetime.datetime.now().strftime("%a %b %d %Y at %H:%M:%S")
         lines_to_write = []
