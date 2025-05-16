@@ -377,12 +377,15 @@ class GenotypeHandler(object):
             for note in geno_anno.notes:
                 lines_to_write.append(f'\tNOTE: {note}')
                 log.info(f'\tNOTE: {note}')
+            for warning in geno_anno.warnings:
+                lines_to_write.append(f'\WARNING: {warning}')
+                log.info(f'\WARNING: {warning}')
             for error in geno_anno.errors:
                 lines_to_write.append(f'\tERROR: {error}')
                 log.info(f'\tERROR: {error}')
             lines_to_write.append('')
         for line in lines_to_write:
-            report.write(f'{line}')
+            # report.write(f'{line}')
             log.info(f'REPORT: {line}')
         return
 
@@ -395,7 +398,7 @@ class GenotypeHandler(object):
         self.find_redundant_genotype_entries()
         self.report_errors()
         self.get_or_create_genotypes(session)
-        self.sync_with_alliance()
+        # self.sync_with_alliance()    # BOB: Turning off sync w/Alliance for dev.
         self.print_curator_genotype_report()
         return
 
