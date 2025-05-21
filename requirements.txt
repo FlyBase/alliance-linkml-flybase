@@ -5,7 +5,8 @@ psycopg2>=2.6.2
 strict_rfc3339==0.7
 tqdm>=4.29.0
 # git+https://github.com/FlyBase/harvdev-utils.git@master#egg=harvdev_utils
-git+https://github.com/FlyBase/harvdev-utils.git@FTA-30#egg=harvdev_utils    # BOB - for testing
+# git+https://github.com/FlyBase/harvdev-utils.git@FTA-30#egg=harvdev_utils    # BOB - for testing
+git+https://github.com/FlyBase/harvdev-utils.git@fbalfbti#egg=harvdev_utils    # BOB - for testing
 
 # Below are additional requirements for harvdev-utils itself (may not be automatically installed by cmd above).
 # bioservices
