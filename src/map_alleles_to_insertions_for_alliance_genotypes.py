@@ -383,7 +383,7 @@ class AlleleMapper(AlleleHandler):
                     notes.append('Unconventional allele name is ok')
                     allele_name_is_ok = True
             if fbti_mappable is True and allele_name_is_ok is True:
-                # insertion = self.feature_lookup[distinct_fbti_feature_ids[0]]    # BOB - I _think_ this is unnecessary, but leaving just in case
+                insertion = self.feature_lookup[distinct_fbti_feature_ids[0]]
                 allele.maps_to_feature_id = insertion['feature_id']
                 mapped_counter += 1
                 mapping_str = f'\t{allele.chado_obj.uniquename}\t{allele.chado_obj.name}\t{insertion["uniquename"]}\t{insertion["name"]}'
