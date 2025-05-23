@@ -201,7 +201,7 @@ class GenotypeHandler(object):
             geno_specific_features = geno_anno.features.keys() - set(self.pub_associated_feature_ids)
             for feature_id in geno_specific_features:
                 input_symbol = geno_anno.features[feature_id]['input_symbol']
-                geno_anno.warnings.append(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')    # BOB: For testing many genotypes, ignore this chk
+                geno_anno.warnings.append(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')    # DEV: For testing many genotypes, ignore this chk
                 # geno_anno.errors.append(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
                 log.error(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
                 no_counter += 1
@@ -269,7 +269,7 @@ class GenotypeHandler(object):
             agr_curie = f'FB:{geno_anno.curie}'
             log.debug(f'Check Alliance for {agr_curie}: {geno_anno}')
             genotype_at_alliance = False
-            get_url = f'https://beta-curation.alliancegenome.org/api/agm/{agr_curie}'    # BOB: Change to prod once implemented.
+            get_url = f'https://beta-curation.alliancegenome.org/api/agm/{agr_curie}'    # DEV: Change to prod once implemented.
             headers = {
                 'accept': 'application/json',
                 'Authorization': f'Bearer {self.agr_token}',
@@ -328,7 +328,7 @@ class GenotypeHandler(object):
                 }
                 json_data = json.dumps(linkml_genotype)
                 log.debug(f'Have this LinkML AGM genotype JSON:\n{json_data}')
-                post_url = 'https://beta-curation.alliancegenome.org/api/agm/'    # BOB: Change to main curation once in production.
+                post_url = 'https://beta-curation.alliancegenome.org/api/agm/'    # DEV: Change to main curation once in production.
                 post_headers = {
                     'Content-Type': 'application/json',
                     'accept': 'application/json',
@@ -388,7 +388,7 @@ class GenotypeHandler(object):
         self.find_redundant_genotype_entries()
         self.report_errors()
         self.get_or_create_genotypes(session)
-        # self.sync_with_alliance()    # BOB: Turning off sync w/Alliance for dev.
+        # self.sync_with_alliance()    # DEV: Turning off sync w/Alliance for dev.
         self.print_curator_genotype_report()
         return
 
