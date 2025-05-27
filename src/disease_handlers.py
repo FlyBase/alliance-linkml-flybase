@@ -924,7 +924,7 @@ class AGMDiseaseHandler(DataHandler):
                         self.driver_dict[alt_unique_key].append(driver_info)
                 else:
                     line_number = driver_info['line_number']
-                    # self.log.warning(f'Could not find dis anno: line={line_number}; unique_key={driver_info["unique_key"]}; line={line}; dict={driver_info}')
+                    self.log.warning(f'Could not find dis anno: line={line_number}; unique_key={driver_info["unique_key"]}; line={line}; dict={driver_info}')
                     prob_msg = 'no matching dis anno'
                     driver_info['problems'].append(prob_msg)
                     self.rejected_driver_info.append(driver_info)
@@ -1272,7 +1272,7 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info('Derive genotypes for final genotype-level disease annotations.')
         counter = 0
         for dis_anno in self.fb_data_entities.values():
-            # self.log.debug(f'Derive genotype for {dis_anno}')
+            self.log.debug(f'Derive genotype for {dis_anno}')
             # Determine if input is allele-level, or, aberration-from-spreadsheet, annotation.
             aberr_anno = True
             if dis_anno.allele_annotations:
@@ -1309,8 +1309,9 @@ class AGMDiseaseHandler(DataHandler):
                     single_cgroup = False
                 elif feature['feature_id'] in self.in_vitro_allele_ids:
                     single_cgroup = False
-                elif feature['feature_id'] in self.misxprn_allele_ids:
-                    single_cgroup = False
+                # This does not make sense for disease annotations, even though misxprn alleles are normally allowed to occupy many cgroups.
+                # elif feature['feature_id'] in self.misxprn_allele_ids:
+                #     single_cgroup = False
                 # Sort transgenic alleles into their own cgroup.
                 if single_cgroup is False:
                     cgroup_dict[curie] = [feature]
@@ -1349,6 +1350,9 @@ class AGMDiseaseHandler(DataHandler):
                 prob_counter += 1
                 continue
             genotype = GenotypeAnnotation(dis_anno.input_genotype_name, session, self.log, dis_anno.internal_pub_id)
+            if genotype.curie is None:
+                self.log.error(f'Could not create genotype for {dis_anno}')
+                continue
             genotype.get_known_or_create_new_genotype(session)
             self.log.debug(f'Got this curie: {genotype.curie}')
             dis_anno.genotype_uniquename = genotype.uniquename.replace('<up>', '[').replace('</up>', ']')
