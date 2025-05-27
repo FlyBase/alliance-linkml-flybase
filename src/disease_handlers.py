@@ -1345,15 +1345,16 @@ class AGMDiseaseHandler(DataHandler):
         prob_counter = 0
         no_counter = 0
         for dis_anno in self.fb_data_entities.values():
+            self.log.debug(f'Get genotype for {dis_anno}')
             if not dis_anno.input_genotype_name:
                 self.log.error(f'No input_genotype_name for {dis_anno}')
                 prob_counter += 1
                 continue
             genotype = GenotypeAnnotation(dis_anno.input_genotype_name, session, self.log, dis_anno.internal_pub_id)
+            genotype.get_known_or_create_new_genotype(session)
             if genotype.curie is None:
                 self.log.error(f'Could not create genotype for {dis_anno}')
                 continue
-            genotype.get_known_or_create_new_genotype(session)
             self.log.debug(f'Got this curie: {genotype.curie}')
             dis_anno.genotype_uniquename = genotype.uniquename.replace('<up>', '[').replace('</up>', ']')
             dis_anno.genotype_curie = genotype.curie
