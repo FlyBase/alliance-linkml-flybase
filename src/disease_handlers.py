@@ -1506,9 +1506,10 @@ class AGMDiseaseHandler(DataHandler):
                 continue
             # Asserted alleles.
             dis_anno.asserted_allele_ids.sort()
-            # BOB: for now, we specify one asserted allele, but this needs to change to a list (in progress at Alliance).
-            dis_anno.linkmldto.asserted_allele_identifier = self.feature_lookup[dis_anno.asserted_allele_ids[0]]['curie']
-            # dis_anno.linkmldto.asserted_allele_identifiers = [self.feature_lookup[i]['curie'] for i in dis_anno.asserted_allele_ids]    # BOB: for later.
+            # For agr_curation_schema <= v2.10.0.
+            # dis_anno.linkmldto.asserted_allele_identifier = self.feature_lookup[dis_anno.asserted_allele_ids[0]]['curie']
+            # For agr_curation_schema >= v2.11.0:
+            dis_anno.linkmldto.asserted_allele_identifiers = [self.feature_lookup[i]['curie'] for i in dis_anno.asserted_allele_ids]
             # Asserted genes.
             for gene_feature_id in dis_anno.asserted_gene_ids:
                 gene = self.feature_lookup[gene_feature_id]
