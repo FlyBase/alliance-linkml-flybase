@@ -1359,6 +1359,7 @@ class AGMDiseaseHandler(DataHandler):
             dis_anno.genotype_uniquename = genotype.uniquename.replace('<up>', '[').replace('</up>', ']')
             dis_anno.genotype_curie = genotype.curie
             dis_anno.genotype_desc = genotype.description
+            dis_anno.input_features_replaced = genotype.input_features_replaced
             if genotype.curie is None:
                 no_counter += 1
             else:
@@ -1400,9 +1401,13 @@ class AGMDiseaseHandler(DataHandler):
         for dis_anno in self.fb_data_entities.values():
             if dis_anno.for_export is False:
                 continue
-            # Determine asserted alleles.
+            # Determine asserted alleles (converting to FBti ID where needed).
             for fbal_id in dis_anno.modeled_by:
-                dis_anno.asserted_allele_ids.append(self.uname_feature_lookup[fbal_id]['feature_id'])
+                try:
+                    new_fbti_id = dis_anno.input_features_replaced(fbal_id)
+                    dis_anno.asserted_allele_ids.append(self.uname_feature_lookup[new_fbti_id]['feature_id'])
+                except KeyError:
+                    dis_anno.asserted_allele_ids.append(self.uname_feature_lookup[fbal_id]['feature_id'])
             dis_anno.asserted_allele_ids = list(set(dis_anno.asserted_allele_ids))
             # Determine asserted genes.
             for fbal_id in dis_anno.modeled_by:
