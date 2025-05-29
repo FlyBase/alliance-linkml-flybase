@@ -1390,7 +1390,7 @@ class AGMDiseaseHandler(DataHandler):
         self.propagate_allele_to_genotype_attributes()
         self.parse_aberration_info(session)
         self.derive_genotypes()
-        # self.get_genotypes(session)    # BOB - TURN OFF FOR TESTING
+        self.get_genotypes(session)
         return
 
     # Add methods to be run by synthesize_info() below.
