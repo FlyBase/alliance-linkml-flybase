@@ -1333,7 +1333,7 @@ class AGMDiseaseHandler(DataHandler):
                 cgroup_name = '/'.join([i['name'] for i in cgroup])
                 cgroup_names.append(cgroup_name)
             dis_anno.input_genotype_name = ' '.join(cgroup_names)
-            self.log.debug(f'For {dis_anno}:\n\tgenotype input name: {dis_anno.input_genotype_name}')
+            self.log.debug(f'For {dis_anno}, we have genotype input name: {dis_anno.input_genotype_name}')
             counter += 1
         self.log.info(f'Derived genotype names for {counter} disease annotations.')
         return
@@ -1395,6 +1395,18 @@ class AGMDiseaseHandler(DataHandler):
         return
 
     # Add methods to be run by synthesize_info() below.
+    def flag_unexportable_annotations(self):
+        """Flag internal annotations."""
+        self.log.info('Flag internal annotations.')
+        no_export_counter = 0
+        for dis_anno in self.fb_data_entities.values():
+            if dis_anno.genotype_curie is None:
+                dis_anno.for_export = False
+                dis_anno.export_warnings.append('Could not determine genotype')
+                no_export_counter += 1
+        self.log.info(f'{no_export_counter} annotations flagged as unexportable in early checking.')
+        return
+
     def add_asserted_genes_alleles(self):
         """Add asserted genes and alleles."""
         self.log.info('Add asserted genes and alleles.')
@@ -1477,6 +1489,7 @@ class AGMDiseaseHandler(DataHandler):
     def synthesize_info(self):
         """Extend the method for the AGMDiseaseHandler."""
         super().synthesize_info()
+        self.flag_unexportable_annotations()
         self.add_asserted_genes_alleles()
         self.print_curator_report()
         return
