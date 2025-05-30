@@ -8,7 +8,7 @@ RUN mkdir /src/output/
 RUN mkdir /src/temp/
 
 # This Dockerfile combines stuff from two repos.
-# The ADD commands assume that repos are in specific folders in GoCD.
+# This Dockerfile should be run from a directory in which both repos are present and named accordingly.
 
 # 1. FlyBase scripts.
 ADD git_alliance-linkml-flybase/requirements.txt                              /src/requirements.txt
