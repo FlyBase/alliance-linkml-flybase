@@ -1404,7 +1404,7 @@ class AGMDiseaseHandler(DataHandler):
             # Determine asserted alleles (converting to FBti ID where needed).
             for fbal_id in dis_anno.modeled_by:
                 try:
-                    new_fbti_id = dis_anno.input_features_replaced(fbal_id)
+                    new_fbti_id = dis_anno.input_features_replaced[fbal_id]
                     dis_anno.asserted_allele_ids.append(self.uname_feature_lookup[new_fbti_id]['feature_id'])
                 except KeyError:
                     dis_anno.asserted_allele_ids.append(self.uname_feature_lookup[fbal_id]['feature_id'])
