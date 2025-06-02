@@ -72,7 +72,9 @@ genotype_report_filename = '/src/logs/genotypes_retrieved.report'
 log = set_up_dict['log']
 TESTING = set_up_dict['testing']
 AGR_TOKEN = os.environ['ALLIANCETOKEN']
-
+if not AGR_TOKEN:
+    raise ValueError("ALLIANCETOKEN environment variable is required")
+AGR_BASE_URL = os.environ.get('AGR_BASE_URL', 'https://curation.alliancegenome.org')
 
 # Create SQL Alchemy engines from environmental variables.
 engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server + '/' + database
@@ -201,8 +203,8 @@ class GenotypeHandler(object):
             geno_specific_features = geno_anno.features.keys() - set(self.pub_associated_feature_ids)
             for feature_id in geno_specific_features:
                 input_symbol = geno_anno.features[feature_id]['input_symbol']
-                geno_anno.warnings.append(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')    # DEV: For testing many genotypes, ignore this chk
-                # geno_anno.errors.append(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
+                # geno_anno.warnings.append(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')    # DEV: For testing many genotypes, ignore this chk
+                geno_anno.errors.append(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
                 log.error(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
                 no_counter += 1
         if no_counter > 0:
@@ -269,7 +271,7 @@ class GenotypeHandler(object):
             agr_curie = f'FB:{geno_anno.curie}'
             log.debug(f'Check Alliance for {agr_curie}: {geno_anno}')
             genotype_at_alliance = False
-            get_url = f'https://beta-curation.alliancegenome.org/api/agm/{agr_curie}'    # DEV: Change to prod once implemented.
+            get_url = f'{AGR_BASE_URL}/api/agm/{agr_curie}'
             headers = {
                 'accept': 'application/json',
                 'Authorization': f'Bearer {self.agr_token}',
@@ -328,7 +330,7 @@ class GenotypeHandler(object):
                 }
                 json_data = json.dumps(linkml_genotype)
                 log.debug(f'Have this LinkML AGM genotype JSON:\n{json_data}')
-                post_url = 'https://beta-curation.alliancegenome.org/api/agm/'    # DEV: Change to main curation once in production.
+                post_url = f'{AGR_BASE_URL}/api/agm/'
                 post_headers = {
                     'Content-Type': 'application/json',
                     'accept': 'application/json',
@@ -347,7 +349,6 @@ class GenotypeHandler(object):
         """Print out genotype report."""
         log.info('Print out genotype report.')
         report = open(genotype_report_filename, 'w')
-        # now = datetime.datetime.now().strftime("%a %b %d %Y at %H:%M:%S")
         lines_to_write = []
         for geno_anno in self.genotype_annotations:
             lines_to_write.append(f'\nINPUT GENOTYPE NAME: {geno_anno.input_genotype_name}')
@@ -388,7 +389,7 @@ class GenotypeHandler(object):
         self.find_redundant_genotype_entries()
         self.report_errors()
         self.get_or_create_genotypes(session)
-        # self.sync_with_alliance()    # DEV: Turning off sync w/Alliance for dev.
+        self.sync_with_alliance()
         self.print_curator_genotype_report()
         return
 

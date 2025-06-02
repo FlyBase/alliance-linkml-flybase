@@ -106,7 +106,6 @@ except SystemExit as e:
     sys.exit(e.code)
 
 # Open config for chado communication.
-# DEV: Ensure database is "production_chado" for real production implementation.
 config = configparser.ConfigParser()
 config.read('/data/credentials/production/config.cfg')
 server = config['chiacur']['Server']
@@ -119,8 +118,7 @@ if database != 'production_chado':
     print(f'WARNING: Script is running on test database {database}, not "production_chado". Contact HarvDev if trying to use this script for real.')
 
 # Check for the necessary docker image.
-# DEV: Ensure image_name is "export_to_linkml" for real production implementation.
-image_name = 'test_export_to_linkml'
+image_name = 'export_to_linkml'
 check_docker_image_exists(image_name)
 if image_name != 'export_to_linkml':
     print(f'WARNING: Script is using a test docker image {image_name}, not "export_to_linkml". Contact HarvDev if trying to use this script for real.')
