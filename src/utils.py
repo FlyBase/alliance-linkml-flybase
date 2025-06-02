@@ -25,6 +25,7 @@ def export_chado_data(session: Session, log: Logger, object_to_execute: DataHand
 
     Kwargs:
         reference_session (Session|None): SQLAlchemy session for an earlier reference database (for incremental export).
+        testing (boolean): If testing is False, any db writes are committed. Default is testing=True.
 
     Raises:
         Raises a RuntimeError if there are problems with executing the query.
@@ -37,6 +38,9 @@ def export_chado_data(session: Session, log: Logger, object_to_execute: DataHand
             kwargs['reference_session'].rollback()
             log.critical('Critical transaction error occurred during reference db chado query; rolling back and exiting.')
             raise
+    testing = True
+    if 'testing' in kwargs.keys() and kwargs['testing'] is False:
+        testing = False
     try:
         object_to_execute.query_chado_and_export(session)
         session.flush()
@@ -44,6 +48,12 @@ def export_chado_data(session: Session, log: Logger, object_to_execute: DataHand
         session.rollback()
         log.critical('Critical transaction error occurred during main chado query; rolling back and exiting.')
         raise
+    if testing is True:
+        log.info('Since "testing" is True, rolling back all transactions.')
+        session.rollback()
+    else:
+        log.info('Since "testing" is False, committing transactions.')
+        session.commit()
     return
 
 

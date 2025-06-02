@@ -54,19 +54,24 @@ class DataHandler(object):
         self.primary_agr_ingest_type = None         # Will be name of the Alliance ingest set: e.g., 'gene_ingest_set'.
         # Datatype bins.
         self.fb_data_entities = {}                  # db_primary_id-keyed dict of chado objects to export.
-        self.fb_reference_entity_ids = []           # A list of db_primary_ids for current entities in a previous reference db (for incremental updates).
-        self.export_data = {}                       # agr_ingest_set_name-keyed lists of data objects for export.
+        self.fb_reference_entity_ids = []           # A list of db_primary_ids for current entities in a previous reference db (incremental updates).
+        self.export_data = {}                       # agr_ingest_set_name-keyed list of data objects for export.
         # General data bins.
         self.bibliography = {}                      # A pub_id-keyed dict of pub curies (PMID, or, FBrf if no PMID).
+        self.fbrf_bibliography = {}                 # An FBrf_id-keyed dict of chado Pub objects, current pubs only.
         self.cvterm_lookup = {}                     # A cvterm_id-keyed dict of dicts with these keys: 'name', 'cv_name', 'db_name', 'curie'.
         self.organism_lookup = {}                   # An organism_id-keyed dict of organism info.
         self.chr_dict = {}                          # Will be a feature_id-keyed dict of chr scaffold uniquenames.
-        self.feature_lookup = {}                    # feature_id-keyed dict of uniquename, curie, is_obsolete, type, organism_id, name, symbol, exported.
+        self.feature_lookup = {}                    # feature_id-keyed dicts {uniquename, curie, is_obsolete, type, organism_id, name, symbol, exported}.
+        self.uname_feature_lookup = {}              # FB uniquename-keyed dicts of self.feature_lookup.values().
         self.allele_gene_lookup = {}                # allele feature_id-keyed dict of related gene feature_id (current features only).
         self.seqfeat_gene_lookup = {}               # Will be seqfeat feature_id-keyed lists of gene feature_ids (current features only).
         self.gene_tool_lookup = {}                  # Will be gene feature_id-keyed lists of related FBto tools (current features only).
-        self.internal_gene_ids = []                 # FBgn IDs for FlyBase genes that should be internal at the Alliance: e.g., 'engineered_fusion_gene'
-        self.transgenic_allele_class_lookup = {}    # Will be an allele feature_id-keyed list of "transgenic product class" CV terms (current features only).
+        self.internal_gene_ids = []                 # FBgn IDs for genes that should be internal at the Alliance: e.g., 'engineered_fusion_gene'
+        self.transgenic_allele_class_lookup = {}    # Allele feature_id-keyed list of "transgenic product class" CV terms (current features only).
+        self.transgenic_allele_ids = []             # feature_ids for alleles related to FBtp constructs.
+        self.in_vitro_allele_ids = []               # feature_ids for alleles having "in vitro construct" annotations.
+        self.gene_mod_curie_lookup = {}             # FlyBase gene feature.uniquename-keyed MOD curie (1:1).
         # Trackers.
         self.input_count = 0                        # Count of entities found in FlyBase chado database.
         self.export_count = 0                       # Count of exported Alliance entities.
@@ -158,7 +163,7 @@ class DataHandler(object):
         'chemical': ['chemical entity'],
         'construct': ['engineered_transposable_element', 'engineered_region', 'transgenic_transposable_element'],
         'gene': ['gene'],
-        'insertion': ['insertion_site', 'transposable_element', 'transposable_element_insertion_site'],
+        'insertion': ['insertion_site', 'transposable_element', 'transposable_element_insertion_site'],    # Excludes internal "match" (name=FBti ID).
         'seqfeat': None,    # The list is too long, so for this case let the code be flexible.
         'tool': ['engineered_region'],
         'transposon': ['natural_transposable_element'],
@@ -210,6 +215,7 @@ class DataHandler(object):
             distinct()
         pub_counter = 0
         for pub in results:
+            self.fbrf_bibliography[pub.uniquename] = pub
             self.bibliography[pub.pub_id] = f'FB:{pub.uniquename}'
             pub_counter += 1
         # Next find PMIDs if available and replace the curie in the bibliography.
@@ -269,6 +275,7 @@ class DataHandler(object):
         cvterm_counter = 0
         for result in results:
             cvterm_dict = {
+                'cvterm_id': result.cvterm_id,
                 'name': result.name,
                 'cv_name': result.cv.name,
                 'db_name': result.dbxref.db.name,
@@ -348,8 +355,8 @@ class DataHandler(object):
         return cvterm_id_list
 
     def build_organism_lookup(self, session):
-        """Build organism lookup."""
-        self.log.info('Build organism lookup.')
+        """Build organism lookup and look up official MOD chado db for each."""
+        self.log.info('Build organism lookup and look up official MOD chado db for each.')
         # First, get basic organism table info.
         organism_results = session.query(Organism).distinct()
         counter = 0
@@ -485,6 +492,7 @@ class DataHandler(object):
             feat_counter = 0
             for result in feat_results:
                 feat_dict = {
+                    'feature_id': result[FEATURE_ID],
                     'uniquename': result[UNIQUENAME],
                     'curie': f'FB:{result[UNIQUENAME]}',    # Replaced by MOD curies as applicable down below.
                     'is_obsolete': result[OBSOLETE],
@@ -545,6 +553,7 @@ class DataHandler(object):
                     )
                     results = session.query(FeatureDbxref, Dbxref).\
                         select_from(Feature).\
+                        join(Organism, (Organism.organism_id == Feature.organism_id)).\
                         join(FeatureDbxref, (FeatureDbxref.feature_id == Feature.feature_id)).\
                         join(Dbxref, (Dbxref.dbxref_id == FeatureDbxref.dbxref_id)).\
                         join(Db, (Db.db_id == Dbxref.db_id)).\
@@ -553,9 +562,23 @@ class DataHandler(object):
                     counter = 0
                     db_prefix = self.fb_agr_db_dict[mod_db_name]
                     for result in results:
-                        self.feature_lookup[result.FeatureDbxref.feature_id]['curie'] = f'{db_prefix}:{result.Dbxref.accession}'
+                        accession = result.Dbxref.accession
+                        if db_prefix == 'MGI':
+                            accession = accession.replace('MGI:', '')
+                        self.feature_lookup[result.FeatureDbxref.feature_id]['curie'] = f'{db_prefix}:{accession}'
                         counter += 1
                     self.log.info(f'Obtained {counter} MOD curies for {org_abbr} ({mod_db_name}).')
+        return
+
+    def build_uname_feature_lookup(self):
+        """Build a FB uniquename-keyed dict of features from a previously generated feature_id-keyed dict."""
+        self.log.info('Build a FB uniquename-keyed dict of features from a feature_id-keyed dict.')
+        if not self.feature_lookup:
+            error_msg = 'Must run handler.build_feature_lookup() before running handler.build_uname_feature_lookup().'
+            self.log.error(error_msg)
+            raise Exception(error_msg)
+        for feature_dict in self.feature_lookup.values():
+            self.uname_feature_lookup[feature_dict['uniquename']] = feature_dict
         return
 
     def get_internal_genes(self, session):
@@ -752,6 +775,100 @@ class DataHandler(object):
                 self.transgenic_allele_class_lookup[result.feature_id].append('RNAi_reagent')
                 counter += 1
         self.log.info(f'Found an additional {counter} RNAi reagent alleles via mutagen terms.')
+        return
+
+    def get_dmel_insertion_allele_ids(self, session):
+        """Get feature_ids for alleles related to Dmel FBti insertions."""
+        self.log.info('Get feature_ids for alleles related to Dmel FBti insertions.')
+        insertion = aliased(Feature, name='insertion')
+        allele = aliased(Feature, name='allele')
+        fr_types = ['associated_with', 'progenitor']
+        filters = (
+            insertion.is_obsolete.is_(False),
+            insertion.uniquename.op('~')(self.regex['insertion']),
+            Organism.abbreviation == 'Dmel',
+            allele.is_obsolete.is_(False),
+            allele.uniquename.op('~')(self.regex['allele']),
+            Cvterm.name.in_((fr_types)),
+        )
+        results = session.query(allele).\
+            select_from(allele).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
+            join(insertion, (insertion.feature_id == FeatureRelationship.object_id)).\
+            join(Organism, (Organism.organism_id == insertion.organism_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+        for result in results:
+            self.dmel_insertion_allele_ids.append(result.feature_id)
+        self.dmel_insertion_allele_ids = list(set(self.dmel_insertion_allele_ids))
+        self.log.info(f'Found {len(self.dmel_insertion_allele_ids)} alleles related to Dmel FBti insertions.')
+        return
+
+    def get_transgenic_allele_ids(self, session):
+        """Get feature_ids for alleles related to FBtp constructs."""
+        self.log.info('Get feature_ids for alleles related to FBtp constructs.')
+        construct = aliased(Feature, name='construct')
+        allele = aliased(Feature, name='allele')
+        fr_types = ['derived_tp_assoc_alleles', 'associated_with']
+        filters = (
+            construct.is_obsolete.is_(False),
+            construct.uniquename.op('~')(self.regex['construct']),
+            allele.is_obsolete.is_(False),
+            allele.uniquename.op('~')(self.regex['allele']),
+            Cvterm.name.in_((fr_types)),
+        )
+        results = session.query(allele).\
+            select_from(allele).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
+            join(construct, (construct.feature_id == FeatureRelationship.object_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+        for result in results:
+            self.transgenic_allele_ids.append(result.feature_id)
+        self.transgenic_allele_ids = list(set(self.transgenic_allele_ids))
+        self.log.info(f'Found {len(self.transgenic_allele_ids)} alleles related to FBtp constructs.')
+        return
+
+    def get_in_vitro_allele_ids(self, session):
+        """Get feature_ids for alleles having "in vitro construct" annotations."""
+        self.log.info('Get feature_ids for alleles having "in vitro construct" annotations.')
+        filters = (
+            Feature.is_obsolete.is_(False),
+            Feature.uniquename.op('~')(self.regex['allele']),
+            Cvterm.name == 'in vitro construct',
+        )
+        results = session.query(Feature).\
+            select_from(Feature).\
+            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
+            filter(*filters).\
+            distinct()
+        for result in results:
+            self.in_vitro_allele_ids.append(result.feature_id)
+        self.in_vitro_allele_ids = list(set(self.in_vitro_allele_ids))
+        self.log.info(f'Found {len(self.in_vitro_allele_ids)} alleles annotated as "in vitro construct".')
+        return
+
+    def get_introgressed_aberration_ids(self, session):
+        """Get feature_ids for introgressed_chromosome aberrations."""
+        self.log.info('Get feature_ids for introgressed_chromosome aberrations.')
+        filters = (
+            Feature.is_obsolete.is_(False),
+            Feature.uniquename.op('~')(self.regex['aberration']),
+            Cvterm.name == 'introgressed_chromosome_region',
+        )
+        results = session.query(Feature).\
+            select_from(Feature).\
+            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
+            filter(*filters).\
+            distinct()
+        for result in results:
+            self.introgressed_aberr_ids.append(result.feature_id)
+        self.introgressed_aberr_ids = list(set(self.introgressed_aberr_ids))
+        self.log.info(f'Found {len(self.introgressed_aberr_ids)} aberrations annotated as "introgressed_chromosome_region".')
         return
 
     # The get_general_data() wrapper; sub-methods are defined and called in more specific DataHandler types.
