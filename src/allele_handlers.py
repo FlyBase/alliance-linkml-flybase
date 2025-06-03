@@ -13,7 +13,7 @@ from logging import Logger
 # from sqlalchemy.orm import aliased
 import agr_datatypes
 from fb_datatypes import (
-    FBAberration, FBAllele, FBBalancer, FBInsertion
+    FBAberration, FBAllele, FBBalancer
 )
 from feature_handler import FeatureHandler
 from harvdev_utils.reporting import (
@@ -591,7 +591,7 @@ class InsertionHandler(MetaAlleleHandler):
         """Create the InsertionHandler object."""
         super().__init__(log, testing)
         self.datatype = 'insertion'
-        self.fb_export_type = FBInsertion
+        self.fb_export_type = FBAllele
 
     # Types: 228747 transposable_element_insertion_site; 7726 insertion_site; 5753 transposable element; 3573 match (internal).
     # Relationships: 234754 FBti(producedby)FBtp; 64920 FBal(associated_with)FBti.

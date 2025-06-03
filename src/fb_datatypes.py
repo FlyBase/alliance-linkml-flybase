@@ -286,7 +286,7 @@ class FBAberration(FBFeature):
 
 
 class FBAllele(FBFeature):
-    """A FlyBase allele entity with all its related data."""
+    """A FlyBase allele/insertion entity with all its related data."""
     def __init__(self, chado_obj):
         """Create the FBAllele object."""
         super().__init__(chado_obj)
@@ -346,11 +346,12 @@ class FBGene(FBFeature):
         self.gene_type_id = 'SO:0000704'    # Update this default gene ID to SO term ID from "promoted_gene_type" Featureprop, if available.
 
 
-class FBInsertion(FBFeature):
-    """A FlyBase insertion entity with all its related data."""
-    def __init__(self, chado_obj):
-        """Create the FBInsertion object."""
-        super().__init__(chado_obj)
+# BOB - cue this object for deletion (use FBAllele instead).
+# class FBInsertion(FBFeature):
+#     """A FlyBase insertion entity with all its related data."""
+#     def __init__(self, chado_obj):
+#         """Create the FBInsertion object."""
+#         super().__init__(chado_obj)
 
 
 class FBStrain(FBDataEntity):
