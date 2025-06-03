@@ -129,6 +129,8 @@ class AlleleHandler(MetaAlleleHandler):
         super().__init__(log, testing)
         self.datatype = 'allele'
         self.fb_export_type = FBAllele
+        self.fbti_entitites = {}    # Will be feature_id-keyed FBAllele objects generated from FBti insertions.
+        self.fbti_fbal_dict = {}    # Will be FBti-feature_id keys, with lists of FBal feature_ids to be replaced.
 
     test_set = {
         'FBal0137236': 'gukh[142]',             # Insertion allele, part of TI_set_P{hsneo}.BDGP collection.
@@ -181,7 +183,7 @@ class AlleleHandler(MetaAlleleHandler):
         self.build_cvterm_lookup(session)
         self.build_organism_lookup(session)
         self.get_key_cvterm_sets(session)
-        self.build_feature_lookup(session, feature_types=['construct', 'gene', 'insertion', 'variation'])
+        self.build_feature_lookup(session, feature_types=['construct', 'gene', 'insertion', 'variation', 'transposon'])
         self.get_internal_genes(session)
         return
 
@@ -241,6 +243,19 @@ class AlleleHandler(MetaAlleleHandler):
         self.log.info(f'Found {counter} allele phenotypes from single locus genotypes.')
         return
 
+    def get_fbal_fbti_replacements(self, session):
+        """Build allele-insertion replacement lookup."""
+        self.log.info('Build allele-insertion replacement lookup.')
+        # BOB: Build self.fbti_fbal_dict
+        return
+
+    def get_insertion_entities(self, session):
+        """Have the AlleleHandler run the InsertionHandler."""
+        self.log.info('Have the AlleleHandler run the InsertionHandler.')
+        # BOB: run insertion handler
+        # BOB: Copy InsertionHandler.fb_data_entities to AlleleHandler.fbti_entities.
+        return
+
     # Elaborate on get_datatype_data() for the AlleleHandler.
     def get_datatype_data(self, session):
         """Extend the method for the AlleleHandler."""
@@ -265,14 +280,114 @@ class AlleleHandler(MetaAlleleHandler):
         self.get_very_indirect_reagent_collections(session)
         self.get_phenotypes(session)
         self.find_in_vitro_alleles(session)
+        self.get_fbal_fbti_replacements(session)
+        self.get_insertion_entities(session)
         return
 
     # Additional sub-methods to be run by synthesize_info() below.
+    def merge_fbti_fbal(self):
+        """Merge FBal allele info into FBti insertion entities as appropriate."""
+        self.log.info('Merge FBal allele info into FBti insertion entities as appropriate.')
+        lists_to_extend = [
+            'dbxrefs',
+            'export_warnings',
+            'fb_sec_dbxrefs',
+            'internal_reasons',
+            'new_timestamps',
+            'phenstatements',
+            'pub_associations',
+            'synonyms',
+            'timestamps',
+        ]
+        dicts_to_add = [
+            'props_by_type',
+            'cvt_anno_ids_by_cv',
+            'cvt_anno_ids_by_prop',
+            'cvt_anno_ids_by_term',
+            'cvt_annos_by_id',
+            'obj_rel_ids_by_type',
+            'rels_by_id',
+            'sbj_rel_ids_by_type',
+        ]
+        for insertion in self.fbti_entities:
+            if insertion.db_primary_id not in self.fbti_fbal_dict.keys():
+                self.fb_data_entities[insertion.db_primary_id] = insertion
+                continue
+            for fbal_feature_id in self.fbti_fbal_dict[insertion.db_primary_id]:
+                allele = self.fb_data_entities[fbal_feature_id]
+                for attr_name in lists_to_extend:
+                    allele_list = getattr(allele, attr_name)
+                    insertion_list = getattr(insertion, attr_name)
+                    insertion_list.extend(allele_list)
+                insertion.alt_fb_ids.append('FB:{allele.uniquename}')
+                for attr_name in dicts_to_add:
+                    allele_dict = getattr(allele, attr_name)
+                    insertion_dict = getattr(insertion, attr_name)
+                    for k, v in allele_dict.items():
+                        try:
+                            insertion_dict[k].extend(v)
+                        except KeyError:
+                            insertion_dict[k] = v
+                allele.superceded_by_insertion = True
+                allele.for_export = False
+                allele.export_warnings.append('Superceded by FBti insertion')
+            self.fb_data_entities[insertion.db_primary_id] = insertion
+        return
+
+    def synthesize_related_features(self):
+        """Synthesize allele attributes based on related features."""
+        self.log.info('Synthesize allele attributes based on related features.')
+        has_construct_counter = 0
+        has_dmel_insertion_counter = 0
+        has_non_dmel_insertion_counter = 0
+        has_args_counter = 0
+        for allele in self.fb_data_entities.values():
+            # BOB  - REWORK ALL OF THIS TO HANDLE FBAL AND FBTI
+            # Assess relationships to current constructs.
+            relevant_cons_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='derived_tp_assoc_alleles',
+                                                             rel_entity_types=self.feature_subtypes['construct'])
+            # self.log.debug(f'For {allele}, found {len(relevant_cons_rels)} cons rels to review.')
+            for cons_rel in relevant_cons_rels:
+                construct = self.feature_lookup[cons_rel.chado_obj.object_id]
+                if construct['is_obsolete'] is False and construct['uniquename'].startswith('FBtp'):
+                    allele.cons_rels.append(cons_rel)
+                    has_construct_counter += 1
+            # Assess relationships to ARGs.
+            relevant_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='partof', rel_entity_types=self.feature_subtypes['variation'])
+            # self.log.debug(f'For {allele}, found {len(relevant_rels)} partof relationships to ARGs.')
+            for arg_rel in relevant_rels:
+                arg = self.feature_lookup[arg_rel.chado_obj.subject_id]
+                if arg['is_obsolete'] is False:
+                    allele.arg_rels.append(arg_rel)
+                    has_args_counter += 1
+            # Assess relationships to current insertions.
+            relevant_ins_rels = allele.recall_relationships(self.log, entity_role='subject', rel_entity_types=self.feature_subtypes['insertion'])
+            # self.log.debug(f'For {allele}, found {len(relevant_ins_rels)} ins rels to review.')
+            for ins_rel in relevant_ins_rels:
+                insertion = self.feature_lookup[ins_rel.chado_obj.object_id]
+                if insertion['is_obsolete'] is False and insertion['uniquename'].startswith('FBti'):
+                    if self.organism_lookup[insertion['organism_id']]['abbreviation'] == 'Dmel':
+                        # self.log.debug(f'{allele} has Dmel insertion.')
+                        allele.dmel_ins_rels.append(ins_rel)
+                        has_dmel_insertion_counter += 1
+                    else:
+                        # self.log.debug(f'{allele} has non-Dmel insertion.')
+                        allele.non_dmel_ins_rels.append(ins_rel)
+                        has_non_dmel_insertion_counter += 1
+        self.log.info(f'Found {has_construct_counter} alleles related to a construct.')
+        self.log.info(f'Found {has_dmel_insertion_counter} alleles related to a Dmel insertion.')
+        self.log.info(f'Found {has_non_dmel_insertion_counter} alleles related to a non-Dmel insertion.')
+        self.log.info(f'Found {has_args_counter} alleles related to a mapped variation feature (ARGs).')
+        return
+
     def synthesize_parent_genes(self):
         """Get allele parent gene IDs."""
         self.log.info('Get allele parent gene IDs.')
         allele_counter = 0
         for allele in self.fb_data_entities.values():
+            # Skip transgenic alleles since gene relationships will be reported via Construct/Cassette submissions.
+            if allele.cons_rels:
+                continue
             parent_gene_ids = []
             relevant_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='alleleof', rel_entity_types='gene')
             # self.log.debug(f'For {allele}, found {len(relevant_rels)} alleleof relationships to genes.')
@@ -301,56 +416,14 @@ class AlleleHandler(MetaAlleleHandler):
         self.log.info(f'Flagged {counter} alleles as related to internal genes.')
         return
 
-    def synthesize_related_features(self):
-        """Synthesize allele attributes based on related features."""
-        self.log.info('Synthesize allele attributes based on related features.')
-        has_construct_counter = 0
-        has_dmel_insertion_counter = 0
-        has_non_dmel_insertion_counter = 0
-        has_args_counter = 0
-        for allele in self.fb_data_entities.values():
-            # Assess relationships to current constructs.
-            relevant_cons_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='derived_tp_assoc_alleles',
-                                                             rel_entity_types=self.feature_subtypes['construct'])
-            # self.log.debug(f'For {allele}, found {len(relevant_cons_rels)} cons rels to review.')
-            for cons_rel in relevant_cons_rels:
-                construct = self.feature_lookup[cons_rel.chado_obj.object_id]
-                if construct['is_obsolete'] is False and construct['uniquename'].startswith('FBtp'):
-                    allele.cons_rels.append(cons_rel)
-                    has_construct_counter += 1
-            # Assess relationships to current insertions.
-            relevant_ins_rels = allele.recall_relationships(self.log, entity_role='subject', rel_entity_types=self.feature_subtypes['insertion'])
-            # self.log.debug(f'For {allele}, found {len(relevant_ins_rels)} ins rels to review.')
-            for ins_rel in relevant_ins_rels:
-                insertion = self.feature_lookup[ins_rel.chado_obj.object_id]
-                if insertion['is_obsolete'] is False and insertion['uniquename'].startswith('FBti'):
-                    if self.organism_lookup[insertion['organism_id']]['abbreviation'] == 'Dmel':
-                        # self.log.debug(f'{allele} has Dmel insertion.')
-                        allele.dmel_ins_rels.append(ins_rel)
-                        has_dmel_insertion_counter += 1
-                    else:
-                        # self.log.debug(f'{allele} has non-Dmel insertion.')
-                        allele.non_dmel_ins_rels.append(ins_rel)
-                        has_non_dmel_insertion_counter += 1
-            # Assess relationships to ARGs.
-            relevant_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='partof', rel_entity_types=self.feature_subtypes['variation'])
-            # self.log.debug(f'For {allele}, found {len(relevant_rels)} partof relationships to ARGs.')
-            for arg_rel in relevant_rels:
-                arg = self.feature_lookup[arg_rel.chado_obj.subject_id]
-                if arg['is_obsolete'] is False:
-                    allele.arg_rels.append(arg_rel)
-                    has_args_counter += 1
-        self.log.info(f'Found {has_construct_counter} alleles related to a construct.')
-        self.log.info(f'Found {has_dmel_insertion_counter} alleles related to a Dmel insertion.')
-        self.log.info(f'Found {has_non_dmel_insertion_counter} alleles related to a non-Dmel insertion.')
-        self.log.info(f'Found {has_args_counter} alleles related to a mapped variation feature (ARGs).')
-        return
-
     def adjust_allele_organism(self):
         """Adjust organism for classical non-Dmel alleles."""
         self.log.info('Adjust organism for classical non-Dmel alleles.')
         counter = 0
         for allele in self.fb_data_entities.values():
+            # Ignore for insertions.
+            if allele.uniquename.startswith('FBti'):
+                continue
             # SET ALL ALLELES TO HAVE DEFAULT "Dmel" ORGANISM.
             allele.organism_id = 1
             # Skip alleles that exist in Dmel (certainly or most likely).
@@ -389,6 +462,11 @@ class AlleleHandler(MetaAlleleHandler):
         allele_counter = 0
         # Need to code for the rare possibility that gene-allele is represented by many feature_relationships.
         for allele in self.fb_data_entities.values():
+            if allele.superceded_by_insertion is True:
+                continue
+            # Skip transgenic alleles.
+            elif allele.uniquename.startswith('FBti') and allele.name.endswith('unspecified'):
+                continue
             relevant_gene_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='alleleof', rel_entity_types='gene')
             if relevant_gene_rels:
                 allele_counter += 1
@@ -408,13 +486,14 @@ class AlleleHandler(MetaAlleleHandler):
     def synthesize_info(self):
         """Extend the method for the AlleleHandler."""
         super().synthesize_info()
+        self.merge_fbti_fbal()
         self.flag_new_additions_and_obsoletes()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
+        self.synthesize_related_features()
         self.synthesize_parent_genes()
         self.flag_alleles_of_internal_genes()
-        self.synthesize_related_features()
         self.adjust_allele_organism()
         self.synthesize_ncbi_taxon_id()
         self.synthesize_allele_gene_associations()
@@ -554,6 +633,66 @@ class AlleleHandler(MetaAlleleHandler):
         self.log.info(f'Generated {counter} allele-gene unique associations.')
         return
 
+    def map_insertion_mutation_types(self):
+        """Map insertion mutation types."""
+        self.log.info('Map insertion mutation types.')
+        # Collect evidence for both types of possible values: mobile_element_insertion (SO:0001837) or transgenic_insertion (SO:0001218).
+        # Then, pick the best option and report relevant pubs.
+        counter = 0
+        te_insertion_subtypes = [
+            'natTE_isolate',
+            'natTE_isolate_named',
+            'natTE_partial_named',
+            'natTE_sequenced_strain_1',
+        ]
+        for insertion in self.fb_data_entities.values():
+            if insertion.uniquename.startswith('FBal'):
+                continue
+            mutation_type_curie = None
+            te_pub_ids = []
+            tp_pub_ids = []
+            # First look at producedby relationships. Every FBti should have a single current FBtp or FBte associated in this way.
+            inserted_element_rels = insertion.recall_relationships(self.log, entity_role='subject', rel_types='producedby')
+            for inserted_element_rel in inserted_element_rels:
+                inserted_element_id = inserted_element_rel.chado_obj.object_id
+                # Code for data quirks.
+                if inserted_element_id not in self.feature_lookup.keys():
+                    continue
+                inserted_element = self.feature_lookup[inserted_element_id]
+                if inserted_element['is_obsolete'] is True:
+                    continue
+                if inserted_element['uniquename'].startswith('FBte'):
+                    mutation_type_curie = 'SO:0001837'    # mobile_element_insertion
+                    te_pub_ids.extend(inserted_element_rel.pubs)
+                elif inserted_element['uniquename'].startswith('FBtp'):
+                    mutation_type_curie = 'SO:0001218'    # transgenic_insertion
+                    tp_pub_ids.extend(inserted_element_rel.pubs)
+            # Then look at TI_subtype annotations. Opportunity to change transgenic_insertion to mobile_element_insertion.
+            mutation_type_annotations = insertion.recall_cvterm_annotations(self.log, cv_names='TI_subtype')
+            for mutation_type_annotation in mutation_type_annotations:
+                insertion_subtype_term = self.cvterm_lookup[mutation_type_annotation.chado_obj.cvterm_id]['name']
+                if insertion_subtype_term in te_insertion_subtypes:
+                    mutation_type_curie = 'SO:0001837'    # mobile_element_insertion
+                    te_pub_ids.append(mutation_type_annotation.chado_obj.pub_id)
+                else:
+                    tp_pub_ids.append(mutation_type_annotation.chado_obj.pub_id)
+                    if mutation_type_curie is None:
+                        mutation_type_curie = 'SO:0001218'    # transgenic_insertion
+            # Pick the mutation type and relevant pubs.
+            if mutation_type_curie is None:
+                if insertion.is_obsolete is False:
+                    self.log.error(f'Could not determine mutation_type for {insertion}')
+                continue
+            elif mutation_type_curie == 'SO:0001837':
+                pub_curies = self.lookup_pub_curies(te_pub_ids)
+            else:
+                pub_curies = self.lookup_pub_curies(tp_pub_ids)
+            mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, pub_curies)
+            insertion.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
+            counter += 1
+        self.log.info(f'Mapped {counter} mutation type annotations for insertions.')
+        return
+
     # Elaborate on map_fb_data_to_alliance() for the AlleleHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the AlleleHandler."""
@@ -561,6 +700,7 @@ class AlleleHandler(MetaAlleleHandler):
         self.map_metaallele_basic()
         self.map_metaallele_database_status()
         self.map_internal_metaallele_status()
+        self.map_insertion_mutation_types()
         self.map_allele_mutation_types()
         self.map_synonyms()
         self.map_data_provider_dto()
@@ -568,7 +708,7 @@ class AlleleHandler(MetaAlleleHandler):
         self.map_extinction_info()
         self.map_collections()
         self.map_inheritance_modes()
-        # self.map_pubs()    # TEMPORARILY SUPPRESS UNTIL ALLIANCE LOAD SPEED IMPROVES
+        self.map_pubs()    # Suppress if load times are slow.
         self.map_timestamps()
         self.map_secondary_ids('allele_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
@@ -656,12 +796,13 @@ class InsertionHandler(MetaAlleleHandler):
     # Elaborate on synthesize_info() for the InsertionHandler.
     def synthesize_info(self):
         """Extend the method for the InsertionHandler."""
-        super().synthesize_info()
-        self.flag_new_additions_and_obsoletes()
-        self.synthesize_secondary_ids()
-        self.synthesize_synonyms()
-        self.synthesize_pubs()
-        self.synthesize_ncbi_taxon_id()
+        # Suppress these steps since AlleleHandler will run them downstream of FBal/FBti merge.
+        # super().synthesize_info()
+        # self.flag_new_additions_and_obsoletes()
+        # self.synthesize_secondary_ids()
+        # self.synthesize_synonyms()
+        # self.synthesize_pubs()
+        # self.synthesize_ncbi_taxon_id()
         return
 
     # Additional methods to be run by map_fb_data_to_alliance() below.
@@ -726,20 +867,21 @@ class InsertionHandler(MetaAlleleHandler):
     # Elaborate on map_fb_data_to_alliance() for the InsertionHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the InsertionHandler."""
-        super().map_fb_data_to_alliance()
-        self.map_metaallele_basic()
-        self.map_metaallele_database_status()
-        self.map_internal_metaallele_status()
-        self.map_insertion_mutation_types()
-        self.map_synonyms()
-        self.map_data_provider_dto()
-        self.map_xrefs()
-        self.map_extinction_info()
-        self.map_collections()
-        # self.map_pubs()    # TEMPORARILY SUPPRESS UNTIL ALLIANCE LOAD SPEED IMPROVES
-        self.map_timestamps()
-        self.map_secondary_ids('allele_secondary_id_dtos')
-        self.flag_internal_fb_entities('fb_data_entities')
+        # Suppress these steps since AlleleHandler will run them downstream of FBal/FBti merge.
+        # super().map_fb_data_to_alliance()
+        # self.map_metaallele_basic()
+        # self.map_metaallele_database_status()
+        # self.map_internal_metaallele_status()
+        # self.map_insertion_mutation_types()
+        # self.map_synonyms()
+        # self.map_data_provider_dto()
+        # self.map_xrefs()
+        # self.map_extinction_info()
+        # self.map_collections()
+        # self.map_pubs()    # Suppress if load times are slow.
+        # self.map_timestamps()
+        # self.map_secondary_ids('allele_secondary_id_dtos')
+        # self.flag_internal_fb_entities('fb_data_entities')
         return
 
     # Elaborate on query_chado_and_export() for the InsertionHandler.
@@ -980,7 +1122,7 @@ class AberrationHandler(MetaAlleleHandler):
         self.map_xrefs()
         self.map_extinction_info()
         self.map_collections()
-        # self.map_pubs()    # TEMPORARILY SUPPRESS UNTIL ALLIANCE LOAD SPEED IMPROVES
+        self.map_pubs()    # Suppress if load times are slow.
         self.map_timestamps()
         self.map_secondary_ids('allele_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
@@ -1081,7 +1223,7 @@ class BalancerHandler(MetaAlleleHandler):
         self.map_xrefs()
         self.map_extinction_info()
         self.map_collections()
-        # self.map_pubs()    # TEMPORARILY SUPPRESS UNTIL ALLIANCE LOAD SPEED IMPROVES
+        self.map_pubs()    # Suppress if load times are slow.
         self.map_timestamps()
         self.map_secondary_ids('allele_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')

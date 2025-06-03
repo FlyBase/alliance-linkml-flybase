@@ -292,6 +292,7 @@ class FBAllele(FBFeature):
         super().__init__(chado_obj)
         # Primary FB chado data.
         self.phenstatements = []                # List of SQLAlchemy (Feature, Genotype, Phenotype, Cvterm, Pub) results from Phenstatements.
+        self.superceded_by_insertion = False    # Change to True if an FBal allele is to be reported under the related FBti insertion(s) instead.
         # Processed FB data.
         self.parent_gene_id = None              # The FBgn ID for the allele's parent gene.
         self.cons_rels = []                     # List of current cons FBRelationships.

@@ -907,7 +907,7 @@ class PrimaryEntityHandler(DataHandler):
             secondary_ids = []
             for xref in fb_data_entity.fb_sec_dbxrefs:
                 secondary_ids.append(f'FB:{xref.dbxref.accession}')
-            fb_data_entity.alt_fb_ids = list(set(secondary_ids))
+            fb_data_entity.alt_fb_ids.extend(list(set(secondary_ids)))
         return
 
     def synthesize_synonyms(self):
