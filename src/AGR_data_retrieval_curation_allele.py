@@ -25,7 +25,8 @@ import argparse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
-from allele_handlers import AlleleHandler, AberrationHandler, BalancerHandler, InsertionHandler
+# from allele_handlers import AlleleHandler, AberrationHandler, BalancerHandler, InsertionHandler
+from allele_handlers import InsertionHandler
 from utils import export_chado_data, generate_export_file
 
 # Data types handled by this script.
@@ -81,19 +82,19 @@ def main():
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Get the data and process it.
-    aberration_handler = AberrationHandler(log, testing)
-    allele_handler = AlleleHandler(log, testing)
-    balancer_handler = BalancerHandler(log, testing)
+    # aberration_handler = AberrationHandler(log, testing)
+    # allele_handler = AlleleHandler(log, testing)
+    # balancer_handler = BalancerHandler(log, testing)
     insertion_handler = InsertionHandler(log, testing)
     if reference_session:
-        export_chado_data(session, log, aberration_handler, reference_session=reference_session)
-        export_chado_data(session, log, allele_handler, reference_session=reference_session)
-        export_chado_data(session, log, balancer_handler, reference_session=reference_session)
+        # export_chado_data(session, log, aberration_handler, reference_session=reference_session)
+        # export_chado_data(session, log, allele_handler, reference_session=reference_session)
+        # export_chado_data(session, log, balancer_handler, reference_session=reference_session)
         export_chado_data(session, log, insertion_handler, reference_session=reference_session)
     else:
-        export_chado_data(session, log, aberration_handler)
-        export_chado_data(session, log, allele_handler)
-        export_chado_data(session, log, balancer_handler)
+        # export_chado_data(session, log, aberration_handler)
+        # export_chado_data(session, log, allele_handler)
+        # export_chado_data(session, log, balancer_handler)
         export_chado_data(session, log, insertion_handler)
 
     # Export the data.
@@ -116,7 +117,7 @@ def main():
             'alliance_member_release_version': database_release,
         }
         association_export_dict['allele_gene_association_ingest_set'] = []
-        association_export_dict['allele_gene_association_ingest_set'].extend(allele_handler.export_data['allele_gene_association_ingest_set'])
+        # association_export_dict['allele_gene_association_ingest_set'].extend(allele_handler.export_data['allele_gene_association_ingest_set'])
         # association_export_dict['allele_gene_association_ingest_set'].extend(aberration_handler.export_data['allele_gene_association_ingest_set'])
         generate_export_file(association_export_dict, log, association_output_filename)
 
