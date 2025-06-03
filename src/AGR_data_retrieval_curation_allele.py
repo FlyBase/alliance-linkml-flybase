@@ -102,9 +102,9 @@ def main():
         'alliance_member_release_version': database_release,
     }
     export_dict['allele_ingest_set'] = []
-    export_dict['allele_ingest_set'].extend(aberration_handler.export_data[aberration_handler.primary_export_set])
-    export_dict['allele_ingest_set'].extend(allele_handler.export_data[allele_handler.primary_export_set])
-    export_dict['allele_ingest_set'].extend(balancer_handler.export_data[balancer_handler.primary_export_set])
+    # export_dict['allele_ingest_set'].extend(aberration_handler.export_data[aberration_handler.primary_export_set])
+    # export_dict['allele_ingest_set'].extend(allele_handler.export_data[allele_handler.primary_export_set])
+    # export_dict['allele_ingest_set'].extend(balancer_handler.export_data[balancer_handler.primary_export_set])
     export_dict['allele_ingest_set'].extend(insertion_handler.export_data[insertion_handler.primary_export_set])
     generate_export_file(export_dict, log, output_filename)
 
