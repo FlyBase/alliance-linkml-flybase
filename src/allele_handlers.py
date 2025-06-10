@@ -788,7 +788,7 @@ class InsertionHandler(MetaAlleleHandler):
     # Elaborate on get_general_data() for the InsertionHandler.
     def get_general_data(self, session):
         """Suppress the method for the InsertionHandler."""
-        self.log.info('InsertionHandler does not get general data itself as it relies on the AlleleHandler.')
+        self.log.info('DO NOT GET FLYBASE INSERTION DATA FROM CHADO via InsertionHandler; use AlleleHandler.')
         return
 
     # Additional sub-methods for get_datatype_data().
@@ -817,13 +817,13 @@ class InsertionHandler(MetaAlleleHandler):
     # Elaborate on synthesize_info() for the InsertionHandler.
     def synthesize_info(self):
         """Suppress the method for the InsertionHandler."""
-        self.log.info('InsertionHandler does not get synthesize info itself as it relies on the AlleleHandler.')
+        self.log.info('DO NOT SYNTHESIZE FLYBASE ALLELE DATA FROM CHADO via the InsertionHandler; use AlleleHandler.')
         return
 
     # Elaborate on map_fb_data_to_alliance() for the InsertionHandler.
     def map_fb_data_to_alliance(self):
         """Suppress the method for the InsertionHandler."""
-        self.log.info('InsertionHandler does not map FB data to the Alliance as it relies on the AlleleHandler.')
+        self.log.info('DO NOT MAP FLYBASE DATA TO ALLIANCE DATA via the InsertionHandler; use AlleleHandler.')
         return
 
     # Elaborate on query_chado_and_export() for the InsertionHandler.
