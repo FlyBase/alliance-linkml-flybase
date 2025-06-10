@@ -20,6 +20,7 @@ from harvdev_utils.reporting import (
     Cvterm, Feature, FeatureCvterm, FeatureGenotype, Genotype, Phenotype,
     PhenotypeCvterm, Phenstatement, Pub
 )
+from utils import export_chado_data
 
 
 class MetaAlleleHandler(FeatureHandler):
@@ -243,17 +244,19 @@ class AlleleHandler(MetaAlleleHandler):
         self.log.info(f'Found {counter} allele phenotypes from single locus genotypes.')
         return
 
+    def get_insertion_entities(self, session):
+        """Have the AlleleHandler run the InsertionHandler."""
+        self.log.info('Have the AlleleHandler run the InsertionHandler.')
+        insertion_handler = InsertionHandler(self.log, self.testing)
+        export_chado_data(session, self.log, insertion_handler)
+        self.fbti_entities = insertion_handler.fb_data_entities
+        self.log.info(f'The AlleleHandler obtained {len(self.fbti_entities)} FBti insertions from chado.')
+        return
+
     def get_fbal_fbti_replacements(self, session):
         """Build allele-insertion replacement lookup."""
         self.log.info('Build allele-insertion replacement lookup.')
         # BOB: Build self.fbti_fbal_dict
-        return
-
-    def get_insertion_entities(self, session):
-        """Have the AlleleHandler run the InsertionHandler."""
-        self.log.info('Have the AlleleHandler run the InsertionHandler.')
-        # BOB: run insertion handler
-        # BOB: Copy InsertionHandler.fb_data_entities to AlleleHandler.fbti_entities.
         return
 
     # Elaborate on get_datatype_data() for the AlleleHandler.
@@ -280,8 +283,8 @@ class AlleleHandler(MetaAlleleHandler):
         self.get_very_indirect_reagent_collections(session)
         self.get_phenotypes(session)
         self.find_in_vitro_alleles(session)
-        self.get_fbal_fbti_replacements(session)
         self.get_insertion_entities(session)
+        self.get_fbal_fbti_replacements(session)
         return
 
     # Additional sub-methods to be run by synthesize_info() below.
