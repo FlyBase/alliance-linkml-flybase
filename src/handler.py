@@ -1036,11 +1036,11 @@ class DataHandler(object):
         self.log.info(f'RUN MAIN {type(self)} QUERY_CHADO_AND_EXPORT() METHOD.')
         self.get_general_data(session)
         self.get_datatype_data(session)
-        # For the InsertionHandler, skip the last four steps because the AlleleHandler will take over the processing.
-        if self.datatype == 'insertion':
-            return
         self.synthesize_info()
         self.map_fb_data_to_alliance()
+        # For the InsertionHandler, skip the last two steps because the AlleleHandler will take over the processing.
+        if self.datatype == 'insertion':
+            return
         self.flag_unexportable_entities(self.fb_data_entities.values(), self.primary_export_set)
         self.generate_export_dict(self.fb_data_entities.values(), self.primary_export_set)
         return

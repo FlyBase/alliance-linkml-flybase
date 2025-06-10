@@ -324,7 +324,7 @@ class AlleleHandler(MetaAlleleHandler):
         """Merge FBal allele info into FBti insertion entities as appropriate."""
         self.log.info('Merge FBal allele info into FBti insertion entities as appropriate.')
         counter = 0
-        for insertion in self.fbti_entities:
+        for insertion in self.fbti_entities.values():
             self.fb_data_entities[insertion.db_primary_id] = insertion
             counter += 1
         self.log.info(f'Added {counter} FBti insertions to the initial FBal entities list.')
@@ -789,11 +789,6 @@ class InsertionHandler(MetaAlleleHandler):
     def get_general_data(self, session):
         """Suppress the method for the InsertionHandler."""
         self.log.info('InsertionHandler does not get general data itself as it relies on the AlleleHandler.')
-        # super().get_general_data(session)
-        # self.build_bibliography(session)
-        # self.build_cvterm_lookup(session)
-        # self.build_organism_lookup(session)
-        # self.build_feature_lookup(session, feature_types=['construct', 'transposon'])
         return
 
     # Additional sub-methods for get_datatype_data().
@@ -819,8 +814,17 @@ class InsertionHandler(MetaAlleleHandler):
         # self.get_very_indirect_reagent_collections(session)    # Suppressed because it's slow and perhaps too indirect.
         return
 
-    # Note: synthesize_info() is not run for the InsertionHandler, but by an AlleleHandler that takes InsertionHandler query results.
-    # Note: map_fb_data_to_alliance() is not run for the InsertionHandler, but by an AlleleHandler that takes InsertionHandler query results.
+    # Elaborate on synthesize_info() for the InsertionHandler.
+    def synthesize_info(self):
+        """Suppress the method for the InsertionHandler."""
+        self.log.info('InsertionHandler does not get synthesize info itself as it relies on the AlleleHandler.')
+        return
+
+    # Elaborate on map_fb_data_to_alliance() for the InsertionHandler.
+    def map_fb_data_to_alliance(self):
+        """Suppress the method for the InsertionHandler."""
+        self.log.info('InsertionHandler does not map FB data to the Alliance as it relies on the AlleleHandler.')
+        return
 
     # Elaborate on query_chado_and_export() for the InsertionHandler.
     # def query_chado_and_export(self, session):
