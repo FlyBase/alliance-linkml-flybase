@@ -787,12 +787,13 @@ class InsertionHandler(MetaAlleleHandler):
 
     # Elaborate on get_general_data() for the InsertionHandler.
     def get_general_data(self, session):
-        """Extend the method for the InsertionHandler."""
-        super().get_general_data(session)
-        self.build_bibliography(session)
-        self.build_cvterm_lookup(session)
-        self.build_organism_lookup(session)
-        self.build_feature_lookup(session, feature_types=['construct', 'transposon'])
+        """Suppress the method for the InsertionHandler."""
+        self.log.info('InsertionHandler does not get general data itself as it relies on the AlleleHandler.')
+        # super().get_general_data(session)
+        # self.build_bibliography(session)
+        # self.build_cvterm_lookup(session)
+        # self.build_organism_lookup(session)
+        # self.build_feature_lookup(session, feature_types=['construct', 'transposon'])
         return
 
     # Additional sub-methods for get_datatype_data().
