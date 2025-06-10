@@ -10,15 +10,15 @@ Author(s):
 """
 
 from logging import Logger
-# from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased
 import agr_datatypes
 from fb_datatypes import (
     FBAberration, FBAllele, FBBalancer
 )
 from feature_handler import FeatureHandler
 from harvdev_utils.reporting import (
-    Cvterm, Feature, FeatureCvterm, FeatureGenotype, Genotype, Phenotype,
-    PhenotypeCvterm, Phenstatement, Pub
+    Cvterm, Feature, FeatureCvterm, FeatureGenotype, FeatureRelationship,
+    Genotype, Phenotype, PhenotypeCvterm, Phenstatement, Pub
 )
 from utils import export_chado_data
 
@@ -130,8 +130,8 @@ class AlleleHandler(MetaAlleleHandler):
         super().__init__(log, testing)
         self.datatype = 'allele'
         self.fb_export_type = FBAllele
-        self.fbti_entities = {}    # Will be feature_id-keyed FBAllele objects generated from FBti insertions.
-        self.fbti_fbal_dict = {}    # Will be FBti-feature_id keys, with lists of FBal feature_ids to be replaced.
+        self.fbal_fbti_dict = {}    # Will be FBal-feature_id-keyed dict of FBti feature_id lists.
+        self.fbti_entities = {}     # Will be feature_id-keyed FBAllele objects generated from FBti insertions.
 
     test_set = {
         'FBal0137236': 'gukh[142]',             # Insertion allele, part of TI_set_P{hsneo}.BDGP collection.
@@ -244,6 +244,43 @@ class AlleleHandler(MetaAlleleHandler):
         self.log.info(f'Found {counter} allele phenotypes from single locus genotypes.')
         return
 
+    def get_fbal_fbti_replacements(self, session):
+        """Find FBal-FBti replacements to make."""
+        self.log.info('Build allele-insertion replacement lookup.')
+        # self.fbal_fbti_dict = {}
+        direct_fbal_fbti_counter = 0
+        # First, get relationships for at-locus insertions.
+        for allele in self.fb_data_entities.values():
+            fbal_fbti_alliance_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='is_represented_at_alliance_as',
+                                                                  rel_entity_types=self.feature_subtypes['insertion'])
+            for feat_rel in fbal_fbti_alliance_rels:
+                insertion = self.feature_lookup[feat_rel.chado_obj.object_id]
+                self.log.debug(f'Report {allele} under {insertion["name"]} ({insertion["uniquename"]}).')
+                try:
+                    self.fbal_fbti[allele.db_primary_id].append(insertion["feature_id"])
+                    self.log.debug(f'BOB: found another FBti for {allele}.')
+                except KeyError:
+                    self.fbal_fbti[allele.db_primary_id] = [(insertion["feature_id"])]
+            direct_fbal_fbti_counter += 1
+        self.log.info(f'Found {direct_fbal_fbti_counter} FBal alleles to be replaced by at-locus FBti insertions in export file.')
+        # BILLY BOB - continue here
+        # Second, get relationships via constructs.
+        allele = aliased(Feature, name='allele')
+        construct = aliased(Feature, name='construct')
+        insertion = aliased(Feature, name='insertion')
+        ac_rel = aliased(Feature, name='ac_rel')
+        ic_rel = aliased(Feature, name='ic_rel')
+        filters = (
+            Cvterm.name == 'is_represented_at_alliance_as',
+            allele.is_obsolete.is_(False),
+            allele.uniquename.op('~')(self.regex['allele']),
+            construct.is_obsolete.is_(False),
+            construct.uniquename.op('~')(self.regex['construct']),
+            insertion.is_obsolete.is_(False),
+            insertion.uniquename.op('~')(self.regex['insertion']),
+        )
+        return
+
     def get_insertion_entities(self, session):
         """Have the AlleleHandler run the InsertionHandler."""
         self.log.info('Have the AlleleHandler run the InsertionHandler.')
@@ -251,12 +288,6 @@ class AlleleHandler(MetaAlleleHandler):
         export_chado_data(session, self.log, insertion_handler)
         self.fbti_entities = insertion_handler.fb_data_entities
         self.log.info(f'The AlleleHandler obtained {len(self.fbti_entities)} FBti insertions from chado.')
-        return
-
-    def get_fbal_fbti_replacements(self, session):
-        """Build allele-insertion replacement lookup."""
-        self.log.info('Build allele-insertion replacement lookup.')
-        # BOB: Build self.fbti_fbal_dict
         return
 
     # Elaborate on get_datatype_data() for the AlleleHandler.
@@ -283,8 +314,8 @@ class AlleleHandler(MetaAlleleHandler):
         self.get_very_indirect_reagent_collections(session)
         self.get_phenotypes(session)
         self.find_in_vitro_alleles(session)
-        self.get_insertion_entities(session)
         self.get_fbal_fbti_replacements(session)
+        self.get_insertion_entities(session)
         return
 
     # Additional sub-methods to be run by synthesize_info() below.
@@ -341,15 +372,12 @@ class AlleleHandler(MetaAlleleHandler):
         """Synthesize allele attributes based on related features."""
         self.log.info('Synthesize allele attributes based on related features.')
         has_construct_counter = 0
-        has_dmel_insertion_counter = 0
-        has_non_dmel_insertion_counter = 0
         has_args_counter = 0
         for allele in self.fb_data_entities.values():
-            # BOB  - REWORK ALL OF THIS TO HANDLE FBAL AND FBTI
             # Assess relationships to current constructs.
             relevant_cons_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='derived_tp_assoc_alleles',
                                                              rel_entity_types=self.feature_subtypes['construct'])
-            # self.log.debug(f'For {allele}, found {len(relevant_cons_rels)} cons rels to review.')
+            self.log.debug(f'For {allele}, found {len(relevant_cons_rels)} cons rels to review.')
             for cons_rel in relevant_cons_rels:
                 construct = self.feature_lookup[cons_rel.chado_obj.object_id]
                 if construct['is_obsolete'] is False and construct['uniquename'].startswith('FBtp'):
@@ -363,23 +391,7 @@ class AlleleHandler(MetaAlleleHandler):
                 if arg['is_obsolete'] is False:
                     allele.arg_rels.append(arg_rel)
                     has_args_counter += 1
-            # Assess relationships to current insertions.
-            relevant_ins_rels = allele.recall_relationships(self.log, entity_role='subject', rel_entity_types=self.feature_subtypes['insertion'])
-            # self.log.debug(f'For {allele}, found {len(relevant_ins_rels)} ins rels to review.')
-            for ins_rel in relevant_ins_rels:
-                insertion = self.feature_lookup[ins_rel.chado_obj.object_id]
-                if insertion['is_obsolete'] is False and insertion['uniquename'].startswith('FBti'):
-                    if self.organism_lookup[insertion['organism_id']]['abbreviation'] == 'Dmel':
-                        # self.log.debug(f'{allele} has Dmel insertion.')
-                        allele.dmel_ins_rels.append(ins_rel)
-                        has_dmel_insertion_counter += 1
-                    else:
-                        # self.log.debug(f'{allele} has non-Dmel insertion.')
-                        allele.non_dmel_ins_rels.append(ins_rel)
-                        has_non_dmel_insertion_counter += 1
         self.log.info(f'Found {has_construct_counter} alleles related to a construct.')
-        self.log.info(f'Found {has_dmel_insertion_counter} alleles related to a Dmel insertion.')
-        self.log.info(f'Found {has_non_dmel_insertion_counter} alleles related to a non-Dmel insertion.')
         self.log.info(f'Found {has_args_counter} alleles related to a mapped variation feature (ARGs).')
         return
 
@@ -393,7 +405,7 @@ class AlleleHandler(MetaAlleleHandler):
                 continue
             parent_gene_ids = []
             relevant_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='alleleof', rel_entity_types='gene')
-            # self.log.debug(f'For {allele}, found {len(relevant_rels)} alleleof relationships to genes.')
+            self.log.debug(f'For {allele}, found {len(relevant_rels)} alleleof relationships to genes.')
             for allele_gene_rel in relevant_rels:
                 parent_gene = self.feature_lookup[allele_gene_rel.chado_obj.object_id]
                 if parent_gene['is_obsolete'] is False:
@@ -476,6 +488,10 @@ class AlleleHandler(MetaAlleleHandler):
             # self.log.debug(f'For {gene}, found {len(relevant_allele_rels)} allele rels to review.')
             for gene_rel in relevant_gene_rels:
                 gene_feature_id = gene_rel.chado_obj.object_id
+                gene = self.feature_lookup[gene_feature_id]
+                # Suppress allele-gene associations involving non-Drosophilid genes (which are not exported to the Alliance).
+                if self.organism_lookup[gene['organism_id']]['is_drosophilid'] is False:
+                    continue
                 allele_gene_key = (allele.db_primary_id, gene_feature_id)
                 try:
                     self.allele_gene_rels[allele_gene_key].append(gene_rel)
@@ -489,7 +505,7 @@ class AlleleHandler(MetaAlleleHandler):
     def synthesize_info(self):
         """Extend the method for the AlleleHandler."""
         super().synthesize_info()
-        self.merge_fbti_fbal()
+        # self.merge_fbti_fbal()    # BILLY
         self.flag_new_additions_and_obsoletes()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
@@ -870,7 +886,7 @@ class InsertionHandler(MetaAlleleHandler):
     # Elaborate on map_fb_data_to_alliance() for the InsertionHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the InsertionHandler."""
-        # Suppress these steps since AlleleHandler will run them downstream of FBal/FBti merge.
+        # BOB - Suppress these steps since AlleleHandler will run them downstream of FBal/FBti merge.
         # super().map_fb_data_to_alliance()
         # self.map_metaallele_basic()
         # self.map_metaallele_database_status()
