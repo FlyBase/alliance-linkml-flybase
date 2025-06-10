@@ -261,7 +261,7 @@ class AlleleHandler(MetaAlleleHandler):
                     self.log.debug(f'BOB: found another FBti for {allele}.')
                 except KeyError:
                     self.fbal_fbti[allele.db_primary_id] = [(insertion["feature_id"])]
-            direct_fbal_fbti_counter += 1
+                    direct_fbal_fbti_counter += 1
         self.log.info(f'Found {direct_fbal_fbti_counter} FBal alleles to be replaced by at-locus FBti insertions in export file.')
         # BILLY BOB - continue here
         # Second, get relationships via constructs.
@@ -283,11 +283,12 @@ class AlleleHandler(MetaAlleleHandler):
 
     def get_insertion_entities(self, session):
         """Have the AlleleHandler run the InsertionHandler."""
-        self.log.info('Have the AlleleHandler run the InsertionHandler.')
+        separator = 80*'#'
+        self.log.info(f'Have the AlleleHandler run the InsertionHandler.\n{separator}')
         insertion_handler = InsertionHandler(self.log, self.testing)
         export_chado_data(session, self.log, insertion_handler)
         self.fbti_entities = insertion_handler.fb_data_entities
-        self.log.info(f'The AlleleHandler obtained {len(self.fbti_entities)} FBti insertions from chado.')
+        self.log.info(f'The AlleleHandler obtained {len(self.fbti_entities)} FBti insertions from chado.\n{separator}')
         return
 
     # Elaborate on get_datatype_data() for the AlleleHandler.
@@ -505,7 +506,7 @@ class AlleleHandler(MetaAlleleHandler):
     def synthesize_info(self):
         """Extend the method for the AlleleHandler."""
         super().synthesize_info()
-        # self.merge_fbti_fbal()    # BILLY
+        self.merge_fbti_fbal()    # BILLY
         self.flag_new_additions_and_obsoletes()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
@@ -809,106 +810,15 @@ class InsertionHandler(MetaAlleleHandler):
         # self.get_very_indirect_reagent_collections(session)    # Suppressed because it's slow and perhaps too indirect.
         return
 
-    # Additional sub-methods to be run by synthesize_info() below.
-    # Placeholder.
-
-    # Elaborate on synthesize_info() for the InsertionHandler.
-    def synthesize_info(self):
-        """Extend the method for the InsertionHandler."""
-        # Suppress these steps since AlleleHandler will run them downstream of FBal/FBti merge.
-        # super().synthesize_info()
-        # self.flag_new_additions_and_obsoletes()
-        # self.synthesize_secondary_ids()
-        # self.synthesize_synonyms()
-        # self.synthesize_pubs()
-        # self.synthesize_ncbi_taxon_id()
-        return
-
-    # Additional methods to be run by map_fb_data_to_alliance() below.
-    def map_insertion_mutation_types(self):
-        """Map insertion mutation types."""
-        self.log.info('Map insertion mutation types.')
-        # Collect evidence for both types of possible values: mobile_element_insertion (SO:0001837) or transgenic_insertion (SO:0001218).
-        # Then, pick the best option and report relevant pubs.
-        counter = 0
-        te_insertion_subtypes = [
-            'natTE_isolate',
-            'natTE_isolate_named',
-            'natTE_partial_named',
-            'natTE_sequenced_strain_1',
-        ]
-        for insertion in self.fb_data_entities.values():
-            mutation_type_curie = None
-            te_pub_ids = []
-            tp_pub_ids = []
-            # First look at producedby relationships. Every FBti should have a single current FBtp or FBte associated in this way.
-            inserted_element_rels = insertion.recall_relationships(self.log, entity_role='subject', rel_types='producedby')
-            for inserted_element_rel in inserted_element_rels:
-                inserted_element_id = inserted_element_rel.chado_obj.object_id
-                # Code for data quirks.
-                if inserted_element_id not in self.feature_lookup.keys():
-                    continue
-                inserted_element = self.feature_lookup[inserted_element_id]
-                if inserted_element['is_obsolete'] is True:
-                    continue
-                if inserted_element['uniquename'].startswith('FBte'):
-                    mutation_type_curie = 'SO:0001837'    # mobile_element_insertion
-                    te_pub_ids.extend(inserted_element_rel.pubs)
-                elif inserted_element['uniquename'].startswith('FBtp'):
-                    mutation_type_curie = 'SO:0001218'    # transgenic_insertion
-                    tp_pub_ids.extend(inserted_element_rel.pubs)
-            # Then look at TI_subtype annotations. Opportunity to change transgenic_insertion to mobile_element_insertion.
-            mutation_type_annotations = insertion.recall_cvterm_annotations(self.log, cv_names='TI_subtype')
-            for mutation_type_annotation in mutation_type_annotations:
-                insertion_subtype_term = self.cvterm_lookup[mutation_type_annotation.chado_obj.cvterm_id]['name']
-                if insertion_subtype_term in te_insertion_subtypes:
-                    mutation_type_curie = 'SO:0001837'    # mobile_element_insertion
-                    te_pub_ids.append(mutation_type_annotation.chado_obj.pub_id)
-                else:
-                    tp_pub_ids.append(mutation_type_annotation.chado_obj.pub_id)
-                    if mutation_type_curie is None:
-                        mutation_type_curie = 'SO:0001218'    # transgenic_insertion
-            # Pick the mutation type and relevant pubs.
-            if mutation_type_curie is None:
-                if insertion.is_obsolete is False:
-                    self.log.error(f'Could not determine mutation_type for {insertion}')
-                continue
-            elif mutation_type_curie == 'SO:0001837':
-                pub_curies = self.lookup_pub_curies(te_pub_ids)
-            else:
-                pub_curies = self.lookup_pub_curies(tp_pub_ids)
-            mutant_type_annotation = agr_datatypes.AlleleMutationTypeSlotAnnotationDTO(mutation_type_curie, pub_curies)
-            insertion.linkmldto.allele_mutation_type_dtos.append(mutant_type_annotation.dict_export())
-            counter += 1
-        self.log.info(f'Mapped {counter} mutation type annotations for insertions.')
-        return
-
-    # Elaborate on map_fb_data_to_alliance() for the InsertionHandler.
-    def map_fb_data_to_alliance(self):
-        """Extend the method for the InsertionHandler."""
-        # BOB - Suppress these steps since AlleleHandler will run them downstream of FBal/FBti merge.
-        # super().map_fb_data_to_alliance()
-        # self.map_metaallele_basic()
-        # self.map_metaallele_database_status()
-        # self.map_internal_metaallele_status()
-        # self.map_insertion_mutation_types()
-        # self.map_synonyms()
-        # self.map_data_provider_dto()
-        # self.map_xrefs()
-        # self.map_extinction_info()
-        # self.map_collections()
-        # self.map_pubs()    # Suppress if load times are slow.
-        # self.map_timestamps()
-        # self.map_secondary_ids('allele_secondary_id_dtos')
-        # self.flag_internal_fb_entities('fb_data_entities')
-        return
+    # Note: synthesize_info() is not run for the InsertionHandler, but by an AlleleHandler that takes InsertionHandler query results.
+    # Note: map_fb_data_to_alliance() is not run for the InsertionHandler, but by an AlleleHandler that takes InsertionHandler query results.
 
     # Elaborate on query_chado_and_export() for the InsertionHandler.
-    def query_chado_and_export(self, session):
-        """Elaborate on query_chado_and_export method for the InsertionHandler."""
-        super().query_chado_and_export(session)
-        return
-
+    # def query_chado_and_export(self, session):
+    #     """Elaborate on query_chado_and_export method for the InsertionHandler."""
+    #     super().query_chado_and_export(session)
+    #     return
+    # BOB - I THINK THIS IS UNNECESSARY - DELETE IF CONFIRMED.
 
 class AberrationHandler(MetaAlleleHandler):
     """This object gets, synthesizes and filters aberration data for export."""
