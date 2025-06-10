@@ -129,7 +129,7 @@ class AlleleHandler(MetaAlleleHandler):
         super().__init__(log, testing)
         self.datatype = 'allele'
         self.fb_export_type = FBAllele
-        self.fbti_entitites = {}    # Will be feature_id-keyed FBAllele objects generated from FBti insertions.
+        self.fbti_entities = {}    # Will be feature_id-keyed FBAllele objects generated from FBti insertions.
         self.fbti_fbal_dict = {}    # Will be FBti-feature_id keys, with lists of FBal feature_ids to be replaced.
 
     test_set = {
