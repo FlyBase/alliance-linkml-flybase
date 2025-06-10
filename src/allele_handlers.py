@@ -283,7 +283,7 @@ class AlleleHandler(MetaAlleleHandler):
 
     def get_insertion_entities(self, session):
         """Have the AlleleHandler run the InsertionHandler."""
-        separator = 80*'#'
+        separator = 80 * '#'
         self.log.info(f'Have the AlleleHandler run the InsertionHandler.\n{separator}')
         insertion_handler = InsertionHandler(self.log, self.testing)
         export_chado_data(session, self.log, insertion_handler)
@@ -323,50 +323,58 @@ class AlleleHandler(MetaAlleleHandler):
     def merge_fbti_fbal(self):
         """Merge FBal allele info into FBti insertion entities as appropriate."""
         self.log.info('Merge FBal allele info into FBti insertion entities as appropriate.')
-        lists_to_extend = [
-            'dbxrefs',
-            'export_warnings',
-            'fb_sec_dbxrefs',
-            'internal_reasons',
-            'new_timestamps',
-            'phenstatements',
-            'pub_associations',
-            'synonyms',
-            'timestamps',
-        ]
-        dicts_to_add = [
-            'props_by_type',
-            'cvt_anno_ids_by_cv',
-            'cvt_anno_ids_by_prop',
-            'cvt_anno_ids_by_term',
-            'cvt_annos_by_id',
-            'obj_rel_ids_by_type',
-            'rels_by_id',
-            'sbj_rel_ids_by_type',
-        ]
+        counter = 0
         for insertion in self.fbti_entities:
-            if insertion.db_primary_id not in self.fbti_fbal_dict.keys():
-                self.fb_data_entities[insertion.db_primary_id] = insertion
-                continue
-            for fbal_feature_id in self.fbti_fbal_dict[insertion.db_primary_id]:
-                allele = self.fb_data_entities[fbal_feature_id]
-                for attr_name in lists_to_extend:
-                    allele_list = getattr(allele, attr_name)
-                    insertion_list = getattr(insertion, attr_name)
-                    insertion_list.extend(allele_list)
-                insertion.alt_fb_ids.append('FB:{allele.uniquename}')
-                for attr_name in dicts_to_add:
-                    allele_dict = getattr(allele, attr_name)
-                    insertion_dict = getattr(insertion, attr_name)
-                    for k, v in allele_dict.items():
-                        try:
-                            insertion_dict[k].extend(v)
-                        except KeyError:
-                            insertion_dict[k] = v
-                allele.superceded_by_insertion = True
-                allele.for_export = False
-                allele.export_warnings.append('Superceded by FBti insertion')
             self.fb_data_entities[insertion.db_primary_id] = insertion
+            counter += 1
+        self.log.info(f'Added {counter} FBti insertions to the initial FBal entities list.')
+        # BOB - CONTINUE BELOW
+        #######################################################################################################
+        # lists_to_extend = [
+        #     'dbxrefs',
+        #     'export_warnings',
+        #     'fb_sec_dbxrefs',
+        #     'internal_reasons',
+        #     'new_timestamps',
+        #     'phenstatements',
+        #     'pub_associations',
+        #     'synonyms',
+        #     'timestamps',
+        # ]
+        # dicts_to_add = [
+        #     'props_by_type',
+        #     'cvt_anno_ids_by_cv',
+        #     'cvt_anno_ids_by_prop',
+        #     'cvt_anno_ids_by_term',
+        #     'cvt_annos_by_id',
+        #     'obj_rel_ids_by_type',
+        #     'rels_by_id',
+        #     'sbj_rel_ids_by_type',
+        # ]
+        # for insertion in self.fbti_entities:
+        #     if insertion.db_primary_id not in self.fbti_fbal_dict.keys():
+        #         self.fb_data_entities[insertion.db_primary_id] = insertion
+        #         continue
+        #     for fbal_feature_id in self.fbti_fbal_dict[insertion.db_primary_id]:
+        #         allele = self.fb_data_entities[fbal_feature_id]
+        #         for attr_name in lists_to_extend:
+        #             allele_list = getattr(allele, attr_name)
+        #             insertion_list = getattr(insertion, attr_name)
+        #             insertion_list.extend(allele_list)
+        #         insertion.alt_fb_ids.append('FB:{allele.uniquename}')
+        #         for attr_name in dicts_to_add:
+        #             allele_dict = getattr(allele, attr_name)
+        #             insertion_dict = getattr(insertion, attr_name)
+        #             for k, v in allele_dict.items():
+        #                 try:
+        #                     insertion_dict[k].extend(v)
+        #                 except KeyError:
+        #                     insertion_dict[k] = v
+        #         allele.superceded_by_insertion = True
+        #         allele.for_export = False
+        #         allele.export_warnings.append('Superceded by FBti insertion')
+        #     self.fb_data_entities[insertion.db_primary_id] = insertion
+        #######################################################################################################
         return
 
     def synthesize_related_features(self):
@@ -819,6 +827,7 @@ class InsertionHandler(MetaAlleleHandler):
     #     super().query_chado_and_export(session)
     #     return
     # BOB - I THINK THIS IS UNNECESSARY - DELETE IF CONFIRMED.
+
 
 class AberrationHandler(MetaAlleleHandler):
     """This object gets, synthesizes and filters aberration data for export."""
