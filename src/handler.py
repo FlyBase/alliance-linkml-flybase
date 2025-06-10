@@ -1037,7 +1037,7 @@ class DataHandler(object):
         self.get_general_data(session)
         self.get_datatype_data(session)
         # For the InsertionHandler, skip the last four steps because the AlleleHandler will take over the processing.
-        if self.datatype != 'insertion':
+        if self.datatype == 'insertion':
             return
         self.synthesize_info()
         self.map_fb_data_to_alliance()
