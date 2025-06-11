@@ -375,14 +375,17 @@ class AlleleHandler(MetaAlleleHandler):
             if fbti_feature_id not in self.fb_data_entities:
                 self.fb_data_entities[fbti_feature_id] = self.fbti_entities[fbti_feature_id]
             insertion = self.fb_data_entities[fbti_feature_id]
+            self.log.debug(f'Merge {allele} data into {insertion} data.')
             insertion.alt_fb_ids.append(f'FB:{allele.uniquename}')
             for attr_name in lists_to_extend:
                 allele_list = getattr(allele, attr_name)
                 insertion_list = getattr(insertion, attr_name)
+                self.log.debug(f'For {attr_name}, add {len(allele_list)} allele elements to {len(insertion_list)} insertion elements.')
                 insertion_list.extend(allele_list)
             for attr_name in dicts_to_add:
                 allele_dict = getattr(allele, attr_name)
                 insertion_dict = getattr(insertion, attr_name)
+                self.log.debug(f'For {attr_name}, add {len(allele_dict)} allele elements to {len(insertion_dict)} insertion elements.')
                 for k, v in allele_dict.items():
                     try:
                         insertion_dict[k].extend(v)
