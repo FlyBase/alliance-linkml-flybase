@@ -375,9 +375,7 @@ class AlleleHandler(MetaAlleleHandler):
         ]
 
         for fbti_feature_id in fbti_feature_ids:
-            if fbti_feature_id not in self.fb_data_entities:
-                self.fb_data_entities[fbti_feature_id] = self.fbti_entities[fbti_feature_id]
-            insertion = self.fb_data_entities[fbti_feature_id]
+            insertion = self.fbti_entities[fbti_feature_id]
             self.log.debug(f'Merge {allele} data into {insertion} data.')
             insertion.alt_fb_ids.append(f'FB:{allele.uniquename}')
             for attr_name in lists_to_extend:
@@ -418,6 +416,7 @@ class AlleleHandler(MetaAlleleHandler):
         at_locus_counter = 0
         transgenic_counter = 0
         classical_counter = 0
+        fbti_counter = 0
         for allele in self.fb_data_entities.values():
             if allele.db_primary_id in self.at_locus_fbal_fbti_dict.keys() and allele.db_primary_id in self.transgenic_fbal_fbti_dict.keys():
                 self.log.error(f'Allele {allele} unexpectedly has both at-locus and transgenic unspecified FBti insertions.')
@@ -436,6 +435,10 @@ class AlleleHandler(MetaAlleleHandler):
         self.log.info(f'Found {at_locus_counter} FBal alleles related to at-locus FBti insertions.')
         self.log.info(f'Found {transgenic_counter} FBal alleles related to unspecified transgenic FBti insertions.')
         self.log.info(f'Found {classical_counter} FBal classical and/or complex alleles to be reported as they are (no FBti replacement).')
+        for fbti_feature_id, insertion in self.fbti_entities.items():
+            self.fb_data_entities[fbti_feature_id] = insertion
+            fbti_counter += 1
+        self.log.info(f'Added {fbti_counter} FBti insertions to the list of FBal alleles for export.')
         return
 
     def synthesize_related_features(self):
