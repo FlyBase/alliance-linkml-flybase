@@ -294,7 +294,9 @@ class AlleleHandler(MetaAlleleHandler):
             filter(*filters).\
             distinct()
         for result in results:
-            self.log.debug(f'The transgenic allele {allele} is related to the generic insertion {result.insertion.name} ({result.insertion.uniquename}).')
+            allele_str = f'{result.allele.name} ({result.allele.uniquename})'
+            insertion_str = f'{result.insertion.name} ({result.insertion.uniquename})'
+            self.log.debug(f'The transgenic allele {allele_str} is related to the generic insertion {insertion_str}.')
             try:
                 self.transgenic_fbal_fbti_dict[result.allele.feature_id].append(result.insertion.feature_id)
             except KeyError:
@@ -343,61 +345,79 @@ class AlleleHandler(MetaAlleleHandler):
         return
 
     # Additional sub-methods to be run by synthesize_info() below.
+    def add_fbal_to_fbti(self, allele):
+        """Add FBal data to a related FBti."""
+        fbti_feature_ids = []
+        fbti_feature_ids.append(allele.superceded_by_at_locus_insertion)
+        fbti_feature_ids.extend(allele.superceded_by_transgnc_insertions)
+        lists_to_extend = [
+            'dbxrefs',
+            'export_warnings',
+            'fb_sec_dbxrefs',
+            'internal_reasons',
+            'new_timestamps',
+            'phenstatements',
+            'pub_associations',
+            'synonyms',
+            'timestamps',
+        ]
+        dicts_to_add = [
+            'props_by_type',
+            'cvt_anno_ids_by_cv',
+            'cvt_anno_ids_by_prop',
+            'cvt_anno_ids_by_term',
+            'cvt_annos_by_id',
+            'obj_rel_ids_by_type',
+            'rels_by_id',
+            'sbj_rel_ids_by_type',
+        ]
+        for fbti_feature_id in fbti_feature_ids:
+            if fbti_feature_id not in self.fb_data_entities:
+                self.fb_data_entities[fbti_feature_id] = self.fbti_entities[fbti_feature_id]
+            insertion = self.fb_data_entities[fbti_feature_id]
+            insertion.alt_fb_ids.append(f'FB:{allele.uniquename}')
+            for attr_name in lists_to_extend:
+                allele_list = getattr(allele, attr_name)
+                insertion_list = getattr(insertion, attr_name)
+                insertion_list.extend(allele_list)
+            for attr_name in dicts_to_add:
+                allele_dict = getattr(allele, attr_name)
+                insertion_dict = getattr(insertion, attr_name)
+                for k, v in allele_dict.items():
+                    try:
+                        insertion_dict[k].extend(v)
+                    except KeyError:
+                        insertion_dict[k] = v
+        allele.is_obsolete = False
+        allele.for_export = False
+        allele.export_warnings.append('Superceded by FBti insertion')
+        return
+
     def merge_fbti_fbal(self):
         """Merge FBal allele info into FBti insertion entities as appropriate."""
         self.log.info('Merge FBal allele info into FBti insertion entities as appropriate.')
-        counter = 0
-        for insertion in self.fbti_entities.values():
-            self.fb_data_entities[insertion.db_primary_id] = insertion
-            counter += 1
-        self.log.info(f'Added {counter} FBti insertions to the initial FBal entities list.')
-        # BILLY BOB - CONTINUE HERE #2
-        #######################################################################################################
-        # lists_to_extend = [
-        #     'dbxrefs',
-        #     'export_warnings',
-        #     'fb_sec_dbxrefs',
-        #     'internal_reasons',
-        #     'new_timestamps',
-        #     'phenstatements',
-        #     'pub_associations',
-        #     'synonyms',
-        #     'timestamps',
-        # ]
-        # dicts_to_add = [
-        #     'props_by_type',
-        #     'cvt_anno_ids_by_cv',
-        #     'cvt_anno_ids_by_prop',
-        #     'cvt_anno_ids_by_term',
-        #     'cvt_annos_by_id',
-        #     'obj_rel_ids_by_type',
-        #     'rels_by_id',
-        #     'sbj_rel_ids_by_type',
-        # ]
-        # for insertion in self.fbti_entities:
-        #     if insertion.db_primary_id not in self.fbti_fbal_dict.keys():
-        #         self.fb_data_entities[insertion.db_primary_id] = insertion
-        #         continue
-        #     for fbal_feature_id in self.fbti_fbal_dict[insertion.db_primary_id]:
-        #         allele = self.fb_data_entities[fbal_feature_id]
-        #         for attr_name in lists_to_extend:
-        #             allele_list = getattr(allele, attr_name)
-        #             insertion_list = getattr(insertion, attr_name)
-        #             insertion_list.extend(allele_list)
-        #         insertion.alt_fb_ids.append('FB:{allele.uniquename}')
-        #         for attr_name in dicts_to_add:
-        #             allele_dict = getattr(allele, attr_name)
-        #             insertion_dict = getattr(insertion, attr_name)
-        #             for k, v in allele_dict.items():
-        #                 try:
-        #                     insertion_dict[k].extend(v)
-        #                 except KeyError:
-        #                     insertion_dict[k] = v
-        #         allele.superceded_by_insertion = True
-        #         allele.for_export = False
-        #         allele.export_warnings.append('Superceded by FBti insertion')
-        #     self.fb_data_entities[insertion.db_primary_id] = insertion
-        #######################################################################################################
+        prob_counter = 0
+        at_locus_counter = 0
+        transgenic_counter = 0
+        classical_counter = 0
+        for allele in self.fb_data_entities.values():
+            if allele.db_primary_id in self.at_locus_fbal_fbti_dict.keys() and allele.db_primary_id in self.transgenic_fbal_fbti_dict.keys():
+                self.log.error(f'Allele {allele} unexpectedly has both at-locus and transgenic unspecified FBti insertions.')
+                prob_counter += 1
+            elif allele.db_primary_id in self.at_locus_fbal_fbti_dict.keys():
+                allele.superceded_by_at_locus_insertion = self.at_locus_fbal_fbti_dict[allele.db_primary_id][0]
+                self.add_fbal_to_fbti(self, allele)
+                at_locus_counter += 1
+            elif allele.db_primary_id in self.transgenic_fbal_fbti_dict.keys():
+                allele.superceded_by_transgnc_insertions = self.transgenic_fbal_fbti_dict[allele.db_primary_id]
+                self.add_fbal_to_fbti(self, allele)
+                transgenic_counter += 1
+            else:
+                classical_counter += 1
+        self.log.info(f'Found {prob_counter} FBal alleles unexpectedly related to both at-locus and unspecified transgenic FBti insertions.')
+        self.log.info(f'Found {at_locus_counter} FBal alleles related to at-locus FBti insertions.')
+        self.log.info(f'Found {transgenic_counter} FBal alleles related to unspecified transgenic FBti insertions.')
+        self.log.info(f'Found {classical_counter} FBal classical and/or complex alleles to be reported as they are (no FBti replacement).')
         return
 
     def synthesize_related_features(self):
@@ -529,7 +549,7 @@ class AlleleHandler(MetaAlleleHandler):
         allele_counter = 0
         # Need to code for the rare possibility that gene-allele is represented by many feature_relationships.
         for allele in self.fb_data_entities.values():
-            if allele.superceded_by_insertion is True:
+            if allele.superceded_by_at_locus_insertion or allele.superceded_by_transgnc_insertion:
                 continue
             # Skip transgenic alleles.
             elif allele.uniquename.startswith('FBti') and allele.name.endswith('unspecified'):
