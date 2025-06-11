@@ -361,16 +361,19 @@ class AlleleHandler(MetaAlleleHandler):
             'synonyms',
             'timestamps',
         ]
-        dicts_to_add = [
+        dicts_of_elements_to_add = [
+            'cvt_annos_by_id',
+            'rels_by_id',
+        ]
+        dicts_of_lists_to_add = [
             'props_by_type',
             'cvt_anno_ids_by_cv',
             'cvt_anno_ids_by_prop',
             'cvt_anno_ids_by_term',
-            'cvt_annos_by_id',
             'obj_rel_ids_by_type',
-            'rels_by_id',
             'sbj_rel_ids_by_type',
         ]
+
         for fbti_feature_id in fbti_feature_ids:
             if fbti_feature_id not in self.fb_data_entities:
                 self.fb_data_entities[fbti_feature_id] = self.fbti_entities[fbti_feature_id]
@@ -382,10 +385,19 @@ class AlleleHandler(MetaAlleleHandler):
                 insertion_list = getattr(insertion, attr_name)
                 self.log.debug(f'For {attr_name}, add {len(allele_list)} allele elements to {len(insertion_list)} insertion elements.')
                 insertion_list.extend(allele_list)
-            for attr_name in dicts_to_add:
+            # Add to ID-keyed dict of single chado annotations (key is unique for FBCVtermAnnotation or FBRelationship).
+            for attr_name in dicts_of_elements_to_add:
                 allele_dict = getattr(allele, attr_name)
                 insertion_dict = getattr(insertion, attr_name)
                 self.log.debug(f'For {attr_name}, add {len(allele_dict)} allele elements to {len(insertion_dict)} insertion elements.')
+                for k, v in allele_dict.items():
+                    if k not in insertion_dict.keys():
+                        insertion_dict[k] = v
+            # Combine lists of annotations.
+            for attr_name in dicts_of_lists_to_add:
+                allele_dict = getattr(allele, attr_name)
+                insertion_dict = getattr(insertion, attr_name)
+                self.log.debug(f'For {attr_name}, add {len(allele_dict)} allele lists to {len(insertion_dict)} insertion lists.')
                 for k, v in allele_dict.items():
                     try:
                         insertion_dict[k].extend(v)
