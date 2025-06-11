@@ -130,8 +130,9 @@ class AlleleHandler(MetaAlleleHandler):
         super().__init__(log, testing)
         self.datatype = 'allele'
         self.fb_export_type = FBAllele
-        self.fbal_fbti_dict = {}    # Will be FBal-feature_id-keyed dict of FBti feature_id lists.
-        self.fbti_entities = {}     # Will be feature_id-keyed FBAllele objects generated from FBti insertions.
+        self.at_locus_fbal_fbti_dict = {}      # Will be FBal-feature_id-keyed dict of FBti feature_id lists ("is_represented_at_Alliance_as").
+        self.transgenic_fbal_fbti_dict = {}    # Will be FBal-feature_id-keyed dict of FBti feature_id lists (via FBtp to unspecified FBti).
+        self.fbti_entities = {}                # Will be feature_id-keyed FBAllele objects generated from FBti insertions.
 
     test_set = {
         'FBal0137236': 'gukh[142]',             # Insertion allele, part of TI_set_P{hsneo}.BDGP collection.
@@ -249,7 +250,7 @@ class AlleleHandler(MetaAlleleHandler):
         self.log.info('Build allele-insertion replacement lookup.')
         direct_fbal_fbti_counter = 0
         indirect_fbal_fbti_counter = 0
-        # First, get relationships for at-locus insertions.
+        # First, get relationships between FBal alleles and at-locus FBti insertions (FBti is inside FBal).
         for allele in self.fb_data_entities.values():
             fbal_fbti_alliance_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='is_represented_at_alliance_as',
                                                                   rel_entity_types=self.feature_subtypes['insertion'])
@@ -257,28 +258,49 @@ class AlleleHandler(MetaAlleleHandler):
                 insertion = self.feature_lookup[feat_rel.chado_obj.object_id]
                 self.log.debug(f'Report {allele} under {insertion["name"]} ({insertion["uniquename"]}).')
                 try:
-                    self.fbal_fbti_dict[allele.db_primary_id].append(insertion["feature_id"])
+                    self.at_locus_fbal_fbti_dict[allele.db_primary_id].append(insertion["feature_id"])
                     self.log.warning(f'Found another FBti for {allele}, but expected a one-to-one relationship.')
                 except KeyError:
-                    self.fbal_fbti_dict[allele.db_primary_id] = [(insertion["feature_id"])]
+                    self.at_locus_fbal_fbti_dict[allele.db_primary_id] = [(insertion["feature_id"])]
                     direct_fbal_fbti_counter += 1
         self.log.info(f'Found {direct_fbal_fbti_counter} FBal alleles to be replaced by at-locus FBti insertions in export file.')
-        # BILLY BOB - CONTINUE HERE #1
-        # Second, get relationships via constructs.
+        # Second, get relationships between FBal alleles and transgenic insertions (FBal is inside FBti).
         allele = aliased(Feature, name='allele')
         construct = aliased(Feature, name='construct')
         insertion = aliased(Feature, name='insertion')
-        ac_rel = aliased(Feature, name='ac_rel')
-        ic_rel = aliased(Feature, name='ic_rel')
+        ac_rel = aliased(FeatureRelationship, name='ac_rel')
+        ic_rel = aliased(FeatureRelationship, name='ic_rel')
+        ac_rel_type = aliased(Cvterm, name='ac_rel_type')
+        ic_rel_type = aliased(Cvterm, name='ic_rel_type')
         filters = (
-            Cvterm.name == 'is_represented_at_alliance_as',
             allele.is_obsolete.is_(False),
             allele.uniquename.op('~')(self.regex['allele']),
             construct.is_obsolete.is_(False),
             construct.uniquename.op('~')(self.regex['construct']),
             insertion.is_obsolete.is_(False),
             insertion.uniquename.op('~')(self.regex['insertion']),
+            insertion.name.op('~')('unspecified$'),
+            ac_rel_type.name == 'associated_with',
+            ic_rel_type.name == 'producedby',
         )
+        results = session.query(allele, insertion).\
+            select_from(allele).\
+            join(ac_rel, (ac_rel.subject_id == allele.feature_id)).\
+            join(ac_rel_type, (ac_rel_type.cvterm_id == ac_rel.type_id)).\
+            join(construct, (construct.feature_id == ac_rel.object_id)).\
+            join(ic_rel, (ic_rel.object_id == construct.feature_id)).\
+            join(ic_rel_type, (ic_rel_type.cvterm_id == ic_rel.type_id)).\
+            join(insertion, (insertion.feature_id == ic_rel.subject_id)).\
+            filter(*filters).\
+            distinct()
+        for result in results:
+            self.log.debug(f'The transgenic allele {allele} is related to the generic insertion {result.insertion.name} ({result.insertion.uniquename}).')
+            try:
+                self.transgenic_fbal_fbti_dict[allele.db_primary_id].append(result.insertion.feature_id)
+            except KeyError:
+                self.transgenic_fbal_fbti_dict[allele.db_primary_id] = [result.insertion.feature_id]
+                indirect_fbal_fbti_counter += 1
+        self.log.info(f'Found {indirect_fbal_fbti_counter} FBal alleles to be replaced by transgenic FBti insertions in export file.')
         return
 
     def get_insertion_entities(self, session):
