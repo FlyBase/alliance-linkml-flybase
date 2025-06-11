@@ -406,11 +406,11 @@ class AlleleHandler(MetaAlleleHandler):
                 prob_counter += 1
             elif allele.db_primary_id in self.at_locus_fbal_fbti_dict.keys():
                 allele.superceded_by_at_locus_insertion = self.at_locus_fbal_fbti_dict[allele.db_primary_id][0]
-                self.add_fbal_to_fbti(self, allele)
+                self.add_fbal_to_fbti(allele)
                 at_locus_counter += 1
             elif allele.db_primary_id in self.transgenic_fbal_fbti_dict.keys():
                 allele.superceded_by_transgnc_insertions = self.transgenic_fbal_fbti_dict[allele.db_primary_id]
-                self.add_fbal_to_fbti(self, allele)
+                self.add_fbal_to_fbti(allele)
                 transgenic_counter += 1
             else:
                 classical_counter += 1
