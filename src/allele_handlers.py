@@ -247,8 +247,8 @@ class AlleleHandler(MetaAlleleHandler):
     def get_fbal_fbti_replacements(self, session):
         """Find FBal-FBti replacements to make."""
         self.log.info('Build allele-insertion replacement lookup.')
-        # self.fbal_fbti_dict = {}
         direct_fbal_fbti_counter = 0
+        indirect_fbal_fbti_counter = 0
         # First, get relationships for at-locus insertions.
         for allele in self.fb_data_entities.values():
             fbal_fbti_alliance_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='is_represented_at_alliance_as',
@@ -257,13 +257,13 @@ class AlleleHandler(MetaAlleleHandler):
                 insertion = self.feature_lookup[feat_rel.chado_obj.object_id]
                 self.log.debug(f'Report {allele} under {insertion["name"]} ({insertion["uniquename"]}).')
                 try:
-                    self.fbal_fbti[allele.db_primary_id].append(insertion["feature_id"])
+                    self.fbal_fbti_dict[allele.db_primary_id].append(insertion["feature_id"])
                     self.log.warning(f'Found another FBti for {allele}, but expected a one-to-one relationship.')
                 except KeyError:
-                    self.fbal_fbti[allele.db_primary_id] = [(insertion["feature_id"])]
+                    self.fbal_fbti_dict[allele.db_primary_id] = [(insertion["feature_id"])]
                     direct_fbal_fbti_counter += 1
         self.log.info(f'Found {direct_fbal_fbti_counter} FBal alleles to be replaced by at-locus FBti insertions in export file.')
-        # BILLY BOB - continue here
+        # BILLY BOB - CONTINUE HERE #1
         # Second, get relationships via constructs.
         allele = aliased(Feature, name='allele')
         construct = aliased(Feature, name='construct')
@@ -299,7 +299,8 @@ class AlleleHandler(MetaAlleleHandler):
         self.get_entity_relationships(session, 'subject', rel_type='alleleof', entity_type='gene', entity_regex=self.regex['gene'])
         al_cons_fr_types = ['derived_tp_assoc_alleles', 'associated_with', 'gets_expression_data_from']
         self.get_entity_relationships(session, 'subject', rel_type=al_cons_fr_types, entity_type='construct', entity_regex=self.regex['construct'])
-        self.get_entity_relationships(session, 'subject', rel_type='associated_with', entity_type='insertion', entity_regex=self.regex['insertion'])
+        al_ins_fr_types = ['is_represented_at_alliance_as', 'associated_with']
+        self.get_entity_relationships(session, 'subject', rel_type=al_ins_fr_types, entity_type='insertion', entity_regex=self.regex['insertion'])
         self.get_entity_relationships(session, 'object', rel_type='partof', entity_type='variation')
         self.get_entity_cvterms(session)
         self.get_entityprops(session)
@@ -328,7 +329,7 @@ class AlleleHandler(MetaAlleleHandler):
             self.fb_data_entities[insertion.db_primary_id] = insertion
             counter += 1
         self.log.info(f'Added {counter} FBti insertions to the initial FBal entities list.')
-        # BOB - CONTINUE BELOW
+        # BILLY BOB - CONTINUE HERE #2
         #######################################################################################################
         # lists_to_extend = [
         #     'dbxrefs',
