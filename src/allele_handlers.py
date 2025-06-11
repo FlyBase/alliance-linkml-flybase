@@ -385,6 +385,7 @@ class AlleleHandler(MetaAlleleHandler):
                 insertion_list = getattr(insertion, attr_name)
                 self.log.debug(f'For {attr_name}, add {len(allele_list)} allele elements to {len(insertion_list)} insertion elements.')
                 insertion_list.extend(allele_list)
+                self.log.debug(f'For {attr_name}, now have {len(insertion_list)} insertion elements.')
             # Add to ID-keyed dict of single chado annotations (key is unique for FBCVtermAnnotation or FBRelationship).
             for attr_name in dicts_of_elements_to_add:
                 allele_dict = getattr(allele, attr_name)
@@ -393,6 +394,7 @@ class AlleleHandler(MetaAlleleHandler):
                 for k, v in allele_dict.items():
                     if k not in insertion_dict.keys():
                         insertion_dict[k] = v
+                self.log.debug(f'For {attr_name}, now have {len(insertion_dict)} insertion elements.')
             # Combine lists of annotations.
             for attr_name in dicts_of_lists_to_add:
                 allele_dict = getattr(allele, attr_name)
@@ -403,6 +405,7 @@ class AlleleHandler(MetaAlleleHandler):
                         insertion_dict[k].extend(v)
                     except KeyError:
                         insertion_dict[k] = v
+                self.log.debug(f'For {attr_name}, now have {len(insertion_dict)} insertion lists.')
         allele.is_obsolete = False
         allele.for_export = False
         allele.export_warnings.append('Superceded by FBti insertion')
