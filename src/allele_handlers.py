@@ -348,8 +348,10 @@ class AlleleHandler(MetaAlleleHandler):
     def add_fbal_to_fbti(self, allele):
         """Add FBal data to a related FBti."""
         fbti_feature_ids = []
-        fbti_feature_ids.append(allele.superceded_by_at_locus_insertion)
-        fbti_feature_ids.extend(allele.superceded_by_transgnc_insertions)
+        if allele.superceded_by_at_locus_insertion:
+            fbti_feature_ids.append(allele.superceded_by_at_locus_insertion)
+        if allele.superceded_by_transgnc_insertions:
+            fbti_feature_ids.extend(allele.superceded_by_transgnc_insertions)
         lists_to_extend = [
             'dbxrefs',
             'export_warnings',
@@ -373,7 +375,6 @@ class AlleleHandler(MetaAlleleHandler):
             'obj_rel_ids_by_type',
             'sbj_rel_ids_by_type',
         ]
-
         for fbti_feature_id in fbti_feature_ids:
             insertion = self.fbti_entities[fbti_feature_id]
             self.log.debug(f'Merge {allele} data into {insertion} data.')
@@ -418,14 +419,17 @@ class AlleleHandler(MetaAlleleHandler):
         classical_counter = 0
         fbti_counter = 0
         for allele in self.fb_data_entities.values():
+            self.log.debug(f'Assess FBti replacement for allele {allele}')
             if allele.db_primary_id in self.at_locus_fbal_fbti_dict.keys() and allele.db_primary_id in self.transgenic_fbal_fbti_dict.keys():
                 self.log.error(f'Allele {allele} unexpectedly has both at-locus and transgenic unspecified FBti insertions.')
                 prob_counter += 1
             elif allele.db_primary_id in self.at_locus_fbal_fbti_dict.keys():
+                self.log.debug(f'Allele {allele} is superceded by an at-locus FBti insertion.')
                 allele.superceded_by_at_locus_insertion = self.at_locus_fbal_fbti_dict[allele.db_primary_id][0]
                 self.add_fbal_to_fbti(allele)
                 at_locus_counter += 1
             elif allele.db_primary_id in self.transgenic_fbal_fbti_dict.keys():
+                self.log.debug(f'Allele {allele} is superceded by unspecified FBti insertion(s).')
                 allele.superceded_by_transgnc_insertions = self.transgenic_fbal_fbti_dict[allele.db_primary_id]
                 self.add_fbal_to_fbti(allele)
                 transgenic_counter += 1
