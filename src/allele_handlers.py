@@ -296,9 +296,9 @@ class AlleleHandler(MetaAlleleHandler):
         for result in results:
             self.log.debug(f'The transgenic allele {allele} is related to the generic insertion {result.insertion.name} ({result.insertion.uniquename}).')
             try:
-                self.transgenic_fbal_fbti_dict[allele.db_primary_id].append(result.insertion.feature_id)
+                self.transgenic_fbal_fbti_dict[result.allele.feature_id].append(result.insertion.feature_id)
             except KeyError:
-                self.transgenic_fbal_fbti_dict[allele.db_primary_id] = [result.insertion.feature_id]
+                self.transgenic_fbal_fbti_dict[result.allele.feature_id] = [result.insertion.feature_id]
                 indirect_fbal_fbti_counter += 1
         self.log.info(f'Found {indirect_fbal_fbti_counter} FBal alleles to be replaced by transgenic FBti insertions in export file.')
         return
