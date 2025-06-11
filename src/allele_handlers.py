@@ -381,29 +381,29 @@ class AlleleHandler(MetaAlleleHandler):
             for attr_name in lists_to_extend:
                 allele_list = getattr(allele, attr_name)
                 insertion_list = getattr(insertion, attr_name)
-                self.log.debug(f'For {attr_name}, add {len(allele_list)} allele elements to {len(insertion_list)} insertion elements.')
+                self.log.debug(f'For {attr_name}, add {len(allele_list)} elements from the allele to {len(insertion_list)} elements from the insertion.')
                 insertion_list.extend(allele_list)
-                self.log.debug(f'For {attr_name}, now have {len(insertion_list)} insertion elements.')
+                self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_list)} elements.')
             # Add to ID-keyed dict of single chado annotations (key is unique for FBCVtermAnnotation or FBRelationship).
             for attr_name in dicts_of_elements_to_add:
                 allele_dict = getattr(allele, attr_name)
                 insertion_dict = getattr(insertion, attr_name)
-                self.log.debug(f'For {attr_name}, add {len(allele_dict)} allele elements to {len(insertion_dict)} insertion elements.')
+                self.log.debug(f'For {attr_name}, add {len(allele_dict)} elements from the allele to {len(insertion_dict)} elements from the insertion.')
                 for k, v in allele_dict.items():
                     if k not in insertion_dict.keys():
                         insertion_dict[k] = v
-                self.log.debug(f'For {attr_name}, now have {len(insertion_dict)} insertion elements.')
+                self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_dict)} elements.')
             # Combine lists of annotations.
             for attr_name in dicts_of_lists_to_add:
                 allele_dict = getattr(allele, attr_name)
                 insertion_dict = getattr(insertion, attr_name)
-                self.log.debug(f'For {attr_name}, add {len(allele_dict)} allele lists to {len(insertion_dict)} insertion lists.')
+                self.log.debug(f'For {attr_name}, add {len(allele_dict)} lists from the allele to {len(insertion_dict)} lists from the insertion.')
                 for k, v in allele_dict.items():
                     try:
                         insertion_dict[k].extend(v)
                     except KeyError:
                         insertion_dict[k] = v
-                self.log.debug(f'For {attr_name}, now have {len(insertion_dict)} insertion lists.')
+                self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_dict)} lists.')
         allele.is_obsolete = False
         allele.for_export = False
         allele.export_warnings.append('Superceded by FBti insertion')
