@@ -25,7 +25,7 @@ import argparse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
-from allele_handlers import AlleleHandler, AberrationHandler, BalancerHandler
+from allele_handlers import AlleleHandler    # BOB, AberrationHandler, BalancerHandler
 from utils import export_chado_data, generate_export_file
 
 # Data types handled by this script.
