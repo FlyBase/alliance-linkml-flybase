@@ -374,6 +374,8 @@ class AlleleHandler(MetaAlleleHandler):
             'cvt_anno_ids_by_term',
             'obj_rel_ids_by_type',
             'sbj_rel_ids_by_type',
+            'sbj_rel_ids_by_obj_type',
+            'obj_rel_ids_by_sbj_type',
         ]
         for fbti_feature_id in fbti_feature_ids:
             insertion = self.fbti_entities[fbti_feature_id]
@@ -465,7 +467,7 @@ class AlleleHandler(MetaAlleleHandler):
                     allele.arg_rels.append(arg_rel)
                     has_args_counter += 1
             # Assess relationships to current constructs.
-            relevant_cons_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='derived_tp_assoc_alleles',
+            relevant_cons_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types=['derived_tp_assoc_alleles', 'producedby'],
                                                              rel_entity_types=self.feature_subtypes['construct'])
             self.log.debug(f'For {allele}, found {len(relevant_cons_rels)} cons rels to review.')
             for cons_rel in relevant_cons_rels:
