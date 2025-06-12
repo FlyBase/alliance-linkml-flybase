@@ -416,6 +416,7 @@ class AlleleHandler(MetaAlleleHandler):
         prob_counter = 0
         at_locus_counter = 0
         transgenic_counter = 0
+        unspecified_ins_counter = 0
         classical_counter = 0
         fbti_counter = 0
         for allele in self.fb_data_entities.values():
@@ -432,12 +433,13 @@ class AlleleHandler(MetaAlleleHandler):
                 self.log.debug(f'Allele {allele} is superceded by unspecified FBti insertion(s).')
                 allele.superceded_by_transgnc_insertions = self.transgenic_fbal_fbti_dict[allele.db_primary_id]
                 self.add_fbal_to_fbti(allele)
+                unspecified_ins_counter += len(allele.superceded_by_transgnc_insertions)
                 transgenic_counter += 1
             else:
                 classical_counter += 1
         self.log.info(f'Found {prob_counter} FBal alleles unexpectedly related to both at-locus and unspecified transgenic FBti insertions.')
         self.log.info(f'Found {at_locus_counter} FBal alleles related to at-locus FBti insertions.')
-        self.log.info(f'Found {transgenic_counter} FBal alleles related to unspecified transgenic FBti insertions.')
+        self.log.info(f'Found {transgenic_counter} FBal alleles related to {unspecified_ins_counter} unspecified transgenic FBti insertions.')
         self.log.info(f'Found {classical_counter} FBal classical and/or complex alleles to be reported as they are (no FBti replacement).')
         for fbti_feature_id, insertion in self.fbti_entities.items():
             self.fb_data_entities[fbti_feature_id] = insertion
@@ -574,7 +576,7 @@ class AlleleHandler(MetaAlleleHandler):
         allele_counter = 0
         # Need to code for the rare possibility that gene-allele is represented by many feature_relationships.
         for allele in self.fb_data_entities.values():
-            if allele.superceded_by_at_locus_insertion or allele.superceded_by_transgnc_insertion:
+            if allele.superceded_by_at_locus_insertion or allele.superceded_by_transgnc_insertions:
                 continue
             # Skip transgenic alleles.
             elif allele.uniquename.startswith('FBti') and allele.name.endswith('unspecified'):
