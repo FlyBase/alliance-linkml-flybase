@@ -450,13 +450,21 @@ class AlleleHandler(MetaAlleleHandler):
     def synthesize_related_features(self):
         """Synthesize allele attributes based on related features."""
         self.log.info('Synthesize allele attributes based on related features.')
+        has_args_counter = 0
         has_construct_counter = 0
         has_dmel_insertion_counter = 0
         has_non_dmel_insertion_counter = 0
-        has_args_counter = 0
         for allele in self.fb_data_entities.values():
-            if allele.uniquename.startswith('FBti'):
-                continue
+            # Assess relationships to ARGs.
+            relevant_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='partof', rel_entity_types=self.feature_subtypes['variation'])
+            # self.log.debug(f'For {allele}, found {len(relevant_rels)} partof relationships to ARGs.')
+            if relevant_rels and allele.uniquename.startswith('FBti'):
+                self.log.warning(f'FBti allele {allele} unexpectedly has a related ARGS feature.')
+            for arg_rel in relevant_rels:
+                arg = self.feature_lookup[arg_rel.chado_obj.subject_id]
+                if arg['is_obsolete'] is False:
+                    allele.arg_rels.append(arg_rel)
+                    has_args_counter += 1
             # Assess relationships to current constructs.
             relevant_cons_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='derived_tp_assoc_alleles',
                                                              rel_entity_types=self.feature_subtypes['construct'])
@@ -466,7 +474,9 @@ class AlleleHandler(MetaAlleleHandler):
                 if construct['is_obsolete'] is False and construct['uniquename'].startswith('FBtp'):
                     allele.cons_rels.append(cons_rel)
                     has_construct_counter += 1
-            # Assess relationships to current insertions (will be used for mutation type assessment of complex alleles).
+            # Assess relationships between FBal allele and current FBti insertions (will be used for mutation type assessment of complex FBal alleles).
+            if allele.uniquename.startswith('FBti'):
+                continue
             relevant_ins_rels = allele.recall_relationships(self.log, entity_role='subject', rel_entity_types=self.feature_subtypes['insertion'])
             # self.log.debug(f'For {allele}, found {len(relevant_ins_rels)} ins rels to review.')
             for ins_rel in relevant_ins_rels:
@@ -480,18 +490,10 @@ class AlleleHandler(MetaAlleleHandler):
                         # self.log.debug(f'{allele} has non-Dmel insertion.')
                         allele.non_dmel_ins_rels.append(ins_rel)
                         has_non_dmel_insertion_counter += 1
-            # Assess relationships to ARGs.
-            relevant_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='partof', rel_entity_types=self.feature_subtypes['variation'])
-            # self.log.debug(f'For {allele}, found {len(relevant_rels)} partof relationships to ARGs.')
-            for arg_rel in relevant_rels:
-                arg = self.feature_lookup[arg_rel.chado_obj.subject_id]
-                if arg['is_obsolete'] is False:
-                    allele.arg_rels.append(arg_rel)
-                    has_args_counter += 1
+        self.log.info(f'Found {has_args_counter} alleles related to a mapped variation feature (ARGs).')
         self.log.info(f'Found {has_construct_counter} alleles related to a construct.')
         self.log.info(f'Found {has_dmel_insertion_counter} alleles related to a Dmel insertion.')
         self.log.info(f'Found {has_non_dmel_insertion_counter} alleles related to a non-Dmel insertion.')
-        self.log.info(f'Found {has_args_counter} alleles related to a mapped variation feature (ARGs).')
         return
 
     def synthesize_parent_genes(self):
