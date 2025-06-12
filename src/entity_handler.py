@@ -958,7 +958,9 @@ class PrimaryEntityHandler(DataHandler):
                 syno_dict['pub_curies'] = self.lookup_pub_curies(syno_dict['pub_ids'])
                 # Pick out current symbol for the entity.
                 if syno_dict['is_current'] is True and syno_dict['name_type_name'] in ['systematic_name', 'nomenclature_symbol']:
-                    fb_data_entity.curr_fb_symbol = syno_dict['display_text']
+                    # Add extra check for FBti alleles that inherit current symbols of FBal alleles.
+                    if syno_dict['format_text'] == fb_data_entity.name:
+                        fb_data_entity.curr_fb_symbol = syno_dict['display_text']
                 # Pick out current full name for the entity.
                 if syno_dict['is_current'] is True and syno_dict['name_type_name'] == 'full_name':
                     fb_data_entity.curr_fb_fullname = syno_dict['display_text']
