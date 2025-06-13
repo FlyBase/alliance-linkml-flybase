@@ -410,7 +410,8 @@ class AlleleHandler(MetaAlleleHandler):
                     try:
                         insertion_dict[k].extend(v)
                     except KeyError:
-                        insertion_dict[k] = v
+                        insertion_dict[k] = []
+                        insertion_dict[k].extend(v)
                 self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_dict)} lists.')
         allele.is_obsolete = False
         allele.export_warnings.append('Superceded by FBti insertion')
@@ -461,6 +462,7 @@ class AlleleHandler(MetaAlleleHandler):
         has_dmel_insertion_counter = 0
         has_non_dmel_insertion_counter = 0
         for allele in self.fb_data_entities.values():
+            self.log.debug(f'Assess {allele}, feature_id={allele.db_primary_id}')
             # Assess relationships to ARGs.
             relevant_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='partof', rel_entity_types=self.feature_subtypes['variation'])
             # self.log.debug(f'For {allele}, found {len(relevant_rels)} partof relationships to ARGs.')
