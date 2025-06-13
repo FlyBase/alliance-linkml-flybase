@@ -362,6 +362,11 @@ class AlleleHandler(MetaAlleleHandler):
             'pub_associations',
             'synonyms',
             'timestamps',
+            'reagent_colls',
+            'al_reagent_colls',
+            'ti_reagent_colls',
+            'tp_reagent_colls',
+            'sf_reagent_colls',
         ]
         dicts_of_elements_to_add = [
             'cvt_annos_by_id',
