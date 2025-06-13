@@ -25,7 +25,7 @@ import argparse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
-from allele_handlers import AlleleHandler    # BOB, AberrationHandler, BalancerHandler
+from allele_handlers import AlleleHandler, AberrationHandler, BalancerHandler
 from utils import export_chado_data, generate_export_file
 
 # Data types handled by this script.
@@ -82,16 +82,16 @@ def main():
 
     # Get the data and process it.
     allele_handler = AlleleHandler(log, testing)
-    # aberration_handler = AberrationHandler(log, testing)
-    # balancer_handler = BalancerHandler(log, testing)
+    aberration_handler = AberrationHandler(log, testing)
+    balancer_handler = BalancerHandler(log, testing)
     if reference_session:
         export_chado_data(session, log, allele_handler, reference_session=reference_session)
-        # export_chado_data(session, log, aberration_handler, reference_session=reference_session)
-        # export_chado_data(session, log, balancer_handler, reference_session=reference_session)
+        export_chado_data(session, log, aberration_handler, reference_session=reference_session)
+        export_chado_data(session, log, balancer_handler, reference_session=reference_session)
     else:
         export_chado_data(session, log, allele_handler)
-        # export_chado_data(session, log, aberration_handler)
-        # export_chado_data(session, log, balancer_handler)
+        export_chado_data(session, log, aberration_handler)
+        export_chado_data(session, log, balancer_handler)
 
     # Export the data.
     export_dict = {
@@ -100,8 +100,8 @@ def main():
     }
     export_dict['allele_ingest_set'] = []
     export_dict['allele_ingest_set'].extend(allele_handler.export_data[allele_handler.primary_export_set])
-    # export_dict['allele_ingest_set'].extend(aberration_handler.export_data[aberration_handler.primary_export_set])
-    # export_dict['allele_ingest_set'].extend(balancer_handler.export_data[balancer_handler.primary_export_set])
+    export_dict['allele_ingest_set'].extend(aberration_handler.export_data[aberration_handler.primary_export_set])
+    export_dict['allele_ingest_set'].extend(balancer_handler.export_data[balancer_handler.primary_export_set])
     generate_export_file(export_dict, log, output_filename)
 
     if not reference_session:
