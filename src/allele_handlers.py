@@ -413,7 +413,7 @@ class AlleleHandler(MetaAlleleHandler):
                         insertion_dict[k] = []
                         insertion_dict[k].extend(v)
                 self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_dict)} lists.')
-        allele.is_obsolete = False
+        allele.is_obsolete = True
         allele.export_warnings.append('Superceded by FBti insertion')
         return
 
@@ -513,10 +513,9 @@ class AlleleHandler(MetaAlleleHandler):
             if allele.cons_rels:
                 continue
             parent_gene_ids = []
-            # BOB - for FBti, this pulls up 0, even though it seems like rels are being transferred????
-            self.log.debug(f'BOB: Have these f_r_ids: {allele.rels_by_id.keys()}')
-            self.log.debug(f'BOB: Have these f_r sbj types: {allele.sbj_rel_ids_by_type.keys()}')
-            self.log.debug(f'BOB: Have these f_r obj types: {allele.obj_rel_ids_by_type.keys()}')
+            # self.log.debug(f'Have these f_r_ids: {allele.rels_by_id.keys()}')
+            # self.log.debug(f'Have these f_r sbj types: {allele.sbj_rel_ids_by_type.keys()}')
+            # self.log.debug(f'Have these f_r obj types: {allele.obj_rel_ids_by_type.keys()}')
             relevant_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='alleleof', rel_entity_types='gene')
             self.log.debug(f'For {allele}, found {len(relevant_rels)} alleleof relationships to genes.')
             for allele_gene_rel in relevant_rels:
@@ -595,7 +594,6 @@ class AlleleHandler(MetaAlleleHandler):
             # Skip transgenic alleles.
             elif allele.uniquename.startswith('FBti') and allele.name.endswith('unspecified'):
                 continue
-            # BOB - for FBti, this pulls up 0, even though it seems like rels are being transferred????
             relevant_gene_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='alleleof', rel_entity_types='gene')
             if relevant_gene_rels:
                 allele_counter += 1
@@ -622,8 +620,8 @@ class AlleleHandler(MetaAlleleHandler):
         self.merge_fbti_fbal()
         self.flag_new_additions_and_obsoletes()
         self.synthesize_secondary_ids()
-        # self.synthesize_synonyms()    # BOB - TMP DEV
-        # self.synthesize_pubs()        # BOB - TMP DEV
+        self.synthesize_synonyms()
+        self.synthesize_pubs()
         self.synthesize_related_features()
         self.synthesize_parent_genes()
         self.flag_alleles_of_internal_genes()
