@@ -952,7 +952,7 @@ class AberrationHandler(MetaAlleleHandler):
     }
 
     # Additional export sets.
-    aberration_gene_rels = {}            # Will be (aberration feature_id, gene feature_id, fr type_id) tuples keying lists of FBRelationships.
+    aberration_gene_rels = {}            # Will be (FBab feature_id, FBgn feature_id, AGR_rel_type, ECO) tuples keying lists of FBRelationships.
     aberration_gene_associations = []    # Will be the final list of gene-aberration FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
 
     # Additional reference info.
@@ -1043,6 +1043,21 @@ class AberrationHandler(MetaAlleleHandler):
     def synthesize_aberration_gene_associations(self):
         """Synthesize aberration-to-gene associations."""
         self.log.info('Synthesize aberration-to-gene associations.')
+        fb_agr_aberr_rel_mapping = {
+            'deletes': 'full_deletion',
+            'molec_deletes': 'full_deletion',
+            'part_deletes': 'partial_deletion',
+            'molec_partdeletes': 'partial_deletion',
+            'nondeletes': 'mutation_does_not_delete',
+            'molec_nondeletes': 'mutation_does_not_delete',
+            'duplicates': 'full_duplication',
+            'molec_dups': 'full_duplication',
+            'part_duplicates': 'partial_duplication',
+            'molec_partdups': 'partial_duplication',
+            'nonduplicates': 'mutation_does_not_duplicate',
+            'molec_nondups': 'mutation_does_not_duplicate',
+            # 'derived_computed_affected_gene': 'contains',
+        }
         aberration_counter = 0
         gene_rel_counter = 0
         for aberration in self.fb_data_entities.values():
@@ -1051,14 +1066,32 @@ class AberrationHandler(MetaAlleleHandler):
             if relevant_sbj_gene_rels or relevant_obj_gene_rels:
                 aberration_counter += 1
             for sbj_gene_rel in relevant_sbj_gene_rels:
-                rel_key = (aberration.db_primary_id, sbj_gene_rel.chado_obj.object_id, sbj_gene_rel.chado_obj.type_id)
+                fb_rel_type = sbj_gene_rel.chado_obj.type.name
+                if fb_rel_type not in fb_agr_aberr_rel_mapping.keys():
+                    self.log.debug(f'Skip this FBab-FBgn relationship type: {fb_rel_type}')
+                    continue
+                agr_rel_type = fb_agr_aberr_rel_mapping[fb_rel_type]
+                if fb_rel_type.startswith('molec'):
+                    eco_id = 'ECO:0007736'    # molecule detection assay evidence used in manual assertion
+                else:
+                    eco_id = 'ECO:0000315'    # mutant phenotype evidence used in manual assertion
+                rel_key = (aberration.db_primary_id, sbj_gene_rel.chado_obj.object_id, agr_rel_type, eco_id)
                 try:
                     self.aberration_gene_rels[rel_key].append(sbj_gene_rel)
                 except KeyError:
                     self.aberration_gene_rels[rel_key] = [sbj_gene_rel]
                     gene_rel_counter += 1
             for obj_gene_rel in relevant_obj_gene_rels:
-                rel_key = (aberration.db_primary_id, obj_gene_rel.chado_obj.subject_id, obj_gene_rel.chado_obj.type_id)
+                fb_rel_type = sbj_gene_rel.chado_obj.type.name
+                if fb_rel_type not in fb_agr_aberr_rel_mapping.keys():
+                    self.log.debug(f'Skip this FBab-FBgn relationship type: {fb_rel_type}')
+                    continue
+                agr_rel_type = fb_agr_aberr_rel_mapping[fb_rel_type]
+                if fb_rel_type.startswith('molec'):
+                    eco_id = 'ECO:0007736'    # molecule detection assay evidence used in manual assertion
+                else:
+                    eco_id = 'ECO:0000315'    # mutant phenotype evidence used in manual assertion
+                rel_key = (aberration.db_primary_id, sbj_gene_rel.chado_obj.object_id, agr_rel_type, eco_id)
                 try:
                     self.aberration_gene_rels[rel_key].append(obj_gene_rel)
                 except KeyError:
@@ -1106,43 +1139,29 @@ class AberrationHandler(MetaAlleleHandler):
     def map_aberration_gene_associations(self):
         """Map aberration-gene associations to Alliance object."""
         self.log.info('Map aberration-gene associations to Alliance object.')
-        ABERRATION = 0
-        GENE = 1
-        REL_TYPE = 2
-        fb_agr_aberr_rel_mapping = {
-            'deletes': 'full_deletion',
-            'molec_deletes': 'full_deletion',
-            'part_deletes': 'partial_deletion',
-            'molec_partdeletes': 'partial_deletion',
-            'nondeletes': 'mutation_does_not_delete',
-            'molec_nondeletes': 'mutation_does_not_delete',
-            'duplicates': 'full_duplication',
-            'molec_dups': 'full_duplication',
-            'part_duplicates': 'partial_duplication',
-            'molec_partdups': 'partial_duplication',
-            'nonduplicates': 'mutation_does_not_duplicate',
-            'molec_nondups': 'mutation_does_not_duplicate',
-        }
+        ABERRATION_ID = 0
+        GENE_ID = 1
+        REL_TYPE_NAME = 2
+        ECO_CURIE = 3
         counter = 0
         for rel_key, aberration_gene_rels in self.aberration_gene_rels.items():
-            aberration = self.fb_data_entities[rel_key[ABERRATION]]
+            aberration = self.fb_data_entities[rel_key[ABERRATION_ID]]
             aberration_curie = f'FB:{aberration.uniquename}'
-            gene = self.feature_lookup[rel_key[GENE]]
+            gene = self.feature_lookup[rel_key[GENE_ID]]
             gene_curie = f'FB:{gene["uniquename"]}'
-            fb_rel_type_name = self.cvterm_lookup[rel_key[REL_TYPE]]['name']
-            if fb_rel_type_name not in fb_agr_aberr_rel_mapping.keys():
-                continue
-            agr_rel_type_name = fb_agr_aberr_rel_mapping[fb_rel_type_name]
-            first_feat_rel = aberration_gene_rels[0]
+            agr_rel_type_name = rel_key[REL_TYPE_NAME]
+            eco_curie = rel_key[ECO_CURIE]
             all_pub_ids = []
             for aberration_gene_rel in aberration_gene_rels:
                 all_pub_ids.extend(aberration_gene_rel.pubs)
-            first_feat_rel.pubs = all_pub_ids
             pub_curies = self.lookup_pub_curies(all_pub_ids)
             rel_dto = agr_datatypes.AlleleGeneAssociationDTO(aberration_curie, agr_rel_type_name, gene_curie, pub_curies)
+            rel_dto.evidence_code_curie = eco_curie
             if aberration.is_obsolete is True or gene['is_obsolete'] is True:
                 rel_dto.obsolete = True
                 rel_dto.internal = True
+            first_feat_rel = aberration_gene_rels[0]
+            first_feat_rel.pubs = all_pub_ids
             first_feat_rel.linkmldto = rel_dto
             self.aberration_gene_associations.append(first_feat_rel)
             counter += 1
