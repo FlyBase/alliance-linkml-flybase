@@ -1044,6 +1044,8 @@ class AberrationHandler(MetaAlleleHandler):
 
     def flag_deletions(self):
         """Flag aberrations with the "chromosomal_deletion" annotation."""
+        additional_terms = set('assortment_derived_aneuploid', 'assortment_derived_deficiency', 'assortment_derived_deficiency_plus_duplication')
+        counter = 0
         for aberration in self.fb_data_entities.values():
             annotated_cvterm_ids = set()
             for anno in aberration.cvt_annos_by_id.values():
@@ -1051,6 +1053,12 @@ class AberrationHandler(MetaAlleleHandler):
             if annotated_cvterm_ids.intersection(set(self.chr_del_terms)):
                 aberration.is_deletion = True
                 self.log.debug(f'Aberration {aberration} is annotated to a child term of "chromosomal_deletion".')
+            elif additional_terms.intersection(aberration.cvt_anno_ids_by_term.keys()):
+                aberration.is_deletion = True
+                self.log.debug(f'Aberration {aberration} is annotated to a "assortment_derived_deficiency"-type term.')
+            if aberration.is_deletion:
+                counter += 1
+            self.log.info(f'Flagged {counter} aberrations as being some type of deletion.')
         return
 
     def synthesize_aberration_gene_associations(self):
