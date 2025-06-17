@@ -1044,7 +1044,7 @@ class AberrationHandler(MetaAlleleHandler):
 
     def flag_deletions(self):
         """Flag aberrations with the "chromosomal_deletion" annotation."""
-        additional_terms = set('assortment_derived_aneuploid', 'assortment_derived_deficiency', 'assortment_derived_deficiency_plus_duplication')
+        additional_terms = {'assortment_derived_aneuploid', 'assortment_derived_deficiency', 'assortment_derived_deficiency_plus_duplication'}
         counter = 0
         for aberration in self.fb_data_entities.values():
             annotated_cvterm_ids = set()
