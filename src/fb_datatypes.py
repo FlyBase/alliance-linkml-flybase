@@ -283,6 +283,8 @@ class FBAberration(FBFeature):
     def __init__(self, chado_obj):
         """Create the FBAberration object."""
         super().__init__(chado_obj)
+        # Processed FB data.
+        self.is_deletion = False    # True if the aberration has an annotation from the "chromosomal_deletion" SO branch.
 
 
 class FBAllele(FBFeature):

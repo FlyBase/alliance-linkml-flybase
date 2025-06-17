@@ -959,6 +959,7 @@ class AberrationHandler(MetaAlleleHandler):
     chr_str_var_terms = []    # A list of cvterm_ids for child terms of "chromosome_structure_variation" (SO:0000240).
     seq_alt_terms = []        # A list of cvterm_ids for child terms of "sequence_alteration" (SO:0001059).
     str_var_terms = []        # A list of cvterm_ids for child terms of "structural_variant" (SO:0001537).
+    chr_del_terms = []        # A list of cvterm_ids for child terms of "chromosomal_deletion" (SO:1000029).
 
     # Additional sub-methods for get_general_data().
     def get_key_cvterm_sets_for_aberrations(self, session):
@@ -967,6 +968,7 @@ class AberrationHandler(MetaAlleleHandler):
         self.chr_str_var_terms.extend(self.get_child_cvterms(session, 'chromosome_structure_variation', 'SO'))
         self.seq_alt_terms.extend(self.get_child_cvterms(session, 'sequence_alteration', 'SO'))
         self.str_var_terms.extend(self.get_child_cvterms(session, 'structural_variant', 'SO'))
+        self.chr_del_terms.extend(self.get_child_cvterms(session, 'chromosomal_deletion', 'SO'))
         return
 
     # Elaborate on get_general_data() for the AberrationHandler.
@@ -1040,6 +1042,17 @@ class AberrationHandler(MetaAlleleHandler):
                         self.log.debug(f'QCCHK:{report_str}')
         return
 
+    def flag_deletions(self):
+        """Flag aberrations with the "chromosomal_deletion" annotation."""
+        for aberration in self.fb_data_entities.values():
+            annotated_cvterm_ids = set()
+            for anno in aberration.cvt_annos_by_id.values():
+                annotated_cvterm_ids.add(anno.cvterm_id)
+            if annotated_cvterm_ids.intersection(set(self.chr_del_terms)):
+                aberration.is_deletion = True
+                self.log.debug(f'Aberration {aberration} is annotated to a child term of "chromosomal_deletion".')
+        return
+
     def synthesize_aberration_gene_associations(self):
         """Synthesize aberration-to-gene associations."""
         self.log.info('Synthesize aberration-to-gene associations.')
@@ -1056,14 +1069,13 @@ class AberrationHandler(MetaAlleleHandler):
             'molec_partdups': 'partial_duplication',
             'nonduplicates': 'mutation_does_not_duplicate',
             'molec_nondups': 'mutation_does_not_duplicate',
-            # 'derived_computed_affected_gene': 'contains',
+            # 'derived_computed_affected_gene': 'contains',    # Decision to ignore from chado and derive this at Alliance.
         }
         aberration_counter = 0
         gene_rel_counter = 0
         for aberration in self.fb_data_entities.values():
             relevant_sbj_gene_rels = aberration.recall_relationships(self.log, entity_role='subject', rel_entity_types='gene')
-            relevant_obj_gene_rels = aberration.recall_relationships(self.log, entity_role='object', rel_entity_types='gene')
-            if relevant_sbj_gene_rels or relevant_obj_gene_rels:
+            if relevant_sbj_gene_rels:
                 aberration_counter += 1
             for sbj_gene_rel in relevant_sbj_gene_rels:
                 fb_rel_type = sbj_gene_rel.chado_obj.type.name
@@ -1071,6 +1083,9 @@ class AberrationHandler(MetaAlleleHandler):
                     self.log.debug(f'Skip this FBab-FBgn relationship type: {fb_rel_type}')
                     continue
                 agr_rel_type = fb_agr_aberr_rel_mapping[fb_rel_type]
+                # Adjust Alliance relationship type for non-deletion aberrations with curated "deletes" relationship to a gene.
+                if fb_rel_type == 'deletes' and aberration.is_deletion is False:
+                    agr_rel_type = 'mutation_involves'
                 if fb_rel_type.startswith('molec'):
                     eco_id = 'ECO:0007736'    # molecule detection assay evidence used in manual assertion
                 else:
@@ -1081,22 +1096,24 @@ class AberrationHandler(MetaAlleleHandler):
                 except KeyError:
                     self.aberration_gene_rels[rel_key] = [sbj_gene_rel]
                     gene_rel_counter += 1
-            for obj_gene_rel in relevant_obj_gene_rels:
-                fb_rel_type = sbj_gene_rel.chado_obj.type.name
-                if fb_rel_type not in fb_agr_aberr_rel_mapping.keys():
-                    self.log.debug(f'Skip this FBab-FBgn relationship type: {fb_rel_type}')
-                    continue
-                agr_rel_type = fb_agr_aberr_rel_mapping[fb_rel_type]
-                if fb_rel_type.startswith('molec'):
-                    eco_id = 'ECO:0007736'    # molecule detection assay evidence used in manual assertion
-                else:
-                    eco_id = 'ECO:0000315'    # mutant phenotype evidence used in manual assertion
-                rel_key = (aberration.db_primary_id, sbj_gene_rel.chado_obj.object_id, agr_rel_type, eco_id)
-                try:
-                    self.aberration_gene_rels[rel_key].append(obj_gene_rel)
-                except KeyError:
-                    self.aberration_gene_rels[rel_key] = [obj_gene_rel]
-                    gene_rel_counter += 1
+            # Only required if processing FBgn-FBab derived relationships.
+            # relevant_obj_gene_rels = aberration.recall_relationships(self.log, entity_role='object', rel_entity_types='gene')    # Only for derived rels.
+            # for obj_gene_rel in relevant_obj_gene_rels:
+            #     fb_rel_type = obj_gene_rel.chado_obj.type.name
+            #     if fb_rel_type not in fb_agr_aberr_rel_mapping.keys():
+            #         self.log.debug(f'Skip this FBab-FBgn relationship type: {fb_rel_type}')
+            #         continue
+            #     agr_rel_type = fb_agr_aberr_rel_mapping[fb_rel_type]
+            #     if fb_rel_type.startswith('molec'):
+            #         eco_id = 'ECO:0007736'    # molecule detection assay evidence used in manual assertion
+            #     else:
+            #         eco_id = 'ECO:0000315'    # mutant phenotype evidence used in manual assertion
+            #     rel_key = (aberration.db_primary_id, obj_gene_rel.chado_obj.subject_id, agr_rel_type, eco_id)
+            #     try:
+            #         self.aberration_gene_rels[rel_key].append(obj_gene_rel)
+            #     except KeyError:
+            #         self.aberration_gene_rels[rel_key] = [obj_gene_rel]
+            #         gene_rel_counter += 1
         self.log.info(f'Found {gene_rel_counter} aberration-gene relationships for {aberration_counter} aberrations.')
         return
 
@@ -1109,8 +1126,9 @@ class AberrationHandler(MetaAlleleHandler):
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
-        self.synthesize_aberration_gene_associations()
         self.synthesize_ncbi_taxon_id()
+        self.flag_deletions()
+        self.synthesize_aberration_gene_associations()
         self.qc_aberration_mutation_types()
         return
 
