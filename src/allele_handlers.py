@@ -1047,7 +1047,7 @@ class AberrationHandler(MetaAlleleHandler):
         for aberration in self.fb_data_entities.values():
             annotated_cvterm_ids = set()
             for anno in aberration.cvt_annos_by_id.values():
-                annotated_cvterm_ids.add(anno.cvterm_id)
+                annotated_cvterm_ids.add(anno.chado_obj.cvterm_id)
             if annotated_cvterm_ids.intersection(set(self.chr_del_terms)):
                 aberration.is_deletion = True
                 self.log.debug(f'Aberration {aberration} is annotated to a child term of "chromosomal_deletion".')
