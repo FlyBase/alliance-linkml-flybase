@@ -347,11 +347,20 @@ class AlleleHandler(MetaAlleleHandler):
     # Additional sub-methods to be run by synthesize_info() below.
     def add_fbal_to_fbti(self, allele):
         """Add FBal data to a related FBti."""
-        fbti_feature_ids = []
-        if allele.superceded_by_at_locus_insertion:
-            fbti_feature_ids.append(allele.superceded_by_at_locus_insertion)
+        # Safeguard to prevent changes to alleles not superceded by FBti insertion if this method is called by accident.
+        if allele.superceded_by_at_locus_insertion is None and not allele.superceded_by_transgnc_insertions:
+            return
+        # Set FBal allele to be obsolete if it is superceded by any FBti insertion.
+        allele.is_obsolete = True
+        # For transgenic alleles, just add the export warning and move on.
         if allele.superceded_by_transgnc_insertions:
-            fbti_feature_ids.extend(allele.superceded_by_transgnc_insertions)
+            allele.export_warnings.append('Superceded by unspecified FBti insertion of FBtp construct')
+            return
+        # For alleles derived from at-locus FBti insertions, add FBal data to the FBti.
+        allele.export_warnings.append('Superceded by FBti insertion')
+        insertion = self.fbti_entities[allele.superceded_by_at_locus_insertion]
+        self.log.debug(f'Merge {allele} data into {insertion} data.')
+        insertion.alt_fb_ids.append(f'FB:{allele.uniquename}')
         lists_to_extend = [
             'dbxrefs',
             'export_warnings',
@@ -382,39 +391,33 @@ class AlleleHandler(MetaAlleleHandler):
             'sbj_rel_ids_by_obj_type',
             'obj_rel_ids_by_sbj_type',
         ]
-        for fbti_feature_id in fbti_feature_ids:
-            insertion = self.fbti_entities[fbti_feature_id]
-            self.log.debug(f'Merge {allele} data into {insertion} data.')
-            insertion.alt_fb_ids.append(f'FB:{allele.uniquename}')
-            for attr_name in lists_to_extend:
-                allele_list = getattr(allele, attr_name)
-                insertion_list = getattr(insertion, attr_name)
-                self.log.debug(f'For {attr_name}, add {len(allele_list)} elements from the allele to {len(insertion_list)} elements from the insertion.')
-                insertion_list.extend(allele_list)
-                self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_list)} elements.')
-            # Add to ID-keyed dict of single chado annotations (key is unique for FBCVtermAnnotation or FBRelationship).
-            for attr_name in dicts_of_elements_to_add:
-                allele_dict = getattr(allele, attr_name)
-                insertion_dict = getattr(insertion, attr_name)
-                self.log.debug(f'For {attr_name}, add {len(allele_dict)} elements from the allele to {len(insertion_dict)} elements from the insertion.')
-                for k, v in allele_dict.items():
-                    if k not in insertion_dict.keys():
-                        insertion_dict[k] = v
-                self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_dict)} elements.')
-            # Combine lists of annotations.
-            for attr_name in dicts_of_lists_to_add:
-                allele_dict = getattr(allele, attr_name)
-                insertion_dict = getattr(insertion, attr_name)
-                self.log.debug(f'For {attr_name}, add {len(allele_dict)} lists from the allele to {len(insertion_dict)} lists from the insertion.')
-                for k, v in allele_dict.items():
-                    try:
-                        insertion_dict[k].extend(v)
-                    except KeyError:
-                        insertion_dict[k] = []
-                        insertion_dict[k].extend(v)
-                self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_dict)} lists.')
-        allele.is_obsolete = True
-        allele.export_warnings.append('Superceded by FBti insertion')
+        for attr_name in lists_to_extend:
+            allele_list = getattr(allele, attr_name)
+            insertion_list = getattr(insertion, attr_name)
+            self.log.debug(f'For {attr_name}, add {len(allele_list)} elements from the allele to {len(insertion_list)} elements from the insertion.')
+            insertion_list.extend(allele_list)
+            self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_list)} elements.')
+        # Add to ID-keyed dict of single chado annotations (key is unique for FBCVtermAnnotation or FBRelationship).
+        for attr_name in dicts_of_elements_to_add:
+            allele_dict = getattr(allele, attr_name)
+            insertion_dict = getattr(insertion, attr_name)
+            self.log.debug(f'For {attr_name}, add {len(allele_dict)} elements from the allele to {len(insertion_dict)} elements from the insertion.')
+            for k, v in allele_dict.items():
+                if k not in insertion_dict.keys():
+                    insertion_dict[k] = v
+            self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_dict)} elements.')
+        # Combine lists of annotations.
+        for attr_name in dicts_of_lists_to_add:
+            allele_dict = getattr(allele, attr_name)
+            insertion_dict = getattr(insertion, attr_name)
+            self.log.debug(f'For {attr_name}, add {len(allele_dict)} lists from the allele to {len(insertion_dict)} lists from the insertion.')
+            for k, v in allele_dict.items():
+                try:
+                    insertion_dict[k].extend(v)
+                except KeyError:
+                    insertion_dict[k] = []
+                    insertion_dict[k].extend(v)
+            self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_dict)} lists.')
         return
 
     def merge_fbti_fbal(self):
