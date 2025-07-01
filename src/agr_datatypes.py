@@ -227,7 +227,6 @@ class AlleleGeneAssociationDTO(AlleleGenomicEntityAssociationDTO):
         self.gene_identifier = gene_id
         self.evidence_curies = evidence_curies
         self.required_fields.extend(['gene_identifier'])
-        # self.internal_fields.extend(['evidence_curies'])    # Suppress "evidence_curies" if file load takes too long.
 
 
 class ConstructGenomicEntityAssociationDTO(EvidenceAssociationDTO):
@@ -249,7 +248,6 @@ class ConstructGenomicEntityAssociationDTO(EvidenceAssociationDTO):
         # self.evidence_curies = evidence_curies
         self.note_dtos = []
         self.required_fields.extend(['construct_identifier', 'genomic_entity_relation_name', 'genomic_entity_identifier'])
-        # self.internal_fields.extend(['evidence_curies'])    # Suppress "evidence_curies" if file load takes too long.
 
 
 class AnnotationDTO(SingleReferenceAssociationDTO):
@@ -392,7 +390,6 @@ class SlotAnnotationDTO(AuditedObjectDTO):
         """
         super().__init__()
         self.evidence_curies = evidence_curies
-        # self.internal_fields.extend(['evidence_curies'])    # Suppress "evidence_curies" if file load takes too long.
 
 
 class AlleleDatabaseStatusSlotAnnotationDTO(SlotAnnotationDTO):
