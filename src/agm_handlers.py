@@ -429,6 +429,10 @@ class GenotypeHandler(PrimaryEntityHandler):
                 for feature_id in component_feature_id_list:
                     geno_allele_rel = fb_datatypes.FBExportEntity()
                     component_curie = self.feature_lookup[feature_id]['curie']
+                    # Do not report FBtp construct or FBba balancer components for genotypes.
+                    # FBal alleles, FBti insertions and FBab aberrations are ok.
+                    if component_curie.startswith('FBtp') or component_curie.startswith('FBba'):
+                        continue
                     geno_allele_rel.linkmldto = agr_datatypes.AgmAlleleAssociationDTO(genotype.linkmldto.primary_external_id,
                                                                                       component_curie, zygosity)
                     self.agm_component_associations.append(geno_allele_rel)
