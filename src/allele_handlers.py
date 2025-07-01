@@ -1095,7 +1095,7 @@ class AberrationHandler(MetaAlleleHandler):
                     continue
                 agr_rel_type = fb_agr_aberr_rel_mapping[fb_rel_type]
                 # Adjust Alliance relationship type for non-deletion aberrations with curated "deletes" relationship to a gene.
-                if fb_rel_type == 'deletes' and aberration.is_deletion is False:
+                if fb_rel_type in ['deletes', 'part_deletes'] and aberration.is_deletion is False:
                     agr_rel_type = 'mutation_involves'
                 if fb_rel_type.startswith('molec'):
                     eco_id = 'ECO:0007736'    # molecule detection assay evidence used in manual assertion
