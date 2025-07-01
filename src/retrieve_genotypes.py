@@ -203,9 +203,12 @@ class GenotypeHandler(object):
             geno_specific_features = geno_anno.features.keys() - set(self.pub_associated_feature_ids)
             for feature_id in geno_specific_features:
                 input_symbol = geno_anno.features[feature_id]['input_symbol']
-                # geno_anno.warnings.append(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')    # DEV: For testing many genotypes, ignore this chk
-                geno_anno.errors.append(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
-                log.error(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
+                # Relaxed feature-pub constraint.
+                geno_anno.warnings.append(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
+                log.warning(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
+                # Stringent feature-pub constraint.
+                # geno_anno.errors.append(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
+                # log.error(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
                 no_counter += 1
         if no_counter > 0:
             log.error(f'Found {no_counter} listed features NOT associated with {self.fbrf_pub_id}')
