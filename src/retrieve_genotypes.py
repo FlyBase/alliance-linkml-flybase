@@ -353,6 +353,7 @@ class GenotypeHandler(object):
         for geno_anno in self.genotype_annotations:
             lines_to_write.append(f'\nINPUT GENOTYPE NAME: {geno_anno.input_genotype_name}')
             if geno_anno.curie:
+                lines_to_write.append(f'\tGENOTYPE_ID: {geno_anno.genotype_id}')
                 lines_to_write.append(f'\tCURIE: FB:{geno_anno.curie}')
             else:
                 lines_to_write.append('\tCURIE:')
