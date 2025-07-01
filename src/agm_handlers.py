@@ -429,6 +429,8 @@ class GenotypeHandler(PrimaryEntityHandler):
                 for feature_id in component_feature_id_list:
                     geno_allele_rel = fb_datatypes.FBExportEntity()
                     component_curie = self.feature_lookup[feature_id]['curie']
+                    if component_curie.startswith('FBba') or component_curie.startswith('FBti'):
+                        continue
                     geno_allele_rel.linkmldto = agr_datatypes.AgmAlleleAssociationDTO(genotype.linkmldto.primary_external_id,
                                                                                       component_curie, zygosity)
                     self.agm_component_associations.append(geno_allele_rel)
