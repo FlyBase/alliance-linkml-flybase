@@ -294,8 +294,8 @@ class FBAllele(FBFeature):
         super().__init__(chado_obj)
         # Primary FB chado data.
         self.phenstatements = []                        # List of SQLAlchemy (Feature, Genotype, Phenotype, Cvterm, Pub) results from Phenstatements.
-        self.superceded_by_at_locus_insertion = None    # Change to the feature_id of an at-locus FBti to be used for Alliance export.
-        self.superceded_by_transgnc_insertions = []     # Append feature_ids of "unspecified" FBti insertions to be used for Alliance export.
+        self.superseded_by_at_locus_insertion = None    # Change to the feature_id of an at-locus FBti to be used for Alliance export.
+        self.superseded_by_transgnc_insertions = []     # Append feature_ids of "unspecified" FBti insertions to be used for Alliance export.
         # Processed FB data.
         self.parent_gene_id = None              # The FBgn ID for the allele's parent gene.
         self.cons_rels = []                     # List of current cons FBRelationships.

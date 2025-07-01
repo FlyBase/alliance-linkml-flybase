@@ -347,18 +347,18 @@ class AlleleHandler(MetaAlleleHandler):
     # Additional sub-methods to be run by synthesize_info() below.
     def add_fbal_to_fbti(self, allele):
         """Add FBal data to a related FBti."""
-        # Safeguard to prevent changes to alleles not superceded by FBti insertion if this method is called by accident.
-        if allele.superceded_by_at_locus_insertion is None and not allele.superceded_by_transgnc_insertions:
+        # Safeguard to prevent changes to alleles not superseded by FBti insertion if this method is called by accident.
+        if allele.superseded_by_at_locus_insertion is None and not allele.superseded_by_transgnc_insertions:
             return
-        # Set FBal allele to be obsolete if it is superceded by any FBti insertion.
+        # Set FBal allele to be obsolete if it is superseded by any FBti insertion.
         allele.is_obsolete = True
         # For transgenic alleles, just add the export warning and move on.
-        if allele.superceded_by_transgnc_insertions:
+        if allele.superseded_by_transgnc_insertions:
             allele.export_warnings.append('Superceded by unspecified FBti insertion of FBtp construct')
             return
         # For alleles derived from at-locus FBti insertions, add FBal data to the FBti.
         allele.export_warnings.append('Superceded by FBti insertion')
-        insertion = self.fbti_entities[allele.superceded_by_at_locus_insertion]
+        insertion = self.fbti_entities[allele.superseded_by_at_locus_insertion]
         self.log.debug(f'Merge {allele} data into {insertion} data.')
         insertion.alt_fb_ids.append(f'FB:{allele.uniquename}')
         lists_to_extend = [
@@ -435,15 +435,15 @@ class AlleleHandler(MetaAlleleHandler):
                 self.log.error(f'Allele {allele} unexpectedly has both at-locus and transgenic unspecified FBti insertions.')
                 prob_counter += 1
             elif allele.db_primary_id in self.at_locus_fbal_fbti_dict.keys():
-                self.log.debug(f'Allele {allele} is superceded by an at-locus FBti insertion.')
-                allele.superceded_by_at_locus_insertion = self.at_locus_fbal_fbti_dict[allele.db_primary_id][0]
+                self.log.debug(f'Allele {allele} is superseded by an at-locus FBti insertion.')
+                allele.superseded_by_at_locus_insertion = self.at_locus_fbal_fbti_dict[allele.db_primary_id][0]
                 self.add_fbal_to_fbti(allele)
                 at_locus_counter += 1
             elif allele.db_primary_id in self.transgenic_fbal_fbti_dict.keys():
-                self.log.debug(f'Allele {allele} is superceded by unspecified FBti insertion(s).')
-                allele.superceded_by_transgnc_insertions = self.transgenic_fbal_fbti_dict[allele.db_primary_id]
+                self.log.debug(f'Allele {allele} is superseded by unspecified FBti insertion(s).')
+                allele.superseded_by_transgnc_insertions = self.transgenic_fbal_fbti_dict[allele.db_primary_id]
                 self.add_fbal_to_fbti(allele)
-                unspecified_ins_counter += len(allele.superceded_by_transgnc_insertions)
+                unspecified_ins_counter += len(allele.superseded_by_transgnc_insertions)
                 transgenic_counter += 1
             else:
                 classical_counter += 1
@@ -592,7 +592,7 @@ class AlleleHandler(MetaAlleleHandler):
         allele_counter = 0
         # Need to code for the rare possibility that gene-allele is represented by many feature_relationships.
         for allele in self.fb_data_entities.values():
-            if allele.superceded_by_at_locus_insertion or allele.superceded_by_transgnc_insertions:
+            if allele.superseded_by_at_locus_insertion or allele.superseded_by_transgnc_insertions:
                 continue
             # Skip transgenic alleles.
             elif allele.uniquename.startswith('FBti') and allele.name.endswith('unspecified'):
@@ -1061,7 +1061,7 @@ class AberrationHandler(MetaAlleleHandler):
                 self.log.debug(f'Aberration {aberration} is annotated to a "assortment_derived_deficiency"-type term.')
             if aberration.is_deletion:
                 counter += 1
-            self.log.info(f'Flagged {counter} aberrations as being some type of deletion.')
+        self.log.info(f'Flagged {counter} aberrations as being some type of deletion.')
         return
 
     def synthesize_aberration_gene_associations(self):
@@ -1211,7 +1211,7 @@ class AberrationHandler(MetaAlleleHandler):
         self.map_xrefs()
         self.map_extinction_info()
         self.map_collections()
-        self.map_pubs()    # Suppress if load times are slow.
+        self.map_pubs()
         self.map_timestamps()
         self.map_secondary_ids('allele_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
