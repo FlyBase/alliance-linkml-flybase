@@ -297,11 +297,9 @@ class GenotypeHandler(PrimaryEntityHandler):
                     continue
                 # Skip transgenic constructs.
                 elif feature['uniquename'].startswith('FBtp'):
-                    genotype.has_fbtp_component = True
                     continue
                 # Record FBti organism.
                 elif feature['uniquename'].startswith('FBti'):
-                    genotype.has_fbti_component = True
                     organism_id_list.append(org_id)
                 # Record FBab organism (unless introgressed).
                 elif feature['uniquename'].startswith('FBab'):
@@ -387,6 +385,22 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.log.info(f'Found {component_counter} components for {genotype_counter} genotypes for export.')
         return
 
+    def flag_non_compliant_genotypes(self):
+        """Flag non-Alliance-compliant genotypes."""
+        self.log.info('Flag non-Alliance-compliant genotypes.')
+        compliant_counter = 0
+        non_compliant_counter = 0
+        for genotype in self.fb_data_entities.values():
+            if 'alliance_compliant' in genotype.cvt_anno_ids_by_term.keys():
+                genotype.is_alliance_compliant = True
+                compliant_counter += 1
+            else:
+                genotype.is_alliance_compliant = False
+                non_compliant_counter += 1
+        self.log.info(f'Found {compliant_counter} Alliance-compliant genotypes.')
+        self.log.info(f'Found {non_compliant_counter} Alliance-compliant genotypes.')
+        return
+
     # Elaborate on synthesize_info() for the GenotypeHandler.
     def synthesize_info(self):
         """Extend the method for the GenotypeHandler."""
@@ -399,6 +413,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
+        self.flag_non_compliant_genotypes()
         return
 
     # Additional sub-methods for map_fb_data_to_alliance().
@@ -416,6 +431,9 @@ class GenotypeHandler(PrimaryEntityHandler):
             if genotype.ncbi_taxon_id != 'NCBITaxon:7227':
                 agr_genotype.internal = True
                 genotype.internal_reasons.append('Non-Dmel')
+            if genotype.is_alliance_compliant is False:
+                agr_genotype.internal = True
+                genotype.internal_reasons.append('Non-Alliance-compliant')
             genotype.linkmldto = agr_genotype
             counter += 1
         self.log.info(f'{counter} genotypes could be mapped to the Alliance LinkML model.')
@@ -440,27 +458,6 @@ class GenotypeHandler(PrimaryEntityHandler):
                     self.agm_component_associations.append(geno_allele_rel)
         return
 
-    def flag_unexportable_genotypes(self):
-        """Flag unexportable genotypes."""
-        self.log.info('Flag unexportable genotypes.')
-        fbtp_counter = 0
-        fbti_counter = 0
-        for genotype in self.fb_data_entities.values():
-        # BOB - FBti will be submitted as alleles, so these are now allowed to be exported.
-        # What to do with genotypes referencing FBtp (or FBba) - do not export, or export but as internal or obsolete.
-
-            # if genotype.has_fbtp_component is True:
-            #     genotype.for_export = False
-            #     genotype.export_warnings.append('Directly related to FBtp construct feature')
-            #     fbtp_counter += 1
-            # if genotype.has_fbti_component is True:
-            #     genotype.for_export = False
-            #     genotype.export_warnings.append('Directly related to FBti insertion feature')
-            #     fbti_counter += 1
-        self.log.info(f'Marked {fbtp_counter} genotypes as unexportable due to direct association with an FBtp construct feature.')
-        self.log.info(f'Marked {fbti_counter} genotypes as unexportable due to direct association with an FBti insertion feature.')
-        return
-
     # Elaborate on map_fb_data_to_alliance() for the GenotypeHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the GenotypeHandler."""
@@ -474,7 +471,6 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.map_timestamps()
         self.map_secondary_ids('agm_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
-        self.flag_unexportable_genotypes()
         self.flag_internal_fb_entities('agm_component_associations')
         return
 
