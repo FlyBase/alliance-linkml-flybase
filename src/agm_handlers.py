@@ -425,6 +425,8 @@ class GenotypeHandler(PrimaryEntityHandler):
         """Map genotype components."""
         self.log.info('Map genotype components.')
         for genotype in self.fb_data_entities.values():
+            if genotype.for_export is False:
+                continue
             for zygosity, component_feature_id_list in genotype.component_features.items():
                 for feature_id in component_feature_id_list:
                     geno_allele_rel = fb_datatypes.FBExportEntity()
