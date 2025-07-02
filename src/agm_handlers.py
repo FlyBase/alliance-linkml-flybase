@@ -446,14 +446,17 @@ class GenotypeHandler(PrimaryEntityHandler):
         fbtp_counter = 0
         fbti_counter = 0
         for genotype in self.fb_data_entities.values():
-            if genotype.has_fbtp_component is True:
-                genotype.for_export = False
-                genotype.export_warnings.append('Directly related to FBtp construct feature')
-                fbtp_counter += 1
-            if genotype.has_fbti_component is True:
-                genotype.for_export = False
-                genotype.export_warnings.append('Directly related to FBti insertion feature')
-                fbti_counter += 1
+        # BOB - FBti will be submitted as alleles, so these are now allowed to be exported.
+        # What to do with genotypes referencing FBtp (or FBba) - do not export, or export but as internal or obsolete.
+
+            # if genotype.has_fbtp_component is True:
+            #     genotype.for_export = False
+            #     genotype.export_warnings.append('Directly related to FBtp construct feature')
+            #     fbtp_counter += 1
+            # if genotype.has_fbti_component is True:
+            #     genotype.for_export = False
+            #     genotype.export_warnings.append('Directly related to FBti insertion feature')
+            #     fbti_counter += 1
         self.log.info(f'Marked {fbtp_counter} genotypes as unexportable due to direct association with an FBtp construct feature.')
         self.log.info(f'Marked {fbti_counter} genotypes as unexportable due to direct association with an FBti insertion feature.')
         return
