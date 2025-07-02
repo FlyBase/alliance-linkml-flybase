@@ -372,8 +372,7 @@ class FBGenotype(FBDataEntity):
         self.stocks = []                         # Will be a list of associated chado Stock objects.
         # Processed FB data.
         self.fb_curie = None
-        self.has_fbtp_component = False          # True if genotype is directly related to an FBtp feature.
-        self.has_fbti_component = False          # True if genotype is directly related to an FBti feature.
+        self.is_alliance_compliant = False       # True if genotype has "alliance_compliant" CV term annotation.
         self.component_features = {}             # Zygosity-name-keyed lists of feature_ids.
         self.ncbi_taxon_id = 'NCBITaxon:7227'    # Default Dmel, adjusted later if needed.
 
