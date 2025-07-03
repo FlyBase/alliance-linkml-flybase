@@ -173,17 +173,17 @@ class AgmAlleleAssociationDTO(AuditedObjectDTO):
         self.agm_subject_identifier = genotype_curie
         self.allele_identifier = component_curie
         self.zygosity_curie = self.zygosity_id[zygosity]
-        self.relation_name = 'AGM Allele Association Relation'
+        self.relation_name = 'contains'
         self.required_fields.extend(['agm_subject_identifier', 'allele_identifier', 'zygosity_curie', 'relation_name'])
     # Zygosity mapping to GENO IDs.
     # https://github.com/monarch-initiative/GENO-ontology/blob/develop/geno-base.obo
     zygosity_id = {
         # 'hemizygous': 'GENO:0000134_hemizygous',                          # Not yet implemented in FB code.
         # 'heterozygous': 'GENO:0000135',                                   # Retired in favor of more specific terms.
-        'simple heterozygous': 'GENO:0000458_simple_heterozygous',
-        'compound heterozygous': 'GENO:0000402_compound_heterozygous',
-        'homozygous': 'GENO:0000136_homozygous',
-        'unspecified zygosity': 'GENO:0000137_unspecified_zygosity',
+        'simple heterozygous': 'GENO:0000458',
+        'compound heterozygous': 'GENO:0000402',
+        'homozygous': 'GENO:0000136',
+        'unspecified zygosity': 'GENO:0000137',
         # 'homoplasmic': 'GENO:0000602',
         # 'heteroplasmic': 'GENO:0000603',
         # 'hemizygous X-linked': 'GENO:0000604',
@@ -227,7 +227,6 @@ class AlleleGeneAssociationDTO(AlleleGenomicEntityAssociationDTO):
         self.gene_identifier = gene_id
         self.evidence_curies = evidence_curies
         self.required_fields.extend(['gene_identifier'])
-        self.internal_fields.extend(['evidence_curies'])    # TEMPORARILY SUPPRESS UNTIL LOAD SPEED IMPROVES
 
 
 class ConstructGenomicEntityAssociationDTO(EvidenceAssociationDTO):
@@ -249,7 +248,6 @@ class ConstructGenomicEntityAssociationDTO(EvidenceAssociationDTO):
         # self.evidence_curies = evidence_curies
         self.note_dtos = []
         self.required_fields.extend(['construct_identifier', 'genomic_entity_relation_name', 'genomic_entity_identifier'])
-        self.internal_fields.extend(['evidence_curies'])    # TEMPORARILY SUPPRESS UNTIL LOAD SPEED IMPROVES
 
 
 class AnnotationDTO(SingleReferenceAssociationDTO):
@@ -392,7 +390,6 @@ class SlotAnnotationDTO(AuditedObjectDTO):
         """
         super().__init__()
         self.evidence_curies = evidence_curies
-        self.internal_fields.extend(['evidence_curies'])    # TEMPORARILY SUPPRESS UNTIL LOAD SPEED IMPROVES
 
 
 class AlleleDatabaseStatusSlotAnnotationDTO(SlotAnnotationDTO):

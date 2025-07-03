@@ -203,9 +203,12 @@ class GenotypeHandler(object):
             geno_specific_features = geno_anno.features.keys() - set(self.pub_associated_feature_ids)
             for feature_id in geno_specific_features:
                 input_symbol = geno_anno.features[feature_id]['input_symbol']
-                # geno_anno.warnings.append(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')    # DEV: For testing many genotypes, ignore this chk
-                geno_anno.errors.append(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
-                log.error(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
+                # Relaxed feature-pub constraint.
+                geno_anno.warnings.append(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
+                log.warning(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
+                # Stringent feature-pub constraint.
+                # geno_anno.errors.append(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
+                # log.error(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
                 no_counter += 1
         if no_counter > 0:
             log.error(f'Found {no_counter} listed features NOT associated with {self.fbrf_pub_id}')
@@ -353,6 +356,7 @@ class GenotypeHandler(object):
         for geno_anno in self.genotype_annotations:
             lines_to_write.append(f'\nINPUT GENOTYPE NAME: {geno_anno.input_genotype_name}')
             if geno_anno.curie:
+                lines_to_write.append(f'\tGENOTYPE_ID: {geno_anno.genotype_id}')
                 lines_to_write.append(f'\tCURIE: FB:{geno_anno.curie}')
             else:
                 lines_to_write.append('\tCURIE:')

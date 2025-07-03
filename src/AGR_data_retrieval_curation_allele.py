@@ -25,7 +25,7 @@ import argparse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
-from allele_handlers import AlleleHandler, AberrationHandler, BalancerHandler
+from allele_handlers import AlleleHandler, AberrationHandler    # BalancerHandler
 from utils import export_chado_data, generate_export_file
 
 # Data types handled by this script.
@@ -81,20 +81,17 @@ def main():
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Get the data and process it.
-    aberration_handler = AberrationHandler(log, testing)
     allele_handler = AlleleHandler(log, testing)
-    balancer_handler = BalancerHandler(log, testing)
-    # insertion_handler = InsertionHandler(log, testing)
+    aberration_handler = AberrationHandler(log, testing)
+    # balancer_handler = BalancerHandler(log, testing)
     if reference_session:
-        export_chado_data(session, log, aberration_handler, reference_session=reference_session)
         export_chado_data(session, log, allele_handler, reference_session=reference_session)
-        export_chado_data(session, log, balancer_handler, reference_session=reference_session)
-        # export_chado_data(session, log, insertion_handler, reference_session=reference_session)
+        export_chado_data(session, log, aberration_handler, reference_session=reference_session)
+        # export_chado_data(session, log, balancer_handler, reference_session=reference_session)
     else:
-        export_chado_data(session, log, aberration_handler)
         export_chado_data(session, log, allele_handler)
-        export_chado_data(session, log, balancer_handler)
-        # export_chado_data(session, log, insertion_handler)
+        export_chado_data(session, log, aberration_handler)
+        # export_chado_data(session, log, balancer_handler)
 
     # Export the data.
     export_dict = {
@@ -102,10 +99,9 @@ def main():
         'alliance_member_release_version': database_release,
     }
     export_dict['allele_ingest_set'] = []
-    export_dict['allele_ingest_set'].extend(aberration_handler.export_data[aberration_handler.primary_export_set])
     export_dict['allele_ingest_set'].extend(allele_handler.export_data[allele_handler.primary_export_set])
-    export_dict['allele_ingest_set'].extend(balancer_handler.export_data[balancer_handler.primary_export_set])
-    # export_dict['allele_ingest_set'].extend(insertion_handler.export_data[insertion_handler.primary_export_set])
+    export_dict['allele_ingest_set'].extend(aberration_handler.export_data[aberration_handler.primary_export_set])
+    # export_dict['allele_ingest_set'].extend(balancer_handler.export_data[balancer_handler.primary_export_set])
     generate_export_file(export_dict, log, output_filename)
 
     if not reference_session:
@@ -117,7 +113,7 @@ def main():
         }
         association_export_dict['allele_gene_association_ingest_set'] = []
         association_export_dict['allele_gene_association_ingest_set'].extend(allele_handler.export_data['allele_gene_association_ingest_set'])
-        # association_export_dict['allele_gene_association_ingest_set'].extend(aberration_handler.export_data['allele_gene_association_ingest_set'])
+        association_export_dict['allele_gene_association_ingest_set'].extend(aberration_handler.export_data['allele_gene_association_ingest_set'])
         generate_export_file(association_export_dict, log, association_output_filename)
 
     log.info('Ended main function.\n')

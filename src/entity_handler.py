@@ -13,7 +13,7 @@ Author(s):
 import re
 from logging import Logger
 from sqlalchemy.orm import aliased
-from harvdev_utils.char_conversions import sub_sup_sgml_to_html
+from harvdev_utils.char_conversions import sub_sup_sgml_to_html, sub_sup_to_sgml
 from harvdev_utils.reporting import (
     Cv, Cvterm, Db, Dbxref, CellLine, CellLineCvterm, CellLineCvtermprop, CellLineDbxref, CellLineprop, CellLinepropPub, CellLinePub, CellLineRelationship,
     CellLineSynonym, Feature, FeatureCvterm, FeatureCvtermprop, FeatureDbxref, Featureprop, FeaturepropPub, FeaturePub, FeatureRelationship,
@@ -907,7 +907,7 @@ class PrimaryEntityHandler(DataHandler):
             secondary_ids = []
             for xref in fb_data_entity.fb_sec_dbxrefs:
                 secondary_ids.append(f'FB:{xref.dbxref.accession}')
-            fb_data_entity.alt_fb_ids = list(set(secondary_ids))
+            fb_data_entity.alt_fb_ids = list(set(fb_data_entity.alt_fb_ids).union(set(secondary_ids)))
         return
 
     def synthesize_synonyms(self):
@@ -958,11 +958,12 @@ class PrimaryEntityHandler(DataHandler):
                 syno_dict['pub_curies'] = self.lookup_pub_curies(syno_dict['pub_ids'])
                 # Pick out current symbol for the entity.
                 if syno_dict['is_current'] is True and syno_dict['name_type_name'] in ['systematic_name', 'nomenclature_symbol']:
-                    fb_data_entity.curr_fb_symbol = syno_dict['display_text']
+                    # Add extra check for FBti alleles that inherit current symbols of FBal alleles.
+                    if syno_dict['format_text'] == fb_data_entity.name:
+                        fb_data_entity.curr_fb_symbol = syno_dict['display_text']
                 # Pick out current full name for the entity.
                 if syno_dict['is_current'] is True and syno_dict['name_type_name'] == 'full_name':
                     fb_data_entity.curr_fb_fullname = syno_dict['display_text']
-
         return
 
     def synthesize_pubs(self):
@@ -1134,7 +1135,8 @@ class PrimaryEntityHandler(DataHandler):
             # 1. Symbol.
             if len(linkml_synonym_bins['symbol_bin']) == 0:
                 self.log.warning(f'No current symbols found for {fb_data_entity}: create a generic one.')
-                generic_symbol_dto = agr_datatypes.NameSlotAnnotationDTO('nomenclature_symbol', fb_data_entity.name, fb_data_entity.name, []).dict_export()
+                generic_symbol_dto = agr_datatypes.NameSlotAnnotationDTO('nomenclature_symbol', fb_data_entity.name,
+                                                                         sub_sup_sgml_to_html(sub_sup_to_sgml(fb_data_entity.name)), []).dict_export()
                 setattr(fb_data_entity.linkmldto, linkml_synonym_slots['symbol_bin'], generic_symbol_dto)
             else:
                 setattr(fb_data_entity.linkmldto, linkml_synonym_slots['symbol_bin'], linkml_synonym_bins['symbol_bin'][0])

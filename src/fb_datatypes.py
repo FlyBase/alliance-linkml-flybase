@@ -283,15 +283,19 @@ class FBAberration(FBFeature):
     def __init__(self, chado_obj):
         """Create the FBAberration object."""
         super().__init__(chado_obj)
+        # Processed FB data.
+        self.is_deletion = False    # True if the aberration has an annotation from the "chromosomal_deletion" SO branch.
 
 
 class FBAllele(FBFeature):
-    """A FlyBase allele entity with all its related data."""
+    """A FlyBase allele/insertion entity with all its related data."""
     def __init__(self, chado_obj):
         """Create the FBAllele object."""
         super().__init__(chado_obj)
         # Primary FB chado data.
-        self.phenstatements = []                # List of SQLAlchemy (Feature, Genotype, Phenotype, Cvterm, Pub) results from Phenstatements.
+        self.phenstatements = []                        # List of SQLAlchemy (Feature, Genotype, Phenotype, Cvterm, Pub) results from Phenstatements.
+        self.superseded_by_at_locus_insertion = None    # Change to the feature_id of an at-locus FBti to be used for Alliance export.
+        self.superseded_by_transgnc_insertions = []     # Append feature_ids of "unspecified" FBti insertions to be used for Alliance export.
         # Processed FB data.
         self.parent_gene_id = None              # The FBgn ID for the allele's parent gene.
         self.cons_rels = []                     # List of current cons FBRelationships.
@@ -346,13 +350,6 @@ class FBGene(FBFeature):
         self.gene_type_id = 'SO:0000704'    # Update this default gene ID to SO term ID from "promoted_gene_type" Featureprop, if available.
 
 
-class FBInsertion(FBFeature):
-    """A FlyBase insertion entity with all its related data."""
-    def __init__(self, chado_obj):
-        """Create the FBInsertion object."""
-        super().__init__(chado_obj)
-
-
 class FBStrain(FBDataEntity):
     """A FlyBase strain entity with all its related data."""
     def __init__(self, chado_obj):
@@ -375,8 +372,7 @@ class FBGenotype(FBDataEntity):
         self.stocks = []                         # Will be a list of associated chado Stock objects.
         # Processed FB data.
         self.fb_curie = None
-        self.has_fbtp_component = False          # True if genotype is directly related to an FBtp feature.
-        self.has_fbti_component = False          # True if genotype is directly related to an FBti feature.
+        self.is_alliance_compliant = False       # True if genotype has "alliance_compliant" CV term annotation.
         self.component_features = {}             # Zygosity-name-keyed lists of feature_ids.
         self.ncbi_taxon_id = 'NCBITaxon:7227'    # Default Dmel, adjusted later if needed.
 
