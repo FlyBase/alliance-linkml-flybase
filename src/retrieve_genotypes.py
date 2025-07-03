@@ -238,7 +238,7 @@ class GenotypeHandler(object):
             if geno_anno.errors:
                 log.error(f'STOP processing "{geno_anno.input_genotype_name}" due to these errors: {";".join(geno_anno.errors)}.')
             elif geno_anno.warnings and self.relaxed_stringency is False:
-                log.error(f'STOP processing "{geno_anno.input_genotype_name}" due to these warnings: {";".join(geno_anno.errors)}.')
+                log.error(f'STOP processing "{geno_anno.input_genotype_name}" due to these warnings: {";".join(geno_anno.warnings)}.')
         return
 
     def get_or_create_genotypes(self, session):
