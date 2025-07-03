@@ -400,7 +400,7 @@ class GenotypeHandler(object):
         self.find_redundant_genotype_entries()
         self.report_errors()
         self.get_or_create_genotypes(session)
-        self.sync_with_alliance()
+        # self.sync_with_alliance()    # BOB - do not sync with alliance during testing.
         self.print_curator_genotype_report()
         return
 
