@@ -369,10 +369,14 @@ class GenotypeHandler(object):
                 lines_to_write.append('\tCURIE:')
             if geno_anno.errors:
                 status = 'ERRORS FOUND'
+            elif geno_anno.warnings:
+                status = 'WARNINGS FOUND'
             elif geno_anno.is_new is True:
                 status = 'NEW GENOTYPE CREATED'
             elif geno_anno.is_new is False:
                 status = 'KNOWN CHADO GENOTYPE'
+            else:
+                status = 'INCORRECTLY PROCESSED: CONTACT HARVDEV'
             lines_to_write.append(f'\tSTATUS: {status}')
             if geno_anno.uniquename:
                 uniquename_output = geno_anno.uniquename.replace('<up>', '[').replace('</up>', ']')
