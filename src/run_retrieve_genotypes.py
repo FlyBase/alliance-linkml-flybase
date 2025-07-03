@@ -95,12 +95,13 @@ parser.add_argument('-p', '--pub', help='The FBrf ID for the publication.', requ
 run_mode = parser.add_mutually_exclusive_group(required=True)
 run_mode.add_argument('-i', '--genotype_input', help='The genotype name to get or create.', required=False)
 run_mode.add_argument('-f', '--genotypes_file', help='A file of genotype names to get or create.', required=False)
-
+parser.add_argument('--relax', action='store_true', help='Relax stringency to allow for processing of genotype input with warnings.', required=False)
 try:
     args = parser.parse_args()
     genotype_input = args.genotype_input
     genotype_input_file = args.genotypes_file
     fbrf_pub_id = args.pub
+    relax = args.relax
 except SystemExit as e:
     print('ERROR  : Must supply two arguments: -p/--pub (FBrf ID), and one of -i/--genotype_input or -f/--genotypes_file.')
     sys.exit(e.code)
@@ -123,6 +124,10 @@ check_docker_image_exists(image_name)
 if image_name != 'export_to_linkml':
     print(f'WARNING: Script is using a test docker image {image_name}, not "export_to_linkml". Contact HarvDev if trying to use this script for real.')
 
+if relax:
+    relax_str = '--relax'
+else:
+    relax_str = ''
 # Construct command for running script in docker.
 command = 'rm -f ./genotypes_retrieved*.report && '
 command += 'rm -f ./genotypes_retrieved*.log && '
@@ -136,7 +141,7 @@ command += f'-e PGPASSWORD={pg_pwd} '
 command += '-e RELEASE=production '
 command += f'-e ALLIANCETOKEN={agr_token} '
 command += f'--entrypoint /usr/bin/python3 {image_name} '
-command += f'/src/retrieve_genotypes.py -v -p {fbrf_pub_id} '
+command += f'/src/retrieve_genotypes.py -v {relax_str} -p {fbrf_pub_id} '
 if genotype_input_file:
     command += f'-f /src/input/{genotype_input_file} '
 else:

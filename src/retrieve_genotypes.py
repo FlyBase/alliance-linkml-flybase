@@ -87,7 +87,7 @@ run_mode = parser.add_mutually_exclusive_group(required=True)
 run_mode.add_argument('-i', '--genotype_input', help='The genotype name to get or create.', required=False)
 run_mode.add_argument('-f', '--genotypes_file', help='A file of genotype names to get or create.', required=False)
 parser.add_argument('-p', '--pub_id', help='The FBrf ID for the publication.', required=True)
-
+parser.add_argument('--relax', action='store_true', help='Relax stringency to allow for processing of genotype input with warnings.', required=False)
 
 # Use parse_known_args(), not parse_args(), to handle args specific to this script (outside of set_up_db_reading()).
 try:
@@ -96,6 +96,7 @@ try:
     GENOTYPE_INPUT = args.genotype_input
     GENOTYPE_FILE = args.genotypes_file
     FBRF_PUB_ID = args.pub_id
+    RELAX = args.relax
 except SystemExit as e:
     log.error('ERROR: Must supply two arguments: -p/--pub (FBrf ID), and one of -i/--genotype_input or -f/--genotypes_file.')
     sys.exit(e.code)
@@ -120,20 +121,21 @@ def main():
         except FileNotFoundError:
             log.error(f'Cannot open "{GENOTYPE_FILE}". Make sure the file is in directory mounted to docker /src/input/')
             raise FileNotFoundError
-    genotype_handler_instance = GenotypeHandler(genotype_input_list, FBRF_PUB_ID, AGR_TOKEN)
+    genotype_handler_instance = GenotypeHandler(genotype_input_list, FBRF_PUB_ID, AGR_TOKEN, RELAX)
     db_transaction(genotype_handler_instance)
     log.info('ENDED MAIN FUNCTION.\n')
 
 
 class GenotypeHandler(object):
     """This object processes genotype name inputs and gets or creates chado genotypes."""
-    def __init__(self, genotype_input_list, fbrf_pub_id, agr_token):
+    def __init__(self, genotype_input_list, fbrf_pub_id, agr_token, relaxed_stringency):
         """Create the GenotypeHandler object.
 
         Args:
             genotype_input_list (list): A list of genotype names (allele SGML symbols).
             fbrf_pub_id (str): The FBrf ID for the genotype.
             agr_token (str): The Alliance API token required for interacting with the persistent store.
+            relaxed_stringency (bool): If True, GenotypeAnnotations with warnings (but not errors) will be processed. If False, not processed.
 
         Returns:
             A GenotypeHandler object.
@@ -146,6 +148,7 @@ class GenotypeHandler(object):
         self.genotype_annotations = []          # List of GenotypeAnnotation objects generated from the input list.
         self.uname_genotype_annotations = {}    # uniquename-keyed GenotypeAnnotations (for grouping redundant entries).
         self.agr_token = agr_token
+        self.relaxed_stringency = relaxed_stringency
 
     def get_pub_id(self, session):
         """Get pub.pub_id for given FBrf ID."""
@@ -234,6 +237,8 @@ class GenotypeHandler(object):
         for geno_anno in self.genotype_annotations:
             if geno_anno.errors:
                 log.error(f'STOP processing "{geno_anno.input_genotype_name}" due to these errors: {";".join(geno_anno.errors)}.')
+            elif geno_anno.warnings and self.relaxed_stringency is False:
+                log.error(f'STOP processing "{geno_anno.input_genotype_name}" due to these warnings: {";".join(geno_anno.errors)}.')
         return
 
     def get_or_create_genotypes(self, session):
@@ -245,6 +250,8 @@ class GenotypeHandler(object):
         newly_created_counter = 0
         for geno_anno in self.uname_genotype_annotations.values():
             if geno_anno.errors:
+                continue
+            elif geno_anno.warnings and self.relaxed_stringency is False:
                 continue
             geno_anno.get_known_or_create_new_genotype(session)
             if geno_anno.is_new is True:
