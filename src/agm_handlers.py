@@ -391,6 +391,9 @@ class GenotypeHandler(PrimaryEntityHandler):
         compliant_counter = 0
         non_compliant_counter = 0
         for genotype in self.fb_data_entities.values():
+            if genotype.is_obsolete is True:
+                genotype.export_warnings.append('Suppress obsolete genotypes from Alliance export')
+                genotype.for_export = False
             if 'alliance_compliant' in genotype.cvt_anno_ids_by_term.keys():
                 genotype.is_alliance_compliant = True
                 compliant_counter += 1
