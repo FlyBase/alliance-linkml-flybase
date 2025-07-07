@@ -1087,27 +1087,20 @@ class PrimaryEntityHandler(DataHandler):
         """Generate name/synonym DTOs for an entity."""
         self.log.info('Map synonyms to Alliance object.')
         # First determine synonym slots available, if any.
-        if self.datatype in ['strain', 'genotype']:
-            linkml_synonym_slots = {
-                'symbol_bin': 'agm_full_name_dto',
-                'synonym_bin': 'agm_synonym_dtos'
-            }
-            map_synonyms_required = True
-        else:
-            linkml_synonym_slots = {
-                'symbol_bin': '_symbol_dto',
-                'full_name_bin': '_full_name_dto',
-                'systematic_name_bin': '_systematic_name_dto',
-                'synonym_bin': '_synonym_dtos'
-            }
-            map_synonyms_required = False
-            linkml_dto_attributes = self.agr_export_type().__dict__.keys()
-            for dto_key in linkml_dto_attributes:
-                for bin_type, bin_suffix in linkml_synonym_slots.items():
-                    if dto_key.endswith(bin_suffix):
-                        linkml_synonym_slots[bin_type] = dto_key
-                        self.log.debug(f'Map {bin_type} to LinkML DTO slot {dto_key} because it has suffix "{bin_suffix}".')
-                        map_synonyms_required = True
+        linkml_synonym_slots = {
+            'symbol_bin': '_symbol_dto',
+            'full_name_bin': '_full_name_dto',
+            'systematic_name_bin': '_systematic_name_dto',
+            'synonym_bin': '_synonym_dtos'
+        }
+        map_synonyms_required = False
+        linkml_dto_attributes = self.agr_export_type().__dict__.keys()
+        for dto_key in linkml_dto_attributes:
+            for bin_type, bin_suffix in linkml_synonym_slots.items():
+                if dto_key.endswith(bin_suffix):
+                    linkml_synonym_slots[bin_type] = dto_key
+                    self.log.debug(f'Map {bin_type} to LinkML DTO slot {dto_key} because it has suffix "{bin_suffix}".')
+                    map_synonyms_required = True
         if map_synonyms_required is False:
             self.log.error(f'The map_synonyms() method has been incorrectly called for {self.datatype} objects.')
             return
@@ -1124,9 +1117,6 @@ class PrimaryEntityHandler(DataHandler):
             }
             # Create NameSlotAnnotationDTO objects and sort them out.
             for syno_dict in fb_data_entity.synonym_dict.values():
-                # For genotypes and strains, report all synonyms as "full name" type.
-                if self.datatype in ['strain', 'genotype']:
-                    syno_dict['name_type_name'] = 'full_name'
                 # Sort into current symbol, current fullname or synonym.
                 name_dto = agr_datatypes.NameSlotAnnotationDTO(syno_dict['name_type_name'], syno_dict['format_text'],
                                                                syno_dict['display_text'], syno_dict['pub_curies']).dict_export()
@@ -1138,10 +1128,8 @@ class PrimaryEntityHandler(DataHandler):
                 else:
                     linkml_synonym_bins['synonym_bin'].append(name_dto)
                 # Also add to current systematic name for current Dmel genes only.
-                if hasattr(fb_data_entity, 'curr_anno_id') is False:
-                    pass
-                elif fb_data_entity.chado_obj.is_obsolete is False and fb_data_entity.org_abbr == 'Dmel':
-                    if syno_dict['name_type_name'] == 'systematic_name' and syno_dict['display_text'] == fb_data_entity.curr_anno_id:
+                if syno_dict['name_type_name'] == 'systematic_name' and syno_dict['display_text'] == fb_data_entity.curr_anno_id:
+                    if fb_data_entity.chado_obj.is_obsolete is False and fb_data_entity.org_abbr == 'Dmel':
                         linkml_synonym_bins['systematic_name_bin'].append(name_dto)
             # Review the linkml_synonym_bins for each fb_data_entity.
             # 1. Symbol.
@@ -1162,9 +1150,7 @@ class PrimaryEntityHandler(DataHandler):
                 multi_symbols = ', '.join([i['format_text'] for i in linkml_synonym_bins['full_name_bin']])
                 self.log.warning(f'Found many current full_names for {fb_data_entity}: {multi_symbols}')
             # 3. Systematic name.
-            if hasattr(fb_data_entity, 'curr_anno_id') is False:
-                pass
-            elif len(linkml_synonym_bins['systematic_name_bin']) == 0 and fb_data_entity.curr_anno_id and fb_data_entity.chado_obj.is_obsolete is False:
+            if len(linkml_synonym_bins['systematic_name_bin']) == 0 and fb_data_entity.curr_anno_id and fb_data_entity.chado_obj.is_obsolete is False:
                 self.log.warning(f'No current systematic names found for current annotated {fb_data_entity}: create a generic one.')
                 sys_name_dto = agr_datatypes.NameSlotAnnotationDTO('systematic_name', fb_data_entity.curr_anno_id,
                                                                    fb_data_entity.curr_anno_id, []).dict_export()
