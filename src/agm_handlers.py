@@ -86,7 +86,6 @@ class StrainHandler(PrimaryEntityHandler):
             agr_strain.obsolete = strain.chado_obj.is_obsolete
             agr_strain.primary_external_id = f'FB:{strain.uniquename}'
             agr_strain.taxon_curie = strain.ncbi_taxon_id
-            agr_strain.name = strain.name
             agr_strain.subtype_name = 'strain'
             if strain.ncbi_taxon_id != 'NCBITaxon:7227':
                 agr_strain.internal = True
@@ -98,7 +97,7 @@ class StrainHandler(PrimaryEntityHandler):
         """Extend the method for the StrainHandler."""
         super().map_fb_data_to_alliance()
         self.map_strain_basic()
-        # self.map_synonyms()
+        self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
         self.map_pubs()
@@ -429,7 +428,7 @@ class GenotypeHandler(PrimaryEntityHandler):
             agr_genotype.obsolete = genotype.chado_obj.is_obsolete
             agr_genotype.primary_external_id = f'FB:{genotype.fb_curie}'
             agr_genotype.taxon_curie = genotype.ncbi_taxon_id
-            agr_genotype.name = genotype.name
+            # agr_genotype.name = genotype.name
             agr_genotype.subtype_name = 'genotype'
             if genotype.ncbi_taxon_id != 'NCBITaxon:7227':
                 agr_genotype.internal = True
@@ -467,7 +466,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         super().map_fb_data_to_alliance()
         self.map_genotype_basic()
         self.map_genotype_components()
-        # self.map_synonyms()    # Suppressed until AGM has proper support for synonyms.
+        self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
         self.map_pubs()
