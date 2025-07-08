@@ -99,7 +99,8 @@ class StrainHandler(PrimaryEntityHandler):
             if fb_data_entity.linkmldto is None:
                 continue
             linkml_synonym_bins = {
-                'symbol_bin': [],
+                'fullname_bin': None,
+                'symbol_bin': None,
                 'synonym_bin': []
             }
             # Create NameSlotAnnotationDTO objects and sort them out.
@@ -109,16 +110,24 @@ class StrainHandler(PrimaryEntityHandler):
                                                                syno_dict['display_text'], syno_dict['pub_curies']).dict_export()
                 name_dto['internal'] = syno_dict['is_internal']
                 # Map the current FB fullname to the AGR AGM full_name.
-                if syno_dict['is_current'] is True and syno_dict['name_type_name'] == 'full_name':
-                    name_dto['name_type_name'] = 'full_name'    # Must report current strain symbol (FB) as full_name (AGR).
-                    linkml_synonym_bins['symbol_bin'].append(name_dto)
+                if syno_dict['is_current'] is True and syno_dict['name_type_name'] == 'nomenclature_symbol':
+                    linkml_synonym_bins['symbol_bin'] = name_dto
+                elif syno_dict['is_current'] is True and syno_dict['name_type_name'] == 'full_name':
+                    linkml_synonym_bins['fullname_bin'] = name_dto
                 else:
                     linkml_synonym_bins['synonym_bin'].append(name_dto)
-            # Add the Alliance full_name/synonym annotations to the LinkML object.
-            setattr(fb_data_entity.linkmldto, 'agm_full_name_dto', linkml_synonym_bins['symbol_bin'][0])
-            if len(linkml_synonym_bins['symbol_bin']) > 1:
-                multi_symbols = ', '.join([i['format_text'] for i in linkml_synonym_bins['symbol_bin']])
-                self.log.warning(f'Found many current symbols for {fb_data_entity}: {multi_symbols}')
+            # Now go through the sorted synonym objects.
+            # If there is a current FB fullname, report that as the full name.
+            if linkml_synonym_bins['fullname_bin']:
+                setattr(fb_data_entity.linkmldto, 'agm_full_name_dto', linkml_synonym_bins['fullname_bin'])
+                # If there is a current FB fullname, report the current symbol only if it's different than the fullname:
+                if linkml_synonym_bins['symbol_bin']['format_text'] != linkml_synonym_bins['fullname_bin']['format_text']:
+                    linkml_synonym_bins['synonym_bin'].append(linkml_synonym_bins['symbol_bin'])
+            # If there is not a current FB fullname, report the symbol but call it a "full_name" at the Alliance.
+            else:
+                linkml_synonym_bins['symbol_bin']['name_type_name'] = 'full_name'
+                setattr(fb_data_entity.linkmldto, 'agm_full_name_dto', linkml_synonym_bins['symbol_bin'])
+            # Finally, report aliases.
             setattr(fb_data_entity.linkmldto, 'agm_synonym_dtos', linkml_synonym_bins['synonym_bin'])
         return
 
