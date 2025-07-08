@@ -108,7 +108,8 @@ class StrainHandler(PrimaryEntityHandler):
                 name_dto = agr_datatypes.NameSlotAnnotationDTO(syno_dict['name_type_name'], syno_dict['format_text'],
                                                                syno_dict['display_text'], syno_dict['pub_curies']).dict_export()
                 name_dto['internal'] = syno_dict['is_internal']
-                if syno_dict['is_current'] is True and syno_dict['name_type_name'] == 'nomenclature_symbol':
+                # Map the current FB fullname to the AGR AGM full_name.
+                if syno_dict['is_current'] is True and syno_dict['name_type_name'] == 'full_name':
                     name_dto['name_type_name'] = 'full_name'    # Must report current strain symbol (FB) as full_name (AGR).
                     linkml_synonym_bins['symbol_bin'].append(name_dto)
                 else:
