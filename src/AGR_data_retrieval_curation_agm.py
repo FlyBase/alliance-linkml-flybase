@@ -26,8 +26,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
 from agm_handlers import (
-    # StrainHandler, GenotypeHandler    # BOB
-    StrainHandler
+    StrainHandler, GenotypeHandler
 )
 from utils import export_chado_data, generate_export_file
 
@@ -85,13 +84,13 @@ def main():
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Get the data and process it.
-    # genotype_handler = GenotypeHandler(log, testing)    # BOB
+    genotype_handler = GenotypeHandler(log, testing)
     strain_handler = StrainHandler(log, testing)
     if reference_session:
-        # export_chado_data(session, log, genotype_handler, reference_session=reference_session)    # BOB
+        export_chado_data(session, log, genotype_handler, reference_session=reference_session)
         export_chado_data(session, log, strain_handler, reference_session=reference_session)
     else:
-        # export_chado_data(session, log, genotype_handler)    # BOB
+        export_chado_data(session, log, genotype_handler)
         export_chado_data(session, log, strain_handler)
 
     # Export the data.
@@ -100,7 +99,7 @@ def main():
         'alliance_member_release_version': database_release,
     }
     export_dict['agm_ingest_set'] = []
-    # export_dict['agm_ingest_set'].extend(genotype_handler.export_data[genotype_handler.primary_export_set])    # BOB
+    export_dict['agm_ingest_set'].extend(genotype_handler.export_data[genotype_handler.primary_export_set])
     export_dict['agm_ingest_set'].extend(strain_handler.export_data[strain_handler.primary_export_set])
 
     generate_export_file(export_dict, log, output_filename)
@@ -113,7 +112,7 @@ def main():
             'alliance_member_release_version': database_release,
         }
         association_export_dict['agm_allele_association_ingest_set'] = []
-        # association_export_dict['agm_allele_association_ingest_set'].extend(genotype_handler.export_data['agm_allele_association_ingest_set'])    # BOB
+        association_export_dict['agm_allele_association_ingest_set'].extend(genotype_handler.export_data['agm_allele_association_ingest_set'])
         generate_export_file(association_export_dict, log, association_output_filename)
 
     log.info('Ended main function.\n')
