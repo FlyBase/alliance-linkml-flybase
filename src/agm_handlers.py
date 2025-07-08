@@ -485,7 +485,6 @@ class GenotypeHandler(PrimaryEntityHandler):
                     self.agm_component_associations.append(geno_allele_rel)
         return
 
-    # BILLYBOB - NEXT HERE
     def map_genotype_synonyms(self):
         """Generate genotype name/synonym DTOs for an entity."""
         for genotype in self.fb_data_entities.values():
@@ -497,7 +496,7 @@ class GenotypeHandler(PrimaryEntityHandler):
             }
             # Sort out synonyms, converting "symbol" to "full_name" to comply with Alliance.
             for syno_dict in genotype.synonym_dict.values():
-                name_dto = agr_datatypes.NameSlotAnnotationDTO('full_name', syno_dict['format_text'],
+                name_dto = agr_datatypes.NameSlotAnnotationDTO('full_name', sub_sup_sgml_to_plain_text(syno_dict['format_text']),
                                                                syno_dict['display_text'], syno_dict['pub_curies']).dict_export()
                 name_dto['internal'] = syno_dict['is_internal']
                 # Map the current FB fullname to the AGR AGM full_name.
