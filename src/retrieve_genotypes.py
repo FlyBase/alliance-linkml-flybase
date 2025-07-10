@@ -278,6 +278,8 @@ class GenotypeHandler(object):
         for geno_anno in self.uname_genotype_annotations.values():
             if geno_anno.errors:
                 continue
+            elif geno_anno.warnings and self.relaxed_stringency is False:
+                continue
             agr_curie = f'FB:{geno_anno.curie}'
             log.debug(f'Check Alliance for {agr_curie}: {geno_anno}')
             genotype_at_alliance = False
