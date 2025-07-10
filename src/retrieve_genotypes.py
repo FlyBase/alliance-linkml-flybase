@@ -294,6 +294,8 @@ class GenotypeHandler(object):
             }
             get_response = requests.get(get_url, headers=headers)
             log.debug(f'Got this raw response looking for {agr_curie} at the Alliance:\n{get_response.text}')
+            log.debug(f'Got this response code: "{get_response.status_code}"')
+            log.debug(f'Got these response headers: "{get_response.headers}"')
             if get_response.status_code == 200:
                 try:
                     data = get_response.json()
