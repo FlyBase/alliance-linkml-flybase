@@ -77,7 +77,7 @@ if not AGR_TOKEN:
 # BOB
 else:
     log.debug(f'Have this: {AGR_TOKEN}')
-AGR_BASE_URL = os.environ.get('AGR_BASE_URL', 'https://beta-curation.alliancegenome.org')    # BOB - POINT TO REAL PROD ONCE TESTING IS COMPLETE
+AGR_BASE_URL = os.environ.get('AGR_BASE_URL', 'https://curation.alliancegenome.org')    # BOB - POINT TO REAL PROD ONCE TESTING IS COMPLETE
 
 # Create SQL Alchemy engines from environmental variables.
 engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server + '/' + database
