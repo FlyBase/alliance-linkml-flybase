@@ -292,6 +292,7 @@ class GenotypeHandler(object):
                 'accept': 'application/json',
                 'Authorization': f'Bearer {self.agr_token}',
             }
+            log.debug(f'Have these headers: {headers}')
             get_response = requests.get(get_url, headers=headers)
             log.debug(f'Got this raw response looking for {agr_curie} at the Alliance:\n{get_response.text}')
             log.debug(f'Got this response code: "{get_response.status_code}"')
