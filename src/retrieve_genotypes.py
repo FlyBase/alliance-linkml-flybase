@@ -284,6 +284,7 @@ class GenotypeHandler(object):
             log.debug(f'Check Alliance for {agr_curie}: {geno_anno}')
             genotype_at_alliance = False
             get_url = f'{AGR_BASE_URL}/api/agm/{agr_curie}'
+            log.debug(f'Have this URL: {get_url}, token={self.agr_token}')
             headers = {
                 'accept': 'application/json',
                 'Authorization': f'Bearer {self.agr_token}',
