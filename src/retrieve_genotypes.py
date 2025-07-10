@@ -74,7 +74,7 @@ TESTING = set_up_dict['testing']
 AGR_TOKEN = os.environ['ALLIANCETOKEN']
 if not AGR_TOKEN:
     raise ValueError("ALLIANCETOKEN environment variable is required")
-AGR_BASE_URL = os.environ.get('AGR_BASE_URL', 'https://beta.curation.alliancegenome.org')    # BOB - POINT TO REAL PROD ONCE TESTING IS COMPLETE
+AGR_BASE_URL = os.environ.get('AGR_BASE_URL', 'https://beta-curation.alliancegenome.org')    # BOB - POINT TO REAL PROD ONCE TESTING IS COMPLETE
 
 # Create SQL Alchemy engines from environmental variables.
 engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server + '/' + database
