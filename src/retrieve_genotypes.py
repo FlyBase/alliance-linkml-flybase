@@ -74,7 +74,7 @@ TESTING = set_up_dict['testing']
 AGR_TOKEN = os.environ['ALLIANCETOKEN']
 if not AGR_TOKEN:
     raise ValueError("ALLIANCETOKEN environment variable is required")
-AGR_BASE_URL = os.environ.get('AGR_BASE_URL', 'https://curation.alliancegenome.org')
+AGR_BASE_URL = os.environ.get('AGR_BASE_URL', 'https://beta.curation.alliancegenome.org')    # BOB - POINT TO REAL PROD ONCE TESTING IS COMPLETE
 
 # Create SQL Alchemy engines from environmental variables.
 engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server + '/' + database
@@ -404,7 +404,7 @@ class GenotypeHandler(object):
         self.find_redundant_genotype_entries()
         self.report_errors()
         self.get_or_create_genotypes(session)
-        # self.sync_with_alliance()    # BOB - do not sync with alliance during testing.
+        self.sync_with_alliance()    # BOB - TAKE CARE WITH THIS DURING TESTING.
         self.print_curator_genotype_report()
         return
 
