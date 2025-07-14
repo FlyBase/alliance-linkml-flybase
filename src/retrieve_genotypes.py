@@ -413,7 +413,7 @@ class GenotypeHandler(object):
         self.find_redundant_genotype_entries()
         self.report_errors()
         self.get_or_create_genotypes(session)
-        self.sync_with_alliance()    # BOB - TAKE CARE WITH THIS DURING TESTING.
+        # self.sync_with_alliance()    # Reinstate once Alliance API access is restored: SCRUM-5275.
         self.print_curator_genotype_report()
         return
 
