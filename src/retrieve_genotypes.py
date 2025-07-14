@@ -74,10 +74,7 @@ TESTING = set_up_dict['testing']
 AGR_TOKEN = os.environ['ALLIANCETOKEN']
 if not AGR_TOKEN:
     raise ValueError("ALLIANCETOKEN environment variable is required")
-# BOB
-else:
-    log.debug(f'Have this: {AGR_TOKEN}')
-AGR_BASE_URL = os.environ.get('AGR_BASE_URL', 'https://curation.alliancegenome.org')    # BOB - POINT TO REAL PROD ONCE TESTING IS COMPLETE
+AGR_BASE_URL = os.environ.get('AGR_BASE_URL', 'https://curation.alliancegenome.org')
 
 # Create SQL Alchemy engines from environmental variables.
 engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server + '/' + database
@@ -287,12 +284,11 @@ class GenotypeHandler(object):
             log.debug(f'Check Alliance for {agr_curie}: {geno_anno}')
             genotype_at_alliance = False
             get_url = f'{AGR_BASE_URL}/api/agm/{agr_curie}'
-            log.debug(f'Have this URL: {get_url}, token={self.agr_token}')
+            log.debug(f'Have this URL: {get_url}')
             headers = {
                 'accept': 'application/json',
                 'Authorization': f'Bearer {self.agr_token}',
             }
-            log.debug(f'Have these headers: {headers}')
             get_response = requests.get(get_url, headers=headers)
             log.debug(f'Got this raw response looking for {agr_curie} at the Alliance:\n{get_response.text}')
             log.debug(f'Got this response code: "{get_response.status_code}"')

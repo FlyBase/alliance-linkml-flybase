@@ -119,7 +119,7 @@ if database != 'production_chado':
     print(f'WARNING: Script is running on test database {database}, not "production_chado". Contact HarvDev if trying to use this script for real.')
 
 # Check for the necessary docker image.
-image_name = 'test_export_to_linkml'
+image_name = 'export_to_linkml'
 check_docker_image_exists(image_name)
 if image_name != 'export_to_linkml':
     print(f'WARNING: Script is using a test docker image {image_name}, not "export_to_linkml". Contact HarvDev if trying to use this script for real.')
