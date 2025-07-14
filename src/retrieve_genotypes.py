@@ -206,7 +206,6 @@ class GenotypeHandler(object):
             geno_specific_features = geno_anno.features.keys() - set(self.pub_associated_feature_ids)
             for feature_id in geno_specific_features:
                 input_symbol = geno_anno.features[feature_id]['input_symbol']
-                # Relaxed feature-pub constraint.
                 geno_anno.warnings.append(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
                 log.warning(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
                 # Stringent feature-pub constraint.
