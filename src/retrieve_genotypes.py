@@ -123,9 +123,7 @@ def main():
             genotype_file_contents = open(GENOTYPE_FILE, 'r')
             genotype_input_list = [i.strip() for i in genotype_file_contents if i.strip() != '']
         except FileNotFoundError as e:
-            error_msg = f'Cannot open "{GENOTYPE_FILE}". Make sure the file is in directory mounted to docker /src/input/: {e}'
-            log.error(error_msg)
-            print(f'\nERROR: {error_msg}', flush=True)
+            log.error(f'Cannot open "{GENOTYPE_FILE}". Make sure the file is in directory mounted to docker /src/input/: {e}')
             raise
     genotype_handler_instance = GenotypeHandler(genotype_input_list, FBRF_PUB_ID, AGR_TOKEN, RELAX)
     db_transaction(genotype_handler_instance)
@@ -170,14 +168,10 @@ class GenotypeHandler(object):
             self.pub_id = result.pub_id
             log.info(f'Found ONE current pub in chado for "{self.fbrf_pub_id}".')
         except NoResultFound as ne:
-            error_msg = f'Found ZERO current pubs in chado for "{self.fbrf_pub_id}": {ne}.'
-            log.error(error_msg)
-            print(f'ERROR: {error_msg}')
+            log.error(f'Found ZERO current pubs in chado for "{self.fbrf_pub_id}": {ne}.')
             raise NoResultFound
         except MultipleResultsFound as ne:
-            error_msg = f'Found MANY current pubs in chado for "{self.fbrf_pub_id}": {ne}.'
-            log.error(error_msg)
-            print(f'ERROR: {error_msg}')
+            log.error(f'Found MANY current pubs in chado for "{self.fbrf_pub_id}": {ne}.')
             raise MultipleResultsFound
         return
 
@@ -314,9 +308,7 @@ class GenotypeHandler(object):
                         log.debug(f'SUCCESS: Found {mod_entity_id} at the Alliance.')
                         genotype_at_alliance = True
                     else:
-                        error_msg = 'FAILURE: Got a response but could not find ID attribute.'
-                        log.error(error_msg)
-                        print(f'ERROR: {error_msg}')
+                        log.error('FAILURE: Got a response but could not find ID attribute.')
                         raise
                 except KeyError as e:
                     log.debug(f'Could not find {agr_curie} at the Alliance so it must be new: {e}')
@@ -371,9 +363,7 @@ class GenotypeHandler(object):
                     log.debug('SUCCESS IN POSTING AGM.')
                 else:
                     log.debug(f'Status code = {post_response.status_code}')
-                    error_msg = 'FAILURE TO POST AGM. Continue processing locally.'
-                    log.error(error_msg)
-                    print(f'ERROR: {error_msg}')
+                    log.error('FAILURE TO POST AGM. Continue processing locally.')
         return
 
     def print_curator_genotype_report(self):
