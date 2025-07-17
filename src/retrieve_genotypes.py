@@ -383,14 +383,14 @@ class GenotypeHandler(object):
                 status = 'ERRORS FOUND'
             elif geno_anno.warnings and not self.relaxed_stringency:
                 status = 'WARNINGS FOUND - NOT PROCESSED'
-            elif geno_anno.warnings and self.relaxed_stringency:
-                status = 'WARNINGS FOUND - PROCESSED WITH RELAXED STRINGENCY'
             elif geno_anno.is_new is True:
                 status = 'NEW GENOTYPE CREATED'
+                if self.relaxed_stringency:
+                    status += ' - PROCESSED WITH RELAXED STRINGENCY'
             elif geno_anno.is_new is False:
                 status = 'KNOWN CHADO GENOTYPE'
-            elif hasattr(geno_anno, 'is_new') and geno_anno.is_new is None:
-                status = 'NOT PROCESSED DUE TO ERRORS/WARNINGS'
+                if self.relaxed_stringency:
+                    status += ' - PROCESSED WITH RELAXED STRINGENCY'
             else:
                 status = 'PROCESSING STATUS UNKNOWN - CONTACT HARVDEV'
             lines_to_write.append(f'\tSTATUS: {status}')
