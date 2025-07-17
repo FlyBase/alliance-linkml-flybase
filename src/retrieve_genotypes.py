@@ -87,7 +87,11 @@ run_mode = parser.add_mutually_exclusive_group(required=True)
 run_mode.add_argument('-i', '--genotype_input', help='The genotype name to get or create.', required=False)
 run_mode.add_argument('-f', '--genotypes_file', help='A file of genotype names to get or create.', required=False)
 parser.add_argument('-p', '--pub_id', help='The FBrf ID for the publication.', required=True)
-parser.add_argument('--relax', action='store_true', help='Relax stringency to allow for processing of genotype input with warnings.', required=False)
+parser.add_argument('--relax', action='store_true', 
+                    help='Relax stringency to allow processing of genotype input with warnings. '
+                         'When enabled, genotypes with warnings (but not errors) will be processed. '
+                         'Default behavior requires clean input with no warnings or errors.', 
+                    required=False)
 
 # Use parse_known_args(), not parse_args(), to handle args specific to this script (outside of set_up_db_reading()).
 try:
@@ -237,7 +241,8 @@ class GenotypeHandler(object):
             if geno_anno.errors:
                 log.error(f'STOP processing "{geno_anno.input_genotype_name}" due to these errors: {";".join(geno_anno.errors)}.')
             elif geno_anno.warnings and self.relaxed_stringency is False:
-                log.error(f'STOP processing "{geno_anno.input_genotype_name}" due to these warnings: {";".join(geno_anno.warnings)}.')
+                log.warning(f'SKIP processing "{geno_anno.input_genotype_name}" due to these warnings: {";".join(geno_anno.warnings)}.')
+                log.info('Use --relax flag to process genotypes with warnings.')
         return
 
     def get_or_create_genotypes(self, session):
@@ -283,15 +288,12 @@ class GenotypeHandler(object):
             log.debug(f'Check Alliance for {agr_curie}: {geno_anno}')
             genotype_at_alliance = False
             get_url = f'{AGR_BASE_URL}/api/agm/{agr_curie}'
-            log.debug(f'Have this URL: {get_url}')
             headers = {
                 'accept': 'application/json',
                 'Authorization': f'Bearer {self.agr_token}',
             }
             get_response = requests.get(get_url, headers=headers)
-            log.debug(f'Got this raw response looking for {agr_curie} at the Alliance:\n{get_response.text}')
-            log.debug(f'Got this response code: "{get_response.status_code}"')
-            log.debug(f'Got these response headers: "{get_response.headers}"')
+            log.debug(f'Alliance API response code: {get_response.status_code}')
             if get_response.status_code == 200:
                 try:
                     data = get_response.json()
@@ -306,11 +308,12 @@ class GenotypeHandler(object):
                     else:
                         log.error('FAILURE: Got a response but could not find ID attribute.')
                         raise
-                except KeyError:
-                    log.debug(f'FAILURE: Could not find {agr_curie} at the Alliance.')
+                except KeyError as e:
+                    log.debug(f'FAILURE: Could not find {agr_curie} at the Alliance: {e}')
             else:
-                log.error(f'FAILURE: Lookup of {agr_curie} did not return any response from the Alliance API.')
-                raise
+                log.error(f'FAILURE: Lookup of {agr_curie} returned status code {get_response.status_code} from the Alliance API.')
+                # Note: This is a temporary failure that should not stop processing
+                # The genotype may still be valid for local processing
             if genotype_at_alliance is False:
                 genotype_display_name = sub_sup_sgml_to_plain_text(geno_anno.uniquename)
                 genotype_display_name = sgml_to_plain_text(genotype_display_name)
@@ -371,16 +374,21 @@ class GenotypeHandler(object):
                 lines_to_write.append(f'\tCURIE: FB:{geno_anno.curie}')
             else:
                 lines_to_write.append('\tCURIE:')
+            # Determine processing status based on error/warning state and processing results
             if geno_anno.errors:
                 status = 'ERRORS FOUND'
-            elif geno_anno.warnings:
-                status = 'WARNINGS FOUND'
+            elif geno_anno.warnings and not self.relaxed_stringency:
+                status = 'WARNINGS FOUND - NOT PROCESSED'
+            elif geno_anno.warnings and self.relaxed_stringency:
+                status = 'WARNINGS FOUND - PROCESSED WITH RELAXED STRINGENCY'
             elif geno_anno.is_new is True:
                 status = 'NEW GENOTYPE CREATED'
             elif geno_anno.is_new is False:
                 status = 'KNOWN CHADO GENOTYPE'
+            elif hasattr(geno_anno, 'is_new') and geno_anno.is_new is None:
+                status = 'NOT PROCESSED DUE TO ERRORS/WARNINGS'
             else:
-                status = 'INCORRECTLY PROCESSED: CONTACT HARVDEV'
+                status = 'PROCESSING STATUS UNKNOWN - CONTACT HARVDEV'
             lines_to_write.append(f'\tSTATUS: {status}')
             if geno_anno.uniquename:
                 uniquename_output = geno_anno.uniquename.replace('<up>', '[').replace('</up>', ']')
@@ -408,7 +416,13 @@ class GenotypeHandler(object):
         self.find_redundant_genotype_entries()
         self.report_errors()
         self.get_or_create_genotypes(session)
-        # self.sync_with_alliance()    # Reinstate once Alliance API access is restored: SCRUM-5275.
+        # Note: AGR sync is temporarily disabled due to API access issues (SCRUM-5275)
+        # Re-enable when Alliance API access is restored
+        if self.agr_token and AGR_BASE_URL:
+            try:
+                self.sync_with_alliance()
+            except Exception as e:
+                log.warning(f'Alliance sync failed: {e}. Continuing with local processing.')
         self.print_curator_genotype_report()
         return
 

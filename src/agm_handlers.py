@@ -93,6 +93,24 @@ class StrainHandler(PrimaryEntityHandler):
             strain.linkmldto = agr_strain
         return
 
+    def _create_agm_synonym_dto(self, syno_dict, name_type_override=None):
+        """Create a NameSlotAnnotationDTO from synonym dictionary.
+        
+        Args:
+            syno_dict (dict): Synonym dictionary with name information
+            name_type_override (str, optional): Override the name type
+            
+        Returns:
+            dict: NameSlotAnnotationDTO exported as dictionary
+        """
+        name_type = name_type_override or syno_dict['name_type_name']
+        name_dto = agr_datatypes.NameSlotAnnotationDTO(
+            name_type, syno_dict['format_text'],
+            syno_dict['display_text'], syno_dict['pub_curies']
+        ).dict_export()
+        name_dto['internal'] = syno_dict['is_internal']
+        return name_dto
+
     def map_strain_synonyms(self):
         """Generate strain name/synonym DTOs for an entity."""
         for strain in self.fb_data_entities.values():
@@ -105,11 +123,8 @@ class StrainHandler(PrimaryEntityHandler):
             }
             # Create NameSlotAnnotationDTO objects and sort them out.
             for syno_dict in strain.synonym_dict.values():
+                name_dto = self._create_agm_synonym_dto(syno_dict)
                 # Sort into current symbol, current fullname or synonym.
-                name_dto = agr_datatypes.NameSlotAnnotationDTO(syno_dict['name_type_name'], syno_dict['format_text'],
-                                                               syno_dict['display_text'], syno_dict['pub_curies']).dict_export()
-                name_dto['internal'] = syno_dict['is_internal']
-                # Map the current FB fullname to the AGR AGM full_name.
                 if syno_dict['is_current'] is True and syno_dict['name_type_name'] == 'nomenclature_symbol':
                     linkml_synonym_bins['symbol_bin'] = name_dto
                 elif syno_dict['is_current'] is True and syno_dict['name_type_name'] == 'full_name':
@@ -121,10 +136,11 @@ class StrainHandler(PrimaryEntityHandler):
             if linkml_synonym_bins['fullname_bin']:
                 setattr(strain.linkmldto, 'agm_full_name_dto', linkml_synonym_bins['fullname_bin'])
                 # If there is a current FB fullname, report the current symbol only if it's different than the fullname:
-                if linkml_synonym_bins['symbol_bin']['format_text'] != linkml_synonym_bins['fullname_bin']['format_text']:
+                if (linkml_synonym_bins['symbol_bin'] and 
+                    linkml_synonym_bins['symbol_bin']['format_text'] != linkml_synonym_bins['fullname_bin']['format_text']):
                     linkml_synonym_bins['synonym_bin'].append(linkml_synonym_bins['symbol_bin'])
             # If there is not a current FB fullname, report the symbol but call it a "full_name" at the Alliance.
-            else:
+            elif linkml_synonym_bins['symbol_bin']:
                 linkml_synonym_bins['symbol_bin']['name_type_name'] = 'full_name'
                 setattr(strain.linkmldto, 'agm_full_name_dto', linkml_synonym_bins['symbol_bin'])
             # Finally, report aliases.
@@ -422,6 +438,22 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.log.info(f'Found {component_counter} components for {genotype_counter} genotypes for export.')
         return
 
+    def flag_alliance_compliant_genotypes(self):
+        """Flag genotypes with alliance_compliant CV term annotation."""
+        self.log.info('Flag Alliance-compliant genotypes.')
+        compliant_counter = 0
+        non_compliant_counter = 0
+        for genotype in self.fb_data_entities.values():
+            if 'alliance_compliant' in genotype.cvt_anno_ids_by_term.keys():
+                genotype.is_alliance_compliant = True
+                compliant_counter += 1
+            else:
+                genotype.is_alliance_compliant = False
+                non_compliant_counter += 1
+        self.log.info(f'Found {compliant_counter} Alliance-compliant genotypes.')
+        self.log.info(f'Found {non_compliant_counter} non-Alliance-compliant genotypes.')
+        return
+
     # Elaborate on synthesize_info() for the GenotypeHandler.
     def synthesize_info(self):
         """Extend the method for the GenotypeHandler."""
@@ -434,6 +466,7 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
+        self.flag_alliance_compliant_genotypes()
         return
 
     # Additional sub-methods for map_fb_data_to_alliance().
@@ -443,8 +476,8 @@ class GenotypeHandler(PrimaryEntityHandler):
         non_exportable_counter = 0
         exportable_counter = 0
         for genotype in self.fb_data_entities.values():
-            if genotype.is_obsolete is True:
-                genotype.export_warnings.append('Suppress obsolete genotypes from Alliance export')
+            if genotype.is_obsolete:
+                genotype.export_warnings.append('Obsolete genotypes are suppressed from Alliance export')
                 genotype.for_export = False
             if genotype.for_export is False:
                 non_exportable_counter += 1
@@ -457,13 +490,13 @@ class GenotypeHandler(PrimaryEntityHandler):
             if genotype.ncbi_taxon_id != 'NCBITaxon:7227':
                 agr_genotype.internal = True
                 genotype.internal_reasons.append('Non-Dmel')
-            if genotype.is_alliance_compliant is False:
+            if not genotype.is_alliance_compliant:
                 agr_genotype.internal = True
                 genotype.internal_reasons.append('Non-Alliance-compliant')
             genotype.linkmldto = agr_genotype
             exportable_counter += 1
-        self.log.info(f'{exportable_counter} genotypes could be mapped to the Alliance LinkML model.')
-        self.log.info(f'{non_exportable_counter} genotypes will not be exported.')
+        self.log.info(f'Mapped {exportable_counter} genotypes to Alliance LinkML model.')
+        self.log.info(f'Excluded {non_exportable_counter} genotypes from export.')
         return
 
     def map_genotype_components(self):
@@ -496,9 +529,12 @@ class GenotypeHandler(PrimaryEntityHandler):
             }
             # Sort out synonyms, converting "symbol" to "full_name" to comply with Alliance.
             for syno_dict in genotype.synonym_dict.values():
-                name_dto = agr_datatypes.NameSlotAnnotationDTO('full_name', sub_sup_sgml_to_plain_text(syno_dict['format_text']),
-                                                               syno_dict['display_text'], syno_dict['pub_curies']).dict_export()
-                name_dto['internal'] = syno_dict['is_internal']
+                # Convert SGML to plain text for genotype names
+                syno_dict_converted = syno_dict.copy()
+                syno_dict_converted['format_text'] = sub_sup_sgml_to_plain_text(syno_dict['format_text'])
+                
+                name_dto = self._create_agm_synonym_dto(syno_dict_converted, name_type_override='full_name')
+                
                 # Map the current FB fullname to the AGR AGM full_name.
                 if syno_dict['is_current'] is True:
                     linkml_synonym_bins['current_full_name'] = name_dto
