@@ -286,6 +286,7 @@ class GenotypeHandler(object):
                 continue
             elif geno_anno.warnings and self.relaxed_stringency is False:
                 continue
+            successful_api_connection = False
             agr_curie = f'FB:{geno_anno.curie}'
             log.debug(f'Check Alliance for {agr_curie}: {geno_anno}')
             genotype_at_alliance = False
@@ -297,6 +298,7 @@ class GenotypeHandler(object):
             get_response = requests.get(get_url, headers=headers)
             log.debug(f'Alliance API response code: {get_response.status_code}')
             if get_response.status_code == 200:
+                successful_api_connection = True
                 try:
                     data = get_response.json()
                     if 'primaryExternalId' in data['entity']:
@@ -319,7 +321,7 @@ class GenotypeHandler(object):
                 geno_anno.warnings.append('Could NOT connect to Alliance for lookup, continue to process locally')
                 # Note: This is a temporary failure that should not stop processing
                 # The genotype may still be valid for local processing
-            if genotype_at_alliance is False:
+            if genotype_at_alliance is False and successful_api_connection:
                 genotype_display_name = sub_sup_sgml_to_plain_text(geno_anno.uniquename)
                 genotype_display_name = sgml_to_plain_text(genotype_display_name)
                 log.debug(f'Load {geno_anno} into the Alliance using this name: {genotype_display_name}')
