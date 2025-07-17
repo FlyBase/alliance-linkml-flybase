@@ -122,9 +122,11 @@ def main():
         try:
             genotype_file_contents = open(GENOTYPE_FILE, 'r')
             genotype_input_list = [i.strip() for i in genotype_file_contents if i.strip() != '']
-        except FileNotFoundError:
-            log.error(f'Cannot open "{GENOTYPE_FILE}". Make sure the file is in directory mounted to docker /src/input/')
-            raise FileNotFoundError
+        except FileNotFoundError as e:
+            error_msg = f'Cannot open "{GENOTYPE_FILE}". Make sure the file is in directory mounted to docker /src/input/: {e}'
+            log.error(error_msg)
+            print(f'\nERROR: {error_msg}')
+            raise
     genotype_handler_instance = GenotypeHandler(genotype_input_list, FBRF_PUB_ID, AGR_TOKEN, RELAX)
     db_transaction(genotype_handler_instance)
     log.info('ENDED MAIN FUNCTION.\n')
@@ -153,6 +155,7 @@ class GenotypeHandler(object):
         self.uname_genotype_annotations = {}    # uniquename-keyed GenotypeAnnotations (for grouping redundant entries).
         self.agr_token = agr_token
         self.relaxed_stringency = relaxed_stringency
+        self.script_errors = []                 # Error messages for the
 
     def get_pub_id(self, session):
         """Get pub.pub_id for given FBrf ID."""
@@ -167,10 +170,14 @@ class GenotypeHandler(object):
             self.pub_id = result.pub_id
             log.info(f'Found ONE current pub in chado for "{self.fbrf_pub_id}".')
         except NoResultFound as ne:
-            log.error(f'Found ZERO current pubs in chado for "{self.fbrf_pub_id}": {ne}.')
+            error_msg = f'Found ZERO current pubs in chado for "{self.fbrf_pub_id}": {ne}.'
+            log.error(error_msg)
+            print(f'ERROR: {error_msg}')
             raise NoResultFound
-        except MultipleResultsFound as me:
-            log.error(f'Found MANY current pubs in chado for "{self.fbrf_pub_id}": {me}.')
+        except MultipleResultsFound as ne:
+            error_msg = f'Found MANY current pubs in chado for "{self.fbrf_pub_id}": {ne}.'
+            log.error(error_msg)
+            print(f'ERROR: {error_msg}')
             raise MultipleResultsFound
         return
 
@@ -212,12 +219,11 @@ class GenotypeHandler(object):
                 input_symbol = geno_anno.features[feature_id]['input_symbol']
                 geno_anno.warnings.append(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
                 log.warning(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
-                # Stringent feature-pub constraint.
-                # geno_anno.errors.append(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
-                # log.error(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
                 no_counter += 1
         if no_counter > 0:
-            log.error(f'Found {no_counter} listed features NOT associated with {self.fbrf_pub_id}')
+            warning_msg = f'Found {no_counter} listed features NOT associated with {self.fbrf_pub_id}'
+            log.warning(warning_msg)
+            print(f'WARNING: {warning_msg}')
         return
 
     def find_redundant_genotype_entries(self):
@@ -229,7 +235,9 @@ class GenotypeHandler(object):
             if geno_anno.uniquename in self.uname_genotype_annotations.keys():
                 modified_geno_uname = geno_anno.uniquename.replace('<up>', '[').replace('</up>', ']')
                 geno_anno.errors.append(f'{geno_anno} is redundant with another input genotype, sharing this uniquename: {modified_geno_uname}')
-                log.error(f'{geno_anno} is redundant with another input genotype, sharing this uniquename: {geno_anno.uniquename}')
+                warning_msg = f'{geno_anno} is redundant with another input genotype, sharing this uniquename: {geno_anno.uniquename}'
+                log.warning(warning_msg)
+                print(f'WARNING: {warning_msg}')
             else:
                 self.uname_genotype_annotations[geno_anno.uniquename] = geno_anno
         return
@@ -306,12 +314,16 @@ class GenotypeHandler(object):
                         log.debug(f'SUCCESS: Found {mod_entity_id} at the Alliance.')
                         genotype_at_alliance = True
                     else:
-                        log.error('FAILURE: Got a response but could not find ID attribute.')
+                        error_msg = 'FAILURE: Got a response but could not find ID attribute.'
+                        log.error(error_msg)
+                        print(f'ERROR: {error_msg}')
                         raise
                 except KeyError as e:
-                    log.debug(f'FAILURE: Could not find {agr_curie} at the Alliance: {e}')
+                    log.debug(f'Could not find {agr_curie} at the Alliance so it must be new: {e}')
             else:
-                log.error(f'FAILURE: Lookup of {agr_curie} returned status code {get_response.status_code} from the Alliance API.')
+                warning_msg = f'Could NOT connect to Alliance looking up {agr_curie} returned status code {get_response.status_code}.'
+                log.warning(warning_msg)
+                print(f'WARNING: {warning_msg}')
                 # Note: This is a temporary failure that should not stop processing
                 # The genotype may still be valid for local processing
             if genotype_at_alliance is False:
@@ -359,7 +371,9 @@ class GenotypeHandler(object):
                     log.debug('SUCCESS IN POSTING AGM.')
                 else:
                     log.debug(f'Status code = {post_response.status_code}')
-                    log.error('FAILURE TO POST AGM.')
+                    error_msg = 'FAILURE TO POST AGM. Continue processing locally.'
+                    log.error(error_msg)
+                    print(f'ERROR: {error_msg}')
         return
 
     def print_curator_genotype_report(self):
