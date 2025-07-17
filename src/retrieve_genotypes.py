@@ -125,7 +125,7 @@ def main():
         except FileNotFoundError as e:
             error_msg = f'Cannot open "{GENOTYPE_FILE}". Make sure the file is in directory mounted to docker /src/input/: {e}'
             log.error(error_msg)
-            print(f'\nERROR: {error_msg}')
+            print(f'\nERROR: {error_msg}', flush=True)
             raise
     genotype_handler_instance = GenotypeHandler(genotype_input_list, FBRF_PUB_ID, AGR_TOKEN, RELAX)
     db_transaction(genotype_handler_instance)
