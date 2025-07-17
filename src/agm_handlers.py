@@ -120,9 +120,9 @@ class StrainHandler(PrimaryEntityHandler):
             if linkml_synonym_bins['fullname_bin']:
                 setattr(strain.linkmldto, 'agm_full_name_dto', linkml_synonym_bins['fullname_bin'])
                 # If there is a current FB fullname, report the current symbol only if it's different than the fullname:
-                if (linkml_synonym_bins['symbol_bin'] and 
-                    linkml_synonym_bins['symbol_bin']['format_text'] != linkml_synonym_bins['fullname_bin']['format_text']):
-                    linkml_synonym_bins['synonym_bin'].append(linkml_synonym_bins['symbol_bin'])
+                if linkml_synonym_bins['symbol_bin']:
+                    if linkml_synonym_bins['symbol_bin']['format_text'] != linkml_synonym_bins['fullname_bin']['format_text']:
+                        linkml_synonym_bins['synonym_bin'].append(linkml_synonym_bins['symbol_bin'])
             # If there is not a current FB fullname, report the symbol but call it a "full_name" at the Alliance.
             elif linkml_synonym_bins['symbol_bin']:
                 linkml_synonym_bins['symbol_bin']['name_type_name'] = 'full_name'

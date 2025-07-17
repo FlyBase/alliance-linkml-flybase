@@ -95,10 +95,10 @@ parser.add_argument('-p', '--pub', help='The FBrf ID for the publication.', requ
 run_mode = parser.add_mutually_exclusive_group(required=True)
 run_mode.add_argument('-i', '--genotype_input', help='The genotype name to get or create.', required=False)
 run_mode.add_argument('-f', '--genotypes_file', help='A file of genotype names to get or create.', required=False)
-parser.add_argument('--relax', action='store_true', 
+parser.add_argument('--relax', action='store_true',
                     help='Relax stringency to allow processing of genotype input with warnings. '
                          'When enabled, genotypes with warnings (but not errors) will be processed. '
-                         'Default behavior requires clean input with no warnings or errors.', 
+                         'Default behavior requires clean input with no warnings or errors.',
                     required=False)
 try:
     args = parser.parse_args()
