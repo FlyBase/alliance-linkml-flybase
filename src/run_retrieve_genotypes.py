@@ -146,7 +146,7 @@ command += f'-e PGPASSWORD={pg_pwd} '
 command += '-e RELEASE=production '
 command += f'-e ALLIANCETOKEN={agr_token} '
 command += f'--entrypoint /usr/bin/python3 {image_name} '
-command += f'/src/retrieve_genotypes.py -v {relax_str} -p {fbrf_pub_id} '
+command += f'-u /src/retrieve_genotypes.py -v {relax_str} -p {fbrf_pub_id} '
 if genotype_input_file:
     command += f'-f /src/input/{genotype_input_file} '
 else:
