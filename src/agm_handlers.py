@@ -93,24 +93,6 @@ class StrainHandler(PrimaryEntityHandler):
             strain.linkmldto = agr_strain
         return
 
-    def _create_agm_synonym_dto(self, syno_dict, name_type_override=None):
-        """Create a NameSlotAnnotationDTO from synonym dictionary.
-        
-        Args:
-            syno_dict (dict): Synonym dictionary with name information
-            name_type_override (str, optional): Override the name type
-            
-        Returns:
-            dict: NameSlotAnnotationDTO exported as dictionary
-        """
-        name_type = name_type_override or syno_dict['name_type_name']
-        name_dto = agr_datatypes.NameSlotAnnotationDTO(
-            name_type, syno_dict['format_text'],
-            syno_dict['display_text'], syno_dict['pub_curies']
-        ).dict_export()
-        name_dto['internal'] = syno_dict['is_internal']
-        return name_dto
-
     def map_strain_synonyms(self):
         """Generate strain name/synonym DTOs for an entity."""
         for strain in self.fb_data_entities.values():
@@ -123,7 +105,9 @@ class StrainHandler(PrimaryEntityHandler):
             }
             # Create NameSlotAnnotationDTO objects and sort them out.
             for syno_dict in strain.synonym_dict.values():
-                name_dto = self._create_agm_synonym_dto(syno_dict)
+                name_dto = agr_datatypes.NameSlotAnnotationDTO(syno_dict['name_type_name'], syno_dict['format_text'],
+                                                               syno_dict['display_text'], syno_dict['pub_curies']).dict_export()
+                name_dto['internal'] = syno_dict['is_internal']
                 # Sort into current symbol, current fullname or synonym.
                 if syno_dict['is_current'] is True and syno_dict['name_type_name'] == 'nomenclature_symbol':
                     linkml_synonym_bins['symbol_bin'] = name_dto
@@ -532,9 +516,9 @@ class GenotypeHandler(PrimaryEntityHandler):
                 # Convert SGML to plain text for genotype names
                 syno_dict_converted = syno_dict.copy()
                 syno_dict_converted['format_text'] = sub_sup_sgml_to_plain_text(syno_dict['format_text'])
-                
-                name_dto = self._create_agm_synonym_dto(syno_dict_converted, name_type_override='full_name')
-                
+                name_dto = agr_datatypes.NameSlotAnnotationDTO('full_name', syno_dict_converted['format_text'],
+                                                               syno_dict_converted['display_text'], syno_dict_converted['pub_curies']).dict_export()
+                name_dto['internal'] = syno_dict_converted['is_internal']
                 # Map the current FB fullname to the AGR AGM full_name.
                 if syno_dict['is_current'] is True:
                     linkml_synonym_bins['current_full_name'] = name_dto
