@@ -164,4 +164,4 @@ try:
     for line in report:
         print(line.rstrip())
 except FileNotFoundError:
-    print('\nERROR: Expected script output was not found. Check the log file to see why the script failed.\n')
+    print('\nERROR: SCRIPT FAILED. Check the end of the "genotypes_retrieved*.log" file to see why.\n')
