@@ -67,7 +67,7 @@ class AffectedGenomicModelDTO(GenomicEntityDTO):
     def __init__(self):
         """Create AffectedGenomicModelDTO for FlyBase object."""
         super().__init__()
-        # Legacy name field retired in LinkML v2.12.0 - replaced with structured name DTOs
+        # Legacy "name" field retired in LinkML v2.12.0 - replaced with structured name DTOs
         self.agm_full_name_dto = None      # One NameSlotAnnotationDTO for the current full name
         self.agm_synonym_dtos = []         # List of NameSlotAnnotationDTO objects for synonyms and aliases
         self.subtype_name = None           # "strain" or "genotype".
