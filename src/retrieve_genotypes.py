@@ -316,6 +316,7 @@ class GenotypeHandler(object):
                 warning_msg = f'Could NOT connect to Alliance looking up {agr_curie} returned status code {get_response.status_code}.'
                 log.warning(warning_msg)
                 print(f'WARNING: {warning_msg}')
+                geno_anno.warnings.append('Could NOT connect to Alliance for lookup, continue to process locally')
                 # Note: This is a temporary failure that should not stop processing
                 # The genotype may still be valid for local processing
             if genotype_at_alliance is False:
@@ -364,6 +365,7 @@ class GenotypeHandler(object):
                 else:
                     log.debug(f'Status code = {post_response.status_code}')
                     log.error('FAILURE TO POST AGM. Continue processing locally.')
+                    geno_anno.warnings.append('Could NOT make new AGM at Alliance, continue to process locally')
         return
 
     def print_curator_genotype_report(self):
