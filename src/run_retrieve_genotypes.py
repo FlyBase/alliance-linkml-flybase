@@ -95,7 +95,11 @@ parser.add_argument('-p', '--pub', help='The FBrf ID for the publication.', requ
 run_mode = parser.add_mutually_exclusive_group(required=True)
 run_mode.add_argument('-i', '--genotype_input', help='The genotype name to get or create.', required=False)
 run_mode.add_argument('-f', '--genotypes_file', help='A file of genotype names to get or create.', required=False)
-parser.add_argument('--relax', action='store_true', help='Relax stringency to allow for processing of genotype input with warnings.', required=False)
+parser.add_argument('--relax', action='store_true',
+                    help='Relax stringency to allow processing of genotype input with warnings. '
+                         'When enabled, genotypes with warnings (but not errors) will be processed. '
+                         'Default behavior requires clean input with no warnings or errors.',
+                    required=False)
 try:
     args = parser.parse_args()
     genotype_input = args.genotype_input
@@ -122,7 +126,8 @@ if database != 'production_chado':
 image_name = 'export_to_linkml'
 check_docker_image_exists(image_name)
 if image_name != 'export_to_linkml':
-    print(f'WARNING: Script is using a test docker image {image_name}, not "export_to_linkml". Contact HarvDev if trying to use this script for real.')
+    print(f'WARNING: Using test docker image "{image_name}" instead of production image "export_to_linkml".')
+    print('Contact HarvDev if this is intended for production use.')
 
 if relax:
     relax_str = '--relax'
@@ -159,4 +164,4 @@ try:
     for line in report:
         print(line.rstrip())
 except FileNotFoundError:
-    print('\nERROR: Expected script output was not found. Check the log file to see why the script failed.\n')
+    print('\nERROR: SCRIPT FAILED. Check the end of the "genotypes_retrieved*.log" file to see why.\n')
