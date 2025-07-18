@@ -87,7 +87,11 @@ run_mode = parser.add_mutually_exclusive_group(required=True)
 run_mode.add_argument('-i', '--genotype_input', help='The genotype name to get or create.', required=False)
 run_mode.add_argument('-f', '--genotypes_file', help='A file of genotype names to get or create.', required=False)
 parser.add_argument('-p', '--pub_id', help='The FBrf ID for the publication.', required=True)
-
+parser.add_argument('--relax', action='store_true',
+                    help='Relax stringency to allow processing of genotype input with warnings. '
+                         'When enabled, genotypes with warnings (but not errors) will be processed. '
+                         'Default behavior requires clean input with no warnings or errors.',
+                    required=False)
 
 # Use parse_known_args(), not parse_args(), to handle args specific to this script (outside of set_up_db_reading()).
 try:
@@ -96,6 +100,7 @@ try:
     GENOTYPE_INPUT = args.genotype_input
     GENOTYPE_FILE = args.genotypes_file
     FBRF_PUB_ID = args.pub_id
+    RELAX = args.relax
 except SystemExit as e:
     log.error('ERROR: Must supply two arguments: -p/--pub (FBrf ID), and one of -i/--genotype_input or -f/--genotypes_file.')
     sys.exit(e.code)
@@ -117,23 +122,24 @@ def main():
         try:
             genotype_file_contents = open(GENOTYPE_FILE, 'r')
             genotype_input_list = [i.strip() for i in genotype_file_contents if i.strip() != '']
-        except FileNotFoundError:
-            log.error(f'Cannot open "{GENOTYPE_FILE}". Make sure the file is in directory mounted to docker /src/input/')
-            raise FileNotFoundError
-    genotype_handler_instance = GenotypeHandler(genotype_input_list, FBRF_PUB_ID, AGR_TOKEN)
+        except FileNotFoundError as e:
+            log.error(f'Cannot open "{GENOTYPE_FILE}". Make sure the file is in directory mounted to docker /src/input/: {e}')
+            raise
+    genotype_handler_instance = GenotypeHandler(genotype_input_list, FBRF_PUB_ID, AGR_TOKEN, RELAX)
     db_transaction(genotype_handler_instance)
     log.info('ENDED MAIN FUNCTION.\n')
 
 
 class GenotypeHandler(object):
     """This object processes genotype name inputs and gets or creates chado genotypes."""
-    def __init__(self, genotype_input_list, fbrf_pub_id, agr_token):
+    def __init__(self, genotype_input_list, fbrf_pub_id, agr_token, relaxed_stringency):
         """Create the GenotypeHandler object.
 
         Args:
             genotype_input_list (list): A list of genotype names (allele SGML symbols).
             fbrf_pub_id (str): The FBrf ID for the genotype.
             agr_token (str): The Alliance API token required for interacting with the persistent store.
+            relaxed_stringency (bool): If True, GenotypeAnnotations with warnings (but not errors) will be processed. If False, not processed.
 
         Returns:
             A GenotypeHandler object.
@@ -146,6 +152,8 @@ class GenotypeHandler(object):
         self.genotype_annotations = []          # List of GenotypeAnnotation objects generated from the input list.
         self.uname_genotype_annotations = {}    # uniquename-keyed GenotypeAnnotations (for grouping redundant entries).
         self.agr_token = agr_token
+        self.relaxed_stringency = relaxed_stringency
+        self.script_errors = []                 # Error messages for the
 
     def get_pub_id(self, session):
         """Get pub.pub_id for given FBrf ID."""
@@ -162,8 +170,8 @@ class GenotypeHandler(object):
         except NoResultFound as ne:
             log.error(f'Found ZERO current pubs in chado for "{self.fbrf_pub_id}": {ne}.')
             raise NoResultFound
-        except MultipleResultsFound as me:
-            log.error(f'Found MANY current pubs in chado for "{self.fbrf_pub_id}": {me}.')
+        except MultipleResultsFound as ne:
+            log.error(f'Found MANY current pubs in chado for "{self.fbrf_pub_id}": {ne}.')
             raise MultipleResultsFound
         return
 
@@ -203,15 +211,13 @@ class GenotypeHandler(object):
             geno_specific_features = geno_anno.features.keys() - set(self.pub_associated_feature_ids)
             for feature_id in geno_specific_features:
                 input_symbol = geno_anno.features[feature_id]['input_symbol']
-                # Relaxed feature-pub constraint.
                 geno_anno.warnings.append(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
                 log.warning(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
-                # Stringent feature-pub constraint.
-                # geno_anno.errors.append(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
-                # log.error(f'"{input_symbol}" is not associated with {self.fbrf_pub_id}')
                 no_counter += 1
         if no_counter > 0:
-            log.error(f'Found {no_counter} listed features NOT associated with {self.fbrf_pub_id}')
+            warning_msg = f'Found {no_counter} listed features NOT associated with {self.fbrf_pub_id}'
+            log.warning(warning_msg)
+            print(f'WARNING: {warning_msg}')
         return
 
     def find_redundant_genotype_entries(self):
@@ -223,7 +229,9 @@ class GenotypeHandler(object):
             if geno_anno.uniquename in self.uname_genotype_annotations.keys():
                 modified_geno_uname = geno_anno.uniquename.replace('<up>', '[').replace('</up>', ']')
                 geno_anno.errors.append(f'{geno_anno} is redundant with another input genotype, sharing this uniquename: {modified_geno_uname}')
-                log.error(f'{geno_anno} is redundant with another input genotype, sharing this uniquename: {geno_anno.uniquename}')
+                warning_msg = f'{geno_anno} is redundant with another input genotype, sharing this uniquename: {geno_anno.uniquename}'
+                log.warning(warning_msg)
+                print(f'WARNING: {warning_msg}')
             else:
                 self.uname_genotype_annotations[geno_anno.uniquename] = geno_anno
         return
@@ -234,6 +242,9 @@ class GenotypeHandler(object):
         for geno_anno in self.genotype_annotations:
             if geno_anno.errors:
                 log.error(f'STOP processing "{geno_anno.input_genotype_name}" due to these errors: {";".join(geno_anno.errors)}.')
+            elif geno_anno.warnings and self.relaxed_stringency is False:
+                log.warning(f'SKIP processing "{geno_anno.input_genotype_name}" due to these warnings: {";".join(geno_anno.warnings)}.')
+                log.info('Use --relax flag to process genotypes with warnings.')
         return
 
     def get_or_create_genotypes(self, session):
@@ -245,6 +256,8 @@ class GenotypeHandler(object):
         newly_created_counter = 0
         for geno_anno in self.uname_genotype_annotations.values():
             if geno_anno.errors:
+                continue
+            elif geno_anno.warnings and self.relaxed_stringency is False:
                 continue
             geno_anno.get_known_or_create_new_genotype(session)
             if geno_anno.is_new is True:
@@ -271,6 +284,9 @@ class GenotypeHandler(object):
         for geno_anno in self.uname_genotype_annotations.values():
             if geno_anno.errors:
                 continue
+            elif geno_anno.warnings and self.relaxed_stringency is False:
+                continue
+            successful_api_connection = False
             agr_curie = f'FB:{geno_anno.curie}'
             log.debug(f'Check Alliance for {agr_curie}: {geno_anno}')
             genotype_at_alliance = False
@@ -280,8 +296,9 @@ class GenotypeHandler(object):
                 'Authorization': f'Bearer {self.agr_token}',
             }
             get_response = requests.get(get_url, headers=headers)
-            log.debug(f'Got this raw response looking for {agr_curie} at the Alliance:\n{get_response.text}')
+            log.debug(f'Alliance API response code: {get_response.status_code}')
             if get_response.status_code == 200:
+                successful_api_connection = True
                 try:
                     data = get_response.json()
                     if 'primaryExternalId' in data['entity']:
@@ -295,12 +312,16 @@ class GenotypeHandler(object):
                     else:
                         log.error('FAILURE: Got a response but could not find ID attribute.')
                         raise
-                except KeyError:
-                    log.debug(f'FAILURE: Could not find {agr_curie} at the Alliance.')
+                except KeyError as e:
+                    log.debug(f'Could not find {agr_curie} at the Alliance so it must be new: {e}')
             else:
-                log.error(f'FAILURE: Lookup of {agr_curie} did not return any response from the Alliance API.')
-                raise
-            if genotype_at_alliance is False:
+                warning_msg = f'Could NOT connect to Alliance looking up {agr_curie} returned status code {get_response.status_code}.'
+                log.warning(warning_msg)
+                print(f'WARNING: {warning_msg}')
+                geno_anno.warnings.append('Could NOT connect to Alliance for lookup, continue to process locally')
+                # Note: This is a temporary failure that should not stop processing
+                # The genotype may still be valid for local processing
+            if genotype_at_alliance is False and successful_api_connection:
                 genotype_display_name = sub_sup_sgml_to_plain_text(geno_anno.uniquename)
                 genotype_display_name = sgml_to_plain_text(genotype_display_name)
                 log.debug(f'Load {geno_anno} into the Alliance using this name: {genotype_display_name}')
@@ -345,7 +366,8 @@ class GenotypeHandler(object):
                     log.debug('SUCCESS IN POSTING AGM.')
                 else:
                     log.debug(f'Status code = {post_response.status_code}')
-                    log.error('FAILURE TO POST AGM.')
+                    log.error('FAILURE TO POST AGM. Continue processing locally.')
+                    geno_anno.warnings.append('Could NOT make new AGM at Alliance, continue to process locally')
         return
 
     def print_curator_genotype_report(self):
@@ -360,12 +382,21 @@ class GenotypeHandler(object):
                 lines_to_write.append(f'\tCURIE: FB:{geno_anno.curie}')
             else:
                 lines_to_write.append('\tCURIE:')
+            # Determine processing status based on error/warning state and processing results
             if geno_anno.errors:
                 status = 'ERRORS FOUND'
+            elif geno_anno.warnings and not self.relaxed_stringency:
+                status = 'WARNINGS FOUND - NOT PROCESSED'
             elif geno_anno.is_new is True:
                 status = 'NEW GENOTYPE CREATED'
+                if self.relaxed_stringency:
+                    status += ' - PROCESSED WITH RELAXED STRINGENCY'
             elif geno_anno.is_new is False:
                 status = 'KNOWN CHADO GENOTYPE'
+                if self.relaxed_stringency:
+                    status += ' - PROCESSED WITH RELAXED STRINGENCY'
+            else:
+                status = 'PROCESSING STATUS UNKNOWN - CONTACT HARVDEV'
             lines_to_write.append(f'\tSTATUS: {status}')
             if geno_anno.uniquename:
                 uniquename_output = geno_anno.uniquename.replace('<up>', '[').replace('</up>', ']')
@@ -393,7 +424,13 @@ class GenotypeHandler(object):
         self.find_redundant_genotype_entries()
         self.report_errors()
         self.get_or_create_genotypes(session)
-        self.sync_with_alliance()
+        # Note: AGR sync is temporarily disabled due to API access issues (SCRUM-5275)
+        # Re-enable when Alliance API access is restored
+        if self.agr_token and AGR_BASE_URL:
+            try:
+                self.sync_with_alliance()
+            except Exception as e:
+                log.warning(f'Alliance sync failed: {e}. Continuing with local processing.')
         self.print_curator_genotype_report()
         return
 
