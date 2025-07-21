@@ -488,7 +488,7 @@ class PrimaryEntityHandler(DataHandler):
         filters = (
             Cv.name.not_in((excluded_cv_names)),
         )
-        if self.datatype in self.regex.keys():
+        if self.datatype in self.regex.keys() and self.datatype != 'genotype':
             self.log.debug(f'Use this regex for primary entities: {self.regex[self.datatype]}')
             filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
         if self.datatype in self.feature_subtypes.keys():
