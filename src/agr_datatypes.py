@@ -272,7 +272,6 @@ class DiseaseAnnotationDTO(AnnotationDTO):
         """Create DiseaseAnnotationDTO for FlyBase object."""
         super().__init__(evidence_curie)
         self.do_term_curie = do_term_curie
-        self.disease_relation_name = 'is_implicated_in'
         self.annotation_type_name = 'manually_curated'
         self.negated = False
         self.evidence_code_curies = []
@@ -286,6 +285,7 @@ class AlleleDiseaseAnnotationDTO(DiseaseAnnotationDTO):
     def __init__(self, allele_identifier, do_term_curie, evidence_curie):
         """Create AlleleDiseaseAnnotationDTO for FlyBase object."""
         super().__init__(do_term_curie, evidence_curie)
+        self.disease_relation_name = 'is_implicated_in'
         self.allele_identifier = allele_identifier
         self.inferred_gene_identifier = None
         self.required_fields.extend(['allele_identifier'])
@@ -296,6 +296,7 @@ class AGMDiseaseAnnotationDTO(DiseaseAnnotationDTO):
     def __init__(self, agm_identifier, do_term_curie, evidence_curie):
         """Create AGMDiseaseAnnotationDTO for FlyBase object."""
         super().__init__(do_term_curie, evidence_curie)
+        self.disease_relation_name = None
         self.agm_identifier = agm_identifier
         self.inferred_gene_identifier = None
         self.asserted_gene_identifiers = []
