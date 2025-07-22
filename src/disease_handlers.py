@@ -37,6 +37,8 @@ class AGMDiseaseHandler(DataHandler):
        Because there can be many driver combinations specified for a given genotype, there can be an expansion of
        annotations. So, new annotations (for each genotype-driver combination) are created (self.fb_data_entities).
     4. Then, a separate aberration TSV file is processed to add even more genotype-level annotations to list.
+    5. ***This handler is designed to process disease annotations from production_chado, but not the derived
+       annotations in a release build. So, only run this on a production_chado database.
 
     """
     def __init__(self, log: Logger, testing: bool):
@@ -1285,6 +1287,8 @@ class AGMDiseaseHandler(DataHandler):
             # Get all components.
             components = []
             components.extend(dis_anno.modeled_by)
+            if dis_anno.modifier_curie:
+                components.append(dis_anno.modifier_curie)
             if dis_anno.driver_combos:
                 driver_curies = list(dis_anno.driver_combos)[0].split('_')
                 components.extend(driver_curies)

@@ -450,6 +450,8 @@ class FBGenotypeDiseaseAnnotation(FBExportEntity):
         self.allele_annotations = []         # Allele-level annotations that map to this genotype-level annotation.
         # Information for model genotype.
         self.modeled_by = []                 # Will be a list of all allele FBal IDs that model the disease.
+        self.modifier_curie = None           # Will be FBal ID of the modifier, if applicable.
+        self.modifier_role = None            # Will be Alliance role for a modifier.
         self.driver_combos = set()           # Each item is a driver combo (ID concatenation) to be integrated into this genotype-level annotation.
         self.aberr_trans = False             # True if two aberr/alleles in model are trans from each other.
         self.input_genotype_name = ''        # Will be genotype.uniquename constructed from input symbols.
@@ -467,8 +469,6 @@ class FBGenotypeDiseaseAnnotation(FBExportEntity):
         self.do_term_curie = None            # The DO term curie.
         self.is_not = False                  # Becomes True for "DOES NOT model" annotations.
         self.eco_abbr = ''                   # Will be CEA or CEC, as appropriate.
-        self.modifier_curie = None           # Will be FBal ID of the modifier, if applicable.
-        self.modifier_role = None            # Will be Alliance role for a modifier.
 
 
 class FBRelationship(FBExportEntity):
