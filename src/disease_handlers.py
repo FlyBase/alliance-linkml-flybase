@@ -83,6 +83,11 @@ class AGMDiseaseHandler(DataHandler):
         'DOES NOT exacerbate': 'not_exacerbated_by'
     }
 
+    disease_relation_types = {
+        'ameliorated_by': 'is_ameliorated_model_of',
+        'exacerbated_by': 'is_exacerbated_model_of',
+    }
+
     # Add methods to be run by get_general_data() below.
     def build_allele_name_lookup(self):
         """Build name-keyed dict of alleles."""
@@ -1502,6 +1507,11 @@ class AGMDiseaseHandler(DataHandler):
             if geno_dis_anno.for_export is False:
                 continue
             agr_dis_anno = self.agr_export_type(f'FB:{geno_dis_anno.genotype_curie}', geno_dis_anno.do_term_curie, geno_dis_anno.pub_curie)
+            # Set disease relation type based on type of allele modifier, if present.
+            try:
+                agr_dis_anno.disease_relation_name = self.disease_relation_types[geno_dis_anno.modifier_role]
+            except KeyError:
+                agr_dis_anno.disease_relation_name = 'model_of'
             if geno_dis_anno.is_not is True:
                 agr_dis_anno.negated = True
             agr_dis_anno.evidence_code_curies.append(self.evidence_code_xrefs[geno_dis_anno.eco_abbr])
