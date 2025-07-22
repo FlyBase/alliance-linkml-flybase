@@ -32,11 +32,11 @@ class AGMDiseaseHandler(DataHandler):
        Note that there are duplicated allele-level annotations in chado.
     2. Those allele-level annotations are converted into genotype-level annotations (self.genotype_dis_annos).
        Note that distinct allele-level annotations can represent the same genotype from different perspectives.
-    3. So, genotype-level annotations are grouped to deal with duplications and redundancies.
-    4. This object processes driver line info (from TSV file) and folds it into genotype-level annotations.
-    5. Because there can be many driver combinations for a given genotype, there can be an expansion of annotations.
-       So, new annotations (for each genotype-driver combination) are created (self.fb_data_entities).
-    6. Then, a separate aberration TSV file is processed to add even more genotype-level annotations to self.fb_data_entities.
+       So, allele-level annotations are grouped to deal with genotype-level redundancy.
+    3. This object processes driver line info (from TSV file) and folds it into genotype-level annotations.
+       Because there can be many driver combinations specified for a given genotype, there can be an expansion of
+       annotations. So, new annotations (for each genotype-driver combination) are created (self.fb_data_entities).
+    4. Then, a separate aberration TSV file is processed to add even more genotype-level annotations to list.
 
     """
     def __init__(self, log: Logger, testing: bool):
