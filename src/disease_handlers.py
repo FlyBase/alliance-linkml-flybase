@@ -32,11 +32,13 @@ class AGMDiseaseHandler(DataHandler):
        Note that there are duplicated allele-level annotations in chado.
     2. Those allele-level annotations are converted into genotype-level annotations (self.genotype_dis_annos).
        Note that distinct allele-level annotations can represent the same genotype from different perspectives.
-    3. So, genotype-level annotations are grouped to deal with duplications and redundancies.
-    4. This object processes driver line info (from TSV file) and folds it into genotype-level annotations.
-    5. Because there can be many driver combinations for a given genotype, there can be an expansion of annotations.
-       So, new annotations (for each genotype-driver combination) are created (self.fb_data_entities).
-    6. Then, a separate aberration TSV file is processed to add even more genotype-level annotations to self.fb_data_entities.
+       So, allele-level annotations are grouped to deal with genotype-level redundancy.
+    3. This object processes driver line info (from TSV file) and folds it into genotype-level annotations.
+       Because there can be many driver combinations specified for a given genotype, there can be an expansion of
+       annotations. So, new annotations (for each genotype-driver combination) are created (self.fb_data_entities).
+    4. Then, a separate aberration TSV file is processed to add even more genotype-level annotations to list.
+    5. ***This handler is designed to process disease annotations from production_chado, but not the derived
+       annotations in a release build. So, only run this on a production_chado database.
 
     """
     def __init__(self, log: Logger, testing: bool):
@@ -81,6 +83,11 @@ class AGMDiseaseHandler(DataHandler):
         'DOES NOT ameliorate': 'not_ameliorated_by',
         'exacerbates': 'exacerbated_by',
         'DOES NOT exacerbate': 'not_exacerbated_by'
+    }
+
+    disease_relation_types = {
+        'ameliorated_by': 'is_ameliorated_model_of',
+        'exacerbated_by': 'is_exacerbated_model_of',
     }
 
     # Add methods to be run by get_general_data() below.
@@ -1280,6 +1287,8 @@ class AGMDiseaseHandler(DataHandler):
             # Get all components.
             components = []
             components.extend(dis_anno.modeled_by)
+            if dis_anno.modifier_curie:
+                components.append(dis_anno.modifier_curie)
             if dis_anno.driver_combos:
                 driver_curies = list(dis_anno.driver_combos)[0].split('_')
                 components.extend(driver_curies)
@@ -1502,6 +1511,11 @@ class AGMDiseaseHandler(DataHandler):
             if geno_dis_anno.for_export is False:
                 continue
             agr_dis_anno = self.agr_export_type(f'FB:{geno_dis_anno.genotype_curie}', geno_dis_anno.do_term_curie, geno_dis_anno.pub_curie)
+            # Set disease relation type based on type of allele modifier, if present.
+            try:
+                agr_dis_anno.disease_relation_name = self.disease_relation_types[geno_dis_anno.modifier_role]
+            except KeyError:
+                agr_dis_anno.disease_relation_name = 'model_of'
             if geno_dis_anno.is_not is True:
                 agr_dis_anno.negated = True
             agr_dis_anno.evidence_code_curies.append(self.evidence_code_xrefs[geno_dis_anno.eco_abbr])
