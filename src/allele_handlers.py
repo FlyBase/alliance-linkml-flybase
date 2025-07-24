@@ -497,7 +497,7 @@ class AlleleHandler(MetaAlleleHandler):
                 prop_str = sub_sup_sgml_to_html(prop_str)    # Convert FB sub/superscript to html.
                 prop_str = sgml_to_unicode(prop_str)         # Convert FB "&.gr;" Greeks to unicode.
                 allele_desc_strs.append(prop_str)
-            allele_desc_strs.sort
+            allele_desc_strs.sort()
             allele_desc_str = ' '.join(allele_desc_strs)
             mut_type_note_dto = agr_datatypes.NoteDTO('mutation_type', allele_desc_str, []).dict_export()
             allele.linkmldto.note_dtos.append(mut_type_note_dto)
