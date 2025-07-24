@@ -472,8 +472,8 @@ class AlleleHandler(MetaAlleleHandler):
 
     # billy bob
     def generate_aggregated_allele_mutation_descriptions(self):
-        """Generate an aggregate Alliance allele mutation_description from relevant featureprops."""
-        self.log.info('Generate an aggregate Alliance allele mutation_description from relevant featureprops.')
+        """Generate an aggregate Alliance allele mutation_description notes from relevant featureprops."""
+        self.log.info('Generate an aggregate Alliance allele mutation_description notes from relevant featureprops.')
         counter = 0
         relevant_prop_types = ['molecular_info', 'aminoacid_rep']
         for allele in self.fb_data_entities.values():
@@ -499,10 +499,10 @@ class AlleleHandler(MetaAlleleHandler):
                 allele_desc_strs.append(prop_str)
             allele_desc_strs.sort()
             allele_desc_str = ' '.join(allele_desc_strs)
-            mut_type_note_dto = agr_datatypes.NoteDTO('mutation_type', allele_desc_str, []).dict_export()
+            mut_type_note_dto = agr_datatypes.NoteDTO('mutation_description', allele_desc_str, []).dict_export()
             allele.linkmldto.note_dtos.append(mut_type_note_dto)
             counter += 1
-        self.log.info(f'Generated {counter} allele mutation_type descriptions.')
+        self.log.info(f'Generated {counter} allele mutation_description notes.')
         return
 
     def map_inheritance_modes(self):
