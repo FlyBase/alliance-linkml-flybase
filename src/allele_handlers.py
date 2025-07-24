@@ -16,6 +16,9 @@ from fb_datatypes import (
     FBAberration, FBAllele, FBBalancer, FBInsertion
 )
 from feature_handler import FeatureHandler
+from harvdev_utils.char_conversions import (
+    sub_sup_to_sgml, sub_sup_sgml_to_html, sgml_to_unicode
+)
 from harvdev_utils.reporting import (
     Cvterm, Feature, FeatureCvterm, FeatureGenotype, Genotype, Phenotype,
     PhenotypeCvterm, Phenstatement, Pub
@@ -467,6 +470,41 @@ class AlleleHandler(MetaAlleleHandler):
         self.log.info(f'Mapped {counter} mutation type annotations.')
         return
 
+    # billy bob
+    def generate_aggregated_allele_mutation_descriptions(self):
+        """Generate an aggregate Alliance allele mutation_description from relevant featureprops."""
+        self.log.info('Generate an aggregate Alliance allele mutation_description from relevant featureprops.')
+        counter = 0
+        relevant_prop_types = ['molecular_info', 'aminoacid_rep']
+        for allele in self.fb_data_entities.values():
+            if not allele.linkmldto:
+                continue
+            desc_props = []
+            for prop_type in relevant_prop_types:
+                try:
+                    desc_props.extend(allele.props_by_type[prop_type])
+                except KeyError:
+                    pass
+            if not desc_props:
+                continue
+            allele_desc_strs = []
+            for i in desc_props:
+                prop_str = i.chado_obj.value
+                prop_str = prop_str.replace('\n', ' ')
+                prop_str = prop_str.replace('\t', ' ')
+                prop_str = prop_str.replace('@', '')         # Eliminate internal entity tags.
+                prop_str = sub_sup_to_sgml(prop_str)         # Convert brackets into FB sub/superscript.
+                prop_str = sub_sup_sgml_to_html(prop_str)    # Convert FB sub/superscript to html.
+                prop_str = sgml_to_unicode(prop_str)         # Convert FB "&.gr;" Greeks to unicode.
+                allele_desc_strs.append(prop_str)
+            allele_desc_strs.sort
+            allele_desc_str = ' '.join(allele_desc_strs)
+            mut_type_note_dto = agr_datatypes.NoteDTO('mutation_type', allele_desc_str, []).dict_export()
+            allele.linkmldto.note_dtos.append(mut_type_note_dto)
+            counter += 1
+        self.log.info(f'Generated {counter} allele mutation_type descriptions.')
+        return
+
     def map_inheritance_modes(self):
         """Map allele inheritance modes."""
         self.log.info('Map allele inheritance modes.')
@@ -571,6 +609,7 @@ class AlleleHandler(MetaAlleleHandler):
         # self.map_pubs()    # TEMPORARILY SUPPRESS UNTIL ALLIANCE LOAD SPEED IMPROVES
         self.map_timestamps()
         self.map_secondary_ids('allele_secondary_id_dtos')
+        self.generate_aggregated_allele_mutation_descriptions()
         self.flag_internal_fb_entities('fb_data_entities')
         self.map_allele_gene_associations()
         self.flag_internal_fb_entities('allele_gene_associations')
