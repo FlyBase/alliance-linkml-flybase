@@ -470,7 +470,6 @@ class AlleleHandler(MetaAlleleHandler):
         self.log.info(f'Mapped {counter} mutation type annotations.')
         return
 
-    # billy bob
     def generate_aggregated_allele_mutation_descriptions(self):
         """Generate an aggregate Alliance allele mutation_description notes from relevant featureprops."""
         self.log.info('Generate an aggregate Alliance allele mutation_description notes from relevant featureprops.')
