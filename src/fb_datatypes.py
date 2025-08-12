@@ -496,7 +496,7 @@ class FBCVTermAnnotation(FBExportEntity):
 
         Args:
             chado_obj (SQLAlchemy object): The Chado object representing the CV term annotation: e.g., FeatureCvterm, GrpCvterm.
-            table_name (str): The relationship table name for the relationship: e.g., feature_cvterm, strain_cvterm.
+            table_name (str): The cvterm table name for the CV term annotation: e.g., feature_cvterm, strain_cvterm.
 
         """
         super().__init__()
@@ -505,6 +505,75 @@ class FBCVTermAnnotation(FBExportEntity):
         self.entity_desc = f'{table_name}_id={self.db_primary_id}'
         self.props_by_type = {}    # Lists of FBProp objects keyed by prop type name.
         self.pub_id = self.chado_obj.pub_id
+
+
+class FBExpressionCvterm(object):
+    """FBExpressionCvterm class."""
+    def __init__(self, chado_obj):
+        """Create a FBExpressionCvterm object.
+
+        Args:
+            chado_obj (SQLAlchemy ExpressionCvterm object): The Chado ExpressionCvterm object.
+
+        """
+        # Primary FB chado data.
+        self.chado_obj = chado_obj
+        self.db_primary_id = chado_obj.expression_cvterm_id
+        self.cvterm_id = chado_obj.cvterm_id
+        self.type_id = chado_obj.cvterm_type_id
+        self.type = None    # assay, anatomy, cellular, or stage.
+        # Collect props.
+        # assay - never have props.
+        # anatomy - will have props of qualifier (no prop text) or operator (prop_text is OF, FROM, or, TO).
+        # stage - will have props of qualifier (male/female/mated_female) or operator (prop_text is FROM, TO, or, NULL if term is male/female/mated_female).
+        # cellular - will have props of qualifier (no prop text) or operator (prop_text is only ever OF).
+        self.props = []    # Will be a list of ExpressionCvtermprop objects.
+        # Processed FB data.
+        self.is_start = False    # True if start of a range (if has "FROM" operator: stage, or less commonly, anatomy).
+        self.is_end = False      # True if end of a range (if has "TO" operator: stage, or less commonly, anatomy).
+        self.domain = False      # True if term is a larger domain (if has "OF" operator: anatomy or cellular).
+        self.sex = None          # Change to male, female, or mated female, as appropriate.
+
+
+class FBExpressionAnnotation(object):
+    """FBExpressionAnnotation class."""
+    def __init__(self, chado_obj):
+        """Create a FBExpressionAnnotation object.
+
+        Args:
+            chado_obj (SQLAlchemy Expression object): The Chado Expression object.
+
+        """
+        # Primary FB chado data.
+        self.chado_obj = chado_obj
+        self.db_primary_id = chado_obj.expression_id
+        self.assay_terms = {}       # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, assay.
+        self.anatomy_terms = {}     # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, anatomy.
+        self.cellular_terms = {}    # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, cellular.
+        self.stage_terms = {}       ## expression_cvterm_id-keyed dict of FBExpressionCvterm objects, stage.
+        # 
+
+
+class FBFeatureExpressionAnnotation(FBExportEntity):
+    """FBExpressionAnnotation class."""
+    def __init__(self, chado_obj):
+        """Create a FBExpressionAnnotation object.
+
+        Args:
+            chado_obj (SQLAlchemy FeatureExpression object): The Chado FeatureExpression object.
+
+        """
+        super().__init__()
+        # Primary FB chado data.
+        self.chado_obj = chado_obj
+        self.db_primary_id = chado_obj.feature_expression_id
+        self.feature_id = chado_obj.feature_id
+        self.expression_id = chado_obj.expression_id
+        self.pub_id = chado_obj.pub_id
+        self.feature_expressionprops = []    # Will be a list of FeatureExpressionprop objects for the feature expression annotation.
+        # Processed FB data.
+        self.public_feature_id = None        # Will be the feature_id of the public feature: e.g., the gene, or the allele.
+        self.xprn_type = None                # Will be RNA or protein, as appropriate.
 
 
 # Second class annotations (submitted as part of other objects).
