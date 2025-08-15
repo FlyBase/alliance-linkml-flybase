@@ -153,7 +153,7 @@ class DataHandler(object):
         'insertion': True,
         'polypeptide': False,
         'seqfeat': False,
-        'split_system_combination': False,
+        'split system combination': False,
         'tool': False,
         'transcript': False,
         'transposon': False,
