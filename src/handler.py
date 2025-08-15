@@ -170,8 +170,10 @@ class DataHandler(object):
         'construct': ['engineered_transposable_element', 'engineered_region', 'transgenic_transposable_element'],
         'gene': ['gene'],
         'insertion': ['insertion_site', 'transposable_element', 'transposable_element_insertion_site'],    # Excludes internal "match" (name=FBti ID).
+        'polypeptide': None,
         'seqfeat': None,    # The list is too long, so for this case let the code be flexible.
         'tool': ['engineered_region'],
+        'transcript': None,
         'transposon': ['natural_transposable_element'],
         'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion', 'point_mutation', 'sequence_alteration', 'sequence_variant'],
         'bogus symbol': ['bogus symbol'],
