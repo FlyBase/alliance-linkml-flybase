@@ -128,7 +128,7 @@ class DataHandler(object):
         'insertion': r'^FBti[0-9]{7}$',
         'polypeptide': r'^FBpp[0-9]{7}$',
         'seqfeat': r'^FBsf[0-9]{10}$',
-        'split_system_combination': r'^FBco[0-9]{7}$',
+        'split system combination': r'^FBco[0-9]{7}$',
         'transcript': r'^FBtr[0-9]{7}$',
         'transposon': r'^FBte[0-9]{7}$',
         'tool': r'^FBto[0-9]{7}$',

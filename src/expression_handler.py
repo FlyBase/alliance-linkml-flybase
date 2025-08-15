@@ -29,7 +29,7 @@ class ExpressionHandler(DataHandler):
     def __init__(self, log: Logger, testing: bool):
         """Create the ExpressionHandler object."""
         super().__init__(log, testing)
-        self.datatype = 'expression'
+        self.datatype = 'feature_expression'
         self.fb_export_type = fb_datatypes.FBExpressionAnnotation
         self.agr_export_type = None
         self.primary_export_set = 'temp_expression_ingest_set'
@@ -110,7 +110,8 @@ class ExpressionHandler(DataHandler):
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
         self.build_organism_lookup(session)
-        self.build_feature_lookup(session, feature_types=['transcript', 'polypeptide', 'allele', 'gene', 'insertion', 'split_system_combination'])
+        # BOB: Query for FBco split system combnations is not WORKING!!!!
+        self.build_feature_lookup(session, feature_types=['transcript', 'polypeptide', 'allele', 'gene', 'insertion', 'split system combination'])
         self.get_expression_patterns(session)
         return
 
