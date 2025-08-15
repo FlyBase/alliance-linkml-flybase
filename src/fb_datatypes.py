@@ -510,29 +510,33 @@ class FBCVTermAnnotation(FBExportEntity):
 class FBExpressionCvterm(object):
     """FBExpressionCvterm class."""
     def __init__(self, chado_obj):
-        """Create a FBExpressionCvterm object.
+        """Create a FBExpressionCvterm object for primary assay/stage/anatomy/cellular terms.
 
         Args:
             chado_obj (SQLAlchemy ExpressionCvterm object): The Chado ExpressionCvterm object.
 
         """
+        # Note - all "experimental assays" terms are "FlyBase_internal".
+        # Note - all qualifiers are from "FlyBase miscellaneous CV", usually from FBcv obo, except for "presumptive" from FlyBase_internal obo.
         # Primary FB chado data.
         self.chado_obj = chado_obj
         self.db_primary_id = chado_obj.expression_cvterm_id
         self.cvterm_id = chado_obj.cvterm_id
-        self.type_id = chado_obj.cvterm_type_id
-        self.type = None    # assay, anatomy, cellular, or stage.
-        # Collect props.
-        # assay - never have props.
-        # anatomy - will have props of qualifier (no prop text) or operator (prop_text is OF, FROM, or, TO).
-        # stage - will have props of qualifier (male/female/mated_female) or operator (prop_text is FROM, TO, or, NULL if term is male/female/mated_female).
-        # cellular - will have props of qualifier (no prop text) or operator (prop_text is only ever OF).
-        self.props = []    # Will be a list of ExpressionCvtermprop objects.
+        self.type = chado_obj.cvterm_type.name        # assay, anatomy, cellular, or stage.
+        self.cv = chado_obj.cvterm.cv.name            # experimental assays, cellular_component, FlyBase anatomy/development/miscellaneous CV.
+        self.obo = chado_obj.cvterm.dbxref.db.name    # FBbt, FBdv, FBcv, GO, or FlyBase_internal.
+        # Collect related expression_cvtermprops of type "operator" having non-null expression_cvtermprop.value.
+        # stage - operator props will have text of "FROM/TO" to indicate a temporal range.
+        # cellular - operator props will have text of "OF" (to mark a larger xprn domain).
+        # anatomy - operator props will have text of "OF" (to mark a larger xprn domain), or "FROM/TO" (to indicate a spatial range).
+        self.operators = []      # Will be a list of ExpressionCvtermprop objects: usually zero or one, but 49 cases of two props.
+        # Use rank to assign qualifiers for an expression annotation to the correct term.
+        self.qualifiers = []     # Will be a list of qualifier Cvterm objects for this term (use rank to sort them).
         # Processed FB data.
-        self.is_start = False    # True if start of a range (if has "FROM" operator: stage, or less commonly, anatomy).
-        self.is_end = False      # True if end of a range (if has "TO" operator: stage, or less commonly, anatomy).
-        self.domain = False      # True if term is a larger domain (if has "OF" operator: anatomy or cellular).
-        self.sex = None          # Change to male, female, or mated female, as appropriate.
+        self.has_stage_end = None    # For a stage term having a "FROM" operator, put the matching "TO" FBExpressionCvterm stage term here.
+        self.is_stage_end = False    # True for a stage term having a "TO" operator.
+        self.has_subpart = None      # For an anatomy term having an "OF" operator, put the subpart FBExpressionCvterm object here, if applicable.
+        self.is_subpart = False      # True if the term is a subpart of some other term in the larger expression annotation.
 
 
 class FBExpressionAnnotation(object):
@@ -550,9 +554,11 @@ class FBExpressionAnnotation(object):
         self.assay_terms = {}       # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, assay.
         self.anatomy_terms = {}     # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, anatomy.
         self.cellular_terms = {}    # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, cellular.
-        self.stage_terms = {}       ## expression_cvterm_id-keyed dict of FBExpressionCvterm objects, stage.
-        # 
-
+        self.stage_terms = {}       # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, stage.
+        # BOB: Need a method to identify a stage range, then link the start and end FBExpressionCvterm objects via their has_stage_end and is_stage_end attributes.
+        # BOB: Need a method to identify an anatomical range, then add dummy FBExpressionCvterm objects to self.anatomy_terms for the intervening terms. See "regex_for_variant_numbers()".
+        # BOB: Need a method to identify annotations having part/subpart.
+        # BOB: Need a method to sort out qualifiers by rank.
 
 class FBFeatureExpressionAnnotation(FBExportEntity):
     """FBExpressionAnnotation class."""
@@ -563,17 +569,20 @@ class FBFeatureExpressionAnnotation(FBExportEntity):
             chado_obj (SQLAlchemy FeatureExpression object): The Chado FeatureExpression object.
 
         """
+        # Features are usually Dmel XR/XP, transgenic RA/PA products, or FBco split system combination features.
+        # There are also a few hundred interal Dmel transcripts (e.g., "tkv[+]R4.4") or polypeptides (e.g., "Appl[+]P130kD") - report these for the gene.
+        # BOB: NEED TO FILTER OUT xprn for FBco component FBal alleles!!!!!
+        # BOB: NEED TO FILTER OUT xprn for transgenic transcripts/polypeptides lacking a current allele.
         super().__init__()
         # Primary FB chado data.
         self.chado_obj = chado_obj
         self.db_primary_id = chado_obj.feature_expression_id
-        self.feature_id = chado_obj.feature_id
-        self.expression_id = chado_obj.expression_id
-        self.pub_id = chado_obj.pub_id
-        self.feature_expressionprops = []    # Will be a list of FeatureExpressionprop objects for the feature expression annotation.
+        self.original_tap_stmts = []    # Will be the originally curated TAP statements (type='curated_as'); usually one, but up to seven.
+        self.tap_stmt_note = []         # Will be a list of <note> text from the original curation (type='comment'); usually one, rarely two.
+        # BOB: FILTER OUT <note> with "when combined with", as this is detritus from old FBco-component annotation.
         # Processed FB data.
-        self.public_feature_id = None        # Will be the feature_id of the public feature: e.g., the gene, or the allele.
-        self.xprn_type = None                # Will be RNA or protein, as appropriate.
+        self.public_feature_id = None    # Will be the feature_id of the public feature: e.g., the gene, or the allele.
+        self.xprn_type = None            # Will be RNA or protein, as appropriate.
 
 
 # Second class annotations (submitted as part of other objects).
