@@ -201,7 +201,7 @@ class ExpressionHandler(DataHandler):
                 xprn_pattern_slot = getattr(xprn_pattern, slot_name)
                 if not xprn_pattern_slot:
                     continue
-                self.log.debug(f'BOB: Evaluate type={term_type} for xprn_id={xprn_pattern.expression_id}')
+                self.log.debug(f'BOB: Evaluate type={term_type} for xprn_id={xprn_pattern.db_primary_id}')
                 # First, some QC on rank values to make sure they match expectation.
                 observed_rank_list = [i.chado_obj.rank for i in xprn_pattern_slot.values()]
                 observed_rank_list.sort()
