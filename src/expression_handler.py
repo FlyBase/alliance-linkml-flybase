@@ -104,7 +104,7 @@ class ExpressionHandler(DataHandler):
             distinct()
         counter = 0
         for expression_pattern in expression_patterns:
-            self.expression_patterns[expression_pattern] = fb_datatypes.FBExpressionAnnotation(expression_pattern)
+            self.expression_patterns[expression_pattern.expression_id] = fb_datatypes.FBExpressionAnnotation(expression_pattern)
             counter += 1
         self.log.info(f'Found {counter} distinct expression patterns in chado.')
         return
