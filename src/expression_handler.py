@@ -232,6 +232,10 @@ class ExpressionHandler(DataHandler):
                         self.log.debug(f'BOB: Found primary term="{current_primary_cvterm_name}"')
                 for qualifier_xprn_cvt_id in qualifier_xprn_cvt_ids:
                     del xprn_pattern_slot[qualifier_xprn_cvt_id]
+                # Final review of terms.
+                for xprn_cvt in xprn_pattern_slot.values():
+                    qualifiers = [self.cvterm_lookup[i]['name'] for i in xprn_cvt.qualifier_cvterm_ids]
+                    self.log.debug(f'BOB: type={term_type}, rank={this_xprn_cvt.chado_obj.rank}, term={this_xprn_cvt.cvterm_name}, qualifiers={qualifiers}')
         return
 
     # BOB: Group end stage with start stage.
