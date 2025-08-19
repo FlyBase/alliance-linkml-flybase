@@ -522,8 +522,9 @@ class FBExpressionCvterm(object):
         self.chado_obj = chado_obj
         self.db_primary_id = chado_obj.expression_cvterm_id
         self.cvterm_id = chado_obj.cvterm_id
+        self.cvterm_name = chado_obj.cvterm.name
         self.type = chado_obj.cvterm_type.name        # assay, anatomy, cellular, or stage.
-        self.cv = chado_obj.cvterm.cv.name            # experimental assays, cellular_component, FlyBase anatomy/development/miscellaneous CV.
+        self.cv_name = chado_obj.cvterm.cv.name       # experimental assays, cellular_component, FlyBase anatomy/development/miscellaneous CV.
         self.obo = chado_obj.cvterm.dbxref.db.name    # FBbt, FBdv, FBcv, GO, or FlyBase_internal.
         # Collect related expression_cvtermprops of type "operator" having non-null expression_cvtermprop.value.
         # stage - operator props will have text of "FROM/TO" to indicate a temporal range.
