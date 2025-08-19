@@ -91,6 +91,7 @@ class ExpressionHandler(DataHandler):
     def get_expression_patterns(self, session):
         """Build a dictionary of expression patterns from the "expression" table."""
         self.log.info('Build a dictionary of expression patterns from the "expression" table.')
+        # Note - get only expression patterns related to CV terms (ignore those with only a TAP statement note).
         filters = (
             Feature.is_obsolete.is_(False),            
         )
@@ -98,6 +99,7 @@ class ExpressionHandler(DataHandler):
             select_from(Expression).\
             join(FeatureExpression, (FeatureExpression.expression_id == Expression.expression_id)).\
             join(Feature, (Feature.feature_id == FeatureExpression.feature_id)).\
+            join(ExpressionCvterm, (ExpressionCvterm.expression_id == FeatureExpression.expression_id)).\
             filter(*filters).\
             distinct()
         counter = 0

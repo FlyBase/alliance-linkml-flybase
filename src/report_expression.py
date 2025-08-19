@@ -65,6 +65,7 @@ def main():
     expression_handler = ExpressionHandler(log, testing)
     expression_handler.get_general_data(session)
     expression_handler.get_datatype_data(session)
+    expression_handler.synthesize_info()
 
     # Export the data.
     log.info('Ended main function.\n')
