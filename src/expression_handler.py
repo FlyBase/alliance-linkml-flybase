@@ -191,7 +191,6 @@ class ExpressionHandler(DataHandler):
         return
 
     # Add methods to be run by synthesize_info() below.
-    # BOB - CONTINUE HERE.
     def assign_qualifiers(self):
         """Assign qualifiers to the appropriate primary CV terms."""
         self.log.info('Assign qualifiers to the appropriate primary CV terms.')
@@ -202,13 +201,37 @@ class ExpressionHandler(DataHandler):
                 xprn_pattern_slot = getattr(xprn_pattern, slot_name)
                 if not xprn_pattern_slot:
                     continue
+                self.log.debug(f'BOB: Evaluate type={term_type} for xprn_id={xprn_pattern.expression_id}')
                 # First, some QC on rank values to make sure they match expectation.
                 observed_rank_list = [i.chado_obj.rank for i in xprn_pattern_slot.values()]
                 observed_rank_list.sort()
                 expected_rank_list = list(range(0, len(observed_rank_list)))
                 if observed_rank_list != expected_rank_list:
-                    self.log.warning(f'Expression pattern {xprn_pattern.db_primary_id} has unexpected ranks: {observed_rank_list}. Expected: {expected_rank_list}.')
+                    msg = f'Expression pattern {xprn_pattern.db_primary_id} has unexpected ranks. '
+                    msg += f'For {slot_name}, has unexpected ranks: {observed_rank_list}. Expected: {expected_rank_list}.'
+                    self.log.warning(msg)
+                    xprn_pattern.is_problematic = True
                     continue
+                # Sort qualifiers to their primary term, then delete them from the primary set.
+                current_primary_cvt_id = None
+                current_primary_cvterm_name = None
+                qualifier_xprn_cvt_ids = []
+                rank_sorted_xprn_cvts = {}
+                for xprn_cvt in xprn_pattern_slot.values():
+                    rank_sorted_xprn_cvts[xprn_cvt.chado_obj.rank] = xprn_cvt
+                for rank in expected_rank_list:
+                    this_xprn_cvt = rank_sorted_xprn_cvts[rank]
+                    self.log.debug(f'BOB: Evaluate type={term_type}, rank={this_xprn_cvt.chado_obj.rank}, term={this_xprn_cvt.cvterm_name}')
+                    if this_xprn_cvt.cv_name == 'FlyBase miscellaneous CV':
+                        xprn_pattern_slot[current_primary_cvt_id].qualifier_cvterm_ids.append(this_xprn_cvt.cvterm_id)
+                        qualifier_xprn_cvt_ids.append(this_xprn_cvt.db_primary_id)
+                        self.log.debug(f'BOB: Found qualifier {this_xprn_cvt.cvterm_name} for primary term="{current_primary_cvterm_name}"')
+                    else:
+                        current_primary_cvt_id = this_xprn_cvt.db_primary_id
+                        current_primary_cvterm_name = this_xprn_cvt.cvterm_name
+                        self.log.debug(f'BOB: Found primary term="{current_primary_cvterm_name}"')
+                for qualifier_xprn_cvt_id in qualifier_xprn_cvt_ids:
+                    del xprn_pattern_slot[qualifier_xprn_cvt_id]
         return
 
     # BOB: Group end stage with start stage.
