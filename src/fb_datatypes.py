@@ -529,9 +529,8 @@ class FBExpressionCvterm(object):
         # stage - operator props will have text of "FROM/TO" to indicate a temporal range.
         # cellular - operator props will have text of "OF" (to mark a larger xprn domain).
         # anatomy - operator props will have text of "OF" (to mark a larger xprn domain), or "FROM/TO" (to indicate a spatial range).
-        self.operators = []      # Will be a list of ExpressionCvtermprop objects: usually zero or one, but 49 cases of two props.
-        # Use rank to assign qualifiers for an expression annotation to the correct term.
-        self.qualifiers = []     # Will be a list of qualifier Cvterm objects for this term (use rank to sort them).
+        self.operators = []          # Will be a list of strings (FROM, TO, or OF): usually zero or one, but 49 cases of two.
+        self.qualifiers = []         # Will be a list of qualifier cvterm_ids for this term.
         # Processed FB data.
         self.has_stage_end = None    # For a stage term having a "FROM" operator, put the matching "TO" FBExpressionCvterm stage term here.
         self.is_stage_end = False    # True for a stage term having a "TO" operator.
@@ -556,9 +555,8 @@ class FBExpressionAnnotation(object):
         self.cellular_terms = {}    # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, cellular.
         self.stage_terms = {}       # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, stage.
         # BOB: Need a method to identify a stage range, then link the start and end FBExpressionCvterm objects via their has_stage_end and is_stage_end attributes.
-        # BOB: Need a method to identify an anatomical range, then add dummy FBExpressionCvterm objects to self.anatomy_terms for the intervening terms. See "regex_for_variant_numbers()".
+        # BOB: Need a method to identify an anatomical range, then add dummy FBExpressionCvterm objects to self.anatomy_terms for the intervening terms. See "regex_for_anatomical_terms_in_numerical_series()".
         # BOB: Need a method to identify annotations having part/subpart.
-        # BOB: Need a method to sort out qualifiers by rank.
 
 class FBFeatureExpressionAnnotation(FBExportEntity):
     """FBExpressionAnnotation class."""

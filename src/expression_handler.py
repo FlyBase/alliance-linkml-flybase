@@ -10,11 +10,9 @@ Author(s):
 
 import csv
 import re
-from collections import defaultdict
 from logging import Logger
 from sqlalchemy.orm import aliased
 from harvdev_utils.char_conversions import sgml_to_plain_text
-from harvdev_utils.genotype_utilities import GenotypeAnnotation
 from harvdev_utils.reporting import (
     Cv, Cvterm, Db, Dbxref, Expression, ExpressionCvterm, ExpressionCvtermprop,
     Feature, FeatureExpression, FeatureExpressionprop, Pub
@@ -124,14 +122,23 @@ class ExpressionHandler(DataHandler):
             filter(*filters).\
             distinct()
         counter = 0
+        skip_counter = 0
         for result in expression_cvterms:
             xprn_id = result.ExpressionCvterm.expression_id
+            # Skip "expression patterns" associated only with interaction or dataset tissue samples.
+            if xprn_id not in self.expression_patterns.keys():
+                skip_counter += 1
+                continue
+            # Skip reporting-build-derived interpolated stages.
+            if result.ExpressionCvterm.rank == 9999:
+                continue
             slot = f'{result.type_cvterm.name}_terms'
             xprn_pattern_slot = getattr(self.expression_patterns[xprn_id], slot)
             xprn_cvt_id = result.ExpressionCvterm.expression_cvterm_id
             xprn_pattern_slot[xprn_cvt_id] = fb_datatypes.FBExpressionCvterm(result.ExpressionCvterm)
             counter += 1
         self.log.info(f'Found {counter} distinct expression cvterm objects in chado.')
+        self.log.info(f'Ignored {skip_counter} distinct expression cvterm objects associated only with interactions/datasets.')
         return
 
     def get_expression_pattern_operators(self, session):
@@ -159,10 +166,16 @@ class ExpressionHandler(DataHandler):
         counter = 0
         for result in expression_cvterm_operators:
             xprn_id = result.ExpressionCvterm.expression_id
+            if xprn_id not in self.expression_patterns.keys():
+                continue
+            # Skip reporting-build-derived interpolated stages.
+            if result.ExpressionCvterm.rank == 9999:
+                continue
             slot = f'{result.type_cvterm.name}_terms'
+            xprn_pattern_slot = getattr(self.expression_patterns[xprn_id], slot)
             xprn_cvt_id = result.ExpressionCvterm.expression_cvterm_id
             operator_value = result.ExpressionCvtermprop.value
-            self.expression_patterns[xprn_id][slot][xprn_cvt_id].operators.append(operator_value)
+            xprn_pattern_slot[xprn_cvt_id].operators.append(operator_value)
             counter += 1
         self.log.info(f'Found {counter} distinct expression cvterm operators in chado.')
         return
