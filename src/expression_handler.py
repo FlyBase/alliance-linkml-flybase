@@ -160,7 +160,7 @@ class ExpressionHandler(DataHandler):
             join(Cv, (Cv.cv_id == xprn_cvterm.cv_id)).\
             join(type_cvterm, (type_cvterm.cvterm_id == ExpressionCvterm.cvterm_type_id)).\
             join(ExpressionCvtermprop, (ExpressionCvtermprop.expression_cvterm_id == ExpressionCvterm.expression_cvterm_id)).\
-            join(operator_cvterm, (operator_cvterm.cvterm_id == ExpressionCvterm.type_id)).\
+            join(operator_cvterm, (operator_cvterm.cvterm_id == ExpressionCvtermprop.type_id)).\
             filter(*filters).\
             distinct()
         counter = 0
