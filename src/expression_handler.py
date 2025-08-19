@@ -115,7 +115,7 @@ class ExpressionHandler(DataHandler):
         xprn_cvterm = aliased(Cvterm, name='xprn_cvterm')
         type_cvterm = aliased(Cvterm, name='type_cvterm')
         filters = (
-            xprn_cvterm.is_obsolete.is_(False),
+            xprn_cvterm.is_obsolete == 0,
         )
         expression_cvterms = session.query(type_cvterm, ExpressionCvterm).\
             select_from(ExpressionCvterm).\
