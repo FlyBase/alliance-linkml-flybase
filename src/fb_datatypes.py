@@ -529,8 +529,8 @@ class FBExpressionCvterm(object):
         # stage - operator props will have text of "FROM/TO" to indicate a temporal range.
         # cellular - operator props will have text of "OF" (to mark a larger xprn domain).
         # anatomy - operator props will have text of "OF" (to mark a larger xprn domain), or "FROM/TO" (to indicate a spatial range).
-        self.operators = []          # Will be a list of strings (FROM, TO, or OF): usually zero or one, but 49 cases of two.
-        self.qualifiers = []         # Will be a list of qualifier cvterm_ids for this term.
+        self.operators = []               # Will be a list of strings (FROM, TO, or OF): usually zero or one, but 49 cases of two.
+        self.qualifier_cvterm_ids = []    # Will be a list of qualifier cvterm_ids for this term.
         # Processed FB data.
         self.has_stage_end = None    # For a stage term having a "FROM" operator, put the matching "TO" FBExpressionCvterm stage term here.
         self.is_stage_end = False    # True for a stage term having a "TO" operator.
@@ -550,10 +550,13 @@ class FBExpressionAnnotation(object):
         # Primary FB chado data.
         self.chado_obj = chado_obj
         self.db_primary_id = chado_obj.expression_id
-        self.assay_terms = {}       # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, assay.
-        self.anatomy_terms = {}     # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, anatomy.
-        self.cellular_terms = {}    # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, cellular.
-        self.stage_terms = {}       # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, stage.
+        self.assay_terms = {}          # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, assay.
+        self.anatomy_terms = {}        # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, anatomy.
+        self.cellular_terms = {}       # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, cellular.
+        self.stage_terms = {}          # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, stage.
+        # Processed FB data.
+        self.is_problematic = False    # True if there are problemst that preclude export.
+
         # BOB: Need a method to identify a stage range, then link the start and end FBExpressionCvterm objects via their has_stage_end and is_stage_end attributes.
         # BOB: Need a method to identify an anatomical range, then add dummy FBExpressionCvterm objects to self.anatomy_terms for the intervening terms. See "regex_for_anatomical_terms_in_numerical_series()".
         # BOB: Need a method to identify annotations having part/subpart.
