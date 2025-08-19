@@ -112,16 +112,14 @@ class ExpressionHandler(DataHandler):
     def get_expression_pattern_cvterms(self, session):
         """Get the cvterms for expression annotations."""
         self.log.info('Get the cvterms for expression annotations.')
-        xprn_cvterm = aliased(ExpressionCvterm, name='xprn_cvterm')
+        xprn_cvterm = aliased(Cvterm, name='xprn_cvterm')
         type_cvterm = aliased(Cvterm, name='type_cvterm')
-        # Cv.cv_name != 'FlyBase miscellaneous CV',
         filters = (
             xprn_cvterm.is_obsolete.is_(False),
         )
         expression_cvterms = session.query(type_cvterm, ExpressionCvterm).\
             select_from(ExpressionCvterm).\
             join(xprn_cvterm, (xprn_cvterm.cvterm_id == ExpressionCvterm.cvterm_id)).\
-            join(Cv, (Cv.cv_id == xprn_cvterm.cv_id)).\
             join(type_cvterm, (type_cvterm.cvterm_id == ExpressionCvterm.cvterm_type_id)).\
             filter(*filters).\
             distinct()
