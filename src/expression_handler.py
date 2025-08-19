@@ -144,14 +144,14 @@ class ExpressionHandler(DataHandler):
     def get_expression_pattern_operators(self, session):
         """Get the cvterm operators for expression annotations."""
         self.log.info('Get the cvterm operators for expression annotations.')
-        xprn_cvterm = aliased(ExpressionCvterm, name='xprn_cvterm')
+        xprn_cvterm = aliased(Cvterm, name='xprn_cvterm')
         type_cvterm = aliased(Cvterm, name='type_cvterm')
         operator_cvterm = aliased(Cvterm, name='operator_cvterm')
         operator_values = ['FROM', 'TO', 'OF']
         filters = (
-            Cv.cv_name != 'FlyBase miscellaneous CV',
-            xprn_cvterm.is_obsolete.is_(False),
-            operator_cvterm.is_obsolete.is_(False),
+            operator_cvterm.name == 'operator',
+            Cv.name != 'FlyBase miscellaneous CV',
+            xprn_cvterm.is_obsolete == 0,
             ExpressionCvtermprop.value.in_((operator_values)),
         )
         expression_cvterm_operators = session.query(type_cvterm, ExpressionCvterm, ExpressionCvtermprop).\
