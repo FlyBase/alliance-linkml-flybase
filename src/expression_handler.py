@@ -27,7 +27,6 @@ class ExpressionHandler(DataHandler):
         """Create the ExpressionHandler object."""
         super().__init__(log, testing)
         self.datatype = 'feature_expression'
-        self.fb_export_type = fb_datatypes.FBExpressionAnnotation
         self.agr_export_type = None
         self.expression_patterns = {}    # expression_id-keyed FBExpressionAnnotation objects.
         self.feat_xprn_annos = {}        # feature_expression_id-keyed FBFeatureExpressionAnnotation objects, for export.
@@ -200,13 +199,15 @@ class ExpressionHandler(DataHandler):
         for xprn_pattern in self.expression_patterns.values():
             for term_type in term_types:
                 slot_name = f'{term_type}_terms'
-                if not xprn_pattern[slot_name]:
+                xprn_pattern_slot = getattr(xprn_pattern, slot_name)
+                if not xprn_pattern_slot:
                     continue
-                observed_rank_list = [i.rank for i in xprn_pattern[slot_name].values()]
+                # First, some QC on rank values to make sure they match expectation.
+                observed_rank_list = [i.chado_obj.rank for i in xprn_pattern_slot.values()]
                 observed_rank_list.sort()
                 expected_rank_list = list(range(0, len(observed_rank_list)))
                 if observed_rank_list != expected_rank_list:
-                    self.log.warning(f'Expression pattern {xprn_pattern.expression_id} has unexpected ranks: {observed_rank_list}. Expected: {expected_rank_list}.')
+                    self.log.warning(f'Expression pattern {xprn_pattern.db_primary_id} has unexpected ranks: {observed_rank_list}. Expected: {expected_rank_list}.')
                     continue
         return
 
