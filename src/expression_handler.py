@@ -127,8 +127,9 @@ class ExpressionHandler(DataHandler):
         for result in expression_cvterms:
             xprn_id = result.ExpressionCvterm.expression_id
             slot = f'{result.type_cvterm.name}_terms'
+            xprn_pattern_slot = getattr(self.expression_patterns[xprn_id], slot)
             xprn_cvt_id = result.ExpressionCvterm.expression_cvterm_id
-            self.expression_patterns[xprn_id][slot][xprn_cvt_id] = fb_datatypes.FBExpressionCvterm(result.ExpressionCvterm)
+            xprn_pattern_slot[xprn_cvt_id] = fb_datatypes.FBExpressionCvterm(result.ExpressionCvterm)
             counter += 1
         self.log.info(f'Found {counter} distinct expression cvterm objects in chado.')
         return
