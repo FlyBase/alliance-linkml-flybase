@@ -19,7 +19,6 @@ from harvdev_utils.reporting import (
     Cv, Cvterm, Db, Dbxref, Expression, ExpressionCvterm, ExpressionCvtermprop,
     Feature, FeatureExpression, FeatureExpressionprop, Pub
 )
-import agr_datatypes
 import fb_datatypes
 from handler import DataHandler
 
@@ -32,9 +31,8 @@ class ExpressionHandler(DataHandler):
         self.datatype = 'feature_expression'
         self.fb_export_type = fb_datatypes.FBExpressionAnnotation
         self.agr_export_type = None
-        self.primary_export_set = 'temp_expression_ingest_set'
         self.expression_patterns = {}    # expression_id-keyed FBExpressionAnnotation objects.
-        self.fb_data_entities = {}       # feature_expression_id-keyed FBFeatureExpressionAnnotation objects, for export.
+        self.feat_xprn_annos = {}        # feature_expression_id-keyed FBFeatureExpressionAnnotation objects, for export.
 
 
     # Utility functions.
@@ -79,6 +77,19 @@ class ExpressionHandler(DataHandler):
         return regex, num_group
 
     # Add methods to be run by get_general_data() below.
+    # Placeholder.
+
+    # Elaborate on get_general_data() for the ExpressionHandler.
+    def get_general_data(self, session):
+        """Extend the method for the ExpressionHandler."""
+        super().get_general_data(session)
+        self.build_bibliography(session)
+        self.build_cvterm_lookup(session)
+        self.build_organism_lookup(session)
+        self.build_feature_lookup(session, feature_types=['transcript', 'polypeptide', 'allele', 'gene', 'insertion', 'split system combination'])
+        return
+
+    # Add methods to be run by get_datatype_data() below.
     def get_expression_patterns(self, session):
         """Build a dictionary of expression patterns from the "expression" table."""
         self.log.info('Build a dictionary of expression patterns from the "expression" table.')
@@ -98,47 +109,108 @@ class ExpressionHandler(DataHandler):
         self.log.info(f'Found {counter} distinct expression patterns in chado.')
         return
 
-    # def get cvterms
-    # def get qualifiers
-    # other?
-
-
-    # Elaborate on get_general_data() for the AGMDiseaseHandler.
-    def get_general_data(self, session):
-        """Extend the method for the ExpressionHandler."""
-        super().get_general_data(session)
-        self.build_bibliography(session)
-        self.build_cvterm_lookup(session)
-        self.build_organism_lookup(session)
-        # BOB: Query for FBco split system combnations is not WORKING!!!!
-        self.build_feature_lookup(session, feature_types=['transcript', 'polypeptide', 'allele', 'gene', 'insertion', 'split system combination'])
-        self.get_expression_patterns(session)
+    def get_expression_pattern_cvterms(self, session):
+        """Get the cvterms for expression annotations."""
+        self.log.info('Get the cvterms for expression annotations.')
+        xprn_cvterm = aliased(ExpressionCvterm, name='xprn_cvterm')
+        type_cvterm = aliased(Cvterm, name='type_cvterm')
+        # Cv.cv_name != 'FlyBase miscellaneous CV',
+        filters = (
+            xprn_cvterm.is_obsolete.is_(False),
+        )
+        expression_cvterms = session.query(type_cvterm, ExpressionCvterm).\
+            select_from(ExpressionCvterm).\
+            join(xprn_cvterm, (xprn_cvterm.cvterm_id == ExpressionCvterm.cvterm_id)).\
+            join(Cv, (Cv.cv_id == xprn_cvterm.cv_id)).\
+            join(type_cvterm, (type_cvterm.cvterm_id == ExpressionCvterm.cvterm_type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in expression_cvterms:
+            xprn_id = result.ExpressionCvterm.expression_id
+            slot = f'{result.type_cvterm.name}_terms'
+            xprn_cvt_id = result.ExpressionCvterm.expression_cvterm_id
+            self.expression_patterns[xprn_id][slot][xprn_cvt_id] = fb_datatypes.FBExpressionCvterm(result.ExpressionCvterm)
+            counter += 1
+        self.log.info(f'Found {counter} distinct expression cvterm objects in chado.')
         return
 
-    # Add methods to be run by get_datatype_data() below.
-    def get_expression_statements(self, session):
+    def get_expression_pattern_operators(self, session):
+        """Get the cvterm operators for expression annotations."""
+        self.log.info('Get the cvterm operators for expression annotations.')
+        xprn_cvterm = aliased(ExpressionCvterm, name='xprn_cvterm')
+        type_cvterm = aliased(Cvterm, name='type_cvterm')
+        operator_cvterm = aliased(Cvterm, name='operator_cvterm')
+        operator_values = ['FROM', 'TO', 'OF']
+        filters = (
+            Cv.cv_name != 'FlyBase miscellaneous CV',
+            xprn_cvterm.is_obsolete.is_(False),
+            operator_cvterm.is_obsolete.is_(False),
+            ExpressionCvtermprop.value.in_((operator_values)),
+        )
+        expression_cvterm_operators = session.query(type_cvterm, ExpressionCvterm, ExpressionCvtermprop).\
+            select_from(ExpressionCvterm).\
+            join(xprn_cvterm, (xprn_cvterm.cvterm_id == ExpressionCvterm.cvterm_id)).\
+            join(Cv, (Cv.cv_id == xprn_cvterm.cv_id)).\
+            join(type_cvterm, (type_cvterm.cvterm_id == ExpressionCvterm.cvterm_type_id)).\
+            join(ExpressionCvtermprop, (ExpressionCvtermprop.expression_cvterm_id == ExpressionCvterm.expression_cvterm_id)).\
+            join(operator_cvterm, (operator_cvterm.cvterm_id == ExpressionCvterm.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in expression_cvterm_operators:
+            xprn_id = result.ExpressionCvterm.expression_id
+            slot = f'{result.type_cvterm.name}_terms'
+            xprn_cvt_id = result.ExpressionCvterm.expression_cvterm_id
+            operator_value = result.ExpressionCvtermprop.value
+            self.expression_patterns[xprn_id][slot][xprn_cvt_id].operators.append(operator_value)
+            counter += 1
+        self.log.info(f'Found {counter} distinct expression cvterm operators in chado.')
         return
 
-    # Elaborate on get_datatype_data() for the AGMDiseaseHandler.
+    # Elaborate on get_datatype_data() for the ExpressionHandler.
     def get_datatype_data(self, session):
         """Extend the method for the ExpressionHandler."""
         super().get_datatype_data(session)
+        self.get_expression_patterns(session)
+        self.get_expression_pattern_cvterms(session)
+        self.get_expression_pattern_operators(session)
         return
 
     # Add methods to be run by synthesize_info() below.
-    # Placeholder.
+    # BOB - CONTINUE HERE.
+    def assign_qualifiers(self):
+        """Assign qualifiers to the appropriate primary CV terms."""
+        self.log.info('Assign qualifiers to the appropriate primary CV terms.')
+        term_types = ['assay', 'stage', 'anatomy', 'cellular']
+        for xprn_pattern in self.expression_patterns.values():
+            for term_type in term_types:
+                slot_name = f'{term_type}_terms'
+                if not xprn_pattern[slot_name]:
+                    continue
+                observed_rank_list = [i.rank for i in xprn_pattern[slot_name].values()]
+                observed_rank_list.sort()
+                expected_rank_list = list(range(0, len(observed_rank_list)))
+                if observed_rank_list != expected_rank_list:
+                    self.log.warning(f'Expression pattern {xprn_pattern.expression_id} has unexpected ranks: {observed_rank_list}. Expected: {expected_rank_list}.')
+                    continue
+        return
 
-    # Elaborate on synthesize_info() for the AGMDiseaseHandler.
+    # BOB: Group end stage with start stage.
+    # BOB: Interpolate tissue ranges (and propagate qualifiers from end term to all others).
+
+    # Elaborate on synthesize_info() for the ExpressionHandler.
     def synthesize_info(self):
-        """Extend the method for the AGMDiseaseHandler."""
+        """Extend the method for the ExpressionHandler."""
         super().synthesize_info()
+        self.assign_qualifiers()
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
     # Placeholder.
 
-    # Elaborate on map_fb_data_to_alliance() for the AGMDiseaseHandler.
+    # Elaborate on map_fb_data_to_alliance() for the ExpressionHandler.
     def map_fb_data_to_alliance(self):
-        """Extend the method for the AGMDiseaseHandler."""
+        """Extend the method for the ExpressionHandler."""
         super().map_fb_data_to_alliance()
         return
