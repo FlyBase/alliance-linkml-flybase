@@ -122,7 +122,7 @@ class ExpressionHandler(DataHandler):
         num_end = int(re.match(num_rgx, end).group(1))
         self.log.debug(f'From {start}--{end}, look for numbers between {num_start} and {num_end}.')
         for term in terms:
-            position = re.search(rgx, term).group(1)
+            position = re.search(rgx, term.name).group(1)
             num_position = int(re.match(num_rgx, position).group(1))
             self.log.debug(f'Term {term} is at position {position}, with number={num_position}')
             if num_position > num_start and num_position < num_end:
@@ -352,9 +352,10 @@ class ExpressionHandler(DataHandler):
                 self.log.debug(f'BOB: Look for terms between positions {start} and {end} matching this regex: {rgx}')
 
                 anatomical_series_terms = self.get_anatomical_terms_by_regex(session, rgx)
-                filtered_terms = self.select_in_range_anatomical_terms(anatomical_series_terms, rgx, start, end)
-
                 # BILLY BOB - CONTINUE HERE BY TAKING TERMS WITHIN RANGE!
+                # Unsuppress method below once stuff before is working.
+                # filtered_terms = self.select_in_range_anatomical_terms(anatomical_series_terms, rgx, start, end)
+
                 # BOB - add dummy FBExpressionCvterm objects to self.anatomy_terms for these interpolated terms.
                 # BOB - propagate qualifiers from range end to start and intervening terms.
                 counter += 1
