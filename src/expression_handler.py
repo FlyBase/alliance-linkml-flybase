@@ -268,9 +268,39 @@ class ExpressionHandler(DataHandler):
         return
 
     def identify_tissue_ranges(self):
-        # BOB: Interpolate tissue ranges (and propagate qualifiers from end term to all others).
-        # BOB: Add dummy FBExpressionCvterm objects to self.anatomy_terms for the intervening terms.
-        # See "regex_for_anatomical_terms_in_numerical_series()".
+        """Identify tissue ranges in expression patterns."""
+        self.log.info('Identify tissue ranges in expression patterns.')
+        counter = 0
+        prob_counter = 0
+        for xprn_pattern in self.expression_patterns.values():
+            start_terms = []
+            end_terms = []
+            for anatomy_term in xprn_pattern.anatomy_terms.values():
+                if 'FROM' in anatomy_term.operators:
+                    anatomy_term.is_anat_start = True
+                    start_terms.append(anatomy_term)
+                if 'TO' in anatomy_term.operators:
+                    anatomy_term.is_anat_end = True
+                    end_terms.append(anatomy_term)
+                    if anatomy_term.qualifier_cvterm_ids:
+                        qualifiers = [self.cvterm_lookup[i]['name'] for i in anatomy_term.qualifier_cvterm_ids]
+                        self.log.debug(f'BOB: For {xprn_pattern.db_primary_id}, found these qualifiers: {qualifiers}.')
+            if not start_terms and not end_terms:
+                continue
+            elif len(start_terms) == 1 and len(end_terms) == 1:
+                tissue_range_string = f'{start_terms[0].cvterm_name}--{end_terms[0].cvterm_name}'
+                self.log.debug(f'For {xprn_pattern.db_primary_id}, found this tissue range: {tissue_range_string}')
+                # BOB - find interpolated tissue terms here.
+                # BOB - add dummy FBExpressionCvterm objects to self.anatomy_terms for these interpolated terms.
+                # BOB - propagate qualifiers from range end to start and intervening terms.
+                # BOB - use self.regex_for_anatomical_terms_in_numerical_series()
+                counter += 1
+            else:
+                self.log.error(f'Many/partial tissue ranges found for xprn_id={xprn_pattern.db_primary_id}')
+                xprn_pattern.is_problematic = True
+                prob_counter += 1
+        self.log.info(f'Found {counter} tissue ranges in expression patterns.')
+        self.log.info(f'Found {prob_counter} expression patterns with many/partial tissue ranges that could not be processed.')
         return
 
     def identify_tissue_subparts(self):
