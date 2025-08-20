@@ -44,10 +44,12 @@ class ExpressionHandler(DataHandler):
             rgx = r' ([0-9]-[0-9]) '
             start_match = re.search(rgx, start_term)
             end_match = re.search(rgx, end_term)
-            start_position = start_match.group(1)
-            end_position = end_match.group(1)
-            # Filter out non-sensical intersegmental positions.
-            if match.group(1) not in intersegmental_positions or start_position == end_position:
+            if start_match and end_match and start_match != end_match and start_match.group(1) in intersegmental_positions:
+                match = start_match
+                start_position = start_match.group(1)
+                end_position = end_match.group(1)
+            # Filter out cases that do not meet all criteria.
+            else:
                 match = None
                 start_position = None
                 end_position = None
