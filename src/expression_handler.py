@@ -256,6 +256,8 @@ class ExpressionHandler(DataHandler):
                 continue
             elif len(start_terms) == 1 and len(end_terms) == 1:
                 start_terms[0].has_stage_end = end_terms[0]
+                stage_range_string = f'{start_terms[0].cvterm_name}--{end_terms[0].cvterm_name}'
+                self.log.debug(f'For {xprn_pattern.db_primary_id}, found this stage range: {stage_range_string}')
                 counter += 1
             else:
                 self.log.error(f'Many/partial stage ranges found for xprn_id={xprn_pattern.db_primary_id}')
