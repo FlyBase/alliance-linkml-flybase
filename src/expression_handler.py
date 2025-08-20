@@ -257,7 +257,7 @@ class ExpressionHandler(DataHandler):
             elif len(start_terms) == 1 and len(end_terms) == 1:
                 start_terms[0].has_stage_end = end_terms[0]
                 stage_range_string = f'{start_terms[0].cvterm_name}--{end_terms[0].cvterm_name}'
-                self.log.debug(f'For {xprn_pattern.db_primary_id}, found this stage range: {stage_range_string}')
+                self.log.debug(f'For xprn_id={xprn_pattern.db_primary_id}, found this stage range: {stage_range_string}')
                 counter += 1
             else:
                 self.log.error(f'Many/partial stage ranges found for xprn_id={xprn_pattern.db_primary_id}')
@@ -284,12 +284,17 @@ class ExpressionHandler(DataHandler):
                     end_terms.append(anatomy_term)
                     if anatomy_term.qualifier_cvterm_ids:
                         qualifiers = [self.cvterm_lookup[i]['name'] for i in anatomy_term.qualifier_cvterm_ids]
-                        self.log.debug(f'BOB: For {xprn_pattern.db_primary_id}, found these qualifiers: {qualifiers}.')
+                        self.log.debug(f'For xprn_id={xprn_pattern.db_primary_id}, "{anatomy_term.cvterm_name}" has qualifiers: {qualifiers}.')
             if not start_terms and not end_terms:
                 continue
             elif len(start_terms) == 1 and len(end_terms) == 1:
                 tissue_range_string = f'{start_terms[0].cvterm_name}--{end_terms[0].cvterm_name}'
                 self.log.debug(f'For {xprn_pattern.db_primary_id}, found this tissue range: {tissue_range_string}')
+                tissue_term_regex, start_position = self.regex_for_anatomical_terms_in_numerical_series(start_terms[0].cvterm_name)
+                _, end_position = self.regex_for_anatomical_terms_in_numerical_series(end_terms[0].cvterm_name)
+                self.log.debug(f'BOB: Look for terms between positions {start_position} and {end_position} matching this regex: {tissue_term_regex}')
+
+
                 # BOB - find interpolated tissue terms here.
                 # BOB - add dummy FBExpressionCvterm objects to self.anatomy_terms for these interpolated terms.
                 # BOB - propagate qualifiers from range end to start and intervening terms.
@@ -305,6 +310,7 @@ class ExpressionHandler(DataHandler):
 
     def identify_tissue_subparts(self):
         # BOB: Identify part/subpart tissues.
+        # Check xprn_id=42175, cell | subset &&of mesoderm | dorsal &&of parasegment 2--12
         return
 
     # Elaborate on synthesize_info() for the ExpressionHandler.
