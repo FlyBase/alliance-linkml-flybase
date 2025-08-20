@@ -122,7 +122,9 @@ class ExpressionHandler(DataHandler):
         num_end = int(re.match(num_rgx, end).group(1))
         self.log.debug(f'From {start}--{end}, look for numbers between {num_start} and {num_end}.')
         for term in terms:
+            self.log.debug(f'Is "{term.name}" in range?')
             position = re.search(rgx, term.name).group(1)
+            self.log.debug(f'FOund this position "{position}".')
             num_position = int(re.match(num_rgx, position).group(1))
             self.log.debug(f'Term {term} is at position {position}, with number={num_position}')
             if num_position > num_start and num_position < num_end:
