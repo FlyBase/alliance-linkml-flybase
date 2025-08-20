@@ -65,7 +65,7 @@ class ExpressionHandler(DataHandler):
         after = re.escape(term[match.end():])
 
         # if starts with letters, keep them; replace numbers
-        letter_part = re.match(r'([A-Za-z]*)', num_group).group(1)
+        letter_part = re.match(r' ([A-Za-z]*)', match.group(0)).group(0)
         regex_number_part = r'\d+'
         group_regex = letter_part + regex_number_part
 
