@@ -58,7 +58,7 @@ class ExpressionHandler(DataHandler):
             terminal_rgx = r' ([A-Z]{0,1}[0-9]{1,2})$'
             start_terminal_match = re.search(terminal_rgx, start_term)
             end_terminal_match = re.search(terminal_rgx, end_term)
-            if start_terminal_match and end_terminal_match and start_terminal_match != end_terminal_match:
+            if start_terminal_match and end_terminal_match and start_terminal_match.group(1) != end_terminal_match.group(1):
                 match = start_terminal_match
                 start_position = start_terminal_match.group(1)
                 end_position = end_terminal_match.group(1)
@@ -67,7 +67,7 @@ class ExpressionHandler(DataHandler):
                 internal_rgx = r' ([A-Z]{0,1}[0-9]{1,2})'
                 start_internal_match = re.search(internal_rgx, start_term)
                 end_internal_match = re.search(internal_rgx, end_term)
-                if start_internal_match and end_internal_match and start_internal_match != end_internal_match:
+                if start_internal_match and end_internal_match and start_internal_match.group(1) != end_internal_match.group(1):
                     match = start_internal_match
                     start_position = start_internal_match.group(1)
                     end_position = end_internal_match.group(1)
