@@ -351,7 +351,8 @@ class ExpressionHandler(DataHandler):
                 rgx, start, end = self.regex_for_anatomical_terms_in_numerical_series(start_terms[0].cvterm_name, end_terms[0].cvterm_name)
                 self.log.debug(f'Look for terms between positions {start} and {end} matching this regex: {rgx}')
                 anatomical_series_terms = self.get_anatomical_terms_by_regex(session, rgx)
-                # filtered_terms = self.select_in_range_anatomical_terms(anatomical_series_terms, rgx, start, end)
+                # BILLY BOB: CONTINUE HERE, make sure range filtering works.
+                filtered_terms = self.select_in_range_anatomical_terms(anatomical_series_terms, rgx, start, end)
                 # BOB - add dummy FBExpressionCvterm objects to self.anatomy_terms for these interpolated terms.
                 # BOB - propagate qualifiers from range end to start and intervening terms.
                 counter += 1
