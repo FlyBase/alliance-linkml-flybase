@@ -125,11 +125,11 @@ class ExpressionHandler(DataHandler):
             self.log.debug(f'Is "{term.name}" in range?')
             position = re.search(rgx, term.name).group(1)
             self.log.debug(f'Found this position "{position}".')
-            num_position = int(re.search(num_rgx, position).group(1))    # BOB - this is not working?
-            self.log.debug(f'Term {term} is at position {position}, with number={num_position}')
+            num_position = int(re.search(num_rgx, position).group(1))
+            self.log.debug(f'Term {term.name} is at position {position}, with number={num_position}')
             if num_position > num_start and num_position < num_end:
                 filtered_terms.append(term)
-        self.log.debug(f'Found these terms: {filtered_terms}')
+        self.log.debug(f'Found these terms: {[i.name for i in filtered_terms]}')
         return filtered_terms
 
     # Add methods to be run by get_general_data() below.
