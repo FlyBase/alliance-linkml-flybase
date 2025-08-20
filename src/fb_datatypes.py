@@ -533,10 +533,14 @@ class FBExpressionCvterm(object):
         self.operators = []               # Will be a list of strings (FROM, TO, or OF): usually zero or one, but 49 cases of two.
         self.qualifier_cvterm_ids = []    # Will be a list of qualifier cvterm_ids for this term.
         # Processed FB data.
-        self.has_stage_end = None    # For a stage term having a "FROM" operator, put the matching "TO" FBExpressionCvterm stage term here.
-        self.is_stage_end = False    # True for a stage term having a "TO" operator.
-        self.has_subpart = None      # For an anatomy term having an "OF" operator, put the subpart FBExpressionCvterm object here, if applicable.
-        self.is_subpart = False      # True if the term is a subpart of some other term in the larger expression annotation.
+        self.is_stage_start = False    # True for a stage term having a "FROM" operator.
+        self.is_stage_end = False      # True for a stage term having a "TO" operator.
+        self.has_stage_end = None      # For a stage term having a "FROM" operator, put the matching "TO" FBExpressionCvterm stage term here.
+        self.is_anat_start = False     # True for an anatomy term having a "FROM" operator.
+        self.is_anat_end = False       # True for an anatomy term having a "TO" operator.
+        self.is_main_part = False      # True for an anatomy term having "OF" operator.
+        self.has_subpart = None        # For an anatomy term having an "OF" operator, put the subpart FBExpressionCvterm object here, if applicable.
+        self.is_subpart = False        # True if the term is a subpart of some other term in the larger expression annotation.
 
 
 class FBExpressionAnnotation(object):
@@ -558,9 +562,6 @@ class FBExpressionAnnotation(object):
         # Processed FB data.
         self.is_problematic = False    # True if there are problemst that preclude export.
 
-        # BOB: Need a method to identify a stage range, then link the start and end FBExpressionCvterm objects via their has_stage_end and is_stage_end attributes.
-        # BOB: Need a method to identify an anatomical range, then add dummy FBExpressionCvterm objects to self.anatomy_terms for the intervening terms. See "regex_for_anatomical_terms_in_numerical_series()".
-        # BOB: Need a method to identify annotations having part/subpart.
 
 class FBFeatureExpressionAnnotation(FBExportEntity):
     """FBExpressionAnnotation class."""

@@ -31,7 +31,6 @@ class ExpressionHandler(DataHandler):
         self.expression_patterns = {}    # expression_id-keyed FBExpressionAnnotation objects.
         self.feat_xprn_annos = {}        # feature_expression_id-keyed FBFeatureExpressionAnnotation objects, for export.
 
-
     # Utility functions.
     def regex_for_anatomical_terms_in_numerical_series(self, term):
         """For an anatomical term representing some numerical series, return a regex for all terms in that series, and the series position of the term."""
@@ -64,12 +63,12 @@ class ExpressionHandler(DataHandler):
         self.log.debug(f'Found series position "{match.group(1)}" for term: {term}')
         before = re.escape(term[:match.start()])
         after = re.escape(term[match.end():])
-        
+
         # if starts with letters, keep them; replace numbers
         letter_part = re.match(r'([A-Za-z]*)', num_group).group(1)
         regex_number_part = r'\d+'
         group_regex = letter_part + regex_number_part
-        
+
         regex = f'{before}{group_regex}{after}'
         return regex, num_group
 
@@ -92,7 +91,7 @@ class ExpressionHandler(DataHandler):
         self.log.info('Build a dictionary of expression patterns from the "expression" table.')
         # Note - get only expression patterns related to CV terms (ignore those with only a TAP statement note).
         filters = (
-            Feature.is_obsolete.is_(False),            
+            Feature.is_obsolete.is_(False),
         )
         expression_patterns = session.query(Expression).\
             select_from(Expression).\
@@ -201,7 +200,7 @@ class ExpressionHandler(DataHandler):
                 xprn_pattern_slot = getattr(xprn_pattern, slot_name)
                 if not xprn_pattern_slot:
                     continue
-                self.log.debug(f'BOB: Evaluate type={term_type} for xprn_id={xprn_pattern.db_primary_id}')
+                self.log.debug(f'Evaluate type={term_type} for xprn_id={xprn_pattern.db_primary_id}')
                 # First, some QC on rank values to make sure they match expectation.
                 observed_rank_list = [i.chado_obj.rank for i in xprn_pattern_slot.values()]
                 observed_rank_list.sort()
@@ -221,31 +220,69 @@ class ExpressionHandler(DataHandler):
                     rank_sorted_xprn_cvts[xprn_cvt.chado_obj.rank] = xprn_cvt
                 for rank in expected_rank_list:
                     this_xprn_cvt = rank_sorted_xprn_cvts[rank]
-                    self.log.debug(f'BOB: Evaluate type={term_type}, rank={this_xprn_cvt.chado_obj.rank}, term={this_xprn_cvt.cvterm_name}')
+                    self.log.debug(f'Evaluate type={term_type}, rank={this_xprn_cvt.chado_obj.rank}, term={this_xprn_cvt.cvterm_name}')
                     if this_xprn_cvt.cv_name == 'FlyBase miscellaneous CV':
                         xprn_pattern_slot[current_primary_cvt_id].qualifier_cvterm_ids.append(this_xprn_cvt.cvterm_id)
                         qualifier_xprn_cvt_ids.append(this_xprn_cvt.db_primary_id)
-                        self.log.debug(f'BOB: Found qualifier {this_xprn_cvt.cvterm_name} for primary term="{current_primary_cvterm_name}"')
+                        self.log.debug(f'Found qualifier {this_xprn_cvt.cvterm_name} for primary term="{current_primary_cvterm_name}"')
                     else:
                         current_primary_cvt_id = this_xprn_cvt.db_primary_id
                         current_primary_cvterm_name = this_xprn_cvt.cvterm_name
-                        self.log.debug(f'BOB: Found primary term="{current_primary_cvterm_name}"')
+                        self.log.debug(f'Found primary term="{current_primary_cvterm_name}"')
                 for qualifier_xprn_cvt_id in qualifier_xprn_cvt_ids:
                     del xprn_pattern_slot[qualifier_xprn_cvt_id]
                 # Final review of terms.
                 for xprn_cvt in xprn_pattern_slot.values():
                     qualifiers = [self.cvterm_lookup[i]['name'] for i in xprn_cvt.qualifier_cvterm_ids]
-                    self.log.debug(f'BOB: type={term_type}, rank={xprn_cvt.chado_obj.rank}, term={xprn_cvt.cvterm_name}, qualifiers={qualifiers}')
+                    self.log.debug(f'Final term: type={term_type}, rank={xprn_cvt.chado_obj.rank}, term={xprn_cvt.cvterm_name}, qualifiers={qualifiers}')
         return
 
-    # BOB: Group end stage with start stage.
-    # BOB: Interpolate tissue ranges (and propagate qualifiers from end term to all others).
+    def identify_stage_ranges(self):
+        """Identify stage ranges in expression patterns."""
+        self.log.info('Identify stage ranges in expression patterns.')
+        counter = 0
+        prob_counter = 0
+        for xprn_pattern in self.expression_patterns.values():
+            start_terms = []
+            end_terms = []
+            for stage_term in xprn_pattern.stage_terms.values():
+                if 'FROM' in stage_term.operators:
+                    stage_term.is_stage_start = True
+                    start_terms.append(stage_term)
+                if 'TO' in stage_term.operators:
+                    stage_term.is_stage_end = True
+                    end_terms.append(stage_term)
+            if not start_terms and not end_terms:
+                continue
+            elif len(start_terms) == 1 and len(end_terms) == 1:
+                start_terms[0].has_stage_end = end_terms[0]
+                counter += 1
+            else:
+                self.log.error(f'Many/partial stage ranges found for xprn_id={xprn_pattern.db_primary_id}')
+                xprn_pattern.is_problematic = True
+                prob_counter += 1
+        self.log.info(f'Found {counter} stage ranges in expression patterns.')
+        self.log.info(f'Found {prob_counter} expression patterns with many/partial stage ranges that could not be processed.')
+        return
+
+    def identify_tissue_ranges(self):
+        # BOB: Interpolate tissue ranges (and propagate qualifiers from end term to all others).
+        # BOB: Add dummy FBExpressionCvterm objects to self.anatomy_terms for the intervening terms.
+        # See "regex_for_anatomical_terms_in_numerical_series()".
+        return
+
+    def identify_tissue_subparts(self):
+        # BOB: Identify part/subpart tissues.
+        return
 
     # Elaborate on synthesize_info() for the ExpressionHandler.
     def synthesize_info(self):
         """Extend the method for the ExpressionHandler."""
         super().synthesize_info()
         self.assign_qualifiers()
+        self.identify_stage_ranges()
+        self.identify_tissue_ranges()
+        self.identify_tissue_subparts()
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
