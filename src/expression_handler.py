@@ -41,7 +41,7 @@ class ExpressionHandler(DataHandler):
         # Case 1. Exceptional intersegmental region terms: e.g., "embryonic/larval abdominal 1-2 intersegmental apodeme".
         intersegmental_positions = ['1-2', '2-3', '3-4', '4-5', '5-6', '6-7', '7-8', '8-9']
         if 'intersegmental' in start_term:
-            rgx = r' ([0-9]-[0-9]) '
+            rgx = r' ([0-9]-[0-9])'
             start_match = re.search(rgx, start_term)
             end_match = re.search(rgx, end_term)
             if start_match and end_match and start_match != end_match and start_match.group(1) in intersegmental_positions:
@@ -82,10 +82,13 @@ class ExpressionHandler(DataHandler):
         before = re.escape(start_term[:match.start()])
         after = re.escape(start_term[match.end():])
         position = match.group(0)
-        letter_part = re.match(r' ([A-Za-z]{0,1})', position).group(0)
-        regex_number_part = r'\d+'
+        letter_part = re.match(r' ([A-Za-z]{0,2})', position).group(0)
+        if 'intersegmental' in start_term:
+            regex_number_part = r'\d-\d'
+        else:
+            regex_number_part = r'\d+'
         position_regex = letter_part + regex_number_part
-        regex = f'^{before}{position_regex}{after}$'
+        regex = f'^{before}({position_regex}){after}$'
         self.log.debug(f'For {start_term} and {end_term}, found this range: {start_position}--{end_position}')
         self.log.debug(f'For {start_term} and {end_term}, found this regex: {regex}')
         return regex, start_position, end_position
@@ -109,6 +112,23 @@ class ExpressionHandler(DataHandler):
         else:
             self.log.error(f'For {term_regex}, found NO matching FBbt terms.')
         return terms
+
+    def select_in_range_anatomical_terms(self, terms, rgx, start, end):
+        """Filter for anatomical terms within a certain range."""
+        filtered_terms = []
+        # For intersegmental terms, this approach just uses the first number in the \d-\d pattern for range comparison.
+        num_rgx = r'^[A-ZAa-z]{0,2}(\d+)'
+        num_start = int(re.match(num_rgx, start).group(1))
+        num_end = int(re.match(num_rgx, end).group(1))
+        self.log.debug(f'From {start}--{end}, look for numbers between {num_start} and {num_end}.')
+        for term in terms:
+            position = re.search(rgx, term).group(1)
+            num_position = int(re.match(num_rgx, position).group(1))
+            self.log.debug(f'Term {term} is at position {position}, with number={num_position}')
+            if num_position > num_start and num_position < num_end:
+                filtered_terms.append(term)
+        self.log.debug(f'Found these terms: {filtered_terms}')
+        return filtered_terms
 
     # Add methods to be run by get_general_data() below.
     # Placeholder.
@@ -332,6 +352,8 @@ class ExpressionHandler(DataHandler):
                 self.log.debug(f'BOB: Look for terms between positions {start} and {end} matching this regex: {rgx}')
 
                 anatomical_series_terms = self.get_anatomical_terms_by_regex(session, rgx)
+                filtered_terms = self.select_in_range_anatomical_terms(anatomical_series_terms, rgx, start, end)
+
                 # BILLY BOB - CONTINUE HERE BY TAKING TERMS WITHIN RANGE!
                 # BOB - add dummy FBExpressionCvterm objects to self.anatomy_terms for these interpolated terms.
                 # BOB - propagate qualifiers from range end to start and intervening terms.
