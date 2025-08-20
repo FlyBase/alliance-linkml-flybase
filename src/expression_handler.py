@@ -56,19 +56,19 @@ class ExpressionHandler(DataHandler):
             terminal_rgx = r' ([A-Z]{0,1}[0-9]{1,2})$'
             start_terminal_match = re.search(terminal_rgx, start_term)
             end_terminal_match = re.search(terminal_rgx, end_term)
-            start_position = start_terminal_match.group(1)
-            end_position = end_terminal_match.group(1)
-            if start_terminal_match and end_terminal_match and start_position != end_position:
+            if start_terminal_match and end_terminal_match and start_terminal_match != end_terminal_match:
                 match = start_terminal_match
+                start_position = start_terminal_match.group(1)
+                end_position = end_terminal_match.group(1)
             # Case 3. Look for internal numbers.
             else:
                 internal_rgx = r' ([A-Z]{0,1}[0-9]{1,2})'
                 start_internal_match = re.search(internal_rgx, start_term)
                 end_internal_match = re.search(internal_rgx, end_term)
-                start_position = start_internal_match.group(1)
-                end_position = end_internal_match.group(1)
-                if start_internal_match and end_internal_match and start_position != end_position:
+                if start_internal_match and end_internal_match and start_internal_match != end_internal_match:
                     match = start_internal_match
+                    start_position = start_internal_match.group(1)
+                    end_position = end_internal_match.group(1)
                 else:
                     match = None
                     start_position = None
@@ -328,7 +328,7 @@ class ExpressionHandler(DataHandler):
                 self.log.debug(f'For {xprn_pattern.db_primary_id}, found this tissue range: {tissue_range_string}')
                 rgx, start, end = self.regex_for_anatomical_terms_in_numerical_series(start_terms[0].cvterm_name, end_terms[0].cvterm_name)
                 self.log.debug(f'BOB: Look for terms between positions {start} and {end} matching this regex: {rgx}')
-                
+
                 anatomical_series_terms = self.get_anatomical_terms_by_regex(session, rgx)
                 # BILLY BOB - CONTINUE HERE BY TAKING TERMS WITHIN RANGE!
                 # BOB - add dummy FBExpressionCvterm objects to self.anatomy_terms for these interpolated terms.
