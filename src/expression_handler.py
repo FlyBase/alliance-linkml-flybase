@@ -108,9 +108,9 @@ class ExpressionHandler(DataHandler):
             distinct()
         term_names = [i.name for i in terms]
         if term_names:
-            self.log.debug(f'For {term_regex}, found these matching FBbt terms: {term_names}')
+            self.log.debug(f'For {term_regex}, found these matching FBbt terms: {term_names}\n')
         else:
-            self.log.error(f'For {term_regex}, found NO matching FBbt terms.')
+            self.log.error(f'For {term_regex}, found NO matching FBbt terms.\n')
         return terms
 
     def select_in_range_anatomical_terms(self, terms, rgx, start, end):
@@ -347,7 +347,7 @@ class ExpressionHandler(DataHandler):
                 continue
             elif len(start_terms) == 1 and len(end_terms) == 1:
                 tissue_range_string = f'{start_terms[0].cvterm_name}--{end_terms[0].cvterm_name}'
-                self.log.debug(f'For {xprn_pattern.db_primary_id}, found this tissue range: {tissue_range_string}')
+                self.log.debug(f'\nFor {xprn_pattern.db_primary_id}, found this tissue range: {tissue_range_string}')
                 rgx, start, end = self.regex_for_anatomical_terms_in_numerical_series(start_terms[0].cvterm_name, end_terms[0].cvterm_name)
                 self.log.debug(f'Look for terms between positions {start} and {end} matching this regex: {rgx}')
                 anatomical_series_terms = self.get_anatomical_terms_by_regex(session, rgx)
