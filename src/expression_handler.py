@@ -32,45 +32,61 @@ class ExpressionHandler(DataHandler):
         self.feat_xprn_annos = {}        # feature_expression_id-keyed FBFeatureExpressionAnnotation objects, for export.
 
     # Utility functions.
-    def regex_for_anatomical_terms_in_numerical_series(self, term):
-        """For an anatomical term representing some numerical series, return a regex for all terms in that series, and the series position of the term."""
-        # Use 1: For a term, find the regex to get all terms in the series.
-        # Use 2: For a term, identify the numerical position in the series.
-        # Finally, compare the number of each term in the series to the terms having the "FROM"/"TO" operators to determine which terms are in range.
-
+    def regex_for_anatomical_terms_in_numerical_series(self, start_term, end_term):
+        """For two anatomical terms in a series, return a regex for all terms in that series, and the start and stop positions."""
+        match = None
+        start_position = None
+        end_position = None
         # First get the positional part of the term.
         # Case 1. Exceptional intersegmental region terms: e.g., "embryonic/larval abdominal 1-2 intersegmental apodeme".
         intersegmental_positions = ['1-2', '2-3', '3-4', '4-5', '5-6', '6-7', '7-8', '8-9']
-        if 'intersegmental' in term:
+        if 'intersegmental' in start_term:
             rgx = r' ([0-9]-[0-9]) '
-            match = re.search(rgx, term)
+            start_match = re.search(rgx, start_term)
+            end_match = re.search(rgx, end_term)
+            start_position = start_match.group(1)
+            end_position = end_match.group(1)
             # Filter out non-sensical intersegmental positions.
-            if match and match.group(1) not in intersegmental_positions:
+            if match.group(1) not in intersegmental_positions or start_position == end_position:
                 match = None
-        # Case 2. Standard number at end, which trumps any interal numbers: e.g., "1" in "medulla non-directional M6 local neuron 1".
+                start_position = None
+                end_position = None
+        # Case 2. Look for numbers at the end of the terms and confirm that they differ.
         else:
-            rgx = r' ([A-Z]{0,1}[0-9]{1,2})$'
-            match = re.search(rgx, term)
-            # Case 3. If no match, look for a number internally: e.g., "7" in "abdominal 7 neuroblast NB3-5", "A3" in "larval serotonergic A3 neuron".
-            if not match:
-                rgx = r' ([A-Z]{0,1}[0-9]{1,2})'
-                match = re.search(rgx, term)
-        # Build the regex.
+            terminal_rgx = r' ([A-Z]{0,1}[0-9]{1,2})$'
+            start_terminal_match = re.search(terminal_rgx, start_term)
+            end_terminal_match = re.search(terminal_rgx, end_term)
+            start_position = start_terminal_match.group(1)
+            end_position = end_terminal_match.group(1)
+            if start_terminal_match and end_terminal_match and start_position != end_position:
+                match = start_terminal_match
+            # Case 3. Look for internal numbers.
+            else:
+                internal_rgx = r' ([A-Z]{0,1}[0-9]{1,2})'
+                start_internal_match = re.search(internal_rgx, start_term)
+                end_internal_match = re.search(internal_rgx, end_term)
+                start_position = start_internal_match.group(1)
+                end_position = end_internal_match.group(1)
+                if start_internal_match and end_internal_match and start_position != end_position:
+                    match = start_internal_match
+                else:
+                    match = None
+                    start_position = None
+                    end_position = None
         if not match:
-            self.log.error(f'No number or letter+number pattern found in term: {term}')
-            return None, None
-        num_group = match.group(1)
-        self.log.debug(f'Found series position "{match.group(1)}" for term: {term}')
-        before = re.escape(term[:match.start()])
-        after = re.escape(term[match.end():])
-
-        # if starts with letters, keep them; replace numbers
-        letter_part = re.match(r' ([A-Za-z]*)', match.group(0)).group(0)
+            self.log.error(f'No number or letter+number pattern found for these terms: {start_term}, {end_term}')
+            return None, start_position, end_position
+        # Build the regex.
+        before = re.escape(start_term[:match.start()])
+        after = re.escape(start_term[match.end():])
+        position = match.group(0)
+        letter_part = re.match(r' ([A-Za-z]{0,1})', position).group(0)
         regex_number_part = r'\d+'
-        group_regex = letter_part + regex_number_part
-
-        regex = f'{before}{group_regex}{after}'
-        return regex, num_group
+        position_regex = letter_part + regex_number_part
+        regex = f'{before}{position_regex}{after}$'
+        self.log.debug(f'For {start_term} and {end_term}, found this range: {start_position}--{end_position}')
+        self.log.debug(f'For {start_term} and {end_term}, found this regex: {regex}')
+        return regex, start_position, end_position
 
     def get_anatomical_terms_by_regex(self, session, term_regex):
         """Get anatomical terms matching a given regex."""
@@ -310,14 +326,13 @@ class ExpressionHandler(DataHandler):
             elif len(start_terms) == 1 and len(end_terms) == 1:
                 tissue_range_string = f'{start_terms[0].cvterm_name}--{end_terms[0].cvterm_name}'
                 self.log.debug(f'For {xprn_pattern.db_primary_id}, found this tissue range: {tissue_range_string}')
-                tissue_term_regex, start_position = self.regex_for_anatomical_terms_in_numerical_series(start_terms[0].cvterm_name)
-                _, end_position = self.regex_for_anatomical_terms_in_numerical_series(end_terms[0].cvterm_name)
-                self.log.debug(f'BOB: Look for terms between positions {start_position} and {end_position} matching this regex: {tissue_term_regex}')
-                anatomical_series_terms = self.get_anatomical_terms_by_regex(session, tissue_term_regex)
+                rgx, start, end = self.regex_for_anatomical_terms_in_numerical_series(start_terms[0].cvterm_name, end_terms[0].cvterm_name)
+                self.log.debug(f'BOB: Look for terms between positions {start} and {end} matching this regex: {rgx}')
+
+                anatomical_series_terms = self.get_anatomical_terms_by_regex(session, rgx)
                 # BOB - find interpolated tissue terms here.
                 # BOB - add dummy FBExpressionCvterm objects to self.anatomy_terms for these interpolated terms.
                 # BOB - propagate qualifiers from range end to start and intervening terms.
-                # BOB - use self.regex_for_anatomical_terms_in_numerical_series()
                 counter += 1
             else:
                 self.log.error(f'Many/partial tissue ranges found for xprn_id={xprn_pattern.db_primary_id}')
