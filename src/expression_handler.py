@@ -72,6 +72,26 @@ class ExpressionHandler(DataHandler):
         regex = f'{before}{group_regex}{after}'
         return regex, num_group
 
+    def get_anatomical_terms_by_regex(self, session, term_regex):
+        """Get anatomical terms matching a given regex."""
+        self.log.debug(f'Find terms matching this regex: {term_regex}')
+        filters = (
+            Cvterm.is_obsolete == 0,
+            Cvterm.name.op('~')(term_regex),
+            Cv.name == 'FlyBase anatomy CV',
+        )
+        terms = session.query(Cvterm).\
+            select_from(Cvterm).\
+            join(Cv, (Cv.cv_id == Cvterm.cv_id)).\
+            filter(*filters).\
+            distinct()
+        term_names = [i.name for i in terms]
+        if term_names:
+            self.log.debug(f'For {term_regex}, found these matching FBbt terms: {term_names}')
+        else:
+            self.log.error(f'For {term_regex}, found NO matching FBbt terms.')
+        return terms
+
     # Add methods to be run by get_general_data() below.
     # Placeholder.
 
@@ -267,7 +287,7 @@ class ExpressionHandler(DataHandler):
         self.log.info(f'Found {prob_counter} expression patterns with many/partial stage ranges that could not be processed.')
         return
 
-    def identify_tissue_ranges(self):
+    def identify_tissue_ranges(self, session):
         """Identify tissue ranges in expression patterns."""
         self.log.info('Identify tissue ranges in expression patterns.')
         counter = 0
@@ -293,8 +313,7 @@ class ExpressionHandler(DataHandler):
                 tissue_term_regex, start_position = self.regex_for_anatomical_terms_in_numerical_series(start_terms[0].cvterm_name)
                 _, end_position = self.regex_for_anatomical_terms_in_numerical_series(end_terms[0].cvterm_name)
                 self.log.debug(f'BOB: Look for terms between positions {start_position} and {end_position} matching this regex: {tissue_term_regex}')
-
-
+                anatomical_series_terms = self.get_anatomical_terms_by_regex(session, tissue_term_regex)
                 # BOB - find interpolated tissue terms here.
                 # BOB - add dummy FBExpressionCvterm objects to self.anatomy_terms for these interpolated terms.
                 # BOB - propagate qualifiers from range end to start and intervening terms.
@@ -314,12 +333,12 @@ class ExpressionHandler(DataHandler):
         return
 
     # Elaborate on synthesize_info() for the ExpressionHandler.
-    def synthesize_info(self):
+    def synthesize_info(self, session):
         """Extend the method for the ExpressionHandler."""
         super().synthesize_info()
         self.assign_qualifiers()
         self.identify_stage_ranges()
-        self.identify_tissue_ranges()
+        self.identify_tissue_ranges(session)
         self.identify_tissue_subparts()
         return
 
