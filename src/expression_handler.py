@@ -83,7 +83,7 @@ class ExpressionHandler(DataHandler):
         letter_part = re.match(r' ([A-Za-z]{0,1})', position).group(0)
         regex_number_part = r'\d+'
         position_regex = letter_part + regex_number_part
-        regex = f'{before}{position_regex}{after}$'
+        regex = f'^{before}{position_regex}{after}$'
         self.log.debug(f'For {start_term} and {end_term}, found this range: {start_position}--{end_position}')
         self.log.debug(f'For {start_term} and {end_term}, found this regex: {regex}')
         return regex, start_position, end_position
@@ -328,9 +328,9 @@ class ExpressionHandler(DataHandler):
                 self.log.debug(f'For {xprn_pattern.db_primary_id}, found this tissue range: {tissue_range_string}')
                 rgx, start, end = self.regex_for_anatomical_terms_in_numerical_series(start_terms[0].cvterm_name, end_terms[0].cvterm_name)
                 self.log.debug(f'BOB: Look for terms between positions {start} and {end} matching this regex: {rgx}')
-
+                
                 anatomical_series_terms = self.get_anatomical_terms_by_regex(session, rgx)
-                # BOB - find interpolated tissue terms here.
+                # BILLY BOB - CONTINUE HERE BY TAKING TERMS WITHIN RANGE!
                 # BOB - add dummy FBExpressionCvterm objects to self.anatomy_terms for these interpolated terms.
                 # BOB - propagate qualifiers from range end to start and intervening terms.
                 counter += 1
