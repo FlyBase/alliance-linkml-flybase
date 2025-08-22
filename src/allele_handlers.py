@@ -808,8 +808,18 @@ class AlleleHandler(MetaAlleleHandler):
         ALLELE = 0
         GENE = 1
         counter = 0
+        # First, find alleles that have many associated genes (especially FBti insertions that hit many genes).
+        # This will affect the allele-gene relation_type term used.
+        allele_gene_counter = {}
+        for allele_gene_key in self.allele_gene_rels.keys():
+            try:
+                allele_gene_counter[allele_gene_key[ALLELE]] += 1
+            except KeyError:
+                allele_gene_counter[allele_gene_key[ALLELE]] = 1
+        # Now, go through alleles and make the allele-gene associations.
         for allele_gene_key, allele_gene_rels in self.allele_gene_rels.items():
-            allele = self.fb_data_entities[allele_gene_key[ALLELE]]
+            allele_feature_id = allele_gene_key[ALLELE]
+            allele = self.fb_data_entities[allele_feature_id]
             allele_curie = f'FB:{allele.uniquename}'
             gene = self.feature_lookup[allele_gene_key[GENE]]
             gene_curie = f'FB:{gene["uniquename"]}'
@@ -819,7 +829,13 @@ class AlleleHandler(MetaAlleleHandler):
                 all_pub_ids.extend(allele_gene_rel.pubs)
             first_feat_rel.pubs = all_pub_ids
             pub_curies = self.lookup_pub_curies(all_pub_ids)
-            rel_dto = agr_datatypes.AlleleGeneAssociationDTO(allele_curie, 'is_allele_of', gene_curie, pub_curies)
+            # BOB: CURRENT WORK TO PICK THE CORRECT RELATION_TYPE NAME.
+            rel_type_name = 'is_allele_of'
+            if allele_gene_counter[allele_feature_id] > 1:
+                rel_type_name = 'TEMP_FBTI_MANY_GENES_REL_TYPE_TERM'
+            elif allele.uniquename.startswith('FBti'):
+                rel_type_name = 'TEMP_FBTI_SINGLE_GENE_REL_TYPE_TERM'
+            rel_dto = agr_datatypes.AlleleGeneAssociationDTO(allele_curie, rel_type_name, gene_curie, pub_curies)
             if allele.is_obsolete is True or gene['is_obsolete'] is True:
                 rel_dto.obsolete = True
                 rel_dto.internal = True
