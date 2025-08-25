@@ -118,8 +118,12 @@ class ExpressionHandler(DataHandler):
         filtered_terms = []
         # For intersegmental terms, this approach just uses the first number in the \d-\d pattern for range comparison.
         num_rgx = r'[A-ZAa-z]{0,2}(\d+)'
-        num_start = int(re.search(num_rgx, start).group(1))
-        num_end = int(re.search(num_rgx, end).group(1))
+        try:
+            num_start = int(re.search(num_rgx, start).group(1))
+            num_end = int(re.search(num_rgx, end).group(1))
+        except TypeError:
+            self.log.error(f'Could not find start/end numbers in input terms.')
+            return filtered_terms
         self.log.debug(f'From {start}--{end}, look for numbers between {num_start} and {num_end}.')
         for term in terms:
             self.log.debug(f'Is "{term.name}" in range?')
@@ -270,6 +274,7 @@ class ExpressionHandler(DataHandler):
                     msg += f'For {slot_name}, has unexpected ranks: {observed_rank_list}. Expected: {expected_rank_list}.'
                     self.log.warning(msg)
                     xprn_pattern.is_problematic = True
+                    xprn_pattern.notes.append('Found problematic term ranks.')
                     continue
                 # Sort qualifiers to their primary term, then delete them from the primary set.
                 current_primary_cvt_id = None
@@ -322,6 +327,7 @@ class ExpressionHandler(DataHandler):
             else:
                 self.log.error(f'Many/partial stage ranges found for xprn_id={xprn_pattern.db_primary_id}')
                 xprn_pattern.is_problematic = True
+                xprn_pattern.notes.append('Found many and/or partial stage ranges.')
                 prob_counter += 1
         self.log.info(f'Found {counter} stage ranges in expression patterns.')
         self.log.info(f'Found {prob_counter} expression patterns with many/partial stage ranges that could not be processed.')
@@ -358,13 +364,18 @@ class ExpressionHandler(DataHandler):
                 self.log.debug(f'Look for terms between positions {start} and {end} matching this regex: {rgx}')
                 anatomical_series_terms = self.get_anatomical_terms_by_regex(session, rgx)
                 filtered_terms = self.select_in_range_anatomical_terms(anatomical_series_terms, rgx, start, end)
-                anat_cvterm_ids = [i.cvterm_id for i in filtered_terms]
+                if filtered_terms:
+                    anat_cvterm_ids = [i.cvterm_id for i in filtered_terms]
+                else:
+                    xprn_pattern.is_problematic = True
+                    xprn_pattern.notes.append('Could not process tissue range.')
                 end_terms[0].has_anat_terms.extend(anat_cvterm_ids)
                 end_terms[0].has_anat_terms.sort()
                 counter += 1
             else:
                 self.log.error(f'Many/partial tissue ranges found for xprn_id={xprn_pattern.db_primary_id}')
                 xprn_pattern.is_problematic = True
+                xprn_pattern.notes.append('Found many and/or partial tissue ranges.')
                 prob_counter += 1
         self.log.info(f'Found {counter} tissue ranges in expression patterns.')
         self.log.info(f'Found {prob_counter} expression patterns with many/partial tissue ranges that could not be processed.')
