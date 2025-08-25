@@ -122,7 +122,7 @@ class ExpressionHandler(DataHandler):
             num_start = int(re.search(num_rgx, start).group(1))
             num_end = int(re.search(num_rgx, end).group(1))
         except TypeError:
-            self.log.error(f'Could not find start/end numbers in input terms.')
+            self.log.error('Could not find start/end numbers in input terms.')
             return filtered_terms
         self.log.debug(f'From {start}--{end}, look for numbers between {num_start} and {num_end}.')
         for term in terms:
@@ -347,7 +347,6 @@ class ExpressionHandler(DataHandler):
                     start_terms.append(anatomy_term)
                 if 'TO' in anatomy_term.operators:
                     anatomy_term.is_anat_end = True
-                    anatomy_term.has_anat_terms.append(anatomy_term.cvterm_id)
                     end_terms.append(anatomy_term)
                     if anatomy_term.qualifier_cvterm_ids:
                         qualifiers = [self.cvterm_lookup[i]['name'] for i in anatomy_term.qualifier_cvterm_ids]
@@ -413,11 +412,76 @@ class ExpressionHandler(DataHandler):
         # BOB: Check xprn_id=42175, <a> cell | subset &&of mesoderm | dorsal &&of parasegment 2--12
         return
 
-    # BOB - split out annotations per assay.
-    # BOB - split out annotations per stage/stage-range (continue if is_stage_end is True).
-    # BOB - split out annotations per GO-CC term.
-    # BOB - split out annotations per tissue/tissue-range (continue if is_anat_start is True, continue if is_sub_part is True).
-    # BOB - for tissue-range, report all terms in has_anat_terms list, adding qualfiers and sub_parts to each.
+    def generate_xprn_pattern_dict(self, assay_term, stage_term, anatomy_term, cellular_term, anatomy_range_term_id):
+        """Convert a specific combination of terms from an expression pattern into a simpler dict."""
+        xprn_pattern_dict = {
+            'assay': self.cvterm_lookup[assay_term.cvterm_id]['name'],
+            'stage_start_name': self.cvterm_lookup[stage_term.cvterm_id]['name'],
+            'stage_start_id': self.cvterm_lookup[stage_term.cvterm_id]['curie'],
+            'stage_end_name': self.cvterm_lookup[stage_term.has_stage_end.cvterm__id]['name'],
+            'stage_end_id': self.cvterm_lookup[stage_term.has_stage_end.cvterm__id]['curie'],
+            'stage_qualifier_names': None,
+            'stage_qualifier_ids': None,
+            'anatomical_structure_name': self.cvterm_lookup[anatomy_term.cvterm_id]['name'],
+            'anatomical_structure_id': self.cvterm_lookup[anatomy_term.cvterm_id]['curie'],
+            'anatomical_structure_qualifier_names': None,
+            'anatomical_structure_qualifier_ids': None,
+            'anatomical_substructure_name': None,
+            'anatomical_substructure_id': None,
+            'anatomical_substructure_qualifier_names': None,
+            'anatomical_substructure_qualifier_ids': None,
+            'cellular_component_name': self.cvterm_lookup[cellular_term.cvterm__id]['curie'],
+            'cellular_component_id': self.cvterm_lookup[cellular_term.cvterm__id]['curie'],
+            'cellular_component_qualifier_names': None,
+            'cellular_component_qualifier_ids': None,
+        }
+        # Stage qualifiers.
+        stage_qualifier_cvterm_ids = []
+        stage_qualifier_cvterm_ids.extend(stage_term.qualifier_cvterm_ids)
+        if stage_term.has_stage_end:
+            stage_qualifier_cvterm_ids.extend(stage_term.has_stage_end.qualifier_cvterm_ids)
+        xprn_pattern_dict['stage_qualifier_names'] = '|'.join([self.cvterm_lookup[i]['name'] for i in stage_qualifier_cvterm_ids])
+        xprn_pattern_dict['stage_qualifier_ids'] = '|'.join([self.cvterm_lookup[i]['curie'] for i in stage_qualifier_cvterm_ids])
+        # If processing a term in a tissue range, replace the main anatomy term with the cvterm_id given for the term within the range.
+        if anatomy_range_term_id:
+            xprn_pattern_dict['anatomical_structure_name'] = self.cvterm_lookup[anatomy_range_term_id]['name']
+            xprn_pattern_dict['anatomical_structure_id'] = self.cvterm_lookup[anatomy_range_term_id]['curie']
+        # Anatomy qualfiers.
+        xprn_pattern_dict['anatomical_structure_qualifier_names'] = '|'.join([self.cvterm_lookup[i]['name'] for i in anatomy_term.qualifier_cvterm_ids])
+        xprn_pattern_dict['anatomical_structure_qualifier_ids'] = '|'.join([self.cvterm_lookup[i]['curie'] for i in anatomy_term.qualifier_cvterm_ids])
+        # Anatomy sub_parts.
+        if anatomy_term.has_sub_part:
+            xprn_pattern_dict['anatomical_substructure_name'] = self.cvterm_lookup[anatomy_term.has_sub_part.cvterm_id]['name']
+            xprn_pattern_dict['anatomical_substructure_id'] = self.cvterm_lookup[anatomy_term.has_sub_part.cvterm_id]['curie']
+            qual_name_str = '|'.join([self.cvterm_lookup[i]['name'] for i in anatomy_term.has_sub_part.qualifier_cvterm_ids])
+            qual_id_str = '|'.join([self.cvterm_lookup[i]['curie'] for i in anatomy_term.has_sub_part.qualifier_cvterm_ids])
+            xprn_pattern_dict['anatomical_substructure_qualifier_names'] = qual_name_str
+            xprn_pattern_dict['anatomical_substructure_qualifier_ids'] = qual_id_str
+        # Cellular component qualifiers.
+        xprn_pattern_dict['cellular_component_qualifier_names'] = '|'.join([self.cvterm_lookup[i]['name'] for i in cellular_term.qualifier_cvterm_ids])
+        xprn_pattern_dict['cellular_component_qualifier_ids'] = '|'.join([self.cvterm_lookup[i]['curie'] for i in cellular_term.qualifier_cvterm_ids])
+        return xprn_pattern_dict
+
+    def split_out_expression_patterns(self):
+        """Generate expression patterns for all combinations of assay/anatomy/stage/GO terms."""
+        self.log.info('Generate expression patterns for all combinations of assay/anatomy/stage/GO terms.')
+        for xprn_anno in self.expression_patterns.values():
+            for assay_term in xprn_anno.assay_terms.values():
+                for stage_term in xprn_anno.stage_terms.values():
+                    if stage_term.is_stage_end:
+                        continue
+                    for cellular_term in xprn_anno.cellular_terms.values():
+                        for anatomy_term in xprn_anno.anatomy_terms.values():
+                            if anatomy_term.is_sub_part:
+                                continue
+                            elif anatomy_term.is_anat_start:
+                                continue
+                            for anatomy_range_term_id in anatomy_term.has_anat_terms:
+                                xprn_pattern_dict = self.generate_xprn_pattern_dict(assay_term, stage_term, anatomy_term, cellular_term, anatomy_range_term_id)
+                                xprn_anno.xprn_patterns.append(xprn_pattern_dict)
+                            xprn_pattern_dict = self.generate_xprn_pattern_dict(assay_term, stage_term, anatomy_term, cellular_term, None)
+                            xprn_anno.xprn_patterns.append(xprn_pattern_dict)
+        return
 
     # Elaborate on synthesize_info() for the ExpressionHandler.
     def synthesize_info(self, session):
@@ -427,6 +491,7 @@ class ExpressionHandler(DataHandler):
         self.identify_stage_ranges()
         self.identify_tissue_ranges(session)
         self.identify_tissue_sub_parts()
+        self.split_out_expression_patterns()
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
