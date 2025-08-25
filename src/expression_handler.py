@@ -418,14 +418,14 @@ class ExpressionHandler(DataHandler):
             'assay': self.cvterm_lookup[assay_term.cvterm_id]['name'],
             'stage_start_name': self.cvterm_lookup[stage_term.cvterm_id]['name'],
             'stage_start_id': self.cvterm_lookup[stage_term.cvterm_id]['curie'],
-            'stage_end_name': self.cvterm_lookup[stage_term.has_stage_end.cvterm_id]['name'],
-            'stage_end_id': self.cvterm_lookup[stage_term.has_stage_end.cvterm_id]['curie'],
+            'stage_end_name': None,
+            'stage_end_id': None,
             'stage_qualifier_names': None,
             'stage_qualifier_ids': None,
             'anatomical_structure_name': self.cvterm_lookup[anatomy_term.cvterm_id]['name'],
             'anatomical_structure_id': self.cvterm_lookup[anatomy_term.cvterm_id]['curie'],
-            'anatomical_structure_qualifier_names': None,
-            'anatomical_structure_qualifier_ids': None,
+            'anatomical_structure_qualifier_names': '|'.join([self.cvterm_lookup[i]['name'] for i in anatomy_term.qualifier_cvterm_ids]),
+            'anatomical_structure_qualifier_ids': '|'.join([self.cvterm_lookup[i]['curie'] for i in anatomy_term.qualifier_cvterm_ids]),
             'anatomical_substructure_name': None,
             'anatomical_substructure_id': None,
             'anatomical_substructure_qualifier_names': None,
@@ -435,6 +435,10 @@ class ExpressionHandler(DataHandler):
             'cellular_component_qualifier_names': None,
             'cellular_component_qualifier_ids': None,
         }
+        # Stage end.
+        if stage_term.has_stage_end:
+            xprn_pattern_dict['stage_end_name'] = self.cvterm_lookup[stage_term.has_stage_end.cvterm_id]['name']
+            xprn_pattern_dict['stage_end_id'] = self.cvterm_lookup[stage_term.has_stage_end.cvterm_id]['curie']
         # Stage qualifiers.
         stage_qualifier_cvterm_ids = []
         stage_qualifier_cvterm_ids.extend(stage_term.qualifier_cvterm_ids)
@@ -446,9 +450,6 @@ class ExpressionHandler(DataHandler):
         if anatomy_range_term_id:
             xprn_pattern_dict['anatomical_structure_name'] = self.cvterm_lookup[anatomy_range_term_id]['name']
             xprn_pattern_dict['anatomical_structure_id'] = self.cvterm_lookup[anatomy_range_term_id]['curie']
-        # Anatomy qualfiers.
-        xprn_pattern_dict['anatomical_structure_qualifier_names'] = '|'.join([self.cvterm_lookup[i]['name'] for i in anatomy_term.qualifier_cvterm_ids])
-        xprn_pattern_dict['anatomical_structure_qualifier_ids'] = '|'.join([self.cvterm_lookup[i]['curie'] for i in anatomy_term.qualifier_cvterm_ids])
         # Anatomy sub_parts.
         if anatomy_term.has_sub_part:
             xprn_pattern_dict['anatomical_substructure_name'] = self.cvterm_lookup[anatomy_term.has_sub_part.cvterm_id]['name']
@@ -466,6 +467,8 @@ class ExpressionHandler(DataHandler):
         """Generate expression patterns for all combinations of assay/anatomy/stage/GO terms."""
         self.log.info('Generate expression patterns for all combinations of assay/anatomy/stage/GO terms.')
         for xprn_anno in self.expression_patterns.values():
+        # BOB - need to handle cases where an assay, stage, anatomy and/or cellular term are missing!!!!!
+        # BOB - as current written, is any of these term types are missing, get no annotation!!!
             for assay_term in xprn_anno.assay_terms.values():
                 for stage_term in xprn_anno.stage_terms.values():
                     if stage_term.is_stage_end:
