@@ -562,6 +562,7 @@ class FBExpressionAnnotation(object):
         self.stage_terms = {}          # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, stage.
         # Processed FB data.
         self.is_problematic = False    # True if there are problemst that preclude export.
+        self.notes = []
 
 
 class FBFeatureExpressionAnnotation(FBExportEntity):
