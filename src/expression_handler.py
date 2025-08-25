@@ -357,6 +357,7 @@ class ExpressionHandler(DataHandler):
             elif len(start_terms) == 1 and len(end_terms) == 1:
                 # Add start term to the range (under the end term object).
                 end_terms[0].has_anat_terms.append(start_terms[0].cvterm_id)
+                end_terms[0].operators.extend(start_terms[0].operators)    # Propagate operators from start of tissue range to end.
                 # Get intervening tissue range terms, then add them to the list of terms in the tissue range.
                 tissue_range_string = f'{start_terms[0].cvterm_name}--{end_terms[0].cvterm_name}'
                 self.log.debug(f'For xprn_id={xprn_pattern.db_primary_id}, found this tissue range: {tissue_range_string}')
@@ -409,14 +410,14 @@ class ExpressionHandler(DataHandler):
                             self.log.debug(msg)
                             counter += 1
         self.log.info(f'Found {counter} part-sub_part annotations.')
-        # BOB: Check xprn_id=42175, cell | subset &&of mesoderm | dorsal &&of parasegment 2--12
+        # BOB: Check xprn_id=42175, <a> cell | subset &&of mesoderm | dorsal &&of parasegment 2--12
         return
 
     # BOB - split out annotations per assay.
     # BOB - split out annotations per stage/stage-range (continue if is_stage_end is True).
     # BOB - split out annotations per GO-CC term.
     # BOB - split out annotations per tissue/tissue-range (continue if is_anat_start is True, continue if is_sub_part is True).
-    # BOB - for tissue-range, report all terms in has_anat_terms list, adding qualfiers to each.
+    # BOB - for tissue-range, report all terms in has_anat_terms list, adding qualfiers and sub_parts to each.
 
     # Elaborate on synthesize_info() for the ExpressionHandler.
     def synthesize_info(self, session):
