@@ -538,9 +538,10 @@ class FBExpressionCvterm(object):
         self.has_stage_end = None      # For a stage term having a "FROM" operator, put the matching "TO" FBExpressionCvterm stage term here.
         self.is_anat_start = False     # True for an anatomy term having a "FROM" operator.
         self.is_anat_end = False       # True for an anatomy term having a "TO" operator.
+        self.has_anat_terms = []       # For a term at the end of a tissue range, the list of cvterm_ids for all anatomy terms in the range (inc. itself).
         self.is_main_part = False      # True for an anatomy term having "OF" operator.
-        self.has_subpart = None        # For an anatomy term having an "OF" operator, put the subpart FBExpressionCvterm object here, if applicable.
-        self.is_subpart = False        # True if the term is a subpart of some other term in the larger expression annotation.
+        self.has_sub_part = None        # For an anatomy term having an "OF" operator, put the sub_part FBExpressionCvterm object here, if applicable.
+        self.is_sub_part = False        # True if the term is a sub_part of some other term in the larger expression annotation.
 
 
 class FBExpressionAnnotation(object):

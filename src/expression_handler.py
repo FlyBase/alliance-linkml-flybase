@@ -108,9 +108,9 @@ class ExpressionHandler(DataHandler):
             distinct()
         term_names = [i.name for i in terms]
         if term_names:
-            self.log.debug(f'For {term_regex}, found these matching FBbt terms: {term_names}\n')
+            self.log.debug(f'For {term_regex}, found these matching FBbt terms: {term_names}')
         else:
-            self.log.error(f'For {term_regex}, found NO matching FBbt terms.\n')
+            self.log.error(f'For {term_regex}, found NO matching FBbt terms.')
         return terms
 
     def select_in_range_anatomical_terms(self, terms, rgx, start, end):
@@ -129,7 +129,7 @@ class ExpressionHandler(DataHandler):
             self.log.debug(f'Term {term.name} is at position {position}, with number={num_position}')
             if num_position > num_start and num_position < num_end:
                 filtered_terms.append(term)
-        self.log.debug(f'Found these terms: {[i.name for i in filtered_terms]}')
+        self.log.debug(f'Found these tissue range terms: {[i.name for i in filtered_terms]}')
         return filtered_terms
 
     # Add methods to be run by get_general_data() below.
@@ -341,6 +341,7 @@ class ExpressionHandler(DataHandler):
                     start_terms.append(anatomy_term)
                 if 'TO' in anatomy_term.operators:
                     anatomy_term.is_anat_end = True
+                    anatomy_term.has_anat_terms.append(anatomy_term.cvterm_id)
                     end_terms.append(anatomy_term)
                     if anatomy_term.qualifier_cvterm_ids:
                         qualifiers = [self.cvterm_lookup[i]['name'] for i in anatomy_term.qualifier_cvterm_ids]
@@ -348,15 +349,18 @@ class ExpressionHandler(DataHandler):
             if not start_terms and not end_terms:
                 continue
             elif len(start_terms) == 1 and len(end_terms) == 1:
+                # Add start term to the range (under the end term object).
+                end_terms[0].has_anat_terms.append(start_terms[0].cvterm_id)
+                # Get intervening tissue range terms, then add them to the list of terms in the tissue range.
                 tissue_range_string = f'{start_terms[0].cvterm_name}--{end_terms[0].cvterm_name}'
-                self.log.debug(f'\nFor {xprn_pattern.db_primary_id}, found this tissue range: {tissue_range_string}')
+                self.log.debug(f'For xprn_id={xprn_pattern.db_primary_id}, found this tissue range: {tissue_range_string}')
                 rgx, start, end = self.regex_for_anatomical_terms_in_numerical_series(start_terms[0].cvterm_name, end_terms[0].cvterm_name)
                 self.log.debug(f'Look for terms between positions {start} and {end} matching this regex: {rgx}')
                 anatomical_series_terms = self.get_anatomical_terms_by_regex(session, rgx)
-                # BILLY BOB: CONTINUE HERE, make sure range filtering works.
                 filtered_terms = self.select_in_range_anatomical_terms(anatomical_series_terms, rgx, start, end)
-                # BOB - add dummy FBExpressionCvterm objects to self.anatomy_terms for these interpolated terms.
-                # BOB - propagate qualifiers from range end to start and intervening terms.
+                anat_cvterm_ids = [i.cvterm_id for i in filtered_terms]
+                end_terms[0].has_anat_terms.extend(anat_cvterm_ids)
+                end_terms[0].has_anat_terms.sort()
                 counter += 1
             else:
                 self.log.error(f'Many/partial tissue ranges found for xprn_id={xprn_pattern.db_primary_id}')
@@ -366,10 +370,42 @@ class ExpressionHandler(DataHandler):
         self.log.info(f'Found {prob_counter} expression patterns with many/partial tissue ranges that could not be processed.')
         return
 
-    def identify_tissue_subparts(self):
-        # BOB: Identify part/subpart tissues.
-        # Check xprn_id=42175, cell | subset &&of mesoderm | dorsal &&of parasegment 2--12
+    def identify_tissue_sub_parts(self):
+        """Identify tissue sub_parts in expression patterns."""
+        self.log.info('Identify tissue sub_parts in expression patterns.')
+        counter = 0
+        for xprn_pattern in self.expression_patterns.values():
+            main_parts = []
+            potential_sub_parts = []
+            for anatomy_term in xprn_pattern.anatomy_terms.values():
+                if 'OF' in anatomy_term.operators:
+                    anatomy_term.is_main_part = True
+                    main_parts.append(anatomy_term)
+                else:
+                    potential_sub_parts.append(anatomy_term)
+            if main_parts:
+                if not potential_sub_parts:
+                    self.log.error(f'For xprn_id={xprn_pattern.db_primary_id}, have "main" parts but no sub-parts.')
+                elif len(potential_sub_parts) > 1:
+                    self.log.error(f'For xprn_id={xprn_pattern.db_primary_id}, have MANY sub-parts.')
+                else:
+                    for sub_part in potential_sub_parts:
+                        sub_part.is_sub_part = True
+                        for main_part in main_parts:
+                            main_part.has_sub_part = sub_part
+                            msg = f'BOB: For xprn_id={xprn_pattern.db_primary_id}, found this part-sub_part pair: '
+                            msg += f'part="{main_part.cvterm_name}", sub_part="{sub_part.cvterm_name}"'
+                            self.log.debug(msg)
+                            counter += 1
+        self.log.info(f'Found {counter} part-sub_part annotations.')
+        # BOB: Check xprn_id=42175, cell | subset &&of mesoderm | dorsal &&of parasegment 2--12
         return
+
+    # BOB - split out annotations per assay.
+    # BOB - split out annotations per stage/stage-range (continue if is_stage_end is True).
+    # BOB - split out annotations per GO-CC term.
+    # BOB - split out annotations per tissue/tissue-range (continue if is_anat_start is True, continue if is_sub_part is True).
+    # BOB - for tissue-range, report all terms in has_anat_terms list, adding qualfiers to each.
 
     # Elaborate on synthesize_info() for the ExpressionHandler.
     def synthesize_info(self, session):
@@ -378,7 +414,7 @@ class ExpressionHandler(DataHandler):
         self.assign_qualifiers()
         self.identify_stage_ranges()
         self.identify_tissue_ranges(session)
-        self.identify_tissue_subparts()
+        self.identify_tissue_sub_parts()
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
