@@ -520,12 +520,21 @@ class FBExpressionCvterm(object):
         # Note - all qualifiers are from "FlyBase miscellaneous CV", usually from FBcv obo, except for "presumptive" from FlyBase_internal obo.
         # Primary FB chado data.
         self.chado_obj = chado_obj
-        self.db_primary_id = chado_obj.expression_cvterm_id
-        self.cvterm_id = chado_obj.cvterm_id
-        self.cvterm_name = chado_obj.cvterm.name
-        self.type = chado_obj.cvterm_type.name        # assay, anatomy, cellular, or stage.
-        self.cv_name = chado_obj.cvterm.cv.name       # experimental assays, cellular_component, FlyBase anatomy/development/miscellaneous CV.
-        self.obo = chado_obj.cvterm.dbxref.db.name    # FBbt, FBdv, FBcv, GO, or FlyBase_internal.
+        try:
+            self.db_primary_id = chado_obj.expression_id
+            self.cvterm_id = chado_obj.cvterm_id
+            self.cvterm_name = chado_obj.cvterm.name
+            self.type = chado_obj.cvterm_type.name          # assay, anatomy, cellular, or stage.
+            self.cv_name = chado_obj.cvterm.cv.name         # experimental assays, cellular_component, FlyBase anatomy/development/miscellaneous CV.
+            self.obo = chado_obj.cvterm.dbxref.db.name      # FBbt, FBdv, FBcv, GO, or FlyBase_internal.
+        # For NULL placeholder entities.
+        except AttributeError:
+            self.db_primary_id = 'placeholder'
+            self.cvterm_id = 'placeholder'
+            self.cvterm_name = 'placeholder'
+            self.type = 'placeholder'
+            self.cv_name = 'placeholder'
+            self.obo = 'placeholder'
         # Collect related expression_cvtermprops of type "operator" having non-null expression_cvtermprop.value.
         # stage - operator props will have text of "FROM/TO" to indicate a temporal range.
         # cellular - operator props will have text of "OF" (to mark a larger xprn domain).
@@ -556,13 +565,13 @@ class FBExpressionAnnotation(object):
         # Primary FB chado data.
         self.chado_obj = chado_obj
         self.db_primary_id = chado_obj.expression_id
-        self.assay_terms = {}          # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, assay.
-        self.anatomy_terms = {}        # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, anatomy.
-        self.cellular_terms = {}       # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, cellular.
-        self.stage_terms = {}          # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, stage.
+        self.assay_terms = {}            # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, assay.
+        self.anatomy_terms = {}          # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, anatomy.
+        self.cellular_terms = {}         # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, cellular.
+        self.stage_terms = {}            # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, stage.
         # Processed FB data.
-        self.xprn_patterns = []        # Discrete expression patterns for this annotation.
-        self.is_problematic = False    # True if there are problemst that preclude export.
+        self.xprn_pattern_combos = []    # Discrete anatomy/assay/cellular/stage term combinations for this annotation.
+        self.is_problematic = False      # True if there are problemst that preclude export.
         self.notes = []
 
 

@@ -28,6 +28,8 @@ class ExpressionHandler(DataHandler):
         super().__init__(log, testing)
         self.datatype = 'feature_expression'
         self.agr_export_type = None
+        self.slot_types = ['anatomy', 'assay', 'cellular', 'stage']
+        self.placeholder = fb_datatypes.FBExpressionCvterm(None)
         self.expression_patterns = {}    # expression_id-keyed FBExpressionAnnotation objects.
         self.feat_xprn_annos = {}        # feature_expression_id-keyed FBFeatureExpressionAnnotation objects, for export.
 
@@ -137,7 +139,19 @@ class ExpressionHandler(DataHandler):
         return filtered_terms
 
     # Add methods to be run by get_general_data() below.
-    # Placeholder.
+    def add_placeholder_cvterm(self):
+        """Add an empty placeholder CV term to the CV term lookup."""
+        self.log.info('Add an empty placeholder CV term to the CV term lookup.')
+        # This placeholder will permit the generation of all possible term combinations when a given slot type is empty.
+        placeholder_cvterm_dict = {
+            'cvterm_id': '',
+            'name': '',
+            'cv_name': '',
+            'db_name': '',
+            'curie': ''
+        }
+        self.cvterm_lookup['placeholder'] = placeholder_cvterm_dict
+        return
 
     # Elaborate on get_general_data() for the ExpressionHandler.
     def get_general_data(self, session):
@@ -145,6 +159,7 @@ class ExpressionHandler(DataHandler):
         super().get_general_data(session)
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
+        self.add_placeholder_cvterm()
         self.build_organism_lookup(session)
         self.build_feature_lookup(session, feature_types=['transcript', 'polypeptide', 'allele', 'gene', 'insertion', 'split system combination'])
         return
@@ -257,14 +272,13 @@ class ExpressionHandler(DataHandler):
     def assign_qualifiers(self):
         """Assign qualifiers to the appropriate primary CV terms."""
         self.log.info('Assign qualifiers to the appropriate primary CV terms.')
-        term_types = ['assay', 'stage', 'anatomy', 'cellular']
         for xprn_pattern in self.expression_patterns.values():
-            for term_type in term_types:
-                slot_name = f'{term_type}_terms'
+            for slot_type in self.slot_types:
+                slot_name = f'{slot_type}_terms'
                 xprn_pattern_slot = getattr(xprn_pattern, slot_name)
                 if not xprn_pattern_slot:
                     continue
-                self.log.debug(f'Evaluate type={term_type} for xprn_id={xprn_pattern.db_primary_id}')
+                self.log.debug(f'Evaluate type={slot_type} for xprn_id={xprn_pattern.db_primary_id}')
                 # First, some QC on rank values to make sure they match expectation.
                 observed_rank_list = [i.chado_obj.rank for i in xprn_pattern_slot.values()]
                 observed_rank_list.sort()
@@ -285,7 +299,7 @@ class ExpressionHandler(DataHandler):
                     rank_sorted_xprn_cvts[xprn_cvt.chado_obj.rank] = xprn_cvt
                 for rank in expected_rank_list:
                     this_xprn_cvt = rank_sorted_xprn_cvts[rank]
-                    self.log.debug(f'Evaluate type={term_type}, rank={this_xprn_cvt.chado_obj.rank}, term={this_xprn_cvt.cvterm_name}')
+                    self.log.debug(f'Evaluate type={slot_type}, rank={this_xprn_cvt.chado_obj.rank}, term={this_xprn_cvt.cvterm_name}')
                     if this_xprn_cvt.cv_name == 'FlyBase miscellaneous CV':
                         xprn_pattern_slot[current_primary_cvt_id].qualifier_cvterm_ids.append(this_xprn_cvt.cvterm_id)
                         qualifier_xprn_cvt_ids.append(this_xprn_cvt.db_primary_id)
@@ -299,7 +313,7 @@ class ExpressionHandler(DataHandler):
                 # Final review of terms.
                 for xprn_cvt in xprn_pattern_slot.values():
                     qualifiers = [self.cvterm_lookup[i]['name'] for i in xprn_cvt.qualifier_cvterm_ids]
-                    self.log.debug(f'Final term: type={term_type}, rank={xprn_cvt.chado_obj.rank}, term={xprn_cvt.cvterm_name}, qualifiers={qualifiers}')
+                    self.log.debug(f'Final term: type={slot_type}, rank={xprn_cvt.chado_obj.rank}, term={xprn_cvt.cvterm_name}, qualifiers={qualifiers}')
         return
 
     def identify_stage_ranges(self):
@@ -404,7 +418,7 @@ class ExpressionHandler(DataHandler):
                         sub_part.is_sub_part = True
                         for main_part in main_parts:
                             main_part.has_sub_part = sub_part
-                            msg = f'BOB: For xprn_id={xprn_pattern.db_primary_id}, found this part-sub_part pair: '
+                            msg = f'For xprn_id={xprn_pattern.db_primary_id}, found this part-sub_part pair: '
                             msg += f'part="{main_part.cvterm_name}", sub_part="{sub_part.cvterm_name}"'
                             self.log.debug(msg)
                             counter += 1
@@ -464,26 +478,35 @@ class ExpressionHandler(DataHandler):
         return xprn_pattern_dict
 
     def split_out_expression_patterns(self):
-        """Generate expression patterns for all combinations of assay/anatomy/stage/GO terms."""
-        self.log.info('Generate expression patterns for all combinations of assay/anatomy/stage/GO terms.')
-        for xprn_anno in self.expression_patterns.values():
-        # BOB - need to handle cases where an assay, stage, anatomy and/or cellular term are missing!!!!!
-        # BOB - as current written, is any of these term types are missing, get no annotation!!!
-            for assay_term in xprn_anno.assay_terms.values():
-                for stage_term in xprn_anno.stage_terms.values():
+        """Generate all combinations of anatomy/assay/cellular/stage terms for an expression pattern."""
+        self.log.info('Generate all combinations of anatomy/assay/cellular/stage terms for an expression pattern.')
+        for xprn_pattern in self.expression_patterns.values():
+            # Add a placeholder to slots with zero terms.
+            for slot_type in self.slot_types:
+                slot_name = f'{slot_type}_terms'
+                xprn_pattern_slot = getattr(xprn_pattern, slot_name)
+                if not xprn_pattern_slot:
+                    xprn_pattern_slot['placeholder'] = self.placeholder
+            for assay_term in xprn_pattern.assay_terms.values():
+                for stage_term in xprn_pattern.stage_terms.values():
+                    # Skip stage range end terms, as these are folded into reporting of the stage range start term.
                     if stage_term.is_stage_end:
                         continue
-                    for cellular_term in xprn_anno.cellular_terms.values():
-                        for anatomy_term in xprn_anno.anatomy_terms.values():
+                    for cellular_term in xprn_pattern.cellular_terms.values():
+                        for anatomy_term in xprn_pattern.anatomy_terms.values():
+                            # Skip anatomy sub_part terms, as these are folded into reporting of the main_part term.
                             if anatomy_term.is_sub_part:
                                 continue
+                            # Skip anatomy range start terms, as these are folded into reporting of the stage range end term.
                             elif anatomy_term.is_anat_start:
                                 continue
+                            # If there is an anatomy range, first report the start and intermediate anatomy range terms.
                             for anatomy_range_term_id in anatomy_term.has_anat_terms:
                                 xprn_pattern_dict = self.generate_xprn_pattern_dict(assay_term, stage_term, anatomy_term, cellular_term, anatomy_range_term_id)
-                                xprn_anno.xprn_patterns.append(xprn_pattern_dict)
+                                xprn_pattern.xprn_pattern_combos.append(xprn_pattern_dict)
+                            # Report for the main anatomy term, including end terms for anatomy ranges.
                             xprn_pattern_dict = self.generate_xprn_pattern_dict(assay_term, stage_term, anatomy_term, cellular_term, None)
-                            xprn_anno.xprn_patterns.append(xprn_pattern_dict)
+                            xprn_pattern.xprn_pattern_combos.append(xprn_pattern_dict)
         return
 
     # Elaborate on synthesize_info() for the ExpressionHandler.
