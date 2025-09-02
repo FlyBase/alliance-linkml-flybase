@@ -564,7 +564,7 @@ class FBExpressionAnnotation(object):
         """
         # Primary FB chado data.
         self.chado_obj = chado_obj
-        self.db_primary_id = chado_obj.expression_id
+        self.db_primary_id = chado_obj.expression_cvterm_id
         self.assay_terms = {}            # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, assay.
         self.anatomy_terms = {}          # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, anatomy.
         self.cellular_terms = {}         # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, cellular.

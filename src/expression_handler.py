@@ -307,7 +307,7 @@ class ExpressionHandler(DataHandler):
                     else:
                         current_primary_cvt_id = this_xprn_cvt.db_primary_id
                         current_primary_cvterm_name = this_xprn_cvt.cvterm_name
-                        self.log.debug(f'Found primary term="{current_primary_cvterm_name}"')
+                        self.log.debug(f'Found primary term="{current_primary_cvterm_name}", xprn_cvterm_id={this_xprn_cvt.db_primary_id}')
                 for qualifier_xprn_cvt_id in qualifier_xprn_cvt_ids:
                     del xprn_pattern_slot[qualifier_xprn_cvt_id]
                 # Final review of terms.
