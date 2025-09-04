@@ -216,7 +216,7 @@ class ExpressionHandler(DataHandler):
         }
         for cv_name, slim_term_set in slim_term_sets.items():
             for slim_term_name in slim_term_set:
-                self.log.info(f'Get child terms for slim term: cv_name={cv_name}, cvterm_name={slim_term_name}')
+                self.log.info(f'Assess slim term: cv_name={cv_name}, cvterm_name={slim_term_name}')
                 # First, get the slim term Cvterm from chado (need the cvterm_id).
                 filters = (
                     Cvterm.is_obsolete == 0,
@@ -238,7 +238,7 @@ class ExpressionHandler(DataHandler):
                     self.log.info(f'Slim term: cv_name={cv_name}, cvterm_name="{slim_term_name}", cvterm_id={slim_term.cvterm_id}')
                 # Second, get the child terms under each slim term.
                 child_cvterm_ids = self.get_child_cvterms(session, slim_term_name, cv_name)
-                self.log.info(f'Found {len(child_cvterm_ids)} child terms for the {cv_name} slim term "{slim_term_name}" (including itself)')
+                # self.log.info(f'Found {len(child_cvterm_ids)} child terms for the {cv_name} slim term "{slim_term_name}" (including itself)')
                 for child_cvterm_id in child_cvterm_ids:
                     self.cvterm_lookup[child_cvterm_id]['slim_term_cvterm_ids'].append(slim_term.cvterm_id)
         # BOB: Once code seems to work, print out child-slim names and review to confirm all is ok.
