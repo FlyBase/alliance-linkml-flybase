@@ -8,14 +8,12 @@ Author(s):
 
 """
 
-import csv
 import re
 from logging import Logger
 from sqlalchemy.orm import aliased
-from harvdev_utils.char_conversions import sgml_to_plain_text
 from harvdev_utils.reporting import (
     Cv, Cvterm, Db, Dbxref, Expression, ExpressionCvterm, ExpressionCvtermprop,
-    Feature, FeatureExpression, FeatureExpressionprop, Pub
+    Feature, FeatureExpression    # FeatureExpressionprop
 )
 import fb_datatypes
 from handler import DataHandler
