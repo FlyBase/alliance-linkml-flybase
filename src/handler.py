@@ -287,7 +287,8 @@ class DataHandler(object):
                 'name': result.name,
                 'cv_name': result.cv.name,
                 'db_name': result.dbxref.db.name,
-                'curie': f'{result.dbxref.db.name}:{result.dbxref.accession}'
+                'curie': f'{result.dbxref.db.name}:{result.dbxref.accession}',
+                'slim_term_cvterm_ids': [],
             }
             self.cvterm_lookup[result.cvterm_id] = cvterm_dict
             cvterm_counter += 1

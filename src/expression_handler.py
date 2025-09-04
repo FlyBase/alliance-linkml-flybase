@@ -33,6 +33,58 @@ class ExpressionHandler(DataHandler):
         self.expression_patterns = {}    # expression_id-keyed FBExpressionAnnotation objects.
         self.feat_xprn_annos = {}        # feature_expression_id-keyed FBFeatureExpressionAnnotation objects, for export.
 
+    # Key info.
+
+    # Mappings between FB stage slim terms and UBERON: embryonic (UBERON:0000068), post-embryonic, adult (UBERON:0000113).
+    fb_uberon_stage_slim_map = {
+        'fertilized egg stage': ['UBERON:0000068'],
+        'embryonic stage': ['UBERON:0000068'],
+        'larval stage': ['post embryonic, pre-adult'],
+        'P-stage': ['post embryonic, pre-adult'],
+        'adult stage': ['UBERON:0000113'],
+        'mature adult stage': ['UBERON:0000113'],
+        'oogenesis': ['UBERON:0000113'],
+        'unfertilized egg stage': ['UBERON:0000113'],
+        'spermatogenesis': ['UBERON:0000113'],
+    }
+
+    # Mappings between FB anatomy slim terms and UBERON.
+    fb_uberon_anatomy_slim_map = {
+        'adipose system': ['UBERON:0001013', 'UBERON:0002423'],
+        'presumptive embryonic/larval adipose system': ['UBERON:0001013', 'UBERON:0002423'],
+        'oenocyte': ['UBERON:0002423'],
+        'appendage': ['UBERON:0000026'],
+        'auditory system': ['UBERON:0002105'],
+        'chemosensory system': ['UBERON:0005726'],
+        'circulatory system': ['UBERON:0001009'],
+        'presumptive embryonic/larval circulatory system': ['UBERON:0001009'],
+        'digestive system': ['UBERON:0005409'],
+        'presumptive embryonic/larval digestive system': ['UBERON:0005409'],
+        'ectoderm': ['UBERON:0000924'],
+        'endocrine system': ['UBERON:0000949'],
+        'presumptive embryonic/larval endocrine system': ['UBERON:0000949'],
+        'endoderm': ['UBERON:0000925'],
+        'excretory system': ['UBERON:0001008'],
+        'extraembryonic structure': ['UBERON:0016887'],
+        'embryonic/larval lymph gland': ['UBERON:0002193', 'UBERON:0001009'],
+        'hemolymph': ['UBERON:0002193', 'UBERON:0001009'],
+        'imaginal tissue': ['UBERON:6005023'],
+        'integumentary system': ['UBERON:0002416'],
+        'presumptive embryonic/larval integumentary system': ['UBERON:0002416'],
+        'mechanosensory system': ['UBERON:0007037'],
+        'mesoderm': ['UBERON:0000926'],
+        'muscle system': ['UBERON:0002204'],
+        'presumptive embryonic/larval muscle system': ['UBERON:0002204'],
+        'presumptive embryonic/larval nervous system': ['UBERON:0001016'],
+        'nervous system': ['UBERON:0001016'],
+        'reproductive system': ['UBERON:0000990'],
+        'tracheal system': ['UBERON:0001004'],
+        'presumptive embryonic/larval tracheal system': ['UBERON:0001004'],
+        'sensory system': ['UBERON:0001032'],
+        'embryonic sensory system': ['UBERON:0001032'],
+        'visual system': ['UBERON:0002104'],
+    }
+
     # Utility functions.
     def regex_for_anatomical_terms_in_numerical_series(self, start_term, end_term):
         """For two anatomical terms in a series, return a regex for all terms in that series, and the start and stop positions."""
@@ -153,6 +205,43 @@ class ExpressionHandler(DataHandler):
         self.cvterm_lookup['placeholder'] = placeholder_cvterm_dict
         return
 
+    def get_slim_term_mappings(self, session):
+        """Add anatomy and stage slim term mappings to the CV term lookup."""
+        self.log.info('Add anatomy and stage slim term mappings to the CV term lookup.')
+        slim_term_sets = {
+            'FlyBase anatomy CV': self.fb_uberon_anatomy_slim_map.keys(),
+            'FlyBase development CV': self.fb_uberon_stage_slim_map.keys(),
+        }
+        for cv_name, slim_term_set in slim_term_sets.values():
+            self.log.info(f'Get slim term mappings for {cv_name}')
+            for slim_term_name in slim_term_set:
+                # First get the slim term Cvterm from chado (need the cvterm_id).
+                filters = (
+                    Cvterm.is_obsolete == 0,
+                    Cvterm.name == slim_term_name,
+                    Cv.name == 'FlyBase anatomy CV',
+                    Db.name == 'FBbt',
+                )
+                slim_term = session.query(Cvterm).\
+                    select_from(Cvterm).\
+                    join(Cv, (Cv.cv_id == Cvterm.cv_id)).\
+                    join(Dbxref, (Dbxref.dbxref_id == Cvterm.dbxref_id)).\
+                    join(Db, (Db.db_id == Dbxref.db_id)).\
+                    filter(*filters).\
+                    one_or_none()
+                if not slim_term:
+                    self.log.error(f'Could not find FBbt term for slim term name "{slim_term_name}".')
+                    continue
+                else:
+                    self.log.info(f'Slim term: cv_name={cv_name}, cvterm_name="{slim_term_name}", cvterm_id={slim_term.cvterm_id}')
+                # BOB - suppress below until above is confirmed.
+                # Then get the child terms.
+                # child_cvterm_ids = self.get_child_cvterms(session, slim_term_name, cv_name)
+                # self.log.info(f'Found {len(child_cvterm_ids)} child terms for the anatomy slim term "{slim_term_name}"')
+                # for cvterm_id in child_cvterm_ids:
+                #     self.cvterm_lookup[cvterm_id].append(slim_term.cvterm_id)
+        return
+
     # Elaborate on get_general_data() for the ExpressionHandler.
     def get_general_data(self, session):
         """Extend the method for the ExpressionHandler."""
@@ -160,6 +249,7 @@ class ExpressionHandler(DataHandler):
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
         self.add_placeholder_cvterm()
+        self.get_slim_term_mappings(session)
         self.build_organism_lookup(session)
         self.build_feature_lookup(session, feature_types=['transcript', 'polypeptide', 'allele', 'gene', 'insertion', 'split system combination'])
         return
