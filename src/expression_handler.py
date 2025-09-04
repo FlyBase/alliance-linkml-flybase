@@ -212,9 +212,9 @@ class ExpressionHandler(DataHandler):
             'FlyBase anatomy CV': self.fb_uberon_anatomy_slim_map.keys(),
             'FlyBase development CV': self.fb_uberon_stage_slim_map.keys(),
         }
-        for cv_name, slim_term_set in slim_term_sets.values():
-            self.log.info(f'Get slim term mappings for {cv_name}')
+        for cv_name, slim_term_set in slim_term_sets.items():
             for slim_term_name in slim_term_set:
+                self.log.info(f'Get child terms for slim term: cv_name={cv_name}, cvterm_name={slim_term_name}')
                 # First get the slim term Cvterm from chado (need the cvterm_id).
                 filters = (
                     Cvterm.is_obsolete == 0,
