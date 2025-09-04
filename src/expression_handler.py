@@ -212,6 +212,10 @@ class ExpressionHandler(DataHandler):
             'FlyBase anatomy CV': self.fb_uberon_anatomy_slim_map.keys(),
             'FlyBase development CV': self.fb_uberon_stage_slim_map.keys(),
         }
+        cv_db_correspondence = {
+            'FlyBase anatomy CV': 'FBbt',
+            'FlyBase development CV': 'FBdv',
+        }
         for cv_name, slim_term_set in slim_term_sets.items():
             for slim_term_name in slim_term_set:
                 self.log.info(f'Get child terms for slim term: cv_name={cv_name}, cvterm_name={slim_term_name}')
@@ -219,8 +223,8 @@ class ExpressionHandler(DataHandler):
                 filters = (
                     Cvterm.is_obsolete == 0,
                     Cvterm.name == slim_term_name,
-                    Cv.name == 'FlyBase anatomy CV',
-                    Db.name == 'FBbt',
+                    Cv.name == cv_name,
+                    Db.name == cv_db_correspondence[cv_name],
                 )
                 slim_term = session.query(Cvterm).\
                     select_from(Cvterm).\
