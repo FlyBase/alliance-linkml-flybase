@@ -829,12 +829,10 @@ class AlleleHandler(MetaAlleleHandler):
                 all_pub_ids.extend(allele_gene_rel.pubs)
             first_feat_rel.pubs = all_pub_ids
             pub_curies = self.lookup_pub_curies(all_pub_ids)
-            # BOB: CURRENT WORK TO PICK THE CORRECT RELATION_TYPE NAME.
+            # Adjust allele-gene relation_type as needed.
             rel_type_name = 'is_allele_of'
             if allele_gene_counter[allele_feature_id] > 1:
-                rel_type_name = 'TEMP_FBTI_MANY_GENES_REL_TYPE_TERM'
-            elif allele.uniquename.startswith('FBti'):
-                rel_type_name = 'TEMP_FBTI_SINGLE_GENE_REL_TYPE_TERM'
+                rel_type_name = 'mutation_involves'
             rel_dto = agr_datatypes.AlleleGeneAssociationDTO(allele_curie, rel_type_name, gene_curie, pub_curies)
             if allele.is_obsolete is True or gene['is_obsolete'] is True:
                 rel_dto.obsolete = True
