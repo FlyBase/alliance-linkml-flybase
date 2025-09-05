@@ -549,7 +549,7 @@ class FBExpressionCvterm(object):
         self.is_anat_end = False       # True for an anatomy term having a "TO" operator.
         self.has_anat_terms = []       # For a term at the end of a tissue range, the list of cvterm_ids for all anatomy terms in the range (inc. itself).
         self.is_main_part = False      # True for an anatomy term having "OF" operator.
-        self.has_sub_parts = []        # For an anatomy term having an "OF" operator, put the sub_part FBExpressionCvterm objects here, if applicable.
+        self.has_sub_parts = []        # For an anatomy term having an "OF" operator, put the sub_part cvterm_ids here, if applicable.
         self.is_sub_part = False       # True if the term is a sub_part of some other term in the larger expression annotation.
 
 
