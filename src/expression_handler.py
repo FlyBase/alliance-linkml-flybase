@@ -239,12 +239,13 @@ class ExpressionHandler(DataHandler):
                     self.log.debug(f'Slim term: cv_name={cv_name}, cvterm_name="{slim_term_name}", cvterm_id={slim_term.cvterm_id}')
                 # Second, get the child terms under each slim term.
                 child_cvterm_ids = self.get_child_cvterms(session, slim_term_name, cv_name)
-                child_term_names = [self.cvterm_lookup[i]['name'] for i in child_cvterm_ids if i in self.cvterm_lookup.keys()]
-                child_term_names.sort()
-                child_term_name_str = '\n'.join(child_term_names)
-                self.log.debug(f'Found {len(child_term_names)} child terms for the {cv_name} slim term "{slim_term_name}":\n{child_term_name_str}')
                 for child_cvterm_id in child_cvterm_ids:
                     self.cvterm_lookup[child_cvterm_id]['slim_term_cvterm_ids'].append(slim_term.cvterm_id)
+                # For evaluation of the slim-child results.
+                # child_term_names = [self.cvterm_lookup[i]['name'] for i in child_cvterm_ids if i in self.cvterm_lookup.keys()]
+                # child_term_names.sort()
+                # child_term_name_str = '\n'.join(child_term_names)
+                # self.log.debug(f'Found {len(child_term_names)} child terms for the {cv_name} slim term "{slim_term_name}":\n{child_term_name_str}')
         return
 
     # Elaborate on get_general_data() for the ExpressionHandler.
@@ -373,7 +374,7 @@ class ExpressionHandler(DataHandler):
                 xprn_pattern_slot = getattr(xprn_pattern, slot_name)
                 if not xprn_pattern_slot:
                     continue
-                self.log.debug(f'Evaluate type={slot_type} for xprn_id={xprn_pattern.db_primary_id}')
+                # self.log.debug(f'Evaluate type={slot_type} for xprn_id={xprn_pattern.db_primary_id}')
                 # First, some QC on rank values to make sure they match expectation.
                 observed_rank_list = [i.chado_obj.rank for i in xprn_pattern_slot.values()]
                 observed_rank_list.sort()
@@ -387,28 +388,26 @@ class ExpressionHandler(DataHandler):
                     continue
                 # Sort qualifiers to their primary term, then delete them from the primary set.
                 current_primary_cvt_id = None
-                current_primary_cvterm_name = None
                 qualifier_xprn_cvt_ids = []
                 rank_sorted_xprn_cvts = {}
                 for xprn_cvt in xprn_pattern_slot.values():
                     rank_sorted_xprn_cvts[xprn_cvt.chado_obj.rank] = xprn_cvt
                 for rank in expected_rank_list:
                     this_xprn_cvt = rank_sorted_xprn_cvts[rank]
-                    self.log.debug(f'Evaluate type={slot_type}, rank={this_xprn_cvt.chado_obj.rank}, term={this_xprn_cvt.cvterm_name}')
+                    # self.log.debug(f'Evaluate type={slot_type}, rank={this_xprn_cvt.chado_obj.rank}, term={this_xprn_cvt.cvterm_name}')
                     if this_xprn_cvt.cv_name == 'FlyBase miscellaneous CV':
                         xprn_pattern_slot[current_primary_cvt_id].qualifier_cvterm_ids.append(this_xprn_cvt.cvterm_id)
                         qualifier_xprn_cvt_ids.append(this_xprn_cvt.db_primary_id)
-                        self.log.debug(f'Found qualifier {this_xprn_cvt.cvterm_name} for primary term="{current_primary_cvterm_name}"')
+                        # self.log.debug(f'Found qualifier {this_xprn_cvt.cvterm_name} for primary term="{current_primary_cvterm_name}"')
                     else:
                         current_primary_cvt_id = this_xprn_cvt.db_primary_id
-                        current_primary_cvterm_name = this_xprn_cvt.cvterm_name
-                        self.log.debug(f'Found primary term="{current_primary_cvterm_name}", xprn_cvterm_id={this_xprn_cvt.db_primary_id}')
+                        # self.log.debug(f'Found primary term="{this_xprn_cvt.cvterm_name}", xprn_cvterm_id={this_xprn_cvt.db_primary_id}')
                 for qualifier_xprn_cvt_id in qualifier_xprn_cvt_ids:
                     del xprn_pattern_slot[qualifier_xprn_cvt_id]
-                # Final review of terms.
-                for xprn_cvt in xprn_pattern_slot.values():
-                    qualifiers = [self.cvterm_lookup[i]['name'] for i in xprn_cvt.qualifier_cvterm_ids]
-                    self.log.debug(f'Final term: type={slot_type}, rank={xprn_cvt.chado_obj.rank}, term={xprn_cvt.cvterm_name}, qualifiers={qualifiers}')
+                # Final review of qualifier term assignments.
+                # for xprn_cvt in xprn_pattern_slot.values():
+                    # qualifiers = [self.cvterm_lookup[i]['name'] for i in xprn_cvt.qualifier_cvterm_ids]
+                    # self.log.debug(f'Final term: type={slot_type}, rank={xprn_cvt.chado_obj.rank}, term={xprn_cvt.cvterm_name}, qualifiers={qualifiers}')
         return
 
     def identify_stage_ranges(self):
@@ -508,6 +507,8 @@ class ExpressionHandler(DataHandler):
                 if not potential_sub_parts:
                     self.log.error(f'For xprn_id={xprn_pattern.db_primary_id}, there are "main" parts but no sub-parts.')
                 else:
+                    if len(potential_sub_parts) > 1:
+                        self.log.debug(f'For xprn_id={xprn_pattern.db_primary_id}, there are {len(potential_sub_parts)} parts but no sub-parts.')
                     for sub_part in potential_sub_parts:
                         sub_part.is_sub_part = True
                         for main_part in main_parts:
@@ -517,11 +518,17 @@ class ExpressionHandler(DataHandler):
                             self.log.debug(msg)
                             counter += 1
         self.log.info(f'Found {counter} part-sub_part annotations.')
-        # BOB: Check xprn_id=42175, <a> cell | subset &&of mesoderm | dorsal &&of parasegment 2--12
+        # Tests:
+        # xprn_id=42175, <a> cell | subset &&of mesoderm | dorsal &&of parasegment 2--12
+        # xprn_id=42170, <a> parasegment 3--12 &&of larval ventral nerve cord
         return
 
-    def generate_xprn_pattern_dict(self, assay_term, stage_term, anatomy_term, cellular_term, anatomy_range_term_id, anatomy_sub_part_term):
+    def generate_xprn_pattern_dict(self, xprn_id, assay_term, stage_term, anatomy_term, cellular_term, anatomy_range_term_id, anatomy_sub_part_term):
         """Convert a specific combination of terms from an expression pattern into a simpler dict."""
+        input_str = f'assay="{assay_term.cvterm_name}", stage="{stage_term.cvterm_name}", anatomy="{anatomy_term.cvterm_name}", '
+        input_str += f'cellular="{cellular_term.cvterm_name}", '
+        input_str += f'anatomy_range_term_id={anatomy_range_term_id}, anatomy_sub_part="{anatomy_sub_part_term.cvterm_name}"'
+        self.log.debug(f'Generate xprn_pattern_dict for xprn_id={xprn_id}; input: {input_str}')
         xprn_pattern_dict = {
             'assay_cvterm_id': assay_term.cvterm_id,
             'stage_start_cvterm_id': stage_term.cvterm_id,
@@ -547,6 +554,7 @@ class ExpressionHandler(DataHandler):
         # If processing a term in a tissue range, replace the main anatomy term with the cvterm_id given for the term within the range.
         if anatomy_range_term_id:
             xprn_pattern_dict['anatomical_structure_cvterm_id'] = anatomy_range_term_id
+        self.log.debug(f'For xprn_id={xprn_id}, generated xprn_pattern_dict: {xprn_pattern_dict}')
         return xprn_pattern_dict
 
     def split_out_expression_patterns(self):
@@ -577,11 +585,13 @@ class ExpressionHandler(DataHandler):
                             for sub_part in anatomy_term.has_sub_parts:
                                 # If there is an anatomy range, first report the start and intermediate anatomy range terms.
                                 for anatomy_range_term_id in anatomy_term.has_anat_terms:
-                                    xp = self.generate_xprn_pattern_dict(assay_term, stage_term, anatomy_term, cellular_term, anatomy_range_term_id, sub_part)
+                                    xp = self.generate_xprn_pattern_dict(xprn_pattern.db_primary_id, assay_term, stage_term, anatomy_term, cellular_term,
+                                                                         anatomy_range_term_id, sub_part)
                                     xprn_pattern.xprn_pattern_combos.append(xp)
                                 # Report for the main anatomy term, including end terms for anatomy ranges.
-                                xprn_pattern_dict = self.generate_xprn_pattern_dict(assay_term, stage_term, anatomy_term, cellular_term, None, sub_part)
-                                xprn_pattern.xprn_pattern_combos.append(xprn_pattern_dict)
+                                xp = self.generate_xprn_pattern_dict(xprn_pattern.db_primary_id, assay_term, stage_term, anatomy_term, cellular_term,
+                                                                     None, sub_part)
+                                xprn_pattern.xprn_pattern_combos.append(xp)
         return
 
     # Elaborate on synthesize_info() for the ExpressionHandler.
