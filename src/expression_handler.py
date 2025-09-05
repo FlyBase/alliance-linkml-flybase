@@ -242,6 +242,7 @@ class ExpressionHandler(DataHandler):
                 for child_cvterm_id in child_cvterm_ids:
                     self.cvterm_lookup[child_cvterm_id]['slim_term_cvterm_ids'].append(slim_term.cvterm_id)
         # BOB: Once code seems to work, print out child-slim names and review to confirm all is ok.
+        # BOB: Is "hemolymph" working? I see 7 child terms on web, but this script only returns 5.
         return
 
     # Elaborate on get_general_data() for the ExpressionHandler.
