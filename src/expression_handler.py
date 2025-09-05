@@ -459,15 +459,16 @@ class ExpressionHandler(DataHandler):
                     anatomy_term.is_anat_end = True
                     end_terms.append(anatomy_term)
                     if anatomy_term.qualifier_cvterm_ids:
-                        qualifiers = [self.cvterm_lookup[i]['name'] for i in anatomy_term.qualifier_cvterm_ids]
+                        # qualifiers = [self.cvterm_lookup[i]['name'] for i in anatomy_term.qualifier_cvterm_ids]
                         # self.log.debug(f'For xprn_id={xprn_pattern.db_primary_id}, "{anatomy_term.cvterm_name}" has qualifiers: {qualifiers}.')
+                        pass
             if not start_terms and not end_terms:
                 continue
             elif len(start_terms) == 1 and len(end_terms) == 1:
                 end_terms[0].has_anat_terms.append(start_terms[0].cvterm_id)    # Add start term to the range (under the end term object).
                 end_terms[0].operators.extend(start_terms[0].operators)    # Propagate operators from start of tissue range to end.
                 # Get intervening tissue range terms, then add them to the list of terms in the tissue range.
-                tissue_range_string = f'{start_terms[0].cvterm_name}--{end_terms[0].cvterm_name}'
+                # tissue_range_string = f'{start_terms[0].cvterm_name}--{end_terms[0].cvterm_name}'
                 # self.log.debug(f'For xprn_id={xprn_pattern.db_primary_id}, found this tissue range: {tissue_range_string}')
                 rgx, start, end = self.regex_for_anatomical_terms_in_numerical_series(start_terms[0].cvterm_name,
                                                                                       end_terms[0].cvterm_name, xprn_pattern.db_primary_id)
@@ -529,7 +530,7 @@ class ExpressionHandler(DataHandler):
         """Convert a specific combination of terms from an expression pattern into a simpler dict."""
         input_str = f'assay="{assay_term.cvterm_name}", stage="{stage_term.cvterm_name}", anatomy="{anatomy_term.cvterm_name}", '
         input_str += f'cellular="{cellular_term.cvterm_name}", '
-        input_str += f'anatomy_range_term_id={anatomy_range_term_id}, anatomy_sub_part="{self.cvterm_lookup[anatomy_sub_part_cvterm_id]['name']}"'
+        input_str += f'anatomy_range_term_id={anatomy_range_term_id}, anatomy_sub_part="{self.cvterm_lookup[anatomy_sub_part_cvterm_id]["name"]}"'
         self.log.debug(f'Generate xprn_pattern_dict for xprn_id={xprn_id}; input: {input_str}')
         xprn_pattern_dict = {
             'assay_cvterm_id': assay_term.cvterm_id,
