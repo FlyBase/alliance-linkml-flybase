@@ -468,7 +468,8 @@ class ExpressionHandler(DataHandler):
                 # Get intervening tissue range terms, then add them to the list of terms in the tissue range.
                 tissue_range_string = f'{start_terms[0].cvterm_name}--{end_terms[0].cvterm_name}'
                 self.log.debug(f'For xprn_id={xprn_pattern.db_primary_id}, found this tissue range: {tissue_range_string}')
-                rgx, start, end = self.regex_for_anatomical_terms_in_numerical_series(start_terms[0].cvterm_name, end_terms[0].cvterm_name, xprn_pattern.db_primary_id)
+                rgx, start, end = self.regex_for_anatomical_terms_in_numerical_series(start_terms[0].cvterm_name,
+                                                                                      end_terms[0].cvterm_name, xprn_pattern.db_primary_id)
                 if not rgx:
                     xprn_pattern.is_problematic = True
                     xprn_pattern.notes.append('Could not process tissue range.')
