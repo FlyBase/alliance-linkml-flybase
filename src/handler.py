@@ -310,7 +310,7 @@ class DataHandler(object):
             Raise NoResultFound if starting CV term cannot be found in chado.
 
         """
-        self.log.info(f'Get all child terms of "{starting_cvterm_name}" from the "{starting_cvterm_cv_name}" CV.')
+        self.log.debug(f'Get all child terms of "{starting_cvterm_name}" from the "{starting_cvterm_cv_name}" CV.')
         # 1. Get the parent CV term.
         filters = (
             Cvterm.name == starting_cvterm_name,
@@ -359,7 +359,7 @@ class DataHandler(object):
         recursive_query_total_results = session.query(recursive_query_total)
         # Build the list from the results.
         cvterm_id_list = [i[0] for i in recursive_query_total_results]
-        self.log.info(f'Found {len(cvterm_id_list)} terms under "{starting_cvterm_name}" from the "{starting_cvterm_cv_name}" CV.')
+        self.log.debug(f'Found {len(cvterm_id_list)} terms under "{starting_cvterm_name}" from the "{starting_cvterm_cv_name}" CV.')
         cvterm_id_list.append(starting_cvterm.cvterm_id)
         return cvterm_id_list
 
