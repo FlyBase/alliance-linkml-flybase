@@ -176,16 +176,16 @@ class ExpressionHandler(DataHandler):
         except TypeError:
             self.log.error('Could not find start/end numbers in input terms.')
             return filtered_terms
-        self.log.debug(f'From {start}--{end}, look for numbers between {num_start} and {num_end}.')
+        # self.log.debug(f'From {start}--{end}, look for numbers between {num_start} and {num_end}.')
         for term in terms:
-            self.log.debug(f'Is "{term.name}" in range?')
+            # self.log.debug(f'Is "{term.name}" in range?')
             position = re.search(rgx, term.name).group(1)
-            self.log.debug(f'Found this position "{position}".')
+            # self.log.debug(f'Found this position "{position}".')
             num_position = int(re.search(num_rgx, position).group(1))
-            self.log.debug(f'Term {term.name} is at position {position}, with number={num_position}')
+            # self.log.debug(f'Term {term.name} is at position {position}, with number={num_position}')
             if num_position > num_start and num_position < num_end:
                 filtered_terms.append(term)
-        self.log.debug(f'Found these tissue range terms: {[i.name for i in filtered_terms]}')
+        # self.log.debug(f'Found these tissue range terms: {[i.name for i in filtered_terms]}')
         return filtered_terms
 
     # Add methods to be run by get_general_data() below.
@@ -429,8 +429,8 @@ class ExpressionHandler(DataHandler):
                 continue
             elif len(start_terms) == 1 and len(end_terms) == 1:
                 start_terms[0].has_stage_end = end_terms[0]
-                stage_range_string = f'{start_terms[0].cvterm_name}--{end_terms[0].cvterm_name}'
-                self.log.debug(f'For xprn_id={xprn_pattern.db_primary_id}, found this stage range: {stage_range_string}')
+                # stage_range_string = f'{start_terms[0].cvterm_name}--{end_terms[0].cvterm_name}'
+                # self.log.debug(f'For xprn_id={xprn_pattern.db_primary_id}, found this stage range: {stage_range_string}')
                 counter += 1
             else:
                 self.log.error(f'Many/partial stage ranges found for xprn_id={xprn_pattern.db_primary_id}')
@@ -560,7 +560,14 @@ class ExpressionHandler(DataHandler):
     def split_out_expression_patterns(self):
         """Generate all combinations of anatomy/assay/cellular/stage terms for an expression pattern."""
         self.log.info('Generate all combinations of anatomy/assay/cellular/stage terms for an expression pattern.')
+        prob_xprn_ids = [
+            24639, 26072, 26258, 26632, 26633, 26634, 26789, 28221, 30637,
+            30852, 31361, 32346, 32457, 33139, 33328, 33412, 34285, 34515,
+            34762, 35249, 35739, 35812, 37510, 37993, 42170
+        ]
         for xprn_pattern in self.expression_patterns.values():
+            if xprn_pattern.db_primary_id in prob_xprn_ids:
+                continue
             # Add a placeholder to slots with zero terms.
             for slot_type in self.slot_types:
                 slot_name = f'{slot_type}_terms'
@@ -580,6 +587,7 @@ class ExpressionHandler(DataHandler):
                             # Skip anatomy sub_part terms, as these are folded into reporting of the main_part term.
                             elif anatomy_term.is_sub_part:
                                 continue
+                            # Put in sub_part placeholder, if needed.
                             if not anatomy_term.has_sub_parts:
                                 anatomy_term.has_sub_parts = [self.placeholder]
                             for sub_part in anatomy_term.has_sub_parts:
