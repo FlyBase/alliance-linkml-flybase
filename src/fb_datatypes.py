@@ -549,7 +549,7 @@ class FBExpressionCvterm(object):
         self.is_anat_end = False       # True for an anatomy term having a "TO" operator.
         self.has_anat_terms = []       # For a term at the end of a tissue range, the list of cvterm_ids for all anatomy terms in the range (inc. itself).
         self.is_main_part = False      # True for an anatomy term having "OF" operator.
-        self.has_sub_part = None       # For an anatomy term having an "OF" operator, put the sub_part FBExpressionCvterm object here, if applicable.
+        self.has_sub_parts = []        # For an anatomy term having an "OF" operator, put the sub_part FBExpressionCvterm objects here, if applicable.
         self.is_sub_part = False       # True if the term is a sub_part of some other term in the larger expression annotation.
 
 
@@ -571,7 +571,7 @@ class FBExpressionAnnotation(object):
         self.stage_terms = {}            # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, stage.
         # Processed FB data.
         self.xprn_pattern_combos = []    # Discrete anatomy/assay/cellular/stage term combinations for this annotation.
-        self.is_problematic = False      # True if there are problemst that preclude export.
+        self.is_problematic = False      # True if there are problems that preclude export.
         self.notes = []
 
 
@@ -598,6 +598,8 @@ class FBFeatureExpressionAnnotation(FBExportEntity):
         # Processed FB data.
         self.public_feature_id = None    # Will be the feature_id of the public feature: e.g., the gene, or the allele.
         self.xprn_type = None            # Will be RNA or protein, as appropriate.
+        self.is_problematic = False      # True if there are problems that preclude export.
+        self.notes = []
 
 
 # Second class annotations (submitted as part of other objects).
