@@ -238,11 +238,11 @@ class ExpressionHandler(DataHandler):
                     self.log.info(f'Slim term: cv_name={cv_name}, cvterm_name="{slim_term_name}", cvterm_id={slim_term.cvterm_id}')
                 # Second, get the child terms under each slim term.
                 child_cvterm_ids = self.get_child_cvterms(session, slim_term_name, cv_name)
-                # self.log.info(f'Found {len(child_cvterm_ids)} child terms for the {cv_name} slim term "{slim_term_name}" (including itself)')
+                child_term_names = [self.cvterm_lookup[i]['name'] for i in child_cvterm_ids if i in self.cvterm_lookup.keys()]
+                child_term_name_str = '\n'.join(child_term_names)
+                self.log.info(f'Found {len(child_term_names)} child terms for the {cv_name} slim term "{slim_term_name}":\n{child_term_name_str}')
                 for child_cvterm_id in child_cvterm_ids:
                     self.cvterm_lookup[child_cvterm_id]['slim_term_cvterm_ids'].append(slim_term.cvterm_id)
-        # BOB: Once code seems to work, print out child-slim names and review to confirm all is ok.
-        # BOB: Is "hemolymph" working? I see 7 child terms on web, but this script only returns 5.
         return
 
     # Elaborate on get_general_data() for the ExpressionHandler.
