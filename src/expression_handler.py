@@ -536,6 +536,7 @@ class ExpressionHandler(DataHandler):
             'anatomical_substructure_slim_cvterm_ids': self.cvterm_lookup[anatomy_sub_part_term.cvterm_id]['slim_term_cvterm_ids'],
             'cellular_component_cvterm_id': cellular_term.cvterm_id,
             'cellular_component_qualifier_cvterm_ids': cellular_term.qualifier_cvterm_ids,
+            'cellular_component_slim_cvterm_ids': self.cvterm_lookup[cellular_term.cvterm_id]['slim_term_cvterm_ids'],
         }
         # Handle stage end.
         if stage_term.has_stage_end:
