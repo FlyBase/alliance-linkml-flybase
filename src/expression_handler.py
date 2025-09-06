@@ -601,14 +601,14 @@ class ExpressionHandler(DataHandler):
                             for anatomy_sub_term in xprn_pattern.sub_anatomy_terms.values():
                                 # If there is an anatomy range, first report the start and intermediate anatomy range terms.
                                 for anatomy_range_term_id in anatomy_term.has_anat_terms:
-                                    # xp = self.generate_xprn_pattern_dict(xprn_id, assay_term, stage_term, anatomy_term, anatomy_sub_term,
-                                    #                                      cellular_term, anatomy_range_term_id)
-                                    # xprn_pattern.xprn_pattern_combos.append(xp)
+                                    xp = self.generate_xprn_pattern_dict(xprn_id, assay_term, stage_term, anatomy_term, anatomy_sub_term,
+                                                                         cellular_term, anatomy_range_term_id)
+                                    xprn_pattern.xprn_pattern_combos.append(xp)
                                     n_combos += 1
                                 # Report for the main anatomy term, including end terms for anatomy ranges.
-                                # xp = self.generate_xprn_pattern_dict(xprn_id, assay_term, stage_term, anatomy_term, anatomy_sub_term,
-                                #                                      cellular_term, None)
-                                # xprn_pattern.xprn_pattern_combos.append(xp)
+                                xp = self.generate_xprn_pattern_dict(xprn_id, assay_term, stage_term, anatomy_term, anatomy_sub_term,
+                                                                     cellular_term, None)
+                                xprn_pattern.xprn_pattern_combos.append(xp)
                                 n_combos += 1
             self.log.debug(f'For xprn_id={xprn_id}, found {n_combos} total term combinations.')
         return
