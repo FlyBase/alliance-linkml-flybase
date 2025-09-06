@@ -248,6 +248,10 @@ class ExpressionHandler(DataHandler):
                 # child_term_names.sort()
                 # child_term_name_str = '\n'.join(child_term_names)
                 # self.log.debug(f'Found {len(child_term_names)} child terms for the {cv_name} slim term "{slim_term_name}":\n{child_term_name_str}')
+        for cvterm in self.cvterm_lookup.values():
+            if cvterm['db_name'] in ['FBbt', 'FBdv']:
+                cvterm['slim_term_cvterm_ids'] = list(set(cvterm['slim_term_cvterm_ids']))
+                self.log.debug(f'BOB: For {cvterm["db_name"]} term "{cvterm["name"]}", found slim terms: {cvterm["slim_term_cvterm_ids"]}')
         return
 
     # Elaborate on get_general_data() for the ExpressionHandler.
