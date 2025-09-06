@@ -553,7 +553,7 @@ class ExpressionHandler(DataHandler):
             # 'anatomical_structure_slim_cvterm_ids': self.cvterm_lookup[anatomy_term.cvterm_id]['slim_term_cvterm_ids'],
             'anatomical_substructure_cvterm_id': anatomy_sub_term.cvterm_id,
             'anatomical_substructure_qualifier_cvterm_ids': anatomy_sub_term.qualifier_cvterm_ids,
-            # 'anatomical_substructure_slim_cvterm_ids': self.cvterm_lookup[anatomy_sub_term.cvterm_id]['slim_term_cvterm_ids'],
+            'anatomical_substructure_slim_cvterm_ids': self.cvterm_lookup[anatomy_sub_term.cvterm_id]['slim_term_cvterm_ids'],
             'cellular_component_cvterm_id': cellular_term.cvterm_id,
             'cellular_component_qualifier_cvterm_ids': cellular_term.qualifier_cvterm_ids,
         }
