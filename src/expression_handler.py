@@ -200,6 +200,7 @@ class ExpressionHandler(DataHandler):
             'cv_name': '',
             'db_name': '',
             'curie': '',
+            'name_plus_curie': '',
             'slim_term_cvterm_ids': [],
         }
         self.cvterm_lookup['placeholder'] = placeholder_cvterm_dict
