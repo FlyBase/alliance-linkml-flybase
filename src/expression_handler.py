@@ -547,7 +547,7 @@ class ExpressionHandler(DataHandler):
             'stage_start_cvterm_id': stage_term.cvterm_id,
             'stage_end_cvterm_id': None,
             'stage_qualifier_cvterm_ids': stage_term.qualifier_cvterm_ids,
-            # 'stage_slim_cvterm_ids': self.cvterm_lookup[stage_term.cvterm_id]['slim_term_cvterm_ids'],
+            'stage_slim_cvterm_ids': self.cvterm_lookup[stage_term.cvterm_id]['slim_term_cvterm_ids'],
             'anatomical_structure_cvterm_id': anatomy_term.cvterm_id,
             'anatomical_structure_qualifier_cvterm_ids': anatomy_term.qualifier_cvterm_ids,
             # 'anatomical_structure_slim_cvterm_ids': self.cvterm_lookup[anatomy_term.cvterm_id]['slim_term_cvterm_ids'],
