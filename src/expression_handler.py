@@ -537,32 +537,32 @@ class ExpressionHandler(DataHandler):
         input_str = f'assay="{assay_term.cvterm_name}", stage="{stage_term.cvterm_name}", anatomy="{anatomy_term.cvterm_name}", '
         input_str += f'cellular="{cellular_term.cvterm_name}", anatomy_range_term_id={anatomy_range_term_id}'
         self.log.debug(f'Generate xprn_pattern_dict for xprn_id={xprn_id}; input: {input_str}')
-        xprn_pattern_dict = {
-            'assay_cvterm_id': assay_term.cvterm_id,
-            'stage_start_cvterm_id': stage_term.cvterm_id,
-            'stage_end_cvterm_id': None,
-            'stage_qualifier_cvterm_ids': stage_term.qualifier_cvterm_ids,
-            'stage_slim_cvterm_ids': self.cvterm_lookup[stage_term.cvterm_id]['slim_term_cvterm_ids'],
-            'anatomical_structure_cvterm_id': anatomy_term.cvterm_id,
-            'anatomical_structure_qualifier_cvterm_ids': anatomy_term.qualifier_cvterm_ids,
-            'anatomical_structure_slim_cvterm_ids': self.cvterm_lookup[anatomy_term.cvterm_id]['slim_term_cvterm_ids'],
-            'anatomical_substructure_cvterm_id': anatomy_sub_term.cvterm_id,
-            'anatomical_substructure_qualifier_cvterm_ids': anatomy_sub_term.qualifier_cvterm_ids,
-            'anatomical_substructure_slim_cvterm_ids': self.cvterm_lookup[anatomy_sub_term.cvterm_id]['slim_term_cvterm_ids'],
-            'cellular_component_cvterm_id': cellular_term.cvterm_id,
-            'cellular_component_qualifier_cvterm_ids': cellular_term.qualifier_cvterm_ids,
-            'cellular_component_slim_cvterm_ids': self.cvterm_lookup[cellular_term.cvterm_id]['slim_term_cvterm_ids'],
-        }
-        # Handle stage end.
-        if stage_term.has_stage_end:
-            xprn_pattern_dict['stage_end_cvterm_id'] = stage_term.has_stage_end.cvterm_id
-            xprn_pattern_dict['stage_qualifier_cvterm_ids'].extend(stage_term.has_stage_end.qualifier_cvterm_ids)
-            additional_slim_terms = self.cvterm_lookup[stage_term.has_stage_end.cvterm_id]['slim_term_cvterm_ids']
-            xprn_pattern_dict['stage_slim_cvterm_ids'].extend(additional_slim_terms)
-        # If processing a term in a tissue range, replace the main anatomy term with the cvterm_id given for the term within the range.
-        if anatomy_range_term_id:
-            xprn_pattern_dict['anatomical_structure_cvterm_id'] = anatomy_range_term_id
-        self.log.debug(f'For xprn_id={xprn_id}, generated xprn_pattern_dict: {xprn_pattern_dict}')
+        xprn_pattern_dict = None
+        # xprn_pattern_dict = {
+        #     'assay_cvterm_id': assay_term.cvterm_id,
+        #     'stage_start_cvterm_id': stage_term.cvterm_id,
+        #     'stage_end_cvterm_id': None,
+        #     'stage_qualifier_cvterm_ids': stage_term.qualifier_cvterm_ids,
+        #     'stage_slim_cvterm_ids': self.cvterm_lookup[stage_term.cvterm_id]['slim_term_cvterm_ids'],
+        #     'anatomical_structure_cvterm_id': anatomy_term.cvterm_id,
+        #     'anatomical_structure_qualifier_cvterm_ids': anatomy_term.qualifier_cvterm_ids,
+        #     'anatomical_structure_slim_cvterm_ids': self.cvterm_lookup[anatomy_term.cvterm_id]['slim_term_cvterm_ids'],
+        #     'anatomical_substructure_cvterm_id': anatomy_sub_term.cvterm_id,
+        #     'anatomical_substructure_qualifier_cvterm_ids': anatomy_sub_term.qualifier_cvterm_ids,
+        #     'anatomical_substructure_slim_cvterm_ids': self.cvterm_lookup[anatomy_sub_term.cvterm_id]['slim_term_cvterm_ids'],
+        #     'cellular_component_cvterm_id': cellular_term.cvterm_id,
+        #     'cellular_component_qualifier_cvterm_ids': cellular_term.qualifier_cvterm_ids,
+        # }
+        # # Handle stage end.
+        # if stage_term.has_stage_end:
+        #     xprn_pattern_dict['stage_end_cvterm_id'] = stage_term.has_stage_end.cvterm_id
+        #     xprn_pattern_dict['stage_qualifier_cvterm_ids'].extend(stage_term.has_stage_end.qualifier_cvterm_ids)
+        #     additional_slim_terms = self.cvterm_lookup[stage_term.has_stage_end.cvterm_id]['slim_term_cvterm_ids']
+        #     xprn_pattern_dict['stage_slim_cvterm_ids'].extend(additional_slim_terms)
+        # # If processing a term in a tissue range, replace the main anatomy term with the cvterm_id given for the term within the range.
+        # if anatomy_range_term_id:
+        #     xprn_pattern_dict['anatomical_structure_cvterm_id'] = anatomy_range_term_id
+        # self.log.debug(f'For xprn_id={xprn_id}, generated xprn_pattern_dict: {xprn_pattern_dict}')
         return xprn_pattern_dict
 
     def split_out_expression_patterns(self):
