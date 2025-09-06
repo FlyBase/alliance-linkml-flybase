@@ -512,25 +512,30 @@ class ExpressionHandler(DataHandler):
                 else:
                     if len(potential_sub_parts) > 1:
                         self.log.warning(f'For xprn_id={xprn_pattern.db_primary_id}, there are {len(potential_sub_parts)} sub-parts.')
+                    # Move anatomy sub_parts into a separate dict within the expression pattern object.
                     for sub_part in potential_sub_parts:
-                        sub_part.is_sub_part = True
-                        for main_part in main_parts:
-                            main_part.has_sub_parts.append(sub_part.cvterm_id)
-                            # msg = f'For xprn_id={xprn_pattern.db_primary_id}, found this part-sub_part pair: '
-                            # msg += f'part="{main_part.cvterm_name}", sub_part="{sub_part.cvterm_name}"'
-                            # self.log.debug(msg)
-                            counter += 1
-        self.log.info(f'Found {counter} part-sub_part annotations.')
-        # Tests:
+                        xprn_pattern.sub_anatomy_terms[sub_part.db_primary_id] = sub_part
+                        del xprn_pattern.anatomy_terms[sub_part.db_primary_id]
+            if xprn_pattern.sub_anatomy_terms:
+                counter += 1
+                n_main = len(xprn_pattern.anatomy_terms)
+                n_sub = len(xprn_pattern.sub_anatomy_terms)
+                n_combos = n_main * n_sub
+                self.log.debug(f'For xprn_id={xprn_pattern.db_primary_id}, have {n_combos} main/sub_part combinations.')
+            else:
+                xprn_pattern.sub_anatomy_terms['placeholder'] = self.placeholder
+        self.log.info(f'Found {counter} expression patterns having anatomy sub_parts.')
+        # Check these difficult cases in the output:
         # xprn_id=42175, <a> cell | subset &&of mesoderm | dorsal &&of parasegment 2--12
         # xprn_id=42170, <a> parasegment 3--12 &&of larval ventral nerve cord
+        # xprn_id=34285, <a> parasegment 8 && parasegment 9 &&of midgut
+        # xprn_id=32457, <a> neuron && glial cell &&of central nervous system
         return
 
-    def generate_xprn_pattern_dict(self, xprn_id, assay_term, stage_term, anatomy_term, cellular_term, anatomy_range_term_id, anatomy_sub_part_cvterm_id):
+    def generate_xprn_pattern_dict(self, xprn_id, assay_term, stage_term, anatomy_term, anatomy_sub_term, cellular_term, anatomy_range_term_id):
         """Convert a specific combination of terms from an expression pattern into a simpler dict."""
         input_str = f'assay="{assay_term.cvterm_name}", stage="{stage_term.cvterm_name}", anatomy="{anatomy_term.cvterm_name}", '
-        input_str += f'cellular="{cellular_term.cvterm_name}", '
-        input_str += f'anatomy_range_term_id={anatomy_range_term_id}, anatomy_sub_part="{self.cvterm_lookup[anatomy_sub_part_cvterm_id]["name"]}"'
+        input_str += f'cellular="{cellular_term.cvterm_name}", anatomy_range_term_id={anatomy_range_term_id}'
         self.log.debug(f'Generate xprn_pattern_dict for xprn_id={xprn_id}; input: {input_str}')
         xprn_pattern_dict = {
             'assay_cvterm_id': assay_term.cvterm_id,
@@ -541,9 +546,9 @@ class ExpressionHandler(DataHandler):
             'anatomical_structure_cvterm_id': anatomy_term.cvterm_id,
             'anatomical_structure_qualifier_cvterm_ids': anatomy_term.qualifier_cvterm_ids,
             'anatomical_structure_slim_cvterm_ids': self.cvterm_lookup[anatomy_term.cvterm_id]['slim_term_cvterm_ids'],
-            'anatomical_substructure_cvterm_id': anatomy_sub_part_cvterm_id,
-            # 'anatomical_substructure_qualifier_cvterm_ids': anatomy_sub_part_term.qualifier_cvterm_ids,    # BOB - need a way to get this.
-            'anatomical_substructure_slim_cvterm_ids': self.cvterm_lookup[anatomy_sub_part_cvterm_id]['slim_term_cvterm_ids'],
+            'anatomical_substructure_cvterm_id': anatomy_sub_term.cvterm_id,
+            'anatomical_substructure_qualifier_cvterm_ids': anatomy_sub_term.qualifier_cvterm_ids,
+            'anatomical_substructure_slim_cvterm_ids': self.cvterm_lookup[anatomy_sub_term.cvterm_id]['slim_term_cvterm_ids'],
             'cellular_component_cvterm_id': cellular_term.cvterm_id,
             'cellular_component_qualifier_cvterm_ids': cellular_term.qualifier_cvterm_ids,
             'cellular_component_slim_cvterm_ids': self.cvterm_lookup[cellular_term.cvterm_id]['slim_term_cvterm_ids'],
@@ -569,6 +574,12 @@ class ExpressionHandler(DataHandler):
             34762, 35249, 35739, 35812, 37510, 37993, 42170
         ]
         for xprn_pattern in self.expression_patterns.values():
+            xprn_id = xprn_pattern.db_primary_id
+            n_combos = 0
+            # Skip expression patterns already flagged as problematic.
+            if xprn_pattern.is_problematic:
+                continue
+            # Skip known problematic expression patterns that need manual review.
             if xprn_pattern.db_primary_id in prob_xprn_ids:
                 continue
             # Add a placeholder to slots with zero terms.
@@ -587,22 +598,19 @@ class ExpressionHandler(DataHandler):
                             # Skip anatomy range start terms, as these are folded into reporting of the stage range end term.
                             if anatomy_term.is_anat_start:
                                 continue
-                            # Skip anatomy sub_part terms, as these are folded into reporting of the main_part term.
-                            elif anatomy_term.is_sub_part:
-                                continue
-                            # Put in sub_part placeholder, if needed.
-                            if not anatomy_term.has_sub_parts:
-                                anatomy_term.has_sub_parts = 'placeholder'
-                            for sub_part_cvterm_id in anatomy_term.has_sub_parts:
+                            for anatomy_sub_term in xprn_pattern.sub_anatomy_terms.values():
                                 # If there is an anatomy range, first report the start and intermediate anatomy range terms.
                                 for anatomy_range_term_id in anatomy_term.has_anat_terms:
-                                    xp = self.generate_xprn_pattern_dict(xprn_pattern.db_primary_id, assay_term, stage_term, anatomy_term, cellular_term,
-                                                                         anatomy_range_term_id, sub_part_cvterm_id)
-                                    xprn_pattern.xprn_pattern_combos.append(xp)
+                                    # xp = self.generate_xprn_pattern_dict(xprn_id, assay_term, stage_term, anatomy_term, anatomy_sub_term,
+                                    #                                      cellular_term, anatomy_range_term_id)
+                                    # xprn_pattern.xprn_pattern_combos.append(xp)
+                                    n_combos += 1
                                 # Report for the main anatomy term, including end terms for anatomy ranges.
-                                xp = self.generate_xprn_pattern_dict(xprn_pattern.db_primary_id, assay_term, stage_term, anatomy_term, cellular_term,
-                                                                     None, sub_part_cvterm_id)
-                                xprn_pattern.xprn_pattern_combos.append(xp)
+                                # xp = self.generate_xprn_pattern_dict(xprn_id, assay_term, stage_term, anatomy_term, anatomy_sub_term,
+                                #                                      cellular_term, None)
+                                # xprn_pattern.xprn_pattern_combos.append(xp)
+                                n_combos += 1
+            self.log.debug(f'For xprn_id={xprn_id}, found {n_combos} total term combinations.')
         return
 
     # Elaborate on synthesize_info() for the ExpressionHandler.
@@ -613,7 +621,7 @@ class ExpressionHandler(DataHandler):
         self.identify_stage_ranges()
         self.identify_tissue_ranges(session)
         self.identify_tissue_sub_parts()
-        # self.split_out_expression_patterns()    # BOB
+        # self.split_out_expression_patterns()    # CAREFUL BOB
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
