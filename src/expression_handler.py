@@ -559,8 +559,8 @@ class ExpressionHandler(DataHandler):
             # additional_slim_terms = self.cvterm_lookup[stage_term.has_stage_end.cvterm_id]['slim_term_cvterm_ids']
             # xprn_pattern_dict['stage_slim_cvterm_ids'].extend(additional_slim_terms)
         # # If processing a term in a tissue range, replace the main anatomy term with the cvterm_id given for the term within the range.
-        # if anatomy_range_term_id:
-        #     xprn_pattern_dict['anatomical_structure_cvterm_id'] = anatomy_range_term_id
+        if anatomy_range_term_id:
+            xprn_pattern_dict['anatomical_structure_cvterm_id'] = anatomy_range_term_id
         # self.log.debug(f'For xprn_id={xprn_id}, generated xprn_pattern_dict: {xprn_pattern_dict}')
         return xprn_pattern_dict
 
