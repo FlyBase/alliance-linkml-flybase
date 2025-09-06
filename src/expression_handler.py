@@ -561,7 +561,7 @@ class ExpressionHandler(DataHandler):
         # # If processing a term in a tissue range, replace the main anatomy term with the cvterm_id given for the term within the range.
         if anatomy_range_term_id:
             xprn_pattern_dict['anatomical_structure_cvterm_id'] = anatomy_range_term_id
-        # self.log.debug(f'For xprn_id={xprn_id}, generated xprn_pattern_dict: {xprn_pattern_dict}')
+        self.log.debug(f'For xprn_id={xprn_id}, generated xprn_pattern_dict: {xprn_pattern_dict}')
         return xprn_pattern_dict
 
     def split_out_expression_patterns(self):
