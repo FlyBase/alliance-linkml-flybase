@@ -251,8 +251,8 @@ class ExpressionHandler(DataHandler):
         for cvterm in self.cvterm_lookup.values():
             if cvterm['db_name'] in ['FBbt', 'FBdv']:
                 cvterm['slim_term_cvterm_ids'] = list(set(cvterm['slim_term_cvterm_ids']))
-                self.log.debug(f'BOB: For {cvterm["db_name"]} term "{cvterm["name"]}", found slim terms: {cvterm["slim_term_cvterm_ids"]}')
-                self.log.debug(f'BOB: For {cvterm["db_name"]} term "{cvterm["name"]}", found slim terms: {len(cvterm["slim_term_cvterm_ids"])}')
+                # self.log.debug(f'For {cvterm["db_name"]} term "{cvterm["name"]}", found slim terms: {cvterm["slim_term_cvterm_ids"]}')
+                # self.log.debug(f'For {cvterm["db_name"]} term "{cvterm["name"]}", found slim terms: {len(cvterm["slim_term_cvterm_ids"])}')
         return
 
     # Elaborate on get_general_data() for the ExpressionHandler.
@@ -550,7 +550,7 @@ class ExpressionHandler(DataHandler):
             'stage_slim_cvterm_ids': self.cvterm_lookup[stage_term.cvterm_id]['slim_term_cvterm_ids'],
             'anatomical_structure_cvterm_id': anatomy_term.cvterm_id,
             'anatomical_structure_qualifier_cvterm_ids': anatomy_term.qualifier_cvterm_ids,
-            # 'anatomical_structure_slim_cvterm_ids': self.cvterm_lookup[anatomy_term.cvterm_id]['slim_term_cvterm_ids'],
+            'anatomical_structure_slim_cvterm_ids': self.cvterm_lookup[anatomy_term.cvterm_id]['slim_term_cvterm_ids'],
             'anatomical_substructure_cvterm_id': anatomy_sub_term.cvterm_id,
             'anatomical_substructure_qualifier_cvterm_ids': anatomy_sub_term.qualifier_cvterm_ids,
             'anatomical_substructure_slim_cvterm_ids': self.cvterm_lookup[anatomy_sub_term.cvterm_id]['slim_term_cvterm_ids'],
