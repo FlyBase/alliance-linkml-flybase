@@ -613,7 +613,7 @@ class ExpressionHandler(DataHandler):
         self.identify_stage_ranges()
         self.identify_tissue_ranges(session)
         self.identify_tissue_sub_parts()
-        self.split_out_expression_patterns()
+        # self.split_out_expression_patterns()    # BOB
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
