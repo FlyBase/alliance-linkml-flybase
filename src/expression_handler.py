@@ -518,10 +518,10 @@ class ExpressionHandler(DataHandler):
                         del xprn_pattern.anatomy_terms[sub_part.db_primary_id]
             if xprn_pattern.sub_anatomy_terms:
                 counter += 1
-                n_main = len(xprn_pattern.anatomy_terms)
-                n_sub = len(xprn_pattern.sub_anatomy_terms)
-                n_combos = n_main * n_sub
-                self.log.debug(f'For xprn_id={xprn_pattern.db_primary_id}, have {n_combos} main/sub_part combinations.')
+                # n_main = len(xprn_pattern.anatomy_terms)
+                # n_sub = len(xprn_pattern.sub_anatomy_terms)
+                # n_combos = n_main * n_sub
+                # self.log.debug(f'For xprn_id={xprn_pattern.db_primary_id}, have {n_combos} main/sub_part combinations.')
             else:
                 xprn_pattern.sub_anatomy_terms['placeholder'] = self.placeholder
         self.log.info(f'Found {counter} expression patterns having anatomy sub_parts.')
@@ -569,9 +569,9 @@ class ExpressionHandler(DataHandler):
         """Generate all combinations of anatomy/assay/cellular/stage terms for an expression pattern."""
         self.log.info('Generate all combinations of anatomy/assay/cellular/stage terms for an expression pattern.')
         prob_xprn_ids = [
-            24639, 26072, 26258, 26632, 26633, 26634, 26789, 28221, 30637,
-            30852, 31361, 32346, 32457, 33139, 33328, 33412, 34285, 34515,
-            34762, 35249, 35739, 35812, 37510, 37993, 42170
+            # 24639, 26072, 26258, 26632, 26633, 26634, 26789, 28221, 30637,
+            # 30852, 31361, 32346, 32457, 33139, 33328, 33412, 34285, 34515,
+            # 34762, 35249, 35739, 35812, 37510, 37993, 42170
         ]
         for xprn_pattern in self.expression_patterns.values():
             xprn_id = xprn_pattern.db_primary_id
@@ -621,7 +621,7 @@ class ExpressionHandler(DataHandler):
         self.identify_stage_ranges()
         self.identify_tissue_ranges(session)
         self.identify_tissue_sub_parts()
-        # self.split_out_expression_patterns()    # CAREFUL BOB
+        self.split_out_expression_patterns()
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
