@@ -546,7 +546,7 @@ class ExpressionHandler(DataHandler):
         """Convert a specific combination of terms from an expression pattern into a simpler dict."""
         input_str = f'assay="{assay_term.cvterm_name}", stage="{stage_term.cvterm_name}", anatomy="{anatomy_term.cvterm_name}", '
         input_str += f'cellular="{cellular_term.cvterm_name}", anatomy_range_term_id={anatomy_range_term_id}'
-        self.log.debug(f'Generate xprn_pattern_dict for xprn_id={xprn_id}; input: {input_str}')
+        # self.log.debug(f'Generate xprn_pattern_dict for xprn_id={xprn_id}; input: {input_str}')
         xprn_pattern_dict = {
             'assay_cvterm_id': assay_term.cvterm_id,
             'stage_start_cvterm_id': stage_term.cvterm_id,
@@ -572,7 +572,7 @@ class ExpressionHandler(DataHandler):
         # If processing a term in a tissue range, replace the main anatomy term with the cvterm_id given for the term within the range.
         if anatomy_range_term_id:
             xprn_pattern_dict['anatomical_structure_cvterm_id'] = anatomy_range_term_id
-        self.log.debug(f'For xprn_id={xprn_id}, generated xprn_pattern_dict: {xprn_pattern_dict}')
+        # self.log.debug(f'For xprn_id={xprn_id}, generated xprn_pattern_dict: {xprn_pattern_dict}')
         return xprn_pattern_dict
 
     def split_out_expression_patterns(self):
@@ -612,7 +612,7 @@ class ExpressionHandler(DataHandler):
                                                                      cellular_term, None)
                                 xprn_pattern.xprn_pattern_combos.append(xp)
                                 n_combos += 1
-            self.log.debug(f'For xprn_id={xprn_id}, found {n_combos} total term combinations.')
+            # self.log.debug(f'For xprn_id={xprn_id}, found {n_combos} total term combinations.')
         return
 
     def process_for_tsv_export(self):
