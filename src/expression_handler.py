@@ -404,12 +404,11 @@ class ExpressionHandler(DataHandler):
                 for rank in expected_rank_list:
                     this_xprn_cvt = rank_sorted_xprn_cvts[rank]
                     # self.log.debug(f'Evaluate type={slot_type}, rank={this_xprn_cvt.chado_obj.rank}, term={this_xprn_cvt.cvterm_name}')
-                    if this_xprn_cvt.cv_name == 'FlyBase miscellaneous CV':
+                    # Note that the check for FBcv OBO filters out the "presumptive" qualifier that has an internal ID so cannot be exported.
+                    if this_xprn_cvt.cv_name == 'FlyBase miscellaneous CV' and this_xprn_cvt.obo == 'FBcv':
                         xprn_pattern_slot[current_primary_cvt_id].qualifier_cvterm_ids.append(this_xprn_cvt.cvterm_id)
                         qualifier_xprn_cvt_ids.append(this_xprn_cvt.db_primary_id)
                         # self.log.debug(f'Found qualifier {this_xprn_cvt.cvterm_name} for primary term="{current_primary_cvterm_name}"')
-                        if this_xprn_cvt.obo != 'FBcv':
-                            self.log.warning(f'Found non-FBcv qualifier: "{this_xprn_cvt.cvterm_name}"')
                     else:
                         current_primary_cvt_id = this_xprn_cvt.db_primary_id
                         # self.log.debug(f'Found primary term="{this_xprn_cvt.cvterm_name}", xprn_cvterm_id={this_xprn_cvt.db_primary_id}')
