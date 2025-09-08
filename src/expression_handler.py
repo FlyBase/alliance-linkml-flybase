@@ -30,6 +30,7 @@ class ExpressionHandler(DataHandler):
         self.placeholder = fb_datatypes.FBExpressionCvterm(None)
         self.expression_patterns = {}    # expression_id-keyed FBExpressionAnnotation objects.
         self.feat_xprn_annos = {}        # feature_expression_id-keyed FBFeatureExpressionAnnotation objects, for export.
+        self.export_data_for_tsv = []    # List of dicts for export to TSV.
 
     # Key info.
 
@@ -574,19 +575,11 @@ class ExpressionHandler(DataHandler):
     def split_out_expression_patterns(self):
         """Generate all combinations of anatomy/assay/cellular/stage terms for an expression pattern."""
         self.log.info('Generate all combinations of anatomy/assay/cellular/stage terms for an expression pattern.')
-        prob_xprn_ids = [
-            # 24639, 26072, 26258, 26632, 26633, 26634, 26789, 28221, 30637,
-            # 30852, 31361, 32346, 32457, 33139, 33328, 33412, 34285, 34515,
-            # 34762, 35249, 35739, 35812, 37510, 37993, 42170
-        ]
         for xprn_pattern in self.expression_patterns.values():
             xprn_id = xprn_pattern.db_primary_id
             n_combos = 0
             # Skip expression patterns already flagged as problematic.
             if xprn_pattern.is_problematic:
-                continue
-            # Skip known problematic expression patterns that need manual review.
-            if xprn_pattern.db_primary_id in prob_xprn_ids:
                 continue
             # Add a placeholder to slots with zero terms.
             for slot_type in self.slot_types:
@@ -619,6 +612,42 @@ class ExpressionHandler(DataHandler):
             self.log.debug(f'For xprn_id={xprn_id}, found {n_combos} total term combinations.')
         return
 
+    def process_for_tsv_export(self):
+        """Process expression patterns for export to TSV."""
+        self.log.info('Process expression patterns for export to TSV.')
+        counter = 0
+        for xprn_pattern in self.expression_patterns.values():
+            if xprn_pattern.is_problematic:
+                continue
+            elif not xprn_pattern.xprn_pattern_combos:
+                continue
+            for xp_combo in xprn_pattern.xprn_pattern_combos:
+                xprn_tsv_dict = {
+                    'expression_id': xprn_pattern.db_primary_id,
+                    'assay_term': self.cvterm_lookup[xp_combo['assay_cvterm_id']]['name_plus_curie'],
+                    'stage_start': self.cvterm_lookup[xp_combo['stage_start_cvterm_id']]['name_plus_curie'],
+                    'stage_end': self.cvterm_lookup[xp_combo['stage_end_cvterm_id']]['name_plus_curie'],
+                    'stage_qualifiers': ' | '.join([self.cvterm_lookup[i]['name_plus_curie'] for i in xp_combo['stage_qualifier_cvterm_ids']]),
+                    'stage_slim_terms': ' | '.join([self.cvterm_lookup[i]['name_plus_curie'] for i in xp_combo['stage_slim_cvterm_ids']]),
+                    'anatomical_structure_term': self.cvterm_lookup[xp_combo['anatomical_structure_cvterm_id']]['name_plus_curie'],
+                    'anatomical_structure_qualifiers': ' | '.join([self.cvterm_lookup[i]['name_plus_curie'] for i in
+                                                                  xp_combo['anatomical_structure_qualifier_cvterm_ids']]),
+                    'anatomical_structure_slim_terms': ' | '.join([self.cvterm_lookup[i]['name_plus_curie'] for i in
+                                                                  xp_combo['anatomical_structure_slim_cvterm_ids']]),
+                    'anatomical_substructure_term': self.cvterm_lookup[xp_combo['anatomical_substructure_cvterm_id']]['name_plus_curie'],
+                    'anatomical_substructure_qualifiers': ' | '.join([self.cvterm_lookup[i]['name_plus_curie'] for i in
+                                                                     xp_combo['anatomical_substructure_qualifier_cvterm_ids']]),
+                    'anatomical_substructure_slim_terms': ' | '.join([self.cvterm_lookup[i]['name_plus_curie'] for i in
+                                                                     xp_combo['anatomical_substructure_slim_cvterm_ids']]),
+                    'cellular_component_term': self.cvterm_lookup[xp_combo['cellular_component_cvterm_id']]['name_plus_curie'],
+                    'cellular_component_qualifiers': ' | '.join([self.cvterm_lookup[i]['name_plus_curie'] for i in
+                                                                xp_combo['cellular_component_qualifier_cvterm_ids']]),
+                }
+                self.export_data_for_tsv.append(xprn_tsv_dict)
+                counter += 1
+        self.log.info(f'Generated {counter} expression pattern TSV rows.')
+        return
+
     # Elaborate on synthesize_info() for the ExpressionHandler.
     def synthesize_info(self, session):
         """Extend the method for the ExpressionHandler."""
@@ -628,13 +657,5 @@ class ExpressionHandler(DataHandler):
         self.identify_tissue_ranges(session)
         self.identify_tissue_sub_parts()
         self.split_out_expression_patterns()
-        return
-
-    # Add methods to be run by map_fb_data_to_alliance() below.
-    # Placeholder.
-
-    # Elaborate on map_fb_data_to_alliance() for the ExpressionHandler.
-    def map_fb_data_to_alliance(self):
-        """Extend the method for the ExpressionHandler."""
-        super().map_fb_data_to_alliance()
+        self.process_for_tsv_export()
         return
