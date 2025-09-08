@@ -542,7 +542,7 @@ class ExpressionHandler(DataHandler):
         # xprn_id=32457, <a> neuron && glial cell &&of central nervous system
         return
 
-    def generate_xprn_pattern_dict(self, xprn_id, assay_term, stage_term, anatomy_term, anatomy_sub_term, cellular_term, anatomy_range_term_id):
+    def generate_xprn_pattern_dict(self, xprn_id, assay_term, stage_term, anatomy_term, anatomy_sub_term, cellular_term, anatomy_range_term_id, sub_part_id):
         """Convert a specific combination of terms from an expression pattern into a simpler dict."""
         input_str = f'assay="{assay_term.cvterm_name}", stage="{stage_term.cvterm_name}", anatomy="{anatomy_term.cvterm_name}", '
         input_str += f'cellular="{cellular_term.cvterm_name}", anatomy_range_term_id={anatomy_range_term_id}'
@@ -569,9 +569,12 @@ class ExpressionHandler(DataHandler):
             additional_slim_term_ids = self.cvterm_lookup[stage_term.has_stage_end.cvterm_id]['slim_term_cvterm_ids'].copy()
             xprn_pattern_dict['stage_slim_cvterm_ids'].extend(additional_slim_term_ids)
             xprn_pattern_dict['stage_slim_cvterm_ids'] = list(set(xprn_pattern_dict['stage_slim_cvterm_ids']))
-        # If processing a term in a tissue range, replace the main anatomy term with the cvterm_id given for the term within the range.
+        # If processing a term in a tissue range for the main anatomy part, replace the main anatomy term with the cvterm_id given.
         if anatomy_range_term_id:
             xprn_pattern_dict['anatomical_structure_cvterm_id'] = anatomy_range_term_id
+        # If processing a term in a tissue range for the anatomy sub_part, replace the anatomy sub_part term with the cvterm_id given.
+        if sub_part_id:
+            xprn_pattern_dict['anatomical_substructure_cvterm_id'] = sub_part_id
         # self.log.debug(f'For xprn_id={xprn_id}, generated xprn_pattern_dict: {xprn_pattern_dict}')
         return xprn_pattern_dict
 
@@ -601,19 +604,35 @@ class ExpressionHandler(DataHandler):
                             if anatomy_term.is_anat_start:
                                 continue
                             for anatomy_sub_term in xprn_pattern.sub_anatomy_terms.values():
-                                # If there is an anatomy range, first report the start and intermediate anatomy range terms.
+                                # Skip sub_part anatomy range start terms, as these are folded into reporting of the stage range end term.
+                                if anatomy_sub_term.is_anat_start:
+                                    continue
+                                # Catch cases too complex to handle: i.e., tissue range in both the main and sub parts.
+                                if anatomy_term.has_anat_terms and anatomy_sub_term.has_anat_terms:
+                                    self.log.error(f'For xprn_id={xprn_id}, cannot handle tissue ranges for both main part and sub_part.')
+                                    xprn_pattern.is_problematic = True
+                                    xprn_pattern.notes.append('Found tissue ranges for both main part and sub_part.')
+                                    continue
+                                # If there is an anatomy range for the main body part, first report the start and intermediate anatomy range terms.
                                 for anatomy_range_term_id in anatomy_term.has_anat_terms:
                                     xp = self.generate_xprn_pattern_dict(xprn_id, assay_term, stage_term, anatomy_term, anatomy_sub_term,
-                                                                         cellular_term, anatomy_range_term_id)
+                                                                         cellular_term, anatomy_range_term_id, None)
+                                    xprn_pattern.xprn_pattern_combos.append(xp)
+                                    n_combos += 1
+                                # If there is an anatomy range for the anatomy sub_part, first report the start and intermediate anatomy range terms.
+                                for anatomy_sub_part_term_id in anatomy_sub_term.has_anat_terms:
+                                    xp = self.generate_xprn_pattern_dict(xprn_id, assay_term, stage_term, anatomy_term, anatomy_sub_term,
+                                                                         cellular_term, None, anatomy_sub_part_term_id)
                                     xprn_pattern.xprn_pattern_combos.append(xp)
                                     n_combos += 1
                                 # Report for the main anatomy term, including end terms for anatomy ranges.
                                 xp = self.generate_xprn_pattern_dict(xprn_id, assay_term, stage_term, anatomy_term, anatomy_sub_term,
-                                                                     cellular_term, None)
+                                                                     cellular_term, None, None)
                                 xprn_pattern.xprn_pattern_combos.append(xp)
                                 n_combos += 1
             # self.log.debug(f'For xprn_id={xprn_id}, found {n_combos} total term combinations.')
         return
+    # BOB - xprn_id=26072 - code is not reporting anatomy_sub_part tissue range (see only ventral_nerve_cord/PS7 and ventral_nerve_cord/PS13 combinations).
 
     def process_for_tsv_export(self):
         """Process expression patterns for export to TSV."""
