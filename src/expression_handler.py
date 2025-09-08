@@ -408,6 +408,8 @@ class ExpressionHandler(DataHandler):
                         xprn_pattern_slot[current_primary_cvt_id].qualifier_cvterm_ids.append(this_xprn_cvt.cvterm_id)
                         qualifier_xprn_cvt_ids.append(this_xprn_cvt.db_primary_id)
                         # self.log.debug(f'Found qualifier {this_xprn_cvt.cvterm_name} for primary term="{current_primary_cvterm_name}"')
+                        if this_xprn_cvt.obo != 'FBcv':
+                            self.log.warning(f'Found non-FBcv qualifier: "{this_xprn_cvt.cvterm_name}"')
                     else:
                         current_primary_cvt_id = this_xprn_cvt.db_primary_id
                         # self.log.debug(f'Found primary term="{this_xprn_cvt.cvterm_name}", xprn_cvterm_id={this_xprn_cvt.db_primary_id}')
