@@ -632,7 +632,6 @@ class ExpressionHandler(DataHandler):
         # xprn_id=34285, <a> parasegment 8 && parasegment 9 &&of midgut
         # xprn_id=32457, <a> neuron && glial cell &&of central nervous system
         return
-        
 
     def process_for_tsv_export(self):
         """Process expression patterns for export to TSV."""
