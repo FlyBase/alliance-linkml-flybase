@@ -624,7 +624,7 @@ class ExpressionHandler(DataHandler):
             for xp_combo in xprn_pattern.xprn_pattern_combos:
                 xprn_tsv_dict = {
                     'expression_id': xprn_pattern.db_primary_id,
-                    'assay_term': self.cvterm_lookup[xp_combo['assay_cvterm_id']]['name_plus_curie'],
+                    'assay_term': self.cvterm_lookup[xp_combo['assay_cvterm_id']]['name'],
                     'stage_start': self.cvterm_lookup[xp_combo['stage_start_cvterm_id']]['name_plus_curie'],
                     'stage_end': self.cvterm_lookup[xp_combo['stage_end_cvterm_id']]['name_plus_curie'],
                     'stage_qualifiers': ' | '.join([self.cvterm_lookup[i]['name_plus_curie'] for i in xp_combo['stage_qualifier_cvterm_ids']]),

@@ -566,6 +566,7 @@ class FBExpressionAnnotation(object):
         self.anatomy_terms = {}          # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, anatomy.
         self.cellular_terms = {}         # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, cellular.
         self.stage_terms = {}            # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, stage.
+        self.curated_notes = []          # Will be FeatureExpressionprop.value for type "comment".
         # Processed FB data.
         self.sub_anatomy_terms = {}      # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, anatomy sub_parts.
         self.xprn_pattern_combos = []    # Discrete anatomy/assay/cellular/stage term combinations for this annotation.
