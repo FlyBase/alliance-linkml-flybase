@@ -547,7 +547,7 @@ class ExpressionHandler(DataHandler):
         xprn_pattern_dict = {
             'assay_cvterm_id': assay_term.cvterm_id,
             'stage_start_cvterm_id': stage_term.cvterm_id,
-            'stage_end_cvterm_id': None,
+            'stage_end_cvterm_id': 'placeholder',
             'stage_qualifier_cvterm_ids': stage_term.qualifier_cvterm_ids.copy(),
             'stage_slim_cvterm_ids': self.cvterm_lookup[stage_term.cvterm_id]['slim_term_cvterm_ids'].copy(),
             'anatomical_structure_cvterm_id': anatomy_term.cvterm_id,
