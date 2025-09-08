@@ -535,11 +535,6 @@ class ExpressionHandler(DataHandler):
             else:
                 xprn_pattern.sub_anatomy_terms['placeholder'] = self.placeholder
         self.log.info(f'Found {counter} expression patterns having anatomy sub_parts.')
-        # Check these difficult cases in the output:
-        # xprn_id=42175, <a> cell | subset &&of mesoderm | dorsal &&of parasegment 2--12
-        # xprn_id=42170, <a> parasegment 3--12 &&of larval ventral nerve cord
-        # xprn_id=34285, <a> parasegment 8 && parasegment 9 &&of midgut
-        # xprn_id=32457, <a> neuron && glial cell &&of central nervous system
         return
 
     def generate_xprn_pattern_dict(self, xprn_id, assay_term, stage_term, anatomy_term, anatomy_sub_term, cellular_term, anatomy_range_term_id, sub_part_id):
@@ -631,8 +626,13 @@ class ExpressionHandler(DataHandler):
                                 xprn_pattern.xprn_pattern_combos.append(xp)
                                 n_combos += 1
             # self.log.debug(f'For xprn_id={xprn_id}, found {n_combos} total term combinations.')
+        # Check these difficult cases in the output:
+        # xprn_id=42175, <a> cell | subset &&of mesoderm | dorsal &&of parasegment 2--12
+        # xprn_id=42170, <a> parasegment 3--12 &&of larval ventral nerve cord
+        # xprn_id=34285, <a> parasegment 8 && parasegment 9 &&of midgut
+        # xprn_id=32457, <a> neuron && glial cell &&of central nervous system
         return
-    # BOB - xprn_id=26072 - code is not reporting anatomy_sub_part tissue range (see only ventral_nerve_cord/PS7 and ventral_nerve_cord/PS13 combinations).
+        
 
     def process_for_tsv_export(self):
         """Process expression patterns for export to TSV."""
