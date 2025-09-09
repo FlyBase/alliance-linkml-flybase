@@ -545,8 +545,7 @@ class ExpressionHandler(DataHandler):
         """Convert a specific combination of terms from an expression pattern into a simpler dict."""
         input_str = f'assay="{assay_term.cvterm_name}", stage="{stage_term.cvterm_name}", main_anatomy="{anatomy_term.cvterm_name}", '
         input_str += f'sub_part_anatomy="{anatomy_sub_term.cvterm_name}", cellular="{cellular_term.cvterm_name}"'
-        self.log.debug(f'Generate xprn_pattern_dict for xprn_id={xprn_id}; input: {input_str}')
-        self.log.debug(f'xprn_id={xprn_id} has {len(anatomy_term.has_anat_term_ids)} main parts and {len(anatomy_sub_term.has_anat_term_ids)} sub-parts.')
+        # self.log.debug(f'Generate xprn_pattern_dict for xprn_id={xprn_id}; input: {input_str}')
         xprn_pattern_dict_list = []
         for main_part_id in anatomy_term.has_anat_term_ids:
             for sub_part_id in anatomy_sub_term.has_anat_term_ids:
@@ -608,7 +607,7 @@ class ExpressionHandler(DataHandler):
                                 xp_list = self.generate_xprn_pattern_dict(xprn_id, assay_term, stage_term, anatomy_term, anatomy_sub_term, cellular_term)
                                 xprn_pattern.xprn_pattern_combos.extend(xp_list)
                                 n_combos += len(xp_list)
-            self.log.debug(f'For xprn_id={xprn_id}, found {n_combos} total term combinations.')
+            # self.log.debug(f'For xprn_id={xprn_id}, found {n_combos} total term combinations.')
         # Check these difficult cases in the output:
         # xprn_id=42175, <a> cell | subset &&of mesoderm | dorsal &&of parasegment 2--12
         # xprn_id=42170, <a> parasegment 3--12 &&of larval ventral nerve cord
