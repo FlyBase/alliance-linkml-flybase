@@ -28,8 +28,12 @@ class ExpressionHandler(DataHandler):
         self.agr_export_type = None
         self.slot_types = ['anatomy', 'assay', 'cellular', 'stage']
         self.placeholder = fb_datatypes.FBExpressionCvterm(None)
-        self.expression_patterns = {}    # expression_id-keyed FBExpressionAnnotation objects.
-        self.export_data_for_tsv = []    # List of dicts for export to TSV.
+        self.expression_patterns = {}            # expression_id-keyed FBExpressionAnnotation objects.
+        self.export_data_for_tsv = []            # List of dicts for export to TSV.
+        self.isoform_gene_product_lookup = {}    # Will be feature_id-keyed lists of feature_ids representing isoform "isa" XR/XP relationships.
+        self.gene_product_gene_lookup = {}       # Will be feature_id-keyed lists of feature_ids representing XR/XP to gene relationships.
+        self.gene_product_allele_lookup = {}     # Will be feature_id-keyed lists of feature_ids representing RA/PA to allele relationships.
+        self.hemi_driver_parents_lookup = {}     # Will be feature_id-keyed lsits of feature_ids representing hemi-driver to split system combinations.
 
     # Key info.
 
@@ -385,7 +389,6 @@ class ExpressionHandler(DataHandler):
             if 'RNA' in feat_type:
                 feat_xprn.xprn_type = 'RNA'
             self.fb_data_entities[feat_xprn_id] = feat_xprn
-            self.log.debug(f'BOB: feat_xprn_id={result.feature_expression_id}')
             counter += 1
         self.log.info(f'Found {counter} distinct feature_expression annotations in chado.')
         return

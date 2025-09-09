@@ -602,6 +602,7 @@ class FBFeatureExpressionAnnotation(FBExportEntity):
         self.original_tap_stmts = []    # Will be the originally curated TAP statements (type='curated_as'); usually one, but up to seven.
         self.tap_stmt_notes = []        # Will be a list of <note> text from the original curation (type='comment'); usually one, rarely two.
         # Processed FB data.
+        self.current_gp_ids = []         # Will be feature_ids of parental XR/XP features for isoforms (e.g., tkv[+]R4.4, Appl[+]P130kD)
         self.current_gene_ids = []       # Will be gene feature_ids for the parental genes (for XR/XP).
         self.current_allele_ids = []     # Will be allele feature_ids for the current alleles (for RA/PA).
         self.parental_fbco_ids = []      # Will be split system combination feature_ids for hemi-driver alleles.

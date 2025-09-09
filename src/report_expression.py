@@ -34,7 +34,7 @@ HEADER_LIST = [
     'feature_symbol',
     'reference_id',
     'expression_type',
-    'expression_id',    # Only for debugging.
+    'expression_id',    # BOB: Internal expression.expression_id, only for debugging.
     'assay_term',
     'stage_start',
     'stage_end',
