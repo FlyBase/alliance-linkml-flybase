@@ -410,7 +410,7 @@ class ExpressionHandler(DataHandler):
                         if this_xprn_cvt.obo == 'FBcv':
                             xprn_pattern_slot[current_primary_cvt_id].qualifier_cvterm_ids.append(this_xprn_cvt.cvterm_id)
                         else:
-                            self.log.warning(f'Ignoring non-FBcv qualifier: "{this_xprn_cvt.cvterm_name}".')
+                            self.log.debug(f'Ignoring non-FBcv qualifier: "{this_xprn_cvt.cvterm_name}".')
                     else:
                         current_primary_cvt_id = this_xprn_cvt.db_primary_id
                         # self.log.debug(f'Found primary term="{this_xprn_cvt.cvterm_name}", xprn_cvterm_id={this_xprn_cvt.db_primary_id}')
@@ -546,6 +546,7 @@ class ExpressionHandler(DataHandler):
         input_str = f'assay="{assay_term.cvterm_name}", stage="{stage_term.cvterm_name}", main_anatomy="{anatomy_term.cvterm_name}", '
         input_str += f'sub_part_anatomy="{anatomy_sub_term.cvterm_name}", cellular="{cellular_term.cvterm_name}"'
         self.log.debug(f'Generate xprn_pattern_dict for xprn_id={xprn_id}; input: {input_str}')
+        self.log.debug(f'xprn_id={xprn_id} has {len(anatomy_term.has_anat_term_ids)} main parts and {len(anatomy_sub_term.has_anat_term_ids)} sub-parts.')
         xprn_pattern_dict_list = []
         for main_part_id in anatomy_term.has_anat_term_ids:
             for sub_part_id in anatomy_sub_term.has_anat_term_ids:
