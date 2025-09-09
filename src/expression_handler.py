@@ -384,7 +384,7 @@ class ExpressionHandler(DataHandler):
             feat_xprn = fb_datatypes.FBFeatureExpressionAnnotation(result.FeatureExpression)
             if 'RNA' in feat_type:
                 feat_xprn.xprn_type = 'RNA'
-            self.feat_xprn_annos[feat_xprn_id] = feat_xprn
+            self.fb_data_entities[feat_xprn_id] = feat_xprn
             counter += 1
         self.log.info(f'Found {counter} distinct feature_expression annotations in chado.')
         return
@@ -645,13 +645,18 @@ class ExpressionHandler(DataHandler):
         """Process expression patterns for export to TSV."""
         self.log.info('Process expression patterns for export to TSV.')
         counter = 0
-        for xprn_pattern in self.expression_patterns.values():
+        for feat_xprn in self.fb_data_entities.values():
+            xprn_pattern = self.expression_patterns[feat_xprn.expression_id]
             if xprn_pattern.is_problematic:
                 continue
             elif not xprn_pattern.xprn_pattern_combos:
                 continue
             for xp_combo in xprn_pattern.xprn_pattern_combos:
                 xprn_tsv_dict = {
+                    'feature_id': self.feature_lookup[feat_xprn.feature_id]['uniquename'],
+                    'feature_symbol': self.feature_lookup[feat_xprn.feature_id]['name'],
+                    'reference_id': feat_xprn.pub_curie,
+                    'expression_type': feat_xprn.xprn_type,
                     'expression_id': xprn_pattern.db_primary_id,
                     'assay_term': self.cvterm_lookup[xp_combo['assay_cvterm_id']]['name'],
                     'stage_start': self.cvterm_lookup[xp_combo['stage_start_cvterm_id']]['name_plus_curie'],
@@ -671,6 +676,7 @@ class ExpressionHandler(DataHandler):
                     'cellular_component_term': self.cvterm_lookup[xp_combo['cellular_component_cvterm_id']]['name_plus_curie'],
                     'cellular_component_qualifiers': ' | '.join([self.cvterm_lookup[i]['name_plus_curie'] for i in
                                                                 xp_combo['cellular_component_qualifier_cvterm_ids']]),
+                    'notes': ' | '.join(xprn_pattern.tap_stmt_notes),
                 }
                 self.export_data_for_tsv.append(xprn_tsv_dict)
                 counter += 1

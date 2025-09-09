@@ -586,10 +586,11 @@ class FBFeatureExpressionAnnotation(FBExportEntity):
             chado_obj (SQLAlchemy FeatureExpression object): The Chado FeatureExpression object.
 
         """
-        # Features are usually Dmel XR/XP, transgenic RA/PA products, or FBco split system combination features.
-        # There are also a few hundred interal Dmel transcripts (e.g., "tkv[+]R4.4") or polypeptides (e.g., "Appl[+]P130kD") - report these for the gene.
+        # BOB: Features are usually Dmel XR/XP, transgenic RA/PA products, or FBco split system combination features.
+        # BOB: There are also a few hundred interal Dmel transcripts (e.g., "tkv[+]R4.4") or polypeptides (e.g., "Appl[+]P130kD") - report these for the gene.
         # BOB: NEED TO FILTER OUT xprn for FBco component FBal alleles!!!!!
         # BOB: NEED TO FILTER OUT xprn for transgenic transcripts/polypeptides lacking a current allele.
+        # BOB: FILTER OUT <note> with "when combined with", as this is detritus from old FBco-component annotation.
         super().__init__()
         # Primary FB chado data.
         self.chado_obj = chado_obj
@@ -599,8 +600,7 @@ class FBFeatureExpressionAnnotation(FBExportEntity):
         self.expression_id = chado_obj.expression_id
         self.pub_curie = chado_obj.pub.uniquename
         self.original_tap_stmts = []    # Will be the originally curated TAP statements (type='curated_as'); usually one, but up to seven.
-        self.tap_stmt_note = []         # Will be a list of <note> text from the original curation (type='comment'); usually one, rarely two.
-        # BOB: FILTER OUT <note> with "when combined with", as this is detritus from old FBco-component annotation.
+        self.tap_stmt_notes = []        # Will be a list of <note> text from the original curation (type='comment'); usually one, rarely two.
         # Processed FB data.
         self.current_gene_ids = []       # Will be gene feature_ids for the parental genes (for XR/XP).
         self.current_allele_ids = []     # Will be allele feature_ids for the current alleles (for RA/PA).
