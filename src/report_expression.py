@@ -89,6 +89,7 @@ def main():
     expression_handler.get_general_data(session)
     expression_handler.get_datatype_data(session)
     expression_handler.synthesize_info(session)
+    expression_handler.process_for_tsv_export()
 
     # Export the data.
     data_to_export_as_tsv = generic_FB_tsv_dict(REPORT_TITLE, DATABASE)

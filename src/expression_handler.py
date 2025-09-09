@@ -29,7 +29,6 @@ class ExpressionHandler(DataHandler):
         self.slot_types = ['anatomy', 'assay', 'cellular', 'stage']
         self.placeholder = fb_datatypes.FBExpressionCvterm(None)
         self.expression_patterns = {}    # expression_id-keyed FBExpressionAnnotation objects.
-        self.feat_xprn_annos = {}        # feature_expression_id-keyed FBFeatureExpressionAnnotation objects, for export.
         self.export_data_for_tsv = []    # List of dicts for export to TSV.
 
     # Key info.
@@ -364,6 +363,32 @@ class ExpressionHandler(DataHandler):
         self.log.info(f'Found {counter} distinct expression cvterm operators in chado.')
         return
 
+    def get_feature_expression_data(self, session):
+        """Get feature_expression data."""
+        self.log.info('Get feature_expression data.')
+        filters = (
+            Feature.is_obsolete.is_(False),
+        )
+        feature_expressions = session.query(Feature, FeatureExpression).\
+            select_from(Feature).\
+            join(FeatureExpression, (Feature.feature_id == FeatureExpression.feature_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in feature_expressions:
+            feat_xprn_id = result.FeatureExpression.feature_expression_id
+            xprn_id = result.FeatureExpression.expression_id
+            feat_type = result.Feature.type.name
+            if xprn_id not in self.expression_patterns.keys():
+                continue
+            feat_xprn = fb_datatypes.FBFeatureExpressionAnnotation(result.FeatureExpression)
+            if 'RNA' in feat_type:
+                feat_xprn.xprn_type = 'RNA'
+            self.feat_xprn_annos[feat_xprn_id] = feat_xprn
+            counter += 1
+        self.log.info(f'Found {counter} distinct feature_expression annotations in chado.')
+        return
+
     # Elaborate on get_datatype_data() for the ExpressionHandler.
     def get_datatype_data(self, session):
         """Extend the method for the ExpressionHandler."""
@@ -371,6 +396,7 @@ class ExpressionHandler(DataHandler):
         self.get_expression_patterns(session)
         self.get_expression_pattern_cvterms(session)
         self.get_expression_pattern_operators(session)
+        self.get_feature_expression_data(session)
         return
 
     # Add methods to be run by synthesize_info() below.
@@ -660,5 +686,7 @@ class ExpressionHandler(DataHandler):
         self.identify_tissue_ranges(session)
         self.identify_tissue_sub_parts()
         self.split_out_expression_patterns()
-        self.process_for_tsv_export()
         return
+
+    # Additional methods to be run by map_fb_data_to_alliance() below.
+    # Placeholder

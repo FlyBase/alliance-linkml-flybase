@@ -594,12 +594,18 @@ class FBFeatureExpressionAnnotation(FBExportEntity):
         # Primary FB chado data.
         self.chado_obj = chado_obj
         self.db_primary_id = chado_obj.feature_expression_id
+        self.feature_id = chado_obj.feature_id
+        self.xprn_type = chado_obj.feature.type.name    # Simplify to polypeptide or RNA.
+        self.expression_id = chado_obj.expression_id
+        self.pub_curie = chado_obj.pub.uniquename
         self.original_tap_stmts = []    # Will be the originally curated TAP statements (type='curated_as'); usually one, but up to seven.
         self.tap_stmt_note = []         # Will be a list of <note> text from the original curation (type='comment'); usually one, rarely two.
         # BOB: FILTER OUT <note> with "when combined with", as this is detritus from old FBco-component annotation.
         # Processed FB data.
+        self.current_gene_ids = []       # Will be gene feature_ids for the parental genes (for XR/XP).
+        self.current_allele_ids = []     # Will be allele feature_ids for the current alleles (for RA/PA).
+        self.parental_fbco_ids = []      # Will be split system combination feature_ids for hemi-driver alleles.
         self.public_feature_id = None    # Will be the feature_id of the public feature: e.g., the gene, or the allele.
-        self.xprn_type = None            # Will be RNA or protein, as appropriate.
         self.is_problematic = False      # True if there are problems that preclude export.
         self.notes = []
 
