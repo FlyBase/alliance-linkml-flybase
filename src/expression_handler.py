@@ -369,16 +369,17 @@ class ExpressionHandler(DataHandler):
         filters = (
             Feature.is_obsolete.is_(False),
         )
-        feature_expressions = session.query(Feature, FeatureExpression).\
+        feature_expressions = session.query(FeatureExpression).\
             select_from(Feature).\
             join(FeatureExpression, (Feature.feature_id == FeatureExpression.feature_id)).\
             filter(*filters).\
             distinct()
         counter = 0
         for result in feature_expressions:
-            feat_xprn_id = result.FeatureExpression.feature_expression_id
-            xprn_id = result.FeatureExpression.expression_id
-            feat_type = result.Feature.type.name
+            self.log.debug(f'BOB: feat_xprn_id={result.feature_expression_id}')
+            feat_xprn_id = result.feature_expression_id
+            xprn_id = result.expression_id
+            feat_type = result.feature.type.name
             if xprn_id not in self.expression_patterns.keys():
                 continue
             feat_xprn = fb_datatypes.FBFeatureExpressionAnnotation(result.FeatureExpression)
@@ -676,7 +677,7 @@ class ExpressionHandler(DataHandler):
                     'cellular_component_term': self.cvterm_lookup[xp_combo['cellular_component_cvterm_id']]['name_plus_curie'],
                     'cellular_component_qualifiers': ' | '.join([self.cvterm_lookup[i]['name_plus_curie'] for i in
                                                                 xp_combo['cellular_component_qualifier_cvterm_ids']]),
-                    'notes': ' | '.join(xprn_pattern.tap_stmt_notes),
+                    'notes': ' | '.join(feat_xprn.tap_stmt_notes),
                 }
                 self.export_data_for_tsv.append(xprn_tsv_dict)
                 counter += 1
