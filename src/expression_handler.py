@@ -410,7 +410,7 @@ class ExpressionHandler(DataHandler):
                         if this_xprn_cvt.obo == 'FBcv':
                             xprn_pattern_slot[current_primary_cvt_id].qualifier_cvterm_ids.append(this_xprn_cvt.cvterm_id)
                         else:
-                            self.log.warning(f'Ignoring non-FBcv qualifier: "{this_xprn_cvt.cvterm_name}".')
+                            self.log.debug(f'Ignoring non-FBcv qualifier: "{this_xprn_cvt.cvterm_name}".')
                     else:
                         current_primary_cvt_id = this_xprn_cvt.db_primary_id
                         # self.log.debug(f'Found primary term="{this_xprn_cvt.cvterm_name}", xprn_cvterm_id={this_xprn_cvt.db_primary_id}')
@@ -532,11 +532,15 @@ class ExpressionHandler(DataHandler):
                 # self.log.debug(f'For xprn_id={xprn_pattern.db_primary_id}, have {n_combos} main/sub_part combinations.')
             else:
                 xprn_pattern.sub_anatomy_terms['placeholder'] = self.placeholder
+                xprn_pattern.sub_anatomy_terms['placeholder'].has_anat_term_ids.append(self.placeholder.cvterm_id)
         self.log.info(f'Found {counter} expression patterns having anatomy sub_parts.')
         return
 
     def generate_xprn_pattern_dict(self, xprn_id, assay_term, stage_term, anatomy_term, anatomy_sub_term, cellular_term):
         """Convert a specific combination of terms from an expression pattern into a simpler dict."""
+        # input_str = f'xprn_id={xprn_id}, assay="{assay_term.cvterm_name}", stage="{stage_term.cvterm_name}", '
+        # input_str += f'anatomy="{anatomy_term.cvterm_name}", sub_part="{anatomy_sub_term.cvterm_name}", cellular="{cellular_term.cvterm_name}"'
+        # self.log.debug(f'Process {input_str}')
         xprn_pattern_dict_list = []
         for main_part_id in anatomy_term.has_anat_term_ids:
             for sub_part_id in anatomy_sub_term.has_anat_term_ids:
@@ -564,6 +568,7 @@ class ExpressionHandler(DataHandler):
                     xprn_pattern_dict['stage_slim_cvterm_ids'] = list(set(xprn_pattern_dict['stage_slim_cvterm_ids']))
                 xprn_pattern_dict_list.append(xprn_pattern_dict)
                 # self.log.debug(f'For xprn_id={xprn_id}, generated xprn_pattern_dict: {xprn_pattern_dict}')
+        # self.log.debug(f'For xprn_id={xprn_id}, generated {len(xprn_pattern_dict_list)} xprn_pattern_dict entries.')
         return xprn_pattern_dict_list
 
     def split_out_expression_patterns(self):
