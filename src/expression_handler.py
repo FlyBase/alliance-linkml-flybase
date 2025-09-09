@@ -382,7 +382,7 @@ class ExpressionHandler(DataHandler):
             feat_type = result.feature.type.name
             if xprn_id not in self.expression_patterns.keys():
                 continue
-            feat_xprn = fb_datatypes.FBFeatureExpressionAnnotation(result.FeatureExpression)
+            feat_xprn = fb_datatypes.FBFeatureExpressionAnnotation(result)
             if 'RNA' in feat_type:
                 feat_xprn.xprn_type = 'RNA'
             self.fb_data_entities[feat_xprn_id] = feat_xprn
