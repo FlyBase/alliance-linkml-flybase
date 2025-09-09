@@ -535,6 +535,7 @@ class FBExpressionCvterm(object):
             self.type = 'placeholder'
             self.cv_name = 'placeholder'
             self.obo = 'placeholder'
+            self.has_anat_term_ids = ['placeholder']
         # Collect related expression_cvtermprops of type "operator" having non-null expression_cvtermprop.value.
         # stage - operator props will have text of "FROM/TO" to indicate a temporal range.
         # cellular - operator props will have text of "OF" (to mark a larger xprn domain).
@@ -547,7 +548,7 @@ class FBExpressionCvterm(object):
         self.has_stage_end = None      # For a stage term having a "FROM" operator, put the matching "TO" FBExpressionCvterm stage term here.
         self.is_anat_start = False     # True for an anatomy term having a "FROM" operator.
         self.is_anat_end = False       # True for an anatomy term having a "TO" operator.
-        self.has_anat_terms = []       # For a term at the end of a tissue range, the list of cvterm_ids for all anatomy terms in the range (inc. itself).
+        self.has_anat_term_ids = []    # For a term at the end of a tissue range, the list of cvterm_ids for all anatomy terms in the range (inc. itself).
 
 
 class FBExpressionAnnotation(object):
