@@ -376,7 +376,6 @@ class ExpressionHandler(DataHandler):
             distinct()
         counter = 0
         for result in feature_expressions:
-            self.log.debug(f'BOB: feat_xprn_id={result.feature_expression_id}')
             feat_xprn_id = result.feature_expression_id
             xprn_id = result.expression_id
             feat_type = result.feature.type.name
@@ -386,6 +385,7 @@ class ExpressionHandler(DataHandler):
             if 'RNA' in feat_type:
                 feat_xprn.xprn_type = 'RNA'
             self.fb_data_entities[feat_xprn_id] = feat_xprn
+            self.log.debug(f'BOB: feat_xprn_id={result.feature_expression_id}')
             counter += 1
         self.log.info(f'Found {counter} distinct feature_expression annotations in chado.')
         return

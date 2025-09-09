@@ -30,10 +30,10 @@ from harvdev_utils.general_functions import (
 REPORT_LABEL = 'curated_expression'
 REPORT_TITLE = 'FlyBase Expression Report'
 HEADER_LIST = [
-    # 'feature_id',
-    # 'feature_symbol',
-    # 'reference_id',
-    # 'expression_type',
+    'feature_id',
+    'feature_symbol',
+    'reference_id',
+    'expression_type',
     'expression_id',    # Only for debugging.
     'assay_term',
     'stage_start',
@@ -48,7 +48,7 @@ HEADER_LIST = [
     'anatomical_substructure_slim_terms',
     'cellular_component_term',
     'cellular_component_qualifiers',
-    # 'notes',
+    'notes',
 ]
 
 # Now proceed with generic setup.
