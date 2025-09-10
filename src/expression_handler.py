@@ -742,12 +742,17 @@ class ExpressionHandler(DataHandler):
     def determine_public_feature_to_report(self):
         """Determine the public feature to report for each expressed product."""
         self.log.info('Determine the public feature to report for expressed gene product.')
+        split_system_counter = 0
         isoform_to_gene_counter = 0
         gene_product_to_gene_counter = 0
         allele_product_to_allele_counter = 0
         no_mapping_counter = 0
         for feat_xprn in self.fb_data_entities.values():
-            # 1. Deal with gene product isoforms, which map to genes indirectly.
+            # 1. Deal with expressed split system combinations.
+            if self.feature_lookup[feat_xprn.feature_id]['uniquename'].startswith('FBco'):
+                feat_xprn.public_feature_id = feat_xprn.feature_id
+                split_system_counter += 1
+            # 2. Deal with gene product isoforms, which map to genes indirectly.
             if feat_xprn.feature_id in self.isoform_gene_product_lookup.keys():
                 gene_product_id = self.isoform_gene_product_lookup[feat_xprn.feature_id]
                 try:
@@ -757,20 +762,21 @@ class ExpressionHandler(DataHandler):
                     feat_xprn.is_problematic = True
                     feat_xprn.notes.append('Could not find gene for gene product.')
                     self.log.error(f'Could not find gene for gene product ID {gene_product_id}.')
-            # 2. Deal with gene products, which map to genes directly.
+            # 3. Deal with gene products, which map to genes directly.
             elif feat_xprn.feature_id in self.gene_product_gene_lookup.keys():
                 feat_xprn.public_feature_id = self.gene_product_gene_lookup[feat_xprn.feature_id]
                 gene_product_to_gene_counter += 1
-            # 3. Deal with allele products, which map to transgenic alleles.
+            # 4. Deal with allele products, which map to transgenic alleles.
             elif feat_xprn.feature_id in self.allele_product_allele_lookup.keys():
                 feat_xprn.public_feature_id = self.allele_product_allele_lookup[feat_xprn.feature_id]
                 allele_product_to_allele_counter += 1
-            # 4. Deal with expressed products that cannot be mapped to a gene or allele.
+            # 5. Deal with expressed products that cannot be mapped to a gene or allele.
             else:
                 feat_xprn.is_problematic = True
                 feat_xprn.notes.append('Could not map gene product to gene or allele.')
                 self.log.error(f'Could not map feature ID {feat_xprn.feature_id} to a gene or allele.')
                 no_mapping_counter += 1
+        self.log.info(f'Found {split_system_counter} split system combination annotations.')
         self.log.info(f'Mapped isoforms indirectly to genes (via gene products) for {isoform_to_gene_counter} annotations.')
         self.log.info(f'Mapped gene products directly to genes for {gene_product_to_gene_counter} annotations.')
         self.log.info(f'Mapped allele products directly to alleles for {allele_product_to_allele_counter} annotations.')
