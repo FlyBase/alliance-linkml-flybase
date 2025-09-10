@@ -782,6 +782,8 @@ class ExpressionHandler(DataHandler):
         self.log.info('Process expression patterns for export to TSV.')
         counter = 0
         for feat_xprn in self.fb_data_entities.values():
+            if feat_xprn.is_problematic:
+                continue
             xprn_pattern = self.expression_patterns[feat_xprn.expression_id]
             if xprn_pattern.is_problematic:
                 continue
