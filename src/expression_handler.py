@@ -28,12 +28,12 @@ class ExpressionHandler(DataHandler):
         self.agr_export_type = None
         self.slot_types = ['anatomy', 'assay', 'cellular', 'stage']
         self.placeholder = fb_datatypes.FBExpressionCvterm(None)
-        self.expression_patterns = {}            # expression_id-keyed FBExpressionAnnotation objects.
-        self.export_data_for_tsv = []            # List of dicts for export to TSV.
-        self.isoform_gene_product_lookup = {}    # Will be feature_id-keyed feature_id that connects an isoform to an XR/XP gene product.
-        self.gene_product_gene_lookup = {}       # Will be feature_id-keyed feature_id that connects an XR/XP gene product to a gene.
-        self.gene_product_allele_lookup = {}     # Will be feature_id-keyed lists of feature_ids that connect RA/PA gene products to alleles.
-        self.hemi_driver_parents_lookup = {}     # Will be feature_id-keyed lsits of feature_ids that connect hemi-driver to FBco split system combinations.
+        self.expression_patterns = {}             # expression_id-keyed FBExpressionAnnotation objects.
+        self.export_data_for_tsv = []             # List of dicts for export to TSV.
+        self.isoform_gene_product_lookup = {}     # Will be feature_id-keyed feature_id that connects an isoform to an XR/XP gene product.
+        self.gene_product_gene_lookup = {}        # Will be feature_id-keyed feature_id that connects an XR/XP gene product to a gene.
+        self.allele_product_allele_lookup = {}    # Will be feature_id-keyed feature_id that connects an RA\PA allele product to an allele.
+        self.hemi_driver_parents_lookup = {}      # Will be feature_id-keyed lsits of feature_ids that connect hemi-driver to FBco split system combinations.
 
     # Key info.
 
@@ -313,13 +313,45 @@ class ExpressionHandler(DataHandler):
         counter = 0
         for result in results:
             counter += 1
-            gene_product_str = f'{result.gene_product.name} ({result.gene_product.uniquename})'
             if result.gene_product.feature_id in self.gene_product_gene_lookup.keys():
                 gene_product_str = f'{result.gene_product.name} ({result.gene_product.uniquename})'
                 self.log.warning(f'Found multiple genes for gene product {gene_product_str}.')
                 continue
             self.gene_product_gene_lookup[result.gene_product.feature_id] = result.gene.feature_id
-        self.log.info(f'Found {counter} distinct gene_product to gene product relationships.')
+        self.log.info(f'Found {counter} distinct gene_product to gene relationships.')
+        return
+
+    def get_allele_product_allele_mappings(self, session):
+        """Get allele product to allele mappings."""
+        self.log.info('Get allele product to allele mappings.')
+        allele_product = aliased(Feature, name='allele_product')
+        allele = aliased(Feature, name='allele')
+        filters = (
+            allele_product.is_obsolete.is_(False),
+            allele_product.uniquename.op('~')(r'^FB(tr|pp)[0-9]{7}$'),
+            allele.is_obsolete.is_(False),
+            allele.uniquename.op('~')(r'^FBal[0-9]{7}$'),
+            Cvterm.name == 'associated_with',
+        )
+        results = session.query(allele_product, allele).\
+            select_from(allele_product).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == allele_product.feature_id)).\
+            join(allele, (FeatureRelationship.object_id == allele.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            counter += 1
+            allele_product_str = f'{result.gene_product.name} ({result.gene_product.uniquename})'
+            allele_str = f'{result.allele.name} ({result.allele.uniquename})'
+            self.log.debug(f'BOB: {allele_product_str} maps to allele {allele_str}.')
+            if result.allele_product.feature_id in self.allele_product_allele_lookup.keys():
+                allele_product_str = f'{result.gene_product.name} ({result.gene_product.uniquename})'
+                self.log.warning(f'Found multiple alleles for allele product {allele_product_str}.')
+                continue
+            self.allele_product_allele_lookup[result.allele_product.feature_id] = result.allele.feature_id
+        self.log.info(f'Found {counter} distinct allele_product to allele relationships.')
         return
 
     # Elaborate on get_general_data() for the ExpressionHandler.
@@ -334,6 +366,7 @@ class ExpressionHandler(DataHandler):
         self.build_feature_lookup(session, feature_types=['transcript', 'polypeptide', 'allele', 'gene', 'insertion', 'split system combination'])
         self.get_isoform_mappings(session)
         self.get_gene_product_gene_mappings(session)
+        self.get_allele_product_allele_mappings(session)
         return
 
     # Add methods to be run by get_datatype_data() below.
@@ -715,7 +748,7 @@ class ExpressionHandler(DataHandler):
         isoform_to_gene_counter = 0
         gene_product_to_gene_counter = 0
         for feat_xprn in self.fb_data_entities.values():
-            # 1. Deal with gene product isoforms.
+            # 1. Deal with gene product isoforms, which map to genes indirectly.
             if feat_xprn.feature_id in self.isoform_gene_product_lookup.keys():
                 gene_product_id = self.isoform_gene_product_lookup[feat_xprn.feature_id]
                 try:
@@ -725,6 +758,7 @@ class ExpressionHandler(DataHandler):
                     feat_xprn.is_problematic = True
                     feat_xprn.notes.append('Could not find gene for gene product.')
                     self.log.error(f'Could not find gene for gene product ID {gene_product_id}.')
+            # 2. Deal with gene products, which map to genes directly.
             elif feat_xprn.feature_id in self.gene_product_gene_lookup.keys():
                 try:
                     feat_xprn.public_feature_id = self.gene_product_gene_lookup[feat_xprn.feature_id]
@@ -736,8 +770,8 @@ class ExpressionHandler(DataHandler):
             # BOB - temporary default while we work out the public feature id.
             else:
                 feat_xprn.public_feature_id = feat_xprn.feature_id
-        self.log.info(f'Mapped {isoform_to_gene_counter} isoforms indirectly to genes (via gene products).')
-        self.log.info(f'Mapped {gene_product_to_gene_counter} gene products directly to genes.')
+        self.log.info(f'Mapped isoforms indirectly to genes (via gene products) for {isoform_to_gene_counter} annotations.')
+        self.log.info(f'Mapped gene products directly to genes for {gene_product_to_gene_counter} annotations.')
         return
 
     def process_for_tsv_export(self):
