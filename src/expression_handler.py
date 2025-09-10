@@ -343,11 +343,11 @@ class ExpressionHandler(DataHandler):
         counter = 0
         for result in results:
             counter += 1
-            allele_product_str = f'{result.gene_product.name} ({result.gene_product.uniquename})'
+            allele_product_str = f'{result.allele_product.name} ({result.allele_product.uniquename})'
             allele_str = f'{result.allele.name} ({result.allele.uniquename})'
             self.log.debug(f'BOB: {allele_product_str} maps to allele {allele_str}.')
             if result.allele_product.feature_id in self.allele_product_allele_lookup.keys():
-                allele_product_str = f'{result.gene_product.name} ({result.gene_product.uniquename})'
+                allele_product_str = f'{result.allele_product.name} ({result.allele_product.uniquename})'
                 self.log.warning(f'Found multiple alleles for allele product {allele_product_str}.')
                 continue
             self.allele_product_allele_lookup[result.allele_product.feature_id] = result.allele.feature_id
