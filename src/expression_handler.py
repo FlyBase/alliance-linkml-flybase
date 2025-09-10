@@ -303,6 +303,7 @@ class ExpressionHandler(DataHandler):
         self.get_slim_term_mappings(session)
         self.build_organism_lookup(session)
         self.build_feature_lookup(session, feature_types=['transcript', 'polypeptide', 'allele', 'gene', 'insertion', 'split system combination'])
+        self.get_isoform_mappings(session)
         return
 
     # Add methods to be run by get_datatype_data() below.
