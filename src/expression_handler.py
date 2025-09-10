@@ -753,7 +753,7 @@ class ExpressionHandler(DataHandler):
                 feat_xprn.public_feature_id = feat_xprn.feature_id
                 split_system_counter += 1
             # 2. Deal with gene product isoforms, which map to genes indirectly.
-            if feat_xprn.feature_id in self.isoform_gene_product_lookup.keys():
+            elif feat_xprn.feature_id in self.isoform_gene_product_lookup.keys():
                 gene_product_id = self.isoform_gene_product_lookup[feat_xprn.feature_id]
                 try:
                     feat_xprn.public_feature_id = self.gene_product_gene_lookup[gene_product_id]
