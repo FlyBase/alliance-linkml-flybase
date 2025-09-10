@@ -314,8 +314,6 @@ class ExpressionHandler(DataHandler):
         for result in results:
             counter += 1
             gene_product_str = f'{result.gene_product.name} ({result.gene_product.uniquename})'
-            gene_str = f'{result.gene.name} ({result.gene.uniquename})'
-            self.log.debug(f'BOB: gene product {gene_product_str} maps to gene {gene_str}.')
             if result.gene_product.feature_id in self.gene_product_gene_lookup.keys():
                 gene_product_str = f'{result.gene_product.name} ({result.gene_product.uniquename})'
                 self.log.warning(f'Found multiple genes for gene product {gene_product_str}.')
@@ -621,7 +619,7 @@ class ExpressionHandler(DataHandler):
                     if len(potential_sub_parts) > 1:
                         self.log.warning(f'For xprn_id={xprn_pattern.db_primary_id}, there are {len(potential_sub_parts)} sub-parts.')
                     elif len(main_parts) > 1:
-                        self.log.warning(f'For xprn_id={xprn_pattern.db_primary_id}, there are {len(potential_sub_parts)} main parts.')
+                        self.log.warning(f'For xprn_id={xprn_pattern.db_primary_id}, there are {len(main_parts)} main parts.')
                     # Move anatomy sub_parts into a separate dict within the expression pattern object.
                     for sub_part in potential_sub_parts:
                         xprn_pattern.sub_anatomy_terms[sub_part.db_primary_id] = sub_part
@@ -711,6 +709,29 @@ class ExpressionHandler(DataHandler):
         # xprn_id=32457, <a> neuron && glial cell &&of central nervous system
         return
 
+    def determine_public_feature_to_report(self):
+        """Determine the public feature to report for each gene product."""
+        self.log.info('Determine the public feature to report for each gene product.')
+        isoform_to_gene_counter = 0
+        # gene_product_to_gene_counter = 0
+        for feat_xprn in self.fb_data_entities.values():
+            # 1. Deal with gene product isoforms.
+            if feat_xprn.feature_id in self.isoform_gene_product_lookup.keys():
+                gene_product_id = self.isoform_gene_product_lookup[feat_xprn.feature_id]
+                try:
+                    feat_xprn.public_feature_id = self.gene_product_gene_lookup[gene_product_id]
+                    isoform_to_gene_counter += 1
+                except KeyError:
+                    feat_xprn.is_problematic = True
+                    feat_xprn.notes.append('Could not find gene for gene product.')
+                    self.log.error(f'Could not find gene for gene product ID {gene_product_id}.')
+
+            # BOB - temporary default while we work out the public feature id.
+            else:
+                feat_xprn.public_feature_id = feat_xprn.feature_id
+        self.log.info(f'Mapped {isoform_to_gene_counter} isoforms to their gene products and genes.')
+        return
+
     def process_for_tsv_export(self):
         """Process expression patterns for export to TSV."""
         self.log.info('Process expression patterns for export to TSV.')
@@ -723,8 +744,8 @@ class ExpressionHandler(DataHandler):
                 continue
             for xp_combo in xprn_pattern.xprn_pattern_combos:
                 xprn_tsv_dict = {
-                    'feature_id': self.feature_lookup[feat_xprn.feature_id]['uniquename'],
-                    'feature_symbol': self.feature_lookup[feat_xprn.feature_id]['name'],
+                    'feature_id': self.feature_lookup[feat_xprn.public_feature_id]['uniquename'],
+                    'feature_symbol': self.feature_lookup[feat_xprn.public_feature_id]['name'],
                     'reference_id': feat_xprn.pub_curie,
                     'expression_type': feat_xprn.xprn_type,
                     'expression_id': xprn_pattern.db_primary_id,
@@ -761,6 +782,7 @@ class ExpressionHandler(DataHandler):
         self.identify_stage_ranges()
         self.identify_tissue_ranges(session)
         self.identify_tissue_sub_parts()
+        self.determine_public_feature_to_report()
         self.split_out_expression_patterns()
         return
 
