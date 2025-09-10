@@ -713,7 +713,7 @@ class ExpressionHandler(DataHandler):
         """Determine the public feature to report for each gene product."""
         self.log.info('Determine the public feature to report for each gene product.')
         isoform_to_gene_counter = 0
-        # gene_product_to_gene_counter = 0
+        gene_product_to_gene_counter = 0
         for feat_xprn in self.fb_data_entities.values():
             # 1. Deal with gene product isoforms.
             if feat_xprn.feature_id in self.isoform_gene_product_lookup.keys():
@@ -725,11 +725,19 @@ class ExpressionHandler(DataHandler):
                     feat_xprn.is_problematic = True
                     feat_xprn.notes.append('Could not find gene for gene product.')
                     self.log.error(f'Could not find gene for gene product ID {gene_product_id}.')
-
+            elif feat_xprn.feature_id in self.gene_product_gene_lookup.keys():
+                try:
+                    feat_xprn.public_feature_id = self.gene_product_gene_lookup[feat_xprn.feature_id]
+                    gene_product_to_gene_counter += 1
+                except KeyError:
+                    feat_xprn.is_problematic = True
+                    feat_xprn.notes.append('Could not find gene for gene product.')
+                    self.log.error(f'Could not find gene for gene product ID {feat_xprn.feature_id}.')
             # BOB - temporary default while we work out the public feature id.
             else:
                 feat_xprn.public_feature_id = feat_xprn.feature_id
-        self.log.info(f'Mapped {isoform_to_gene_counter} isoforms to their gene products and genes.')
+        self.log.info(f'Mapped {isoform_to_gene_counter} isoforms indirectly to genes (via gene products).')
+        self.log.info(f'Mapped {gene_product_to_gene_counter} gene products directly to genes.')
         return
 
     def process_for_tsv_export(self):
