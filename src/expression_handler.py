@@ -343,9 +343,6 @@ class ExpressionHandler(DataHandler):
         counter = 0
         for result in results:
             counter += 1
-            allele_product_str = f'{result.allele_product.name} ({result.allele_product.uniquename})'
-            allele_str = f'{result.allele.name} ({result.allele.uniquename})'
-            self.log.debug(f'BOB: {allele_product_str} maps to allele {allele_str}.')
             if result.allele_product.feature_id in self.allele_product_allele_lookup.keys():
                 allele_product_str = f'{result.allele_product.name} ({result.allele_product.uniquename})'
                 self.log.warning(f'Found multiple alleles for allele product {allele_product_str}.')
@@ -743,10 +740,12 @@ class ExpressionHandler(DataHandler):
         return
 
     def determine_public_feature_to_report(self):
-        """Determine the public feature to report for each gene product."""
-        self.log.info('Determine the public feature to report for each gene product.')
+        """Determine the public feature to report for each expressed product."""
+        self.log.info('Determine the public feature to report for expressed gene product.')
         isoform_to_gene_counter = 0
         gene_product_to_gene_counter = 0
+        allele_product_to_allele_counter = 0
+        no_mapping_counter = 0
         for feat_xprn in self.fb_data_entities.values():
             # 1. Deal with gene product isoforms, which map to genes indirectly.
             if feat_xprn.feature_id in self.isoform_gene_product_lookup.keys():
@@ -760,18 +759,22 @@ class ExpressionHandler(DataHandler):
                     self.log.error(f'Could not find gene for gene product ID {gene_product_id}.')
             # 2. Deal with gene products, which map to genes directly.
             elif feat_xprn.feature_id in self.gene_product_gene_lookup.keys():
-                try:
-                    feat_xprn.public_feature_id = self.gene_product_gene_lookup[feat_xprn.feature_id]
-                    gene_product_to_gene_counter += 1
-                except KeyError:
-                    feat_xprn.is_problematic = True
-                    feat_xprn.notes.append('Could not find gene for gene product.')
-                    self.log.error(f'Could not find gene for gene product ID {feat_xprn.feature_id}.')
-            # BOB - temporary default while we work out the public feature id.
+                feat_xprn.public_feature_id = self.gene_product_gene_lookup[feat_xprn.feature_id]
+                gene_product_to_gene_counter += 1
+            # 3. Deal with allele products, which map to transgenic alleles.
+            elif feat_xprn.feature_id in self.allele_product_allele_lookup.keys():
+                feat_xprn.public_feature_id = self.allele_product_allele_lookup[feat_xprn.feature_id]
+                allele_product_to_allele_counter += 1
+            # 4. Deal with expressed products that cannot be mapped to a gene or allele.
             else:
-                feat_xprn.public_feature_id = feat_xprn.feature_id
+                feat_xprn.is_problematic = True
+                feat_xprn.notes.append('Could not map gene product to gene or allele.')
+                self.log.error(f'Could not map feature ID {feat_xprn.feature_id} to a gene or allele.')
+                no_mapping_counter += 1
         self.log.info(f'Mapped isoforms indirectly to genes (via gene products) for {isoform_to_gene_counter} annotations.')
         self.log.info(f'Mapped gene products directly to genes for {gene_product_to_gene_counter} annotations.')
+        self.log.info(f'Mapped allele products directly to alleles for {allele_product_to_allele_counter} annotations.')
+        self.log.info(f'Could not map the expressed product to a gene or allele for {no_mapping_counter} annotations.')
         return
 
     def process_for_tsv_export(self):
