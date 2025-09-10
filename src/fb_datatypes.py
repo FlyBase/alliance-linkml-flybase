@@ -606,7 +606,7 @@ class FBFeatureExpressionAnnotation(FBExportEntity):
         self.current_gene_ids = []       # Will be gene feature_ids for the parental genes (for XR/XP).
         self.current_allele_ids = []     # Will be allele feature_ids for the current alleles (for RA/PA).
         self.parental_fbco_ids = []      # Will be split system combination feature_ids for hemi-driver alleles.
-        self.public_feature_id = None    # Will be the feature_id of the public feature: e.g., the gene, or the allele.
+        self.public_feature_id = None    # Will be the feature_id of the feature to use in the TSV export file: e.g., the gene, or the allele/insertion.
         self.is_problematic = False      # True if there are problems that preclude export.
         self.notes = []
 

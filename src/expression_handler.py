@@ -13,7 +13,7 @@ from logging import Logger
 from sqlalchemy.orm import aliased
 from harvdev_utils.reporting import (
     Cv, Cvterm, Db, Dbxref, Expression, ExpressionCvterm, ExpressionCvtermprop,
-    Feature, FeatureExpression    # FeatureExpressionprop
+    Feature, FeatureExpression, FeatureRelationship    # FeatureExpressionprop
 )
 import fb_datatypes
 from handler import DataHandler
@@ -30,10 +30,10 @@ class ExpressionHandler(DataHandler):
         self.placeholder = fb_datatypes.FBExpressionCvterm(None)
         self.expression_patterns = {}            # expression_id-keyed FBExpressionAnnotation objects.
         self.export_data_for_tsv = []            # List of dicts for export to TSV.
-        self.isoform_gene_product_lookup = {}    # Will be feature_id-keyed lists of feature_ids representing isoform "isa" XR/XP relationships.
-        self.gene_product_gene_lookup = {}       # Will be feature_id-keyed lists of feature_ids representing XR/XP to gene relationships.
-        self.gene_product_allele_lookup = {}     # Will be feature_id-keyed lists of feature_ids representing RA/PA to allele relationships.
-        self.hemi_driver_parents_lookup = {}     # Will be feature_id-keyed lsits of feature_ids representing hemi-driver to split system combinations.
+        self.isoform_gene_product_lookup = {}    # Will be feature_id-keyed lists of feature_ids that connect isoform-"isa"-XR/XP features.
+        self.gene_product_gene_lookup = {}       # Will be feature_id-keyed lists of feature_ids that connect XR/XP gene products to genes.
+        self.gene_product_allele_lookup = {}     # Will be feature_id-keyed lists of feature_ids that connect RA/PA gene products to alleles.
+        self.hemi_driver_parents_lookup = {}     # Will be feature_id-keyed lsits of feature_ids that connect hemi-driver to FBco split system combinations.
 
     # Key info.
 
@@ -258,6 +258,39 @@ class ExpressionHandler(DataHandler):
                 cvterm['slim_term_cvterm_ids'] = list(set(cvterm['slim_term_cvterm_ids']))
                 # self.log.debug(f'For {cvterm["db_name"]} term "{cvterm["name"]}", found slim terms: {cvterm["slim_term_cvterm_ids"]}')
                 # self.log.debug(f'For {cvterm["db_name"]} term "{cvterm["name"]}", found slim terms: {len(cvterm["slim_term_cvterm_ids"])}')
+        return
+
+    def get_isoform_mappings(self, session):
+        """Get isoform to gene product mappings."""
+        self.log.info('Get isoform to gene product mappings.')
+        isoform = aliased(Feature, name='isoform')
+        gene_product = aliased(Feature, name='gene_product')
+        filters = (
+            isoform.is_obsolete.is_(False),
+            isoform.uniquename.op('~')(r'^FB(tr|pp)[0-9]{7}$'),
+            gene_product.is_obsolete.is_(False),
+            gene_product.uniquename.op('~')(r'^FB(tr|pp)[0-9]{7}$'),
+            Cvterm.name == 'isa',
+        )
+        results = session.query(isoform, gene_product).\
+            select_from(isoform).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == isoform.feature_id)).\
+            join(gene_product, (FeatureRelationship.object_id == gene_product.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            counter += 1
+            isoform_str = f'{result.isoform.name} ({result.isoform.uniquename})'
+            gene_product_str = f'{result.gene_product.name} ({result.gene_product.uniquename})'
+            self.log.debug(f'BOB: {isoform_str} isa {gene_product_str}')
+            try:
+                self.isoform_gene_product_lookup[result.isoform.feature_id].append(result.gene_product.feature_id)
+                self.log.warning(f'Found multiple gene products for isoform {isoform_str}.')
+            except KeyError:
+                self.isoform_gene_product_lookup[result.isoform.feature_id] = [result.gene_product.feature_id]
+        self.log.info(f'Found {counter} distinct isoform to gene product relationships for {len(self.isoform_gene_product_lookup.keys())}.')
         return
 
     # Elaborate on get_general_data() for the ExpressionHandler.
