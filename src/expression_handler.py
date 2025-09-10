@@ -33,7 +33,7 @@ class ExpressionHandler(DataHandler):
         self.isoform_gene_product_lookup = {}     # Will be feature_id-keyed feature_id that connects an isoform to an XR/XP gene product.
         self.gene_product_gene_lookup = {}        # Will be feature_id-keyed feature_id that connects an XR/XP gene product to a gene.
         self.allele_product_allele_lookup = {}    # Will be feature_id-keyed feature_id that connects an RA\PA allele product to an allele.
-        self.hemi_driver_parents_lookup = {}      # Will be feature_id-keyed lsits of feature_ids that connect hemi-driver to FBco split system combinations.
+        self.hemi_drivers = []                    # Will be a list of feature_ids for hemidriver alleles that have FBco parents.
 
     # Key info.
 
@@ -351,6 +351,30 @@ class ExpressionHandler(DataHandler):
         self.log.info(f'Found {counter} distinct allele_product to allele relationships.')
         return
 
+    def get_hemi_driver_info(self, session):
+        """Get hemi-driver allele feature_ids."""
+        self.log.info('Get hemi-driver allele feature_ids.')
+        split_system = aliased(Feature, name='split_system')
+        hemi_driver = aliased(Feature, name='hemi_driver')
+        filters = (
+            hemi_driver.is_obsolete.is_(False),
+            hemi_driver.uniquename.op('~')(r'^FBal[0-9]{7}$'),
+            split_system.is_obsolete.is_(False),
+            split_system.uniquename.op('~')(r'^FBco[0-9]{7}$'),
+            Cvterm.name == 'partially_produced_by',
+        )
+        results = session.query(hemi_driver).\
+            select_from(hemi_driver).\
+            join(FeatureRelationship, (FeatureRelationship.object_id == hemi_driver.feature_id)).\
+            join(split_system, (FeatureRelationship.subject_id == split_system.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+        for result in results:
+            self.hemi_drivers.append(result.feature_id)
+        self.log.info(f'Found {len(self.hemi_drivers)} distinct hemi-driver alleles with FBco parents.')
+        return
+
     # Elaborate on get_general_data() for the ExpressionHandler.
     def get_general_data(self, session):
         """Extend the method for the ExpressionHandler."""
@@ -364,6 +388,7 @@ class ExpressionHandler(DataHandler):
         self.get_isoform_mappings(session)
         self.get_gene_product_gene_mappings(session)
         self.get_allele_product_allele_mappings(session)
+        self.get_hemi_driver_info(session)
         return
 
     # Add methods to be run by get_datatype_data() below.
