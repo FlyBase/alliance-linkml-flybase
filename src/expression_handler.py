@@ -772,6 +772,7 @@ class ExpressionHandler(DataHandler):
         gene_product_to_gene_counter = 0
         allele_product_to_allele_counter = 0
         no_mapping_counter = 0
+        hemidriver_counter = 0
         for feat_xprn in self.fb_data_entities.values():
             # 1. Deal with expressed split system combinations.
             if self.feature_lookup[feat_xprn.feature_id]['uniquename'].startswith('FBco'):
@@ -793,8 +794,14 @@ class ExpressionHandler(DataHandler):
                 gene_product_to_gene_counter += 1
             # 4. Deal with allele products, which map to transgenic alleles.
             elif feat_xprn.feature_id in self.allele_product_allele_lookup.keys():
-                feat_xprn.public_feature_id = self.allele_product_allele_lookup[feat_xprn.feature_id]
-                allele_product_to_allele_counter += 1
+                allele_feature_id = self.allele_product_allele_lookup[feat_xprn.feature_id]
+                if allele_feature_id in self.hemi_drivers:
+                    feat_xprn.is_problematic = True
+                    feat_xprn.notes.append('Suppress export of hemi-driver expression.')
+                    hemidriver_counter += 1
+                else:
+                    feat_xprn.public_feature_id = allele_feature_id
+                    allele_product_to_allele_counter += 1
             # 5. Deal with expressed products that cannot be mapped to a gene or allele.
             else:
                 feat_xprn.is_problematic = True
@@ -806,6 +813,7 @@ class ExpressionHandler(DataHandler):
         self.log.info(f'Mapped gene products directly to genes for {gene_product_to_gene_counter} annotations.')
         self.log.info(f'Mapped allele products directly to alleles for {allele_product_to_allele_counter} annotations.')
         self.log.info(f'Could not map the expressed product to a gene or allele for {no_mapping_counter} annotations.')
+        self.log.info(f'Supressing {hemidriver_counter} hemidriver annotations.')
         return
 
     def process_for_tsv_export(self):
