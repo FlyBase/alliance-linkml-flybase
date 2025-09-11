@@ -586,7 +586,6 @@ class FBFeatureExpressionAnnotation(FBExportEntity):
             chado_obj (SQLAlchemy FeatureExpression object): The Chado FeatureExpression object.
 
         """
-        # BOB: FILTER OUT <note> with "when combined with", as this is detritus from old FBco-component annotation.
         super().__init__()
         # Primary FB chado data.
         self.chado_obj = chado_obj

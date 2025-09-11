@@ -11,6 +11,7 @@ Author(s):
 import re
 from logging import Logger
 from sqlalchemy.orm import aliased
+from harvdev_utils.char_conversions import clean_free_text
 from harvdev_utils.reporting import (
     Cv, Cvterm, Db, Dbxref, Expression, ExpressionCvterm, ExpressionCvtermprop,
     Feature, FeatureExpression, FeatureExpressionprop, FeatureRelationship
@@ -532,7 +533,8 @@ class ExpressionHandler(DataHandler):
                 self.log.warning(f'feature_expression_id={result.feature_expression_id} has a NULL comment, skipping. ')
                 continue
             try:
-                self.fb_data_entities[result.feature_expression_id].tap_stmt_notes.append(result.value)
+                cleaned_prop_text = clean_free_text(result.value)
+                self.fb_data_entities[result.feature_expression_id].tap_stmt_notes.append(cleaned_prop_text)
                 counter += 1
             except KeyError:
                 continue
