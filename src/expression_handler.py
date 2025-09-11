@@ -13,7 +13,7 @@ from logging import Logger
 from sqlalchemy.orm import aliased
 from harvdev_utils.reporting import (
     Cv, Cvterm, Db, Dbxref, Expression, ExpressionCvterm, ExpressionCvtermprop,
-    Feature, FeatureExpression, FeatureRelationship    # FeatureExpressionprop
+    Feature, FeatureExpression, FeatureExpressionprop, FeatureRelationship
 )
 import fb_datatypes
 from handler import DataHandler
@@ -512,6 +512,26 @@ class ExpressionHandler(DataHandler):
         self.log.info(f'Found {counter} distinct feature_expression annotations in chado.')
         return
 
+    def get_xprn_notes(self, session):
+        """Get feature_expression notes."""
+        self.log.info('Get feature_expression notes.')
+        filters = (
+            Feature.is_obsolete.is_(False),
+            Cvterm.name == 'comment',
+        )
+        feat_xprnprops = session.query(FeatureExpressionprop).\
+            select_from(Feature).\
+            join(FeatureExpression, (Feature.feature_id == FeatureExpression.feature_id)).\
+            join(FeatureExpressionprop, (FeatureExpressionprop.feature_expression_id == FeatureExpression.feature_expression_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in feat_xprnprops:
+            self.fb_data_entities[result.feature_expression_id].tap_stmt_notes.append(result.value)
+            counter += 1
+        self.log.info(f'Found {counter} distinct feature_expressionprop notes in chado.')
+        return
+
     # Elaborate on get_datatype_data() for the ExpressionHandler.
     def get_datatype_data(self, session):
         """Extend the method for the ExpressionHandler."""
@@ -520,6 +540,7 @@ class ExpressionHandler(DataHandler):
         self.get_expression_pattern_cvterms(session)
         self.get_expression_pattern_operators(session)
         self.get_feature_expression_data(session)
+        self.get_xprn_notes(session)
         return
 
     # Add methods to be run by synthesize_info() below.

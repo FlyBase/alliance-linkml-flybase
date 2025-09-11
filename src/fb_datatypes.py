@@ -595,7 +595,6 @@ class FBFeatureExpressionAnnotation(FBExportEntity):
         self.xprn_type = chado_obj.feature.type.name    # Simplify to polypeptide or RNA.
         self.expression_id = chado_obj.expression_id
         self.pub_curie = chado_obj.pub.uniquename
-        self.original_tap_stmts = []    # Will be the originally curated TAP statements (type='curated_as'); usually one, but up to seven.
         self.tap_stmt_notes = []        # Will be a list of <note> text from the original curation (type='comment'); usually one, rarely two.
         # Processed FB data.
         self.current_gp_ids = []         # Will be feature_ids of parental XR/XP features for isoforms (e.g., tkv[+]R4.4, Appl[+]P130kD)
