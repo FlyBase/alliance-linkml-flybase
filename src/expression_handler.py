@@ -889,7 +889,7 @@ class ExpressionHandler(DataHandler):
                     feat_xprn.is_problematic = True
                     feat_xprn.notes.append('Suppress export of hemi-driver expression having split system combination feature.')
                     hemidriver_counter += 1
-                    self.log.debug(f'BOB: Suppress feat_xprn_id={feat_xprn.feature_expression_id} for split system combos {split_system_features_represented}')
+                    self.log.debug(f'BOB: Suppress feat_xprn_id={feat_xprn.db_primary_id} for split system combos {split_system_features_represented}')
                 else:
                     feat_xprn.public_feature_id = allele_feature_id
                     allele_product_to_allele_counter += 1
