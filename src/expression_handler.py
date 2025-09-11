@@ -34,6 +34,7 @@ class ExpressionHandler(DataHandler):
         self.isoform_gene_product_lookup = {}     # Will be feature_id-keyed feature_id that connects an isoform to an XR/XP gene product.
         self.gene_product_gene_lookup = {}        # Will be feature_id-keyed feature_id that connects an XR/XP gene product to a gene.
         self.allele_product_allele_lookup = {}    # Will be feature_id-keyed feature_id that connects an RA\PA allele product to an allele.
+        self.insertion_allele_lookup = {}         # Will be FBti ID keyed lists of related allele FBal IDs (list).
         self.hemi_drivers = []                    # Will be a list of feature_ids for hemidriver alleles that have FBco parents.
         self.split_system_combos = {}             # Will be FBco ID-keyed list of FBal IDs for hemidriver components of each split system combination.
         self.split_system_combo_strs = []         # Will be a list of concatenated hemidriver FBal IDs for each split system combination feature.
@@ -354,6 +355,35 @@ class ExpressionHandler(DataHandler):
         self.log.info(f'Found {counter} distinct allele_product to allele relationships.')
         return
 
+    def get_insertion_allele_mappings(self, session):
+        """Get insertion to allele mappings."""
+        self.log.info('Get insertion to allele mappings.')
+        insertion = aliased(Feature, name='insertion')
+        allele = aliased(Feature, name='allele')
+        filters = (
+            insertion.is_obsolete.is_(False),
+            insertion.uniquename.op('~')(r'^FBti[0-9]{7}$'),
+            allele.is_obsolete.is_(False),
+            allele.uniquename.op('~')(r'^FBal[0-9]{7}$'),
+            Cvterm.name == 'associated_with',
+        )
+        results = session.query(insertion, allele).\
+            select_from(insertion).\
+            join(FeatureRelationship, (FeatureRelationship.object_id == insertion.feature_id)).\
+            join(allele, (FeatureRelationship.subject_id == allele.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            counter += 1
+            try:
+                self.insertion_allele_lookup[result.insertion.uniquename].append(result.allele.uniquename)
+            except KeyError:
+                self.insertion_allele_lookup[result.insertion.uniquename] = [result.allele.uniquename]
+        self.log.info(f'Found {counter} distinct insertion-allele relationships.')
+        return
+
     def get_hemi_driver_info(self, session):
         """Get hemi-driver allele feature_ids."""
         self.log.info('Get hemi-driver allele feature_ids.')
@@ -399,6 +429,7 @@ class ExpressionHandler(DataHandler):
         self.get_isoform_mappings(session)
         self.get_gene_product_gene_mappings(session)
         self.get_allele_product_allele_mappings(session)
+        self.get_insertion_allele_mappings(session)
         self.get_hemi_driver_info(session)
         return
 
@@ -835,14 +866,18 @@ class ExpressionHandler(DataHandler):
             # 4. Deal with allele products, which map to transgenic alleles.
             elif feat_xprn.feature_id in self.allele_product_allele_lookup.keys():
                 allele_feature_id = self.allele_product_allele_lookup[feat_xprn.feature_id]
+                insertion_rgx = r'FBti[0-9]{7}'
+                partner_insertion_curies = []
+                partner_allele_curies = []
                 split_system_features_represented = []
                 if allele_feature_id in self.hemi_drivers:
                     allele_curie = self.feature_lookup[allele_feature_id]['uniquename']
-                    allele_rgx = r'FBal[0-9]{7}'
-                    partner_allele_curies = []
                     for note in feat_xprn.tap_stmt_notes:
-                        if re.search(allele_rgx, note):
-                            partner_allele_curies.extend(re.findall(allele_rgx, note))
+                        if re.search(insertion_rgx, note):
+                            partner_insertion_curies.extend(re.findall(insertion_rgx, note))
+                    partner_insertion_curies = set(partner_insertion_curies)
+                    for partner_insertion_curie in partner_insertion_curies:
+                        partner_allele_curies.extend(self.insertion_allele_lookup[partner_insertion_curie])
                     partner_allele_curies = set(partner_allele_curies)
                     for partner_allele_curie in partner_allele_curies:
                         pair_combo = [allele_curie, partner_allele_curie]
