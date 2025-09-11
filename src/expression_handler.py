@@ -527,6 +527,9 @@ class ExpressionHandler(DataHandler):
             distinct()
         counter = 0
         for result in feat_xprnprops:
+            if result.value is None:
+                self.log.warning(f'feature_expression_id={result.feature_expression_id} has a NULL comment, skipping. ')
+                continue
             try:
                 self.fb_data_entities[result.feature_expression_id].tap_stmt_notes.append(result.value)
                 counter += 1
