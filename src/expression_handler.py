@@ -35,6 +35,8 @@ class ExpressionHandler(DataHandler):
         self.gene_product_gene_lookup = {}        # Will be feature_id-keyed feature_id that connects an XR/XP gene product to a gene.
         self.allele_product_allele_lookup = {}    # Will be feature_id-keyed feature_id that connects an RA\PA allele product to an allele.
         self.hemi_drivers = []                    # Will be a list of feature_ids for hemidriver alleles that have FBco parents.
+        self.split_system_combos = {}             # Will be FBco ID-keyed list of FBal IDs for hemidriver components of each split system combination.
+        self.split_system_combo_strs = []         # Will be a list of concatenated hemidriver FBal IDs for each split system combination feature.
 
     # Key info.
 
@@ -364,7 +366,7 @@ class ExpressionHandler(DataHandler):
             split_system.uniquename.op('~')(r'^FBco[0-9]{7}$'),
             Cvterm.name == 'partially_produced_by',
         )
-        results = session.query(hemi_driver).\
+        results = session.query(split_system, hemi_driver).\
             select_from(hemi_driver).\
             join(FeatureRelationship, (FeatureRelationship.object_id == hemi_driver.feature_id)).\
             join(split_system, (FeatureRelationship.subject_id == split_system.feature_id)).\
@@ -372,8 +374,16 @@ class ExpressionHandler(DataHandler):
             filter(*filters).\
             distinct()
         for result in results:
-            self.hemi_drivers.append(result.feature_id)
+            self.hemi_drivers.append(result.hemi_driver.feature_id)
+            try:
+                self.split_system_combos[result.split_system.uniquename].append(result.hemi_driver.uniquename)
+            except KeyError:
+                self.split_system_combos[result.split_system.uniquename] = [result.hemi_driver.uniquename]
         self.log.info(f'Found {len(self.hemi_drivers)} distinct hemi-driver alleles with FBco parents.')
+        self.log.info(f'Found {len(self.split_system_combos.keys())} distinct split system combinations with hemi-driver components.')
+        for hemidriver_list in self.split_system_combos.values():
+            hemidriver_list.sort()
+            self.split_system_combo_strs.append('|'.join(hemidriver_list))
         return
 
     # Elaborate on get_general_data() for the ExpressionHandler.
@@ -825,10 +835,26 @@ class ExpressionHandler(DataHandler):
             # 4. Deal with allele products, which map to transgenic alleles.
             elif feat_xprn.feature_id in self.allele_product_allele_lookup.keys():
                 allele_feature_id = self.allele_product_allele_lookup[feat_xprn.feature_id]
+                split_system_features_represented = []
                 if allele_feature_id in self.hemi_drivers:
+                    allele_curie = self.feature_lookup[allele_feature_id]['uniquename']
+                    allele_rgx = r'FBal[0-9]{7}'
+                    partner_allele_curies = []
+                    for note in feat_xprn.tap_stmt_notes:
+                        if re.search(allele_rgx, note):
+                            partner_allele_curies.extend(re.findall(allele_rgx, note))
+                    partner_allele_curies = set(partner_allele_curies)
+                    for partner_allele_curie in partner_allele_curies:
+                        pair_combo = [allele_curie, partner_allele_curie]
+                        pair_combo.sort()
+                        pair_combo_str = '|'.join(pair_combo)
+                        if pair_combo_str in self.split_system_combo_strs:
+                            split_system_features_represented.append(pair_combo_str)
+                if split_system_features_represented:
                     feat_xprn.is_problematic = True
-                    feat_xprn.notes.append('Suppress export of hemi-driver expression.')
+                    feat_xprn.notes.append('Suppress export of hemi-driver expression having split system combination feature.')
                     hemidriver_counter += 1
+                    self.log.debug(f'BOB: Suppress feat_xprn_id={feat_xprn.feature_expression_id} for split system combos {split_system_features_represented}')
                 else:
                     feat_xprn.public_feature_id = allele_feature_id
                     allele_product_to_allele_counter += 1
