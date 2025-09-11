@@ -527,8 +527,11 @@ class ExpressionHandler(DataHandler):
             distinct()
         counter = 0
         for result in feat_xprnprops:
-            self.fb_data_entities[result.feature_expression_id].tap_stmt_notes.append(result.value)
-            counter += 1
+            try:
+                self.fb_data_entities[result.feature_expression_id].tap_stmt_notes.append(result.value)
+                counter += 1
+            except KeyError:
+                continue
         self.log.info(f'Found {counter} distinct feature_expressionprop notes in chado.')
         return
 
