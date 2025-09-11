@@ -871,6 +871,7 @@ class ExpressionHandler(DataHandler):
                 partner_allele_curies = []
                 split_system_features_represented = []
                 if allele_feature_id in self.hemi_drivers:
+                    self.log.debug(f'BILLY: Check feat_xprn_id={feat_xprn.db_primary_id} for split system combos')
                     allele_curie = self.feature_lookup[allele_feature_id]['uniquename']
                     for note in feat_xprn.tap_stmt_notes:
                         if re.search(insertion_rgx, note):
