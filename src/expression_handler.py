@@ -523,11 +523,11 @@ class ExpressionHandler(DataHandler):
             select_from(Feature).\
             join(FeatureExpression, (Feature.feature_id == FeatureExpression.feature_id)).\
             join(FeatureExpressionprop, (FeatureExpressionprop.feature_expression_id == FeatureExpression.feature_expression_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureExpressionprop.type_id)).\
             filter(*filters).\
             distinct()
         counter = 0
         for result in feat_xprnprops:
-            self.log.debug(f'BOB: Process feature_expressionprop_id={result.feature_expressionprop_id}')
             if result.value is None:
                 self.log.warning(f'feature_expression_id={result.feature_expression_id} has a NULL comment, skipping. ')
                 continue
