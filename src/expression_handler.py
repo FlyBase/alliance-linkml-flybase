@@ -930,9 +930,9 @@ class ExpressionHandler(DataHandler):
                         pair_combo_str = '|'.join(pair_combo)
                         if pair_combo_str in self.split_system_combo_strs:
                             split_system_features_represented.append(pair_combo_str)
-                    self.log.debug(f'BOB: sbj={allele_curie}, fx_id={feat_xprn.db_primary_id}, \
-                                   fbtp: {partner_construct_curies}, fbti: {partner_insertion_curies}, \
-                                   fbal: {partner_allele_curies}, combos: {split_system_counter}')
+                    # self.log.debug(f'BOB: sbj={allele_curie}, fx_id={feat_xprn.db_primary_id}, \
+                    #                fbtp: {partner_construct_curies}, fbti: {partner_insertion_curies}, \
+                    #                fbal: {partner_allele_curies}, combos: {split_system_counter}')
                     if split_system_features_represented:
                         feat_xprn.is_problematic = True
                         feat_xprn.notes.append('Suppress export of hemi-driver expression having split system combination feature.')
