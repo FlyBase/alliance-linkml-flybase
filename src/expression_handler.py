@@ -35,7 +35,7 @@ class ExpressionHandler(DataHandler):
         self.gene_product_gene_lookup = {}        # Will be feature_id-keyed feature_id that connects an XR/XP gene product to a gene.
         self.allele_product_allele_lookup = {}    # Will be feature_id-keyed feature_id that connects an RA\PA allele product to an allele.
         self.insertion_allele_lookup = {}         # Will be FBti ID keyed lists of related allele FBal IDs (list).
-        self.construct_insertion_lookup = {}      # Will be FBtp ID keyed lists of related insertion FBti IDs (list).
+        self.construct_allele_lookup = {}         # Will be FBtp ID keyed lists of related allele FBal IDs (list).
         self.hemi_drivers = []                    # Will be a list of feature_ids for hemidriver alleles that have FBco parents.
         self.split_system_combos = {}             # Will be FBco ID-keyed list of FBal IDs for hemidriver components of each split system combination.
         self.split_system_combo_strs = []         # Will be a list of concatenated hemidriver FBal IDs for each split system combination feature.
@@ -385,21 +385,21 @@ class ExpressionHandler(DataHandler):
         self.log.info(f'Found {counter} distinct insertion-allele relationships.')
         return
 
-    def get_construct_insertion_mappings(self, session):
-        """Get construct to insertion mappings."""
-        self.log.info('Get construct to insertion mappings.')
-        insertion = aliased(Feature, name='insertion')
+    def get_construct_allele_mappings(self, session):
+        """Get construct to allele mappings."""
+        self.log.info('Get construct to allele mappings.')
+        allele = aliased(Feature, name='allele')
         construct = aliased(Feature, name='construct')
         filters = (
-            insertion.is_obsolete.is_(False),
-            insertion.uniquename.op('~')(r'^FBti[0-9]{7}$'),
+            allele.is_obsolete.is_(False),
+            allele.uniquename.op('~')(r'^FBal[0-9]{7}$'),
             construct.is_obsolete.is_(False),
             construct.uniquename.op('~')(r'^FBtp[0-9]{7}$'),
-            Cvterm.name == 'producedby',
+            Cvterm.name == 'associated_with',
         )
-        results = session.query(construct, insertion).\
-            select_from(insertion).\
-            join(FeatureRelationship, (FeatureRelationship.subject_id == insertion.feature_id)).\
+        results = session.query(construct, allele).\
+            select_from(allele).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
             join(construct, (FeatureRelationship.object_id == construct.feature_id)).\
             join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
             filter(*filters).\
@@ -408,10 +408,10 @@ class ExpressionHandler(DataHandler):
         for result in results:
             counter += 1
             try:
-                self.construct_insertion_lookup[result.construct.uniquename].append(result.insertion.uniquename)
+                self.construct_allele_lookup[result.construct.uniquename].append(result.allele.uniquename)
             except KeyError:
-                self.construct_insertion_lookup[result.construct.uniquename] = [result.insertion.uniquename]
-        self.log.info(f'Found {counter} distinct construct-insertion relationships.')
+                self.construct_allele_lookup[result.construct.uniquename] = [result.allele.uniquename]
+        self.log.info(f'Found {counter} distinct construct-allele relationships.')
         return
 
     def get_hemi_driver_info(self, session):
@@ -444,6 +444,8 @@ class ExpressionHandler(DataHandler):
         for hemidriver_list in self.split_system_combos.values():
             hemidriver_list.sort()
             self.split_system_combo_strs.append('|'.join(hemidriver_list))
+        for i in self.split_system_combo_strs:
+            self.log.debug(f'Split system combination: {i}')
         return
 
     # Elaborate on get_general_data() for the ExpressionHandler.
@@ -460,7 +462,7 @@ class ExpressionHandler(DataHandler):
         self.get_gene_product_gene_mappings(session)
         self.get_allele_product_allele_mappings(session)
         self.get_insertion_allele_mappings(session)
-        self.get_construct_insertion_mappings(session)
+        self.get_construct_allele_mappings(session)
         self.get_hemi_driver_info(session)
         return
 
@@ -911,24 +913,27 @@ class ExpressionHandler(DataHandler):
                             partner_construct_curies.extend(re.findall(construct_rgx, note))
                         if re.search(insertion_rgx, note):
                             partner_insertion_curies.extend(re.findall(insertion_rgx, note))
-                    partner_construct_curies = set(partner_construct_curies)
-                    for partner_construct_curie in partner_construct_curies:
-                        try:
-                            partner_insertion_curies.extend(self.construct_insertion_lookup[partner_construct_curie])
-                        except KeyError:
-                            pass
-                    partner_insertion_curies = set(partner_insertion_curies)
                     if not partner_construct_curies and not partner_insertion_curies:
                         feat_xprn.is_problematic = True
                         feat_xprn.notes.append('Suppress export of hemi-driver expression having no partner hemidrivers mentioned.')
                         self.log.debug(f'Suppress fx_id={feat_xprn.db_primary_id} as no partner hemidrivers are mentioned in notes')
                         hemidriver_counter += 1
                         continue
+                    # Lookup alleles for each construct.
+                    partner_construct_curies = set(partner_construct_curies)
+                    for partner_construct_curie in partner_construct_curies:
+                        try:
+                            partner_allele_curies.extend(self.construct_allele_lookup[partner_construct_curie])
+                        except KeyError:
+                            pass
+                    # Lookup alleles for each insertion.
+                    partner_insertion_curies = set(partner_insertion_curies)
                     for partner_insertion_curie in partner_insertion_curies:
                         try:
                             partner_allele_curies.extend(self.insertion_allele_lookup[partner_insertion_curie])
                         except KeyError:
                             pass
+                    # Identify split system combinations represented by this hemi-driver annotation.
                     partner_allele_curies = set(partner_allele_curies)
                     for partner_allele_curie in partner_allele_curies:
                         pair_combo = [allele_curie, partner_allele_curie]
