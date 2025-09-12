@@ -606,6 +606,8 @@ class ExpressionHandler(DataHandler):
                 continue
             try:
                 cleaned_prop_text = clean_free_text(result.value)
+                if len(cleaned_prop_text) < 2:
+                    continue
                 self.fb_data_entities[result.feature_expression_id].tap_stmt_notes.append(cleaned_prop_text)
                 counter += 1
             except KeyError:
