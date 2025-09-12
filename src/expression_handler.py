@@ -922,7 +922,10 @@ class ExpressionHandler(DataHandler):
                         hemidriver_counter += 1
                         continue
                     for partner_insertion_curie in partner_insertion_curies:
-                        partner_allele_curies.extend(self.insertion_allele_lookup[partner_insertion_curie])
+                        try:
+                            partner_allele_curies.extend(self.insertion_allele_lookup[partner_insertion_curie])
+                        except KeyError:
+                            pass
                     partner_allele_curies = set(partner_allele_curies)
                     for partner_allele_curie in partner_allele_curies:
                         pair_combo = [allele_curie, partner_allele_curie]
