@@ -35,6 +35,7 @@ class ExpressionHandler(DataHandler):
         self.gene_product_gene_lookup = {}        # Will be feature_id-keyed feature_id that connects an XR/XP gene product to a gene.
         self.allele_product_allele_lookup = {}    # Will be feature_id-keyed feature_id that connects an RA\PA allele product to an allele.
         self.insertion_allele_lookup = {}         # Will be FBti ID keyed lists of related allele FBal IDs (list).
+        self.construct_insertion_lookup = {}      # Will be FBtp ID keyed lists of related insertion FBti IDs (list).
         self.hemi_drivers = []                    # Will be a list of feature_ids for hemidriver alleles that have FBco parents.
         self.split_system_combos = {}             # Will be FBco ID-keyed list of FBal IDs for hemidriver components of each split system combination.
         self.split_system_combo_strs = []         # Will be a list of concatenated hemidriver FBal IDs for each split system combination feature.
@@ -384,6 +385,35 @@ class ExpressionHandler(DataHandler):
         self.log.info(f'Found {counter} distinct insertion-allele relationships.')
         return
 
+    def get_construct_insertion_mappings(self, session):
+        """Get construct to insertion mappings."""
+        self.log.info('Get construct to insertion mappings.')
+        insertion = aliased(Feature, name='insertion')
+        construct = aliased(Feature, name='construct')
+        filters = (
+            insertion.is_obsolete.is_(False),
+            insertion.uniquename.op('~')(r'^FBti[0-9]{7}$'),
+            construct.is_obsolete.is_(False),
+            construct.uniquename.op('~')(r'^FBtp[0-9]{7}$'),
+            Cvterm.name == 'producedby',
+        )
+        results = session.query(construct, insertion).\
+            select_from(insertion).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == insertion.feature_id)).\
+            join(construct, (FeatureRelationship.object_id == construct.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            counter += 1
+            try:
+                self.construct_insertion_lookup[result.construct.uniquename].append(result.insertion.uniquename)
+            except KeyError:
+                self.construct_insertion_lookup[result.construct.uniquename] = [result.insertion.uniquename]
+        self.log.info(f'Found {counter} distinct construct-insertion relationships.')
+        return
+
     def get_hemi_driver_info(self, session):
         """Get hemi-driver allele feature_ids."""
         self.log.info('Get hemi-driver allele feature_ids.')
@@ -430,6 +460,7 @@ class ExpressionHandler(DataHandler):
         self.get_gene_product_gene_mappings(session)
         self.get_allele_product_allele_mappings(session)
         self.get_insertion_allele_mappings(session)
+        self.get_construct_insertion_mappings(session)
         self.get_hemi_driver_info(session)
         return
 
@@ -866,14 +897,14 @@ class ExpressionHandler(DataHandler):
             # 4. Deal with allele products, which map to transgenic alleles.
             elif feat_xprn.feature_id in self.allele_product_allele_lookup.keys():
                 allele_feature_id = self.allele_product_allele_lookup[feat_xprn.feature_id]
-                construct_rgx = r'FBtp[0-9]{7}'
-                insertion_rgx = r'FBti[0-9]{7}'
-                partner_construct_curies = []
-                partner_insertion_curies = []
-                partner_allele_curies = []
-                split_system_features_represented = []
-                # Suppress hemi-driver annotations, which are to be deprecated once VFB is ready.
+                # 4a. Suppress hemi-driver annotations, which are to be deprecated once VFB is ready.
                 if allele_feature_id in self.hemi_drivers:
+                    construct_rgx = r'FBtp[0-9]{7}'
+                    insertion_rgx = r'FBti[0-9]{7}'
+                    partner_construct_curies = []
+                    partner_insertion_curies = []
+                    partner_allele_curies = []
+                    split_system_features_represented = []
                     allele_curie = self.feature_lookup[allele_feature_id]['uniquename']
                     for note in feat_xprn.tap_stmt_notes:
                         if re.search(construct_rgx, note):
@@ -881,7 +912,15 @@ class ExpressionHandler(DataHandler):
                         if re.search(insertion_rgx, note):
                             partner_insertion_curies.extend(re.findall(insertion_rgx, note))
                     partner_construct_curies = set(partner_construct_curies)
+                    for partner_construct_curie in partner_construct_curies:
+                        partner_insertion_curies.extend(self.construct_insertion_lookup[partner_construct_curie])
                     partner_insertion_curies = set(partner_insertion_curies)
+                    if not partner_construct_curies and not partner_insertion_curies:
+                        feat_xprn.is_problematic = True
+                        feat_xprn.notes.append('Suppress export of hemi-driver expression having no partner hemidrivers mentioned.')
+                        self.log.debug(f'Suppress fx_id={feat_xprn.db_primary_id} as no partner hemidrivers are mentioned in notes')
+                        hemidriver_counter += 1
+                        continue
                     for partner_insertion_curie in partner_insertion_curies:
                         partner_allele_curies.extend(self.insertion_allele_lookup[partner_insertion_curie])
                     partner_allele_curies = set(partner_allele_curies)
@@ -891,18 +930,17 @@ class ExpressionHandler(DataHandler):
                         pair_combo_str = '|'.join(pair_combo)
                         if pair_combo_str in self.split_system_combo_strs:
                             split_system_features_represented.append(pair_combo_str)
-                    if partner_construct_curies or partner_insertion_curies:
-                        self.log.debug(f'BILLY1: sbj={allele_curie}, fx_id={feat_xprn.db_primary_id}, fbtp: {partner_construct_curies}, fbti: {partner_insertion_curies}, fbal: {partner_allele_curies}, combos: {split_system_counter}')
-                    else:
-                        self.log.debug(f'BILLY2: sbj={allele_curie}, fx_id={feat_xprn.db_primary_id}, no partners')
-                if split_system_features_represented:
-                    feat_xprn.is_problematic = True
-                    feat_xprn.notes.append('Suppress export of hemi-driver expression having split system combination feature.')
-                    hemidriver_counter += 1
-                    self.log.debug(f'BOB: Suppress feat_xprn_id={feat_xprn.db_primary_id} for split system combos {split_system_features_represented}')
-                else:
-                    feat_xprn.public_feature_id = allele_feature_id
-                    allele_product_to_allele_counter += 1
+                    self.log.debug(f'BOB: sbj={allele_curie}, fx_id={feat_xprn.db_primary_id}, \
+                                   fbtp: {partner_construct_curies}, fbti: {partner_insertion_curies}, \
+                                   fbal: {partner_allele_curies}, combos: {split_system_counter}')
+                    if split_system_features_represented:
+                        feat_xprn.is_problematic = True
+                        feat_xprn.notes.append('Suppress export of hemi-driver expression having split system combination feature.')
+                        self.log.debug(f'Suppress fx_id={feat_xprn.db_primary_id} as it represents split system combos: {split_system_features_represented}')
+                        hemidriver_counter += 1
+                        continue
+                feat_xprn.public_feature_id = allele_feature_id
+                allele_product_to_allele_counter += 1
             # 5. Deal with expressed products that cannot be mapped to a gene or allele.
             else:
                 feat_xprn.is_problematic = True
