@@ -444,8 +444,6 @@ class ExpressionHandler(DataHandler):
         for hemidriver_list in self.split_system_combos.values():
             hemidriver_list.sort()
             self.split_system_combo_strs.append('|'.join(hemidriver_list))
-        for i in self.split_system_combo_strs:
-            self.log.debug(f'Split system combination: {i}')
         return
 
     # Elaborate on get_general_data() for the ExpressionHandler.
