@@ -871,7 +871,6 @@ class ExpressionHandler(DataHandler):
                 partner_allele_curies = []
                 split_system_features_represented = []
                 if allele_feature_id in self.hemi_drivers:
-                    self.log.debug(f'BILLY: Check feat_xprn_id={feat_xprn.db_primary_id} for split system combos')
                     allele_curie = self.feature_lookup[allele_feature_id]['uniquename']
                     for note in feat_xprn.tap_stmt_notes:
                         if re.search(insertion_rgx, note):
@@ -886,6 +885,7 @@ class ExpressionHandler(DataHandler):
                         pair_combo_str = '|'.join(pair_combo)
                         if pair_combo_str in self.split_system_combo_strs:
                             split_system_features_represented.append(pair_combo_str)
+                    self.log.debug(f'BILLY: sbj={allele_curie}, fx_id={feat_xprn.db_primary_id}, fbti: {partner_insertion_curies}, fbal: {partner_allele_curies}, combos: {split_system_counter}')
                 if split_system_features_represented:
                     feat_xprn.is_problematic = True
                     feat_xprn.notes.append('Suppress export of hemi-driver expression having split system combination feature.')
