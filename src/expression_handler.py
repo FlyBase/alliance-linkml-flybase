@@ -913,7 +913,10 @@ class ExpressionHandler(DataHandler):
                             partner_insertion_curies.extend(re.findall(insertion_rgx, note))
                     partner_construct_curies = set(partner_construct_curies)
                     for partner_construct_curie in partner_construct_curies:
-                        partner_insertion_curies.extend(self.construct_insertion_lookup[partner_construct_curie])
+                        try:
+                            partner_insertion_curies.extend(self.construct_insertion_lookup[partner_construct_curie])
+                        except KeyError:
+                            pass
                     partner_insertion_curies = set(partner_insertion_curies)
                     if not partner_construct_curies and not partner_insertion_curies:
                         feat_xprn.is_problematic = True
