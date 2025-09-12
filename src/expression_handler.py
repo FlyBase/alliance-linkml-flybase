@@ -866,15 +866,21 @@ class ExpressionHandler(DataHandler):
             # 4. Deal with allele products, which map to transgenic alleles.
             elif feat_xprn.feature_id in self.allele_product_allele_lookup.keys():
                 allele_feature_id = self.allele_product_allele_lookup[feat_xprn.feature_id]
+                construct_rgx = r'FBtp[0-9]{7}'
                 insertion_rgx = r'FBti[0-9]{7}'
+                partner_construct_curies = []
                 partner_insertion_curies = []
                 partner_allele_curies = []
                 split_system_features_represented = []
+                # Suppress hemi-driver annotations, which are to be deprecated once VFB is ready.
                 if allele_feature_id in self.hemi_drivers:
                     allele_curie = self.feature_lookup[allele_feature_id]['uniquename']
                     for note in feat_xprn.tap_stmt_notes:
+                        if re.search(construct_rgx, note):
+                            partner_construct_curies.extend(re.findall(construct_rgx, note))
                         if re.search(insertion_rgx, note):
                             partner_insertion_curies.extend(re.findall(insertion_rgx, note))
+                    partner_construct_curies = set(partner_construct_curies)
                     partner_insertion_curies = set(partner_insertion_curies)
                     for partner_insertion_curie in partner_insertion_curies:
                         partner_allele_curies.extend(self.insertion_allele_lookup[partner_insertion_curie])
@@ -885,7 +891,10 @@ class ExpressionHandler(DataHandler):
                         pair_combo_str = '|'.join(pair_combo)
                         if pair_combo_str in self.split_system_combo_strs:
                             split_system_features_represented.append(pair_combo_str)
-                    self.log.debug(f'BILLY: sbj={allele_curie}, fx_id={feat_xprn.db_primary_id}, fbti: {partner_insertion_curies}, fbal: {partner_allele_curies}, combos: {split_system_counter}')
+                    if partner_construct_curies or partner_insertion_curies:
+                        self.log.debug(f'BILLY1: sbj={allele_curie}, fx_id={feat_xprn.db_primary_id}, fbtp: {partner_construct_curies}, fbti: {partner_insertion_curies}, fbal: {partner_allele_curies}, combos: {split_system_counter}')
+                    else:
+                        self.log.debug(f'BILLY2: sbj={allele_curie}, fx_id={feat_xprn.db_primary_id}, no partners')
                 if split_system_features_represented:
                     feat_xprn.is_problematic = True
                     feat_xprn.notes.append('Suppress export of hemi-driver expression having split system combination feature.')
@@ -898,7 +907,7 @@ class ExpressionHandler(DataHandler):
             else:
                 feat_xprn.is_problematic = True
                 feat_xprn.notes.append('Could not map gene product to gene or allele.')
-                self.log.error(f'Could not map feature ID {feat_xprn.feature_id} to a gene or allele.')
+                self.log.error(f'Could not map feature ID {feat_xprn.feature_id} to a CURRENT gene, allele, or split system combination.')
                 no_mapping_counter += 1
         self.log.info(f'Found {split_system_counter} split system combination annotations.')
         self.log.info(f'Mapped isoforms indirectly to genes (via gene products) for {isoform_to_gene_counter} annotations.')
