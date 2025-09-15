@@ -312,7 +312,7 @@ class DataHandler(object):
 
         """
         self.log.debug(f'Get all child terms of "{starting_cvterm_name}" from the "{starting_cvterm_cv_name}" CV.')
-        # 1. Get the parent CV term.
+        # 1a. Get the parent CV term.
         filters = (
             Cvterm.name == starting_cvterm_name,
             Cv.name == starting_cvterm_cv_name
@@ -326,11 +326,22 @@ class DataHandler(object):
         except NoResultFound:
             self.log.error(f'No chado CV term found for "{starting_cvterm_name}" ("{starting_cvterm_cv_name}")')
             raise NoResultFound
+        # 1b. Get the cvterm_ids for the CV term relationship types we want to follow.
+        cvterm_rel_type_names = ['is_a', 'part_of']
+        cvterm_rel_type_cvterm_ids = []
+        filters = (
+            Cvterm.is_obsolete == 0,
+            Cvterm.name.in_((cvterm_rel_type_names)),
+        )
+        rel_type_results = session.query(Cvterm).\
+            filter(*filters).\
+            distinct()
+        for result in rel_type_results:
+            cvterm_rel_type_cvterm_ids.append(result.cvterm_id)
         # 2. Define the start of the recursive query for child terms of the starting term.
         # Recursive query built up using the sorta helpful instructions here:
         # https://docs.sqlalchemy.org/en/13/orm/query.html
         # https://sanjayasubedi.com.np/python/sqlalchemy/recursive-query-in-postgresql-with-sqlalchemy/
-        rel_type_ids = [92253, 92256]    # is_a, part_of
         cvterm_subject1, cvterm_subject2, cvterm_object = aliased(Cvterm), aliased(Cvterm), aliased(Cvterm)
         cvterm_relationship1, cvterm_relationship2 = aliased(CvtermRelationship), aliased(CvtermRelationship)
         cv1, cv2 = aliased(Cv), aliased(Cv)
@@ -340,7 +351,7 @@ class DataHandler(object):
         filters = (
             cvterm_object.cvterm_id == starting_cvterm.cvterm_id,
             cv1.name == starting_cvterm_cv_name,
-            cvterm_relationship1.type_id.in_((rel_type_ids)),
+            cvterm_relationship1.type_id.in_((cvterm_rel_type_cvterm_ids)),
         )
         recursive_query_start = session.query(cvterm_subject1).\
             join(cvterm_relationship1, (cvterm_relationship1.subject_id == cvterm_subject1.cvterm_id)).\
@@ -354,7 +365,7 @@ class DataHandler(object):
         # Importantly, the columns of the initial "recursive_query_start" query are accessed by the ".c" attribute.
         filters2 = (
             cv2.name == starting_cvterm_cv_name,
-            cvterm_relationship2.type_id.in_((rel_type_ids)),
+            cvterm_relationship2.type_id.in_((cvterm_rel_type_cvterm_ids)),
         )
         recursive_query_repeat = session.query(cvterm_subject2).\
             join(cvterm_relationship2, (cvterm_relationship2.subject_id == cvterm_subject2.cvterm_id)).\

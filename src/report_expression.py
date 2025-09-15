@@ -10,7 +10,7 @@ Usage:
     [-l LINKML_RELEASE] [-r REFERENCE_DB] (OPTIONAL)
 
 Example:
-    python report_xprn.py -v -t -c /path/to/config.cfg
+    python report_expression.py -v -t -c /path/to/config.cfg
 
 Notes:
     This script generates a bulk file for feature_expression chado data.

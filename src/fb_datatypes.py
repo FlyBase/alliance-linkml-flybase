@@ -496,7 +496,7 @@ class FBCVTermAnnotation(FBExportEntity):
 
         Args:
             chado_obj (SQLAlchemy object): The Chado object representing the CV term annotation: e.g., FeatureCvterm, GrpCvterm.
-            table_name (str): The cvterm table name for the CV term annotation: e.g., feature_cvterm, strain_cvterm.
+            table_name (str): The cvterm annotation table name for the CV term annotation: e.g., feature_cvterm, strain_cvterm.
 
         """
         super().__init__()
