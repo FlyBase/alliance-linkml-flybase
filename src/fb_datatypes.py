@@ -496,7 +496,7 @@ class FBCVTermAnnotation(FBExportEntity):
 
         Args:
             chado_obj (SQLAlchemy object): The Chado object representing the CV term annotation: e.g., FeatureCvterm, GrpCvterm.
-            table_name (str): The relationship table name for the relationship: e.g., feature_cvterm, strain_cvterm.
+            table_name (str): The cvterm annotation table name for the CV term annotation: e.g., feature_cvterm, strain_cvterm.
 
         """
         super().__init__()
@@ -505,6 +505,104 @@ class FBCVTermAnnotation(FBExportEntity):
         self.entity_desc = f'{table_name}_id={self.db_primary_id}'
         self.props_by_type = {}    # Lists of FBProp objects keyed by prop type name.
         self.pub_id = self.chado_obj.pub_id
+
+
+class FBExpressionCvterm(object):
+    """FBExpressionCvterm class."""
+    def __init__(self, chado_obj):
+        """Create a FBExpressionCvterm object for primary assay/stage/anatomy/cellular terms.
+
+        Args:
+            chado_obj (SQLAlchemy ExpressionCvterm object): The Chado ExpressionCvterm object.
+
+        """
+        # Note - all "experimental assays" terms are "FlyBase_internal".
+        # Note - all qualifiers are from "FlyBase miscellaneous CV", usually from FBcv obo, except for "presumptive" from FlyBase_internal obo.
+        # Primary FB chado data.
+        self.chado_obj = chado_obj
+        try:
+            self.db_primary_id = chado_obj.expression_cvterm_id
+            self.cvterm_id = chado_obj.cvterm_id
+            self.cvterm_name = chado_obj.cvterm.name
+            self.type = chado_obj.cvterm_type.name          # assay, anatomy, cellular, or stage.
+            self.cv_name = chado_obj.cvterm.cv.name         # experimental assays, cellular_component, FlyBase anatomy/development/miscellaneous CV.
+            self.obo = chado_obj.cvterm.dbxref.db.name      # FBbt, FBdv, FBcv, GO, or FlyBase_internal.
+        # For NULL placeholder entities.
+        except AttributeError:
+            self.db_primary_id = 'placeholder'
+            self.cvterm_id = 'placeholder'
+            self.cvterm_name = 'placeholder'
+            self.type = 'placeholder'
+            self.cv_name = 'placeholder'
+            self.obo = 'placeholder'
+        # Collect related expression_cvtermprops of type "operator" having non-null expression_cvtermprop.value.
+        # stage - operator props will have text of "FROM/TO" to indicate a temporal range.
+        # cellular - operator props will have text of "OF" (to mark a larger xprn domain).
+        # anatomy - operator props will have text of "OF" (to mark a larger xprn domain), or "FROM/TO" (to indicate a spatial range).
+        self.operators = []               # Will be a list of strings (FROM, TO, or OF): usually zero or one, but 49 cases of two.
+        self.qualifier_cvterm_ids = []    # Will be a list of qualifier cvterm_ids for this term.
+        # Processed FB data.
+        self.is_stage_start = False    # True for a stage term having a "FROM" operator.
+        self.is_stage_end = False      # True for a stage term having a "TO" operator.
+        self.has_stage_end = None      # For a stage term having a "FROM" operator, put the matching "TO" FBExpressionCvterm stage term here.
+        self.is_anat_start = False     # True for an anatomy term having a "FROM" operator.
+        self.is_anat_end = False       # True for an anatomy term having a "TO" operator.
+        if self.db_primary_id == 'placeholder':
+            self.has_anat_term_ids = ['placeholder']
+        else:
+            self.has_anat_term_ids = []    # For a term at the end of a tissue range, the list of cvterm_ids for all anatomy terms in the range (inc. itself).
+
+
+class FBExpressionAnnotation(object):
+    """FBExpressionAnnotation class."""
+    def __init__(self, chado_obj):
+        """Create a FBExpressionAnnotation object.
+
+        Args:
+            chado_obj (SQLAlchemy Expression object): The Chado Expression object.
+
+        """
+        # Primary FB chado data.
+        self.chado_obj = chado_obj
+        self.db_primary_id = chado_obj.expression_id
+        self.assay_terms = {}            # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, assay.
+        self.anatomy_terms = {}          # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, anatomy.
+        self.cellular_terms = {}         # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, cellular.
+        self.stage_terms = {}            # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, stage.
+        self.curated_notes = []          # Will be FeatureExpressionprop.value for type "comment".
+        # Processed FB data.
+        self.sub_anatomy_terms = {}      # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, anatomy sub_parts.
+        self.xprn_pattern_combos = []    # Discrete anatomy/assay/cellular/stage term combinations for this annotation.
+        self.is_problematic = False      # True if there are problems that preclude export.
+        self.notes = []
+
+
+class FBFeatureExpressionAnnotation(FBExportEntity):
+    """FBExpressionAnnotation class."""
+    def __init__(self, chado_obj):
+        """Create a FBExpressionAnnotation object.
+
+        Args:
+            chado_obj (SQLAlchemy FeatureExpression object): The Chado FeatureExpression object.
+
+        """
+        super().__init__()
+        # Primary FB chado data.
+        self.chado_obj = chado_obj
+        self.db_primary_id = chado_obj.feature_expression_id
+        self.feature_id = chado_obj.feature_id
+        self.xprn_type = chado_obj.feature.type.name    # Simplify to polypeptide or RNA.
+        self.expression_id = chado_obj.expression_id
+        self.pub_curie = chado_obj.pub.uniquename
+        self.tap_stmt_notes = []        # Will be a list of <note> text from the original curation (type='comment'); usually one, rarely two.
+        # Processed FB data.
+        self.current_gp_ids = []         # Will be feature_ids of parental XR/XP features for isoforms (e.g., tkv[+]R4.4, Appl[+]P130kD)
+        self.current_gene_ids = []       # Will be gene feature_ids for the parental genes (for XR/XP).
+        self.current_allele_ids = []     # Will be allele feature_ids for the current alleles (for RA/PA).
+        self.parental_fbco_ids = []      # Will be split system combination feature_ids for hemi-driver alleles.
+        self.public_feature_id = None    # Will be the feature_id of the feature to use in the TSV export file: e.g., the gene, or the allele/insertion.
+        self.is_problematic = False      # True if there are problems that preclude export.
+        self.notes = []
 
 
 # Second class annotations (submitted as part of other objects).

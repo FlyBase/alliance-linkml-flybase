@@ -126,7 +126,10 @@ class DataHandler(object):
         'fb_uniquename': r'^FB[a-z]{2}[0-9]{7,10}$',
         'gene': r'^FBgn[0-9]{7}$',
         'insertion': r'^FBti[0-9]{7}$',
+        'polypeptide': r'^FBpp[0-9]{7}$',
         'seqfeat': r'^FBsf[0-9]{10}$',
+        'split system combination': r'^FBco[0-9]{7}$',
+        'transcript': r'^FBtr[0-9]{7}$',
         'transposon': r'^FBte[0-9]{7}$',
         'tool': r'^FBto[0-9]{7}$',
         'genotype': r'^FBgo[0-9]{7}$',
@@ -148,8 +151,11 @@ class DataHandler(object):
         'construct': True,
         'gene': True,
         'insertion': True,
+        'polypeptide': False,
         'seqfeat': False,
+        'split system combination': False,
         'tool': False,
+        'transcript': False,
         'transposon': False,
         'variation': True,
         'bogus symbol': False,
@@ -164,8 +170,10 @@ class DataHandler(object):
         'construct': ['engineered_transposable_element', 'engineered_region', 'transgenic_transposable_element'],
         'gene': ['gene'],
         'insertion': ['insertion_site', 'transposable_element', 'transposable_element_insertion_site'],    # Excludes internal "match" (name=FBti ID).
+        'polypeptide': None,
         'seqfeat': None,    # The list is too long, so for this case let the code be flexible.
         'tool': ['engineered_region'],
+        'transcript': None,
         'transposon': ['natural_transposable_element'],
         'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion', 'point_mutation', 'sequence_alteration', 'sequence_variant'],
         'bogus symbol': ['bogus symbol'],
@@ -279,7 +287,9 @@ class DataHandler(object):
                 'name': result.name,
                 'cv_name': result.cv.name,
                 'db_name': result.dbxref.db.name,
-                'curie': f'{result.dbxref.db.name}:{result.dbxref.accession}'
+                'curie': f'{result.dbxref.db.name}:{result.dbxref.accession}',
+                'name_plus_curie': f'{result.name} ({result.dbxref.db.name}:{result.dbxref.accession})',
+                'slim_term_cvterm_ids': [],
             }
             self.cvterm_lookup[result.cvterm_id] = cvterm_dict
             cvterm_counter += 1
@@ -301,8 +311,8 @@ class DataHandler(object):
             Raise NoResultFound if starting CV term cannot be found in chado.
 
         """
-        self.log.info(f'Get all child terms of "{starting_cvterm_name}" from the "{starting_cvterm_cv_name}" CV.')
-        # 1. Get the parent CV term.
+        self.log.debug(f'Get all child terms of "{starting_cvterm_name}" from the "{starting_cvterm_cv_name}" CV.')
+        # 1a. Get the parent CV term.
         filters = (
             Cvterm.name == starting_cvterm_name,
             Cv.name == starting_cvterm_cv_name
@@ -316,6 +326,18 @@ class DataHandler(object):
         except NoResultFound:
             self.log.error(f'No chado CV term found for "{starting_cvterm_name}" ("{starting_cvterm_cv_name}")')
             raise NoResultFound
+        # 1b. Get the cvterm_ids for the CV term relationship types we want to follow.
+        cvterm_rel_type_names = ['is_a', 'part_of']
+        cvterm_rel_type_cvterm_ids = []
+        filters = (
+            Cvterm.is_obsolete == 0,
+            Cvterm.name.in_((cvterm_rel_type_names)),
+        )
+        rel_type_results = session.query(Cvterm).\
+            filter(*filters).\
+            distinct()
+        for result in rel_type_results:
+            cvterm_rel_type_cvterm_ids.append(result.cvterm_id)
         # 2. Define the start of the recursive query for child terms of the starting term.
         # Recursive query built up using the sorta helpful instructions here:
         # https://docs.sqlalchemy.org/en/13/orm/query.html
@@ -326,8 +348,11 @@ class DataHandler(object):
         # 2a. Define the starting point of the query (output of which to be used recursively to get more results).
         # Basically, looking for all child terms (subject) of the initial CV term (object) in cvterm_relationship.
         # The "recursive_query_start" below is not actually results, but a 'sqlalchemy.sql.base.ImmutableColumnCollection' class.
-        filters = (cvterm_object.cvterm_id == starting_cvterm.cvterm_id,
-                   cv1.name == starting_cvterm_cv_name)
+        filters = (
+            cvterm_object.cvterm_id == starting_cvterm.cvterm_id,
+            cv1.name == starting_cvterm_cv_name,
+            cvterm_relationship1.type_id.in_((cvterm_rel_type_cvterm_ids)),
+        )
         recursive_query_start = session.query(cvterm_subject1).\
             join(cvterm_relationship1, (cvterm_relationship1.subject_id == cvterm_subject1.cvterm_id)).\
             join(cvterm_object, (cvterm_object.cvterm_id == cvterm_relationship1.object_id)).\
@@ -338,7 +363,10 @@ class DataHandler(object):
         # Essentially, we want child terms of child terms in the starting query, recursively.
         # So, subject_ids in "recursive_query_start" results will be the objects in our query of cvterm_relationship.
         # Importantly, the columns of the initial "recursive_query_start" query are accessed by the ".c" attribute.
-        filters2 = (cv2.name == starting_cvterm_cv_name,)
+        filters2 = (
+            cv2.name == starting_cvterm_cv_name,
+            cvterm_relationship2.type_id.in_((cvterm_rel_type_cvterm_ids)),
+        )
         recursive_query_repeat = session.query(cvterm_subject2).\
             join(cvterm_relationship2, (cvterm_relationship2.subject_id == cvterm_subject2.cvterm_id)).\
             join(recursive_query_start, (recursive_query_start.c.cvterm_id == cvterm_relationship2.object_id)).\
@@ -350,7 +378,7 @@ class DataHandler(object):
         recursive_query_total_results = session.query(recursive_query_total)
         # Build the list from the results.
         cvterm_id_list = [i[0] for i in recursive_query_total_results]
-        self.log.info(f'Found {len(cvterm_id_list)} terms under "{starting_cvterm_name}" from the "{starting_cvterm_cv_name}" CV.')
+        self.log.debug(f'Found {len(cvterm_id_list)} terms under "{starting_cvterm_name}" from the "{starting_cvterm_cv_name}" CV.')
         cvterm_id_list.append(starting_cvterm.cvterm_id)
         return cvterm_id_list
 
