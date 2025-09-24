@@ -53,7 +53,7 @@ class AGMDiseaseHandler(DataHandler):
         self.allele_name_lookup = {}                 # feature.name-keyed feature dicts for alleles and aberrations, current only.
         self.gene_name_lookup = {}                   # feature.name-keyed feature dicts for genes, current only.
         self.doid_term_lookup = {}                   # cvterm.name-keyed cvterm dicts.
-        self.model_eco_lookup = defaultdict(list)    # Evidence abbreviation lookup for "model_of" annotations.
+        self.model_eco_lookup = defaultdict(list)    # Evidence abbreviation lookup for "is_model_of" annotations.
         self.driver_dict = defaultdict(list)         # Unique disease descriptors key lists of driver info to integrate.
         self.aberr_dict = defaultdict(list)          # Unique disease descriptors key lists of aberration info to integrate.
         self.rejected_driver_info = []               # List of driver dicts missing chado dis anno.
@@ -1515,7 +1515,7 @@ class AGMDiseaseHandler(DataHandler):
             try:
                 agr_dis_anno.disease_relation_name = self.disease_relation_types[geno_dis_anno.modifier_role]
             except KeyError:
-                agr_dis_anno.disease_relation_name = 'model_of'
+                agr_dis_anno.disease_relation_name = 'is_model_of'
             if geno_dis_anno.is_not is True:
                 agr_dis_anno.negated = True
             agr_dis_anno.evidence_code_curies.append(self.evidence_code_xrefs[geno_dis_anno.eco_abbr])
