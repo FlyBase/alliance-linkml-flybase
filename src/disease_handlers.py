@@ -1440,6 +1440,15 @@ class AGMDiseaseHandler(DataHandler):
             dis_anno.asserted_gene_ids = list(set(dis_anno.asserted_gene_ids))
         return
 
+    def convert_modifier_alleles(self):
+        """Convert modifier alleles to the Alliance-compliant allele."""
+        for dis_anno in self.fb_data_entities.values():
+            if dis_anno.for_export is False:
+                continue
+            if dis_anno.modifier_curie in dis_anno.input_features_replaced.keys():
+                dis_anno.modifier_curie = dis_anno.input_features_replaced[dis_anno.modifier_curie]
+        return
+
     def print_curator_report(self):
         """Print a curator report."""
         self.log.info('Print a curator report.')
@@ -1500,6 +1509,7 @@ class AGMDiseaseHandler(DataHandler):
         super().synthesize_info()
         self.flag_unexportable_annotations()
         self.add_asserted_genes_alleles()
+        self.convert_modifier_alleles()
         self.print_curator_report()
         return
 
@@ -1533,9 +1543,6 @@ class AGMDiseaseHandler(DataHandler):
                 continue
             # Asserted alleles.
             dis_anno.asserted_allele_ids.sort()
-            # For agr_curation_schema <= v2.10.0.
-            # dis_anno.linkmldto.asserted_allele_identifier = self.feature_lookup[dis_anno.asserted_allele_ids[0]]['curie']
-            # For agr_curation_schema >= v2.11.0:
             dis_anno.linkmldto.asserted_allele_identifiers = [self.feature_lookup[i]['curie'] for i in dis_anno.asserted_allele_ids]
             # Asserted genes.
             for gene_feature_id in dis_anno.asserted_gene_ids:

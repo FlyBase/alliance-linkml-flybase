@@ -301,7 +301,7 @@ class AGMDiseaseAnnotationDTO(DiseaseAnnotationDTO):
         self.inferred_gene_identifier = None
         self.asserted_gene_identifiers = []
         self.inferred_allele_identifier = None
-        self.asserted_allele_identifier = None    # Take care - should be single or multi-valued?
+        self.asserted_allele_identifiers = []
         self.required_fields.extend(['agm_identifier'])
 
 
