@@ -37,7 +37,7 @@ class MetaAlleleHandler(FeatureHandler):
         self.log.info('Map basic FlyBase metaallele data to the Alliance LinkML Allele object.')
         for metaallele in self.fb_data_entities.values():
             agr_allele = self.agr_export_type()
-            agr_allele.obsolete = metaallele.chado_obj.is_obsolete
+            agr_allele.obsolete = metaallele.is_obsolete
             agr_allele.primary_external_id = f'FB:{metaallele.uniquename}'
             # agr_allele.mod_internal_id = f'FB.feature_id={metaallele.chado_obj.feature_id}'
             agr_allele.taxon_curie = metaallele.ncbi_taxon_id
@@ -135,28 +135,32 @@ class AlleleHandler(MetaAlleleHandler):
         self.fbti_entities = {}                # Will be feature_id-keyed FBAllele objects generated from FBti insertions.
 
     test_set = {
-        'FBal0137236': 'gukh[142]',             # Insertion allele, part of TI_set_P{hsneo}.BDGP collection.
+        'FBal0137236': 'gukh[142]',             # Insertion allele superceded by FBti0000040.
+        'FBal0137618': 'Xrp1[142]',             # Insertion allele superceded by FBti0000040 too.
+        'FBal0036007': 'wg[en11]',              # Insertion allele, should come out as obsolete/internal (superceded by FBti0002065).
         'FBal0018482': 'wg[1]',                 # X-ray mutation.
         'FBal0015148': 'Sb[Spi]',               # point mutation.
-        'FBal0043981': 'Ecol_lacZ[en-14]',      # Has an allele full name. Relationship to ARG has no pub support.
-        'FBal0279489': 'Scer_GAL4[how-24B]',    # Has a 2o ID.
+        'FBal0043981': 'Ecol_lacZ[en-14]',      # Has an allele full name. Relationship to ARG has no pub support, superceded by FBti0002067.
+        'FBal0279489': 'Scer_GAL4[how-24B]',    # Has a 2o ID, superceded by FBti0150063.
         'FBal0000010': 'alphaTub67C[3]',        # Has semidominant annotation from single locus homozygous genotype.
         'FBal0403680': 'Atg8a[3-31]',           # Has recessive annotation from single locus homozygous genotype.
         'FBal0011189': 'sti[1]',                # Has recessive annotation from single locus hemizygous genotype over a deficiency.
         'FBal0007942': '18w[00053]',            # Has recessive annotation from single locus unspecified zygosity genotype.
         'FBal0015410': 'sei[2]',                # Has codominant annotation from single locus unspecified zygosity genotype.
         'FBal0198096': 'tal[1]',                # Allele of internal type gene tal (gene_with_polycistronic_transcript).
-        'FBal0055793': 'wg[UAS.Tag:HA]',        # Allele is directly related to a construct.
-        'FBal0048226': 'Dmau_w[a23]',           # Non-Dmel allele related to non-Dmel insertion.
+        'FBal0055793': 'wg[UAS.Tag:HA]',        # Allele is directly related to a construct, superceded by FBti0256568.
+        'FBal0048226': 'Dmau_w[a23]',           # Non-Dmel allele related to non-Dmel insertion, superceded by FBti0014970.
         'FBal0011649': 'Dsim_Lhr[1]',           # Non-Dmel classical allele.
-        'FBal0043132': 'Hsap_MAPT[UAS.cAa]',    # Dmel transgenic allele expressing human gene.
-        'FBal0062057': 'Scer_CDC42[V12.hs]',    # Dmel transgenic allele expressing yeast gene.
-        'FBal0198528': 'CG33269[HMJ22303]',
+        'FBal0043132': 'Hsap_MAPT[UAS.cAa]',    # Dmel transgenic allele expressing human gene, superceded by FBti0000969, FBti0249419.
+        'FBal0062057': 'Scer_CDC42[V12.hs]',    # Dmel transgenic allele expressing yeast gene, superceded by FBti0012506, FBti0249909.
+        'FBal0198528': 'CG33269[HMJ22303]',     # Superceded by four FBti.
     }
 
     # Additional export sets.
-    allele_gene_rels = {}            # Will be (allele feature_id, gene feature_id) tuples keying lists of FBRelationships.
-    allele_gene_associations = []    # Will be the final list of gene-allele FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
+    allele_gene_rels = {}                 # Will be (allele feature_id, gene feature_id) tuples keying lists of FBRelationships.
+    allele_gene_associations = []         # Will be the final list of gene-allele FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
+    allele_construct_rels = {}            # Will be (allele feature_id, construct feature_id) tuples keying lists of FBRelationships.
+    allele_construct_associations = []    # Will be the final list of construct-allele FBRelationships to export (AlleleConstructAssociationDTO under linkmldto attr).
 
     # Additional reference info.
     allele_class_terms = []          # A list of cvterm_ids for child terms of "allele_class" (FBcv:0000286).
@@ -358,7 +362,11 @@ class AlleleHandler(MetaAlleleHandler):
             return
         # For alleles derived from at-locus FBti insertions, add FBal data to the FBti.
         allele.export_warnings.append('Superceded by FBti insertion')
-        insertion = self.fbti_entities[allele.superseded_by_at_locus_insertion]
+        try:
+            insertion = self.fbti_entities[allele.superseded_by_at_locus_insertion]
+        except KeyError:
+            self.log.warning(f'Could not find insertion feature_id={allele.superseded_by_at_locus_insertion}')
+            return
         self.log.debug(f'Merge {allele} data into {insertion} data.')
         insertion.alt_fb_ids.append(f'FB:{allele.uniquename}')
         lists_to_extend = [
@@ -886,6 +894,19 @@ class InsertionHandler(MetaAlleleHandler):
     # Types: 228747 transposable_element_insertion_site; 7726 insertion_site; 5753 transposable element; 3573 match (internal).
     # Relationships: 234754 FBti(producedby)FBtp; 64920 FBal(associated_with)FBti.
     test_set = {
+        'FBti0012506': 'P{hs-yCDC42.V12}AM1',       # Supercedes FBal0062057.
+        'FBti0249909': 'P{hs-yCDC42.V12}unsp',      # Supercedes FBal0062057.
+        'FBti0099413': 'P{GD9857}v25458',           # Supercedes FBal0198528.
+        'FBti0099414': 'P{GD9857}v25459',           # Supercedes FBal0198528.
+        'FBti0099415': 'P{GD9857}v40995',           # Supercedes FBal0198528.
+        'FBti0283853': 'P{GD9857}unspcd',           # Supercedes FBal0198528.
+        'FBti0000969': 'P{UAS-MAPT.A}59A',          # Supercedes FBal0043132.
+        'FBti0249419': 'P{UAS-MAPT.A}unspecfed',    # Supercedes FBal0043132.
+        'FBti0014970': 'M{}Dmau\w[a23]',            # Supercedes FBal0048226, non-Dmel.
+        'FBti0256568': 'P{UAS-wg.flu}unspcfied',    # Supercedes FBal0055793.
+        'FBti0150063': 'P{GawB}how[24B]',           # Supercedes FBti0150063.
+        'FBti0002067': 'P{en1}48A',                 # Supercedes FBal0043981.
+        'FBti0002065': 'P{en1}wg[en11]',            # Supercedes FBal0036007.
         'FBti0000040': 'P{hsneo}Xrp1[142]',         # type=transposable_element_insertion_site. Location trap. FBal-(associated_with)->FBti-(producedby)->FBtp
         'FBti0151770': 'P{UAS-stnB.M}vl',           # type=transposable_element_insertion_site. FBti-(producedby)->FBtp<-(associated_with)-FBal.
         'FBti0167947': 'TI{TI}wg[GFP]',             # type=insertion_site. FBti-(producedby)->FBtp<-(associated_with)-FBal.
