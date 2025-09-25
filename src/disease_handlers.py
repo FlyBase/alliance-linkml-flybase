@@ -1378,6 +1378,29 @@ class AGMDiseaseHandler(DataHandler):
         self.log.info(f'Could not get/create a genotype in {no_counter} cases.')
         return
 
+    def get_modifier_genotypes(self, session):
+        """Get modifier genotypes for final genotype-level disease annotations."""
+        self.log.info('Get modifier genotypes for final genotype-level disease annotations.')
+        counter = 0
+        prob_counter = 0
+        for dis_anno in self.fb_data_entities.values():
+            if not dis_anno.modifier_curie:
+                continue
+            modifier_name = self.uname_feature_lookup[dis_anno.modifier_curie]['name']
+            modifier_genotype = GenotypeAnnotation(modifier_name, session, self.log, dis_anno.internal_pub_id)
+            modifier_genotype.get_known_or_create_new_genotype(session)
+            if modifier_genotype.curie is None:
+                self.log.error(f'BOB: Could not create modifier genotype for {dis_anno}')
+                prob_counter += 1
+                continue
+            else:
+                self.log.debug(f'BOB: Got this curie: {modifier_genotype.curie}')
+                dis_anno.modifier_curie = modifier_genotype.curie
+                counter += 1
+        self.log.info(f'Got/created modifier genotypes for {counter} disease annotations.')
+        self.log.info(f'Could not get/create a modifier genotype in {prob_counter} cases.')
+        return
+
     # Elaborate on get_datatype_data() for the AGMDiseaseHandler.
     def get_datatype_data(self, session):
         """Extend the method for the AGMDiseaseHandler."""
@@ -1401,6 +1424,7 @@ class AGMDiseaseHandler(DataHandler):
         self.parse_aberration_info(session)
         self.derive_genotypes()
         self.get_genotypes(session)
+        self.get_modifier_genotypes(session)
         return
 
     # Add methods to be run by synthesize_info() below.
@@ -1411,7 +1435,11 @@ class AGMDiseaseHandler(DataHandler):
         for dis_anno in self.fb_data_entities.values():
             if dis_anno.genotype_curie is None:
                 dis_anno.for_export = False
-                dis_anno.export_warnings.append('Could not determine genotype')
+                dis_anno.export_warnings.append('Could not determine model genotype')
+                no_export_counter += 1
+            elif dis_anno.modifier_curie and dis_anno.modifier_curie.startswith('FBal'):
+                dis_anno.for_export = False
+                dis_anno.export_warnings.append('Could not determine modifier genotype')
                 no_export_counter += 1
         self.log.info(f'{no_export_counter} annotations flagged as unexportable in early checking.')
         return
@@ -1496,7 +1524,7 @@ class AGMDiseaseHandler(DataHandler):
             if geno_dis_anno.modifier_curie:
                 dis_anno['modifier_role'] = geno_dis_anno.modifier_role
                 dis_anno['modifier_id'] = geno_dis_anno.modifier_curie
-                dis_anno['modifier_name'] = self.uname_feature_lookup[geno_dis_anno.modifier_curie]['name']
+                # dis_anno['modifier_name'] = self.uname_feature_lookup[geno_dis_anno.modifier_curie]['name']    # BOB: Do not do this for modifier genotypes.
             data_list.append(dis_anno)
         # Print things out.
         for i in data_list:
@@ -1509,7 +1537,7 @@ class AGMDiseaseHandler(DataHandler):
         super().synthesize_info()
         self.flag_unexportable_annotations()
         self.add_asserted_genes_alleles()
-        self.convert_modifier_alleles()
+        # self.convert_modifier_alleles()    # BOB: This is for update of allele ID to another allele ID (do not use if reported modifier genotypes).
         self.print_curator_report()
         return
 
