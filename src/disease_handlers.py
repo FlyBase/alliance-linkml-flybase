@@ -1390,11 +1390,11 @@ class AGMDiseaseHandler(DataHandler):
             modifier_genotype = GenotypeAnnotation(modifier_name, session, self.log, dis_anno.internal_pub_id)
             modifier_genotype.get_known_or_create_new_genotype(session)
             if modifier_genotype.curie is None:
-                self.log.error(f'BOB: Could not create modifier genotype for {dis_anno}')
+                self.log.error(f'Could not create modifier genotype for {dis_anno}')
                 prob_counter += 1
                 continue
             else:
-                self.log.debug(f'BOB: Got this curie: {modifier_genotype.curie}')
+                self.log.debug(f'Got this modifier genotype curie: {modifier_genotype.curie}')
                 dis_anno.modifier_curie = modifier_genotype.curie
                 counter += 1
         self.log.info(f'Got/created modifier genotypes for {counter} disease annotations.')
@@ -1468,15 +1468,6 @@ class AGMDiseaseHandler(DataHandler):
             dis_anno.asserted_gene_ids = list(set(dis_anno.asserted_gene_ids))
         return
 
-    def convert_modifier_alleles(self):
-        """Convert modifier alleles to the Alliance-compliant allele."""
-        for dis_anno in self.fb_data_entities.values():
-            if dis_anno.for_export is False:
-                continue
-            if dis_anno.modifier_curie in dis_anno.input_features_replaced.keys():
-                dis_anno.modifier_curie = dis_anno.input_features_replaced[dis_anno.modifier_curie]
-        return
-
     def print_curator_report(self):
         """Print a curator report."""
         self.log.info('Print a curator report.')
@@ -1524,7 +1515,6 @@ class AGMDiseaseHandler(DataHandler):
             if geno_dis_anno.modifier_curie:
                 dis_anno['modifier_role'] = geno_dis_anno.modifier_role
                 dis_anno['modifier_id'] = geno_dis_anno.modifier_curie
-                # dis_anno['modifier_name'] = self.uname_feature_lookup[geno_dis_anno.modifier_curie]['name']    # BOB: Do not do this for modifier genotypes.
             data_list.append(dis_anno)
         # Print things out.
         for i in data_list:
@@ -1537,7 +1527,6 @@ class AGMDiseaseHandler(DataHandler):
         super().synthesize_info()
         self.flag_unexportable_annotations()
         self.add_asserted_genes_alleles()
-        # self.convert_modifier_alleles()    # BOB: This is for update of allele ID to another allele ID (do not use if reported modifier genotypes).
         self.print_curator_report()
         return
 
