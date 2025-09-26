@@ -18,6 +18,8 @@
   * [FileUpload](#FileUpload)
   * [FinalCheck](#FinalCheck)
   * [References](#References)
+  * [IncrementalUpdates](#IncrementalUpdates)
+
 
 ## Overview
 This code controls the export of FlyBase data to Alliance LinkML-compliant JSON
@@ -84,12 +86,14 @@ The `Alliance_LinkML_Submission` pipeline automates these steps:
 7. Has a separate, manually initiated phase for each file upload (due to dependencies).  
 
 ## DataSubmission
+
 ### FileUpload
 As mentioned above, the GoCD pipeline will upload files to the Alliance.  
 Details of how to upload files are [here](https://github.com/alliance-genome/agr_curation#submitting-data).  
 - Your personal `API Curation Token` is required (available from your profile the [Alliance Curation Site](https://curation.alliancegenome.org/#/)).  
 Expect an `OK` message upon completion of a successful file upload.
 There are dependencies: e.g., the ALLELE file should be fully loaded (takes many hours) at the Alliance before uploading the disease file.
+
 ### ConfirmUploads
 Go to the [Alliance Curation Site](https://curation.alliancegenome.org/#/).  
 - From the left options, choose `Other Links` (at the bottom), then `Data Loads`.  
@@ -101,6 +105,7 @@ Go to the [Alliance Curation Site](https://curation.alliancegenome.org/#/).
   - If you suspect that load order created problems, click on the pencil icon at the right to initiate a re-load of the file.
   - If you want to re-load a file, might be best to first check with the A-Team though.
   - There are dependencies on references too (see below).
+
 ### References
 Loading of most LinkML data is dependent on presence of FB references at the Alliance.  
 These references are in a separate database, the Alliance Bibliography Central (ABC), handled by the Alliance Blue Team.  
@@ -108,3 +113,31 @@ The pub schema is based on the distinct [agr_schemas](https://github.com/allianc
 As such, FB code of pub submission is in the related [alliance-flybase](https://github.com/FlyBase/alliance-flybase) repo.  
 - See the README for this repo for details about submission and load issues.  
 Submissions to the ABC are handled by the `Alliance_Pub_Export` pipeline (runs as part of the `Epicycle` pipeline group).  
+
+### IncrementalUpdates
+The full LinkML submissions are typically made from reporting builds.  
+However, for curators to curate directly into the Alliance, they need access to new features (genes, alleles, genotypes) generated each epicycle.  
+To this end, there is the `Alliance_LinkML_Incremental_Update` pipeline (in the `Epicycle` pipeline group).  
+This pipeline generates small updates for new (or newly obsoleted) genes, alleles, constructs and genotypes/strains (AGMs).  
+It does so by finding what's new in `production_chado` compared to `flysql23 explore_chado_last_week`.  
+The output LinkML files are only for the new things.  
+The code works as follows:  
+1. The code gets objects from a reference db to create a list of previously submitted objects.  
+- Passing a "-r REFERENCE_DB" parameter to the script makes it produce an incremental update LinkML file.  
+- This creates a reference_session object (pointed at `explore_chado_last_week`) that is passed to the export_chado_data() function as a kwarg.  
+- This kwarg makes the `entity_handler.get_entities()` method run on a reference db and store IDs for reference objects in the `handler.fb_reference_entity_ids` list.  
+  - The above step is in addition to the normal run of `entity_handler.get_entities()`, which gets data from the main current db (production or reporting).  
+- This step also sets `handler.incremental_update = True`, and `handler.reference_session` stores the `RefSession()` object.  
+2. The code flags new additions.  
+- When `handler.incremental_update = True`, the `entity_handler.flag_new_additions_and_obsoletes()` methods runs to completion.  
+- This methods flags data entities as `is_new_addition = True` or `is_new_obsolete = True`.  
+3. The code flags new additions as internal.  
+- The `handler.flag_internal_fb_entities()` has a special step for incremental updates.  
+- If an `entity.is_new_addition = True`, then we set `entity.internal=True` (do not want it public at Alliance while it is private at FlyBase).  
+4. The code filters for new stuff when generating the export list.  
+- The `handler.generate_export_dict()` generates the export list.  
+- If `handler.incremental_update = True`, it only exports objects where `i.is_new_addition = True` or `i.is_new_obsolete = True`.  
+- CRITICAL:  
+  - For alleles associated with insertions, the allele may be current in chado (`Allele.chado_obj.is_obsolete`), but is exported as obsolete to the alliance (`FBAllele.is_obsolete`).  
+  - So, when assessing obsoleteness, one needs to assess the correct "obsolete" attribute, depending on the context.  
+ 
