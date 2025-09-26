@@ -101,8 +101,14 @@ def main():
     export_dict['agm_ingest_set'] = []
     export_dict['agm_ingest_set'].extend(genotype_handler.export_data[genotype_handler.primary_export_set])
     export_dict['agm_ingest_set'].extend(strain_handler.export_data[strain_handler.primary_export_set])
-
-    generate_export_file(export_dict, log, output_filename)
+    if len(export_dict['agm_ingest_set']) == 0:
+        if reference_session:
+            log.info('No updates to report.')
+        else:
+            log.error('The "agm_ingest_set" is unexpectedly empty.')
+            raise ValueError
+    else:
+        generate_export_file(export_dict, log, output_filename)
 
     if not reference_session:
         # Export the agm-allele associations to a separate file.
@@ -113,7 +119,11 @@ def main():
         }
         association_export_dict['agm_allele_association_ingest_set'] = []
         association_export_dict['agm_allele_association_ingest_set'].extend(genotype_handler.export_data['agm_allele_association_ingest_set'])
-        generate_export_file(association_export_dict, log, association_output_filename)
+        if len(association_export_dict['agm_allele_association_ingest_set']) == 0:
+            log.error('The "agm_allele_association_ingest_set" is unexpectedly empty.')
+            raise ValueError
+        else:
+            generate_export_file(association_export_dict, log, association_output_filename)
 
     log.info('Ended main function.\n')
 
