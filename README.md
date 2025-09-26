@@ -140,4 +140,8 @@ The code works as follows:
 - CRITICAL:  
   - For alleles associated with insertions, the allele may be current in chado (`Allele.chado_obj.is_obsolete`), but is exported as obsolete to the alliance (`FBAllele.is_obsolete`).  
   - So, when assessing obsoleteness, one needs to assess the correct "obsolete" attribute, depending on the context.  
+5. The files are uploaded with `cleanUp=False` to the Alliance persistent store.  
+- By default, when loading into the Alliance, any objects (e.g., genes) that are in the persistent store, but not the submission file, are made obsolete at the Alliance.  
+- By setting `cleanUp=False`, objects are loaded into the persistent store, but there is not clean up of objects in the Alliance store that are missing from the file. This is what we want for an incremental update.  
+- For full submissions from reporting builds, we let the default clean up happen.  
  
