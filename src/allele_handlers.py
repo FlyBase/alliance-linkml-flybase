@@ -160,7 +160,7 @@ class AlleleHandler(MetaAlleleHandler):
     allele_gene_rels = {}                 # Will be (allele feature_id, gene feature_id) tuples keying lists of FBRelationships.
     allele_gene_associations = []         # Will be the final list of gene-allele FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
     allele_construct_rels = {}            # Will be (allele feature_id, construct feature_id) tuples keying lists of FBRelationships.
-    allele_construct_associations = []    # Will be the final list of construct-allele FBRelationships to export (AlleleConstructAssociationDTO under linkmldto attr).
+    allele_construct_associations = []    # Will be the final list of construct-allele FBRelationships to export (AlleleConstructAssociationDTO).
 
     # Additional reference info.
     allele_class_terms = []          # A list of cvterm_ids for child terms of "allele_class" (FBcv:0000286).
@@ -902,7 +902,7 @@ class InsertionHandler(MetaAlleleHandler):
         'FBti0283853': 'P{GD9857}unspcd',           # Supercedes FBal0198528.
         'FBti0000969': 'P{UAS-MAPT.A}59A',          # Supercedes FBal0043132.
         'FBti0249419': 'P{UAS-MAPT.A}unspecfed',    # Supercedes FBal0043132.
-        'FBti0014970': 'M{}Dmau\w[a23]',            # Supercedes FBal0048226, non-Dmel.
+        'FBti0014970': 'M{}Dmau_w[a23]',            # Supercedes FBal0048226, non-Dmel.
         'FBti0256568': 'P{UAS-wg.flu}unspcfied',    # Supercedes FBal0055793.
         'FBti0150063': 'P{GawB}how[24B]',           # Supercedes FBti0150063.
         'FBti0002067': 'P{en1}48A',                 # Supercedes FBal0043981.
