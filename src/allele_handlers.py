@@ -310,7 +310,11 @@ class AlleleHandler(MetaAlleleHandler):
         separator = 80 * '#'
         self.log.info(f'Have the AlleleHandler run the InsertionHandler.\n{separator}')
         insertion_handler = InsertionHandler(self.log, self.testing)
-        export_chado_data(session, self.log, insertion_handler)
+        if self.incremental_update is True:
+            export_chado_data(session, self.log, insertion_handler, reference_session=self.reference_session)
+            self.fb_reference_entity_ids.extend(insertion_handler.fb_reference_entity_ids)
+        else:
+            export_chado_data(session, self.log, insertion_handler)
         self.fbti_entities = insertion_handler.fb_data_entities
         self.log.info(f'The AlleleHandler obtained {len(self.fbti_entities)} FBti insertions from chado.\n{separator}')
         return

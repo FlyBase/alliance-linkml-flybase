@@ -48,6 +48,7 @@ class DataHandler(object):
         self.log = log
         self.testing = testing
         self.incremental_update = False             # If True, will export only new additions and obsoletes in chado relative to a reference db.
+        self.reference_session = None               # Add RefSession() object to handler (only needed when AlleleHandler runs InsertionHandler).
         self.datatype = None                        # A single word describing the datatype: e.g., 'gene'. Define for more specific handlers.
         self.fb_export_type = None                  # Will be the relevant FBExportEntity object: e.g., FBGene. Define for more specific handlers.
         self.agr_export_type = None                 # Will be the LinkML object to export to: e.g., GeneDTO. Define for more specific handlers.
