@@ -147,4 +147,10 @@ The code works as follows:
 - By default, when loading into the Alliance, any objects (e.g., genes) that are in the persistent store, but not the submission file, are made obsolete at the Alliance.  
 - By setting `cleanUp=False`, objects are loaded into the persistent store, but there is not clean up of objects in the Alliance store that are missing from the file. This is what we want for an incremental update.  
 - For full submissions from reporting builds, we let the default clean up happen.  
- 
+
+Current issues:
+1. Sometimes there is nothing new to upload.  
+- I'm not sure how to handle this situation best.  
+- The code currently not create a JSON file in that case, but downstream JSON validation then fails.  
+- The code can produce an empty JSON, but I'm not sure what happens on the Alliance-side when trying to load an empty JSON.  
+- So, this issue needs some attention.   
