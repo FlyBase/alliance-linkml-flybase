@@ -121,6 +121,9 @@ To this end, there is the `Alliance_LinkML_Incremental_Update` pipeline (in the 
 This pipeline generates small updates for new (or newly obsoleted) genes, alleles, constructs and genotypes/strains (AGMs).  
 It does so by finding what's new in `production_chado` compared to `flysql23 explore_chado_last_week`.  
 The output LinkML files are only for the new things.  
+The pipeline is triggered by the completion of the `Load_Explore_ChadoDB`.  
+You will need to upset the env. variable `LINKML_VERSION` for the `Alliance_LinkML_Incremental_Update` pipeline, as needed.
+
 The code works as follows:  
 1. The code gets objects from a reference db to create a list of previously submitted objects.  
 - Passing a "-r REFERENCE_DB" parameter to the script makes it produce an incremental update LinkML file.  
