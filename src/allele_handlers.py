@@ -637,16 +637,18 @@ class AlleleHandler(MetaAlleleHandler):
         for allele in self.fb_data_entities.values():
             if not allele.uniquename.startswith('FBti'):
                 continue
-            for rel_type, rel_list in allele.sbj_rel_ids_by_type.items():
+            for rel_type, rel_id_list in allele.sbj_rel_ids_by_type.items():
                 if rel_type != 'producedby':
                     continue
-                self.log.debug(f'BOB: {allele} has {len(rel_list)} sbj rels of type {rel_type}')
-                for rel_id in rel_list:
+                self.log.debug(f'BOB: {allele} has {len(rel_id_list)} sbj rels of type {rel_type}')
+                for rel_id in rel_id_list:
                     rel = allele.rels_by_id[rel_id]
                     object_id = rel.chado_obj.object_id
                     object = self.feature_lookup[object_id]
                     obj_type = object['type']
                     self.log.debug(f"BILLY: {allele} is producedby {object['name']} ({object['uniquename']}) of type {obj_type}")
+            for obj_type, rel_id_list in allele.sbj_rel_ids_by_obj_type.items():
+                self.log.debug(f'DAVE: {allele} has {len(rel_id_list)} associations to objects of type {obj_type}')
             relevant_cons_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='producedby',
                                                              rel_entity_types=self.feature_subtypes['construct'])
             if relevant_cons_rels:
