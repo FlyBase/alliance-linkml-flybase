@@ -638,7 +638,14 @@ class AlleleHandler(MetaAlleleHandler):
             if not allele.uniquename.startswith('FBti'):
                 continue
             for rel_type, rel_list in allele.sbj_rel_ids_by_type.items():
+                if rel_type != 'producedby':
+                    continue
                 self.log.debug(f'BOB: {allele} has {len(rel_list)} sbj rels of type {rel_type}')
+                for rel in rel_list:
+                    object_id = rel.chado_obj.object_id
+                    object = self.feature_lookup[object_id]
+                    obj_type = object['type']
+                    self.log.debug(f'BILLY: {allele} is producedby {object['name']} ({object['uniquename']}) of type {obj_type}')
             relevant_cons_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='producedby',
                                                              rel_entity_types=self.feature_subtypes['construct'])
             if relevant_cons_rels:
