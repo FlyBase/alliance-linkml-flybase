@@ -628,6 +628,31 @@ class AlleleHandler(MetaAlleleHandler):
         self.log.info(f'Found {gene_counter} genes for {allele_counter} alleles.')
         return
 
+    def synthesize_allele_construct_associations(self):
+        """Synthesize allele-to-construct associations."""
+        self.log.info('Synthesize allele-to-construct associations.')
+        construct_counter = 0
+        allele_counter = 0
+        # For now, we want only FBti-producedby-FBtp, but we can expand this (put in list of chado rel type names in "rel_types" kwarg).
+        for allele in self.fb_data_entities.values():
+            if not allele.uniquename.startswith('FBti'):
+                continue
+            relevant_cons_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='producedby', rel_entity_types='construct')
+            if relevant_cons_rels:
+                allele_counter += 1
+                # self.log.debug(f'For {allele}, found {len(relevant_cons_rels)} allele rels to review.')
+            for cons_rel in relevant_cons_rels:
+                cons_feature_id = cons_rel.chado_obj.object_id
+                rel_type_name = cons_rel.chado_obj.type.name
+                allele_cons_key = (allele.db_primary_id, cons_feature_id, rel_type_name)
+                try:
+                    self.allele_construct_rels[allele_cons_key].append(cons_rel)
+                except KeyError:
+                    self.allele_construct_rels[allele_cons_key] = [cons_rel]
+                    construct_counter += 1
+        self.log.info(f'Found {construct_counter} constructs for {allele_counter} alleles.')
+        return
+
     # Elaborate on synthesize_info() for the AlleleHandler.
     def synthesize_info(self):
         """Extend the method for the AlleleHandler."""
@@ -643,6 +668,7 @@ class AlleleHandler(MetaAlleleHandler):
         self.adjust_allele_organism()
         self.synthesize_ncbi_taxon_id()
         self.synthesize_allele_gene_associations()
+        self.synthesize_allele_construct_associations()
         return
 
     # Additional methods to be run by map_fb_data_to_alliance() below.
@@ -855,6 +881,46 @@ class AlleleHandler(MetaAlleleHandler):
         self.log.info(f'Generated {counter} allele-gene unique associations.')
         return
 
+    def map_allele_construct_associations(self):
+        """Map allele-construct associations to Alliance object."""
+        self.log.info('Map allele-construct associations to Alliance object.')
+        rel_type_mapping = {
+            'producedby': 'contains',
+        }
+        ALLELE = 0
+        CONSTRUCT = 1
+        REL_TYPE_NAME = 2
+        counter = 0
+        # Go through alleles and make the allele-construct associations.
+        for allele_construct_key, allele_construct_rels in self.allele_construct_rels.items():
+            allele_feature_id = allele_construct_key[ALLELE]
+            allele = self.fb_data_entities[allele_feature_id]
+            allele_curie = f'FB:{allele.uniquename}'
+            construct = self.feature_lookup[allele_construct_key[CONSTRUCT]]
+            construct_curie = f'FB:{construct["uniquename"]}'
+            rel_type_name = allele_construct_key[REL_TYPE_NAME]
+            try:
+                alliance_rel_type_name = rel_type_mapping[rel_type_name]
+            except KeyError:
+                error_msg = f'Encountered allele-construct association of type "{rel_type_name}" in chado with no Alliance mapping.'
+                self.log.error(error_msg)
+                raise ValueError(error_msg)
+            first_feat_rel = allele_construct_rels[0]
+            all_pub_ids = []
+            for allele_construct_rel in allele_construct_rels:
+                all_pub_ids.extend(allele_construct_rel.pubs)
+            first_feat_rel.pubs = all_pub_ids
+            pub_curies = self.lookup_pub_curies(all_pub_ids)
+            rel_dto = agr_datatypes.AlleleConstructAssociationDTO(allele_curie, alliance_rel_type_name, construct_curie, pub_curies)
+            if allele.is_obsolete is True or construct['is_obsolete'] is True:
+                rel_dto.obsolete = True
+                rel_dto.internal = True
+            first_feat_rel.linkmldto = rel_dto
+            self.allele_construct_associations.append(first_feat_rel)
+            counter += 1
+        self.log.info(f'Generated {counter} allele-construct unique associations.')
+        return
+
     # Elaborate on map_fb_data_to_alliance() for the AlleleHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the AlleleHandler."""
@@ -876,6 +942,8 @@ class AlleleHandler(MetaAlleleHandler):
         self.flag_internal_fb_entities('fb_data_entities')
         self.map_allele_gene_associations()
         self.flag_internal_fb_entities('allele_gene_associations')
+        self.map_allele_construct_associations()
+        self.flag_internal_fb_entities('allele_construct_associations')
         return
 
     # Elaborate on query_chado_and_export() for the AlleleHandler.
@@ -884,6 +952,8 @@ class AlleleHandler(MetaAlleleHandler):
         super().query_chado_and_export(session)
         self.flag_unexportable_entities(self.allele_gene_associations, 'allele_gene_association_ingest_set')
         self.generate_export_dict(self.allele_gene_associations, 'allele_gene_association_ingest_set')
+        self.flag_unexportable_entities(self.allele_construct_associations, 'allele_construct_association_ingest_set')
+        self.generate_export_dict(self.allele_construct_associations, 'allele_construct_association_ingest_set')
         return
 
 
