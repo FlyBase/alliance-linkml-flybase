@@ -102,7 +102,14 @@ def main():
     export_dict['allele_ingest_set'].extend(allele_handler.export_data[allele_handler.primary_export_set])
     export_dict['allele_ingest_set'].extend(aberration_handler.export_data[aberration_handler.primary_export_set])
     # export_dict['allele_ingest_set'].extend(balancer_handler.export_data[balancer_handler.primary_export_set])
-    generate_export_file(export_dict, log, output_filename)
+    if len(export_dict['allele_ingest_set']) == 0:
+        if reference_session:
+            log.info('No updates to report.')
+        else:
+            log.error('The "allele_ingest_set" is unexpectedly empty.')
+            raise ValueError('The "allele_ingest_set" is unexpectedly empty.')
+    else:
+        generate_export_file(export_dict, log, output_filename)
 
     if not reference_session:
         # Export the gene-allele associations to a separate file.
@@ -114,7 +121,11 @@ def main():
         association_export_dict['allele_gene_association_ingest_set'] = []
         association_export_dict['allele_gene_association_ingest_set'].extend(allele_handler.export_data['allele_gene_association_ingest_set'])
         association_export_dict['allele_gene_association_ingest_set'].extend(aberration_handler.export_data['allele_gene_association_ingest_set'])
-        generate_export_file(association_export_dict, log, association_output_filename)
+        if len(association_export_dict['allele_gene_association_ingest_set']) == 0:
+            log.error('The "allele_gene_association_ingest_set" is unexpectedly empty.')
+            raise ValueError('The "allele_gene_association_ingest_set" is unexpectedly empty.')
+        else:
+            generate_export_file(association_export_dict, log, association_output_filename)
 
     log.info('Ended main function.\n')
 

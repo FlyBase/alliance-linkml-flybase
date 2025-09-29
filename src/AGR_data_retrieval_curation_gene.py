@@ -92,7 +92,14 @@ def main():
         'alliance_member_release_version': database_release,
     }
     export_dict[gene_handler.primary_export_set] = gene_handler.export_data[gene_handler.primary_export_set]
-    generate_export_file(export_dict, log, output_filename)
+    if len(export_dict[gene_handler.primary_export_set]) == 0:
+        if reference_session:
+            log.info('No updates to report.')
+        else:
+            log.error('The "gene_ingest_set" is unexpectedly empty.')
+            raise ValueError('The "gene_ingest_set" is unexpectedly empty.')
+    else:
+        generate_export_file(export_dict, log, output_filename)
 
     log.info('Ended main function.\n')
 

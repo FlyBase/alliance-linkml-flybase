@@ -32,6 +32,7 @@ def export_chado_data(session: Session, log: Logger, object_to_execute: DataHand
 
     """
     if 'reference_session' in kwargs.keys():
+        object_to_execute.reference_session = kwargs['reference_session']
         try:
             object_to_execute.get_entities(kwargs['reference_session'], reference=True)
         except RuntimeError:
