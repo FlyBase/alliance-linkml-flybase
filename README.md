@@ -150,7 +150,11 @@ The code works as follows:
 
 Current issues:
 1. Sometimes there is nothing new to upload.  
-- I'm not sure how to handle this situation best.  
-- The code currently does not create a JSON file in that case, but downstream JSON validation then fails.  
-- The code can produce an empty JSON, but I'm not sure what happens on the Alliance-side when trying to load an empty JSON.  
-- So, this issue needs some attention.   
+- I'm not sure of the best way to handle this situation best.  
+- When things work, a non-empty file gets validated then uploaded if all looks good. If validation fails, the non-empty file is not uploaded (which is good).  
+  - If it all works, there is an email that confirms completion of all four files.  
+- If an empty file is generated, the validation step fails (because it can't find the expected JSON file), and of course, nothing is uploaded (which is good).  
+- The four current incremental files are handled in parallel, so that if one fails, it does not prevent validation and uploading of the other files (which is good).  
+  - In this case, an email is sent to HarvDev about the failed step.  
+- The only issue I see is that if something fails, we end up with the unsightly red box and the pipeline doesn't hit that final email phase.  
+- Maybe there's a better way to handle this though.  
