@@ -637,21 +637,21 @@ class AlleleHandler(MetaAlleleHandler):
         for allele in self.fb_data_entities.values():
             if not allele.uniquename.startswith('FBti'):
                 continue
-            for rel_type, rel_id_list in allele.sbj_rel_ids_by_type.items():
-                if rel_type != 'producedby':
-                    continue
-                self.log.debug(f'BOB: {allele} has {len(rel_id_list)} sbj rels of type {rel_type}')
-                for rel_id in rel_id_list:
-                    rel = allele.rels_by_id[rel_id]
-                    object_id = rel.chado_obj.object_id
-                    object = self.feature_lookup[object_id]
-                    obj_type = object['type']
-                    self.log.debug(f"BILLY: {allele} is producedby {object['name']} ({object['uniquename']}) of type {obj_type}")
-            if not allele.sbj_rel_ids_by_obj_type:
-                self.log.debug(f'DAVE1: {allele} has no rels indexed by obj type?') 
-            else:
-                for obj_type, rel_id_list in allele.sbj_rel_ids_by_obj_type.items():
-                    self.log.debug(f'DAVE2: {allele} has {len(rel_id_list)} associations to objects of type {obj_type}')
+            # for rel_type, rel_id_list in allele.sbj_rel_ids_by_type.items():
+            #     if rel_type != 'producedby':
+            #         continue
+            #     self.log.debug(f'BOB: {allele} has {len(rel_id_list)} sbj rels of type {rel_type}')
+            #     for rel_id in rel_id_list:
+            #         rel = allele.rels_by_id[rel_id]
+            #         object_id = rel.chado_obj.object_id
+            #         object = self.feature_lookup[object_id]
+            #         obj_type = object['type']
+            #         self.log.debug(f"BILLY: {allele} is producedby {object['name']} ({object['uniquename']}) of type {obj_type}")
+            # if not allele.sbj_rel_ids_by_obj_type:
+            #     self.log.debug(f'DAVE1: {allele} has no rels indexed by obj type?')
+            # else:
+            #     for obj_type, rel_id_list in allele.sbj_rel_ids_by_obj_type.items():
+            #         self.log.debug(f'DAVE2: {allele} has {len(rel_id_list)} associations to objects of type {obj_type}')
             relevant_cons_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='producedby',
                                                              rel_entity_types=self.feature_subtypes['construct'])
             if relevant_cons_rels:
@@ -1017,8 +1017,13 @@ class InsertionHandler(MetaAlleleHandler):
 
     # Elaborate on get_general_data() for the InsertionHandler.
     def get_general_data(self, session):
-        """Suppress the method for the InsertionHandler."""
-        self.log.info('DO NOT GET FLYBASE INSERTION DATA FROM CHADO via InsertionHandler; use AlleleHandler.')
+        """Extend the method for the InsertionHandler."""
+        super().get_general_data(session)
+        self.build_bibliography(session)
+        self.build_cvterm_lookup(session)
+        self.build_organism_lookup(session)
+        self.build_feature_lookup(session, feature_types=['construct', 'gene', 'insertion', 'variation', 'transposon'])
+        self.get_internal_genes(session)
         return
 
     # Elaborate on get_datatype_data() for the InsertionHandler.
