@@ -641,7 +641,8 @@ class AlleleHandler(MetaAlleleHandler):
                 if rel_type != 'producedby':
                     continue
                 self.log.debug(f'BOB: {allele} has {len(rel_list)} sbj rels of type {rel_type}')
-                for rel in rel_list:
+                for rel_id in rel_list:
+                    rel = allele.rels_by_id[rel_id]
                     object_id = rel.chado_obj.object_id
                     object = self.feature_lookup[object_id]
                     obj_type = object['type']
