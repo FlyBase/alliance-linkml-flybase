@@ -653,7 +653,7 @@ class AlleleHandler(MetaAlleleHandler):
                                                              rel_entity_types=self.feature_subtypes['construct'])
             if relevant_cons_rels:
                 allele_counter += 1
-                # self.log.debug(f'For {allele}, found {len(relevant_cons_rels)} allele rels to review.')
+                self.log.debug(f'GIL: For {allele}, found {len(relevant_cons_rels)} allele rels to review.')
             for cons_rel in relevant_cons_rels:
                 cons_feature_id = cons_rel.chado_obj.object_id
                 rel_type_name = cons_rel.chado_obj.type.name
