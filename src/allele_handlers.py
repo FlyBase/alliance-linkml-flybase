@@ -639,7 +639,8 @@ class AlleleHandler(MetaAlleleHandler):
             if not allele.uniquename.startswith('FBti'):
                 continue
             input_counter += 1
-            relevant_cons_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='producedby', rel_entity_types='construct')
+            relevant_cons_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='producedby',
+                                                             rel_entity_types=self.feature_subtypes['construct'])
             if relevant_cons_rels:
                 allele_counter += 1
                 # self.log.debug(f'For {allele}, found {len(relevant_cons_rels)} allele rels to review.')
