@@ -647,8 +647,11 @@ class AlleleHandler(MetaAlleleHandler):
                     object = self.feature_lookup[object_id]
                     obj_type = object['type']
                     self.log.debug(f"BILLY: {allele} is producedby {object['name']} ({object['uniquename']}) of type {obj_type}")
-            for obj_type, rel_id_list in allele.sbj_rel_ids_by_obj_type.items():
-                self.log.debug(f'DAVE: {allele} has {len(rel_id_list)} associations to objects of type {obj_type}')
+            if not allele.sbj_rel_ids_by_obj_type:
+                self.log.debug(f'DAVE1: {allele} has no rels indexed by obj type?') 
+            else:
+                for obj_type, rel_id_list in allele.sbj_rel_ids_by_obj_type.items():
+                    self.log.debug(f'DAVE2: {allele} has {len(rel_id_list)} associations to objects of type {obj_type}')
             relevant_cons_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='producedby',
                                                              rel_entity_types=self.feature_subtypes['construct'])
             if relevant_cons_rels:
