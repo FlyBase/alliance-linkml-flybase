@@ -633,30 +633,14 @@ class AlleleHandler(MetaAlleleHandler):
         self.log.info('Synthesize allele-to-construct associations.')
         construct_counter = 0
         allele_counter = 0
-        # For now, we want only FBti-producedby-FBtp, but we can expand this (put in list of chado rel type names in "rel_types" kwarg).
+        # For now, we want only FBti-producedby-FBtp, but we can expand this (put a list of chado rel type names in "rel_types" kwarg).
         for allele in self.fb_data_entities.values():
             if not allele.uniquename.startswith('FBti'):
                 continue
-            # for rel_type, rel_id_list in allele.sbj_rel_ids_by_type.items():
-            #     if rel_type != 'producedby':
-            #         continue
-            #     self.log.debug(f'BOB: {allele} has {len(rel_id_list)} sbj rels of type {rel_type}')
-            #     for rel_id in rel_id_list:
-            #         rel = allele.rels_by_id[rel_id]
-            #         object_id = rel.chado_obj.object_id
-            #         object = self.feature_lookup[object_id]
-            #         obj_type = object['type']
-            #         self.log.debug(f"BILLY: {allele} is producedby {object['name']} ({object['uniquename']}) of type {obj_type}")
-            # if not allele.sbj_rel_ids_by_obj_type:
-            #     self.log.debug(f'DAVE1: {allele} has no rels indexed by obj type?')
-            # else:
-            #     for obj_type, rel_id_list in allele.sbj_rel_ids_by_obj_type.items():
-            #         self.log.debug(f'DAVE2: {allele} has {len(rel_id_list)} associations to objects of type {obj_type}')
             relevant_cons_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='producedby',
                                                              rel_entity_types=self.feature_subtypes['construct'])
             if relevant_cons_rels:
                 allele_counter += 1
-                self.log.debug(f'GIL: For {allele}, found {len(relevant_cons_rels)} allele rels to review.')
             for cons_rel in relevant_cons_rels:
                 cons_feature_id = cons_rel.chado_obj.object_id
                 rel_type_name = cons_rel.chado_obj.type.name
