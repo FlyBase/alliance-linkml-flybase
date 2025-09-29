@@ -106,7 +106,7 @@ def main():
             log.info('No updates to report.')
         else:
             log.error('The "agm_ingest_set" is unexpectedly empty.')
-            raise ValueError
+            raise ValueError('The "agm_ingest_set" is unexpectedly empty.')
     else:
         generate_export_file(export_dict, log, output_filename)
 
@@ -121,7 +121,7 @@ def main():
         association_export_dict['agm_allele_association_ingest_set'].extend(genotype_handler.export_data['agm_allele_association_ingest_set'])
         if len(association_export_dict['agm_allele_association_ingest_set']) == 0:
             log.error('The "agm_allele_association_ingest_set" is unexpectedly empty.')
-            raise ValueError
+            raise ValueError('The "agm_allele_association_ingest_set" is unexpectedly empty.')
         else:
             generate_export_file(association_export_dict, log, association_output_filename)
 

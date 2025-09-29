@@ -97,7 +97,7 @@ def main():
             log.info('No updates to report.')
         else:
             log.error('The "gene_ingest_set" is unexpectedly empty.')
-            raise ValueError
+            raise ValueError('The "gene_ingest_set" is unexpectedly empty.')
     else:
         generate_export_file(export_dict, log, output_filename)
 

@@ -107,7 +107,7 @@ def main():
             log.info('No updates to report.')
         else:
             log.error('The "allele_ingest_set" is unexpectedly empty.')
-            raise ValueError
+            raise ValueError('The "allele_ingest_set" is unexpectedly empty.')
     else:
         generate_export_file(export_dict, log, output_filename)
 
@@ -123,7 +123,7 @@ def main():
         association_export_dict['allele_gene_association_ingest_set'].extend(aberration_handler.export_data['allele_gene_association_ingest_set'])
         if len(association_export_dict['allele_gene_association_ingest_set']) == 0:
             log.error('The "allele_gene_association_ingest_set" is unexpectedly empty.')
-            raise ValueError
+            raise ValueError('The "allele_gene_association_ingest_set" is unexpectedly empty.')
         else:
             generate_export_file(association_export_dict, log, association_output_filename)
 

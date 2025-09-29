@@ -151,6 +151,6 @@ The code works as follows:
 Current issues:
 1. Sometimes there is nothing new to upload.  
 - I'm not sure how to handle this situation best.  
-- The code currently not create a JSON file in that case, but downstream JSON validation then fails.  
+- The code currently does not create a JSON file in that case, but downstream JSON validation then fails.  
 - The code can produce an empty JSON, but I'm not sure what happens on the Alliance-side when trying to load an empty JSON.  
 - So, this issue needs some attention.   
