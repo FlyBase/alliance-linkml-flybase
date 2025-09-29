@@ -631,14 +631,14 @@ class AlleleHandler(MetaAlleleHandler):
     def synthesize_allele_construct_associations(self):
         """Synthesize allele-to-construct associations."""
         self.log.info('Synthesize allele-to-construct associations.')
-        input_counter = 0
         construct_counter = 0
         allele_counter = 0
         # For now, we want only FBti-producedby-FBtp, but we can expand this (put in list of chado rel type names in "rel_types" kwarg).
         for allele in self.fb_data_entities.values():
             if not allele.uniquename.startswith('FBti'):
                 continue
-            input_counter += 1
+            for rel_type, rel_list in allele.sbj_rel_ids_by_type.items():
+                self.log.debug(f'BOB: {allele} has {len(rel_list)} sbj rels of type {rel_type}')
             relevant_cons_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='producedby',
                                                              rel_entity_types=self.feature_subtypes['construct'])
             if relevant_cons_rels:
@@ -653,7 +653,6 @@ class AlleleHandler(MetaAlleleHandler):
                 except KeyError:
                     self.allele_construct_rels[allele_cons_key] = [cons_rel]
                     construct_counter += 1
-        self.log.info(f'BOB: Assessed {input_counter} FBti alleles.')
         self.log.info(f'Found {construct_counter} constructs for {allele_counter} alleles.')
         return
 
