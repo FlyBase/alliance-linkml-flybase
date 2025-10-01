@@ -1328,7 +1328,7 @@ class AberrationHandler(MetaAlleleHandler):
                 free_text = clean_free_text(mol_info_prop.chado_obj.value)
                 pub_curies = self.lookup_pub_curies(mol_info_prop.pubs)
                 mol_info_dto = agr_datatypes.NoteDTO(note_type_name, free_text, pub_curies).dict_export()
-                aberration.linkmldto.related_notes.append(mol_info_dto)
+                aberration.linkmldto.note_dtos.append(mol_info_dto)
                 prop_counter += 1
         self.log.info(f'Generated {prop_counter} "mutation_description" notes for {ab_counter} aberrations.')
         return
