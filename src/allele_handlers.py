@@ -1061,6 +1061,7 @@ class AberrationHandler(MetaAlleleHandler):
     test_set = {
         'FBab0000001': 'Df(2R)03072',           # Random selection.
         'FBab0000006': 'Df(3L)ZN47',            # Has many genes associated in many ways.
+        'FBab0000009': 'Df(3R)awd-KRB',         # Has "molecular_info" featureprop for Alliance "mutation_description".
         'FBab0024587': 'Dp(1;f)8D',             # Unusual feature type: "free duplication".
         'FBab0005448': 'In(3LR)P88',            # Many distinct "wt_aberr" type CV term annotations.
         'FBab0038557': 'Dmau_Int(3)46.22',      # Unusual annotation: introgressed_chromosome_region (SO:0000664). Assign 'NCBITaxon:32644' (unidentified).
