@@ -16,6 +16,7 @@ from fb_datatypes import (
     FBAberration, FBAllele, FBBalancer
 )
 from feature_handler import FeatureHandler
+from harvdev_utils.char_conversions import clean_free_text
 from harvdev_utils.reporting import (
     Cvterm, Feature, FeatureCvterm, FeatureGenotype, FeatureRelationship,
     Genotype, Phenotype, PhenotypeCvterm, Phenstatement, Pub
@@ -1311,6 +1312,26 @@ class AberrationHandler(MetaAlleleHandler):
         self.log.info(f'Generated {counter} aberration-gene unique associations.')
         return
 
+    def map_aberration_mutation_description(self):
+        """Map aberration mutation description."""
+        self.log.info('Map aberration mutation description to Alliance object.')
+        ab_counter = 0
+        prop_counter = 0
+        for aberration in self.fb_data_entities.values():
+            if 'molecular_info' not in aberration.props_by_type.keys():
+                continue
+            ab_counter += 1
+            mol_info_props = aberration.props_by_type['molecular_info']
+            for mol_info_prop in mol_info_props:
+                note_type_name = 'mutation_description'
+                free_text = clean_free_text(mol_info_prop.chado_obj.value)
+                pub_curies = self.lookup_pub_curies(mol_info_prop.pubs)
+                mol_info_dto = agr_datatypes.NoteDTO(note_type_name, free_text, pub_curies).dict_export()
+                aberration.linkmldto.related_notes.append(mol_info_dto)
+                prop_counter += 1
+        self.log.info(f'Generated {prop_counter} "mutation_description" notes for {ab_counter} aberrations.')
+        return
+
     # Elaborate on map_fb_data_to_alliance() for the AberrationHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the AberrationHandler."""
@@ -1320,6 +1341,7 @@ class AberrationHandler(MetaAlleleHandler):
         self.map_internal_metaallele_status()
         self.map_aberration_mutation_types()
         self.map_aberration_gene_associations()
+        self.map_aberration_mutation_description()
         self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
