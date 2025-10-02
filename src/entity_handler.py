@@ -1175,7 +1175,20 @@ class PrimaryEntityHandler(DataHandler):
         Returns:
             Returns a list of NoteDTO.dict_export() dict entities.
 
+
+        Notes:
+            If the fb_prop_type given is recognized as an "internal" type of FlyBase prop, the output NoteDTO is set to internal.
+
         """
+        internal_note_types = [
+            'gene_summary_internal_notes',
+            'GO_internal_notes',
+            'gg_internal_notes',
+            'hdm_internal_notes',
+            'hh_internal_notes',
+            'internal_notes',
+            'internalnotes',
+        ]
         note_dtos = []
         # Skip cases where the fb_prop_type of interest is not present for a specific entity.
         if fb_prop_type not in fb_entity.props_by_type.keys():
@@ -1184,6 +1197,8 @@ class PrimaryEntityHandler(DataHandler):
         for fb_prop in prop_list:
             free_text = clean_free_text(fb_prop.chado_obj.value)
             pub_curies = self.lookup_pub_curies(fb_prop.pubs)
-            note_dto = agr_datatypes.NoteDTO(agr_note_type, free_text, pub_curies).dict_export()
-            note_dtos.append(note_dto)
+            note_dto = agr_datatypes.NoteDTO(agr_note_type, free_text, pub_curies)
+            if fb_prop_type in internal_note_types:
+                note_dto.internal = True
+            note_dtos.append(note_dto.dict_export())
         return note_dtos
