@@ -180,8 +180,8 @@ class AgmAlleleAssociationDTO(AuditedObjectDTO):
     # Zygosity mapping to GENO IDs.
     # https://github.com/monarch-initiative/GENO-ontology/blob/develop/geno-base.obo
     zygosity_id = {
-        # 'hemizygous': 'GENO:0000134_hemizygous',                          # Not yet implemented in FB code.
-        # 'heterozygous': 'GENO:0000135',                                   # Retired in favor of more specific terms.
+        # 'heterozygous': 'GENO:0000135',             # Retired in favor of more specific terms.
+        # 'hemizygous': 'GENO:0000134_hemizygous',    # Not yet implemented in FB code, may never be.
         'simple heterozygous': 'GENO:0000458',
         'compound heterozygous': 'GENO:0000402',
         'homozygous': 'GENO:0000136',
