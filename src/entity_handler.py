@@ -13,7 +13,7 @@ Author(s):
 import re
 from logging import Logger
 from sqlalchemy.orm import aliased
-from harvdev_utils.char_conversions import sub_sup_sgml_to_html, sub_sup_to_sgml
+from harvdev_utils.char_conversions import sub_sup_sgml_to_html, sub_sup_to_sgml, clean_free_text
 from harvdev_utils.reporting import (
     Cv, Cvterm, Db, Dbxref, CellLine, CellLineCvterm, CellLineCvtermprop, CellLineDbxref, CellLineprop, CellLinepropPub, CellLinePub, CellLineRelationship,
     CellLineSynonym, Feature, FeatureCvterm, FeatureCvtermprop, FeatureDbxref, Featureprop, FeaturepropPub, FeaturePub, FeatureRelationship,
@@ -1163,3 +1163,27 @@ class PrimaryEntityHandler(DataHandler):
             # 4. Synonyms.
             setattr(fb_data_entity.linkmldto, linkml_synonym_slots['synonym_bin'], linkml_synonym_bins['synonym_bin'])
         return
+
+    def convert_prop_to_note(self, fb_entity: fb_datatypes.FBDataEntity, fb_prop_type: str, agr_note_type: str):
+        """Convert FlyBase entity props to Alliance notes and append them to a list.
+
+        Args:
+            fb_entity (FBDataEntity): A FB data entity that has a "props_by_type" dict (prop type-keyed lists of FBProps).
+            fb_prop_type (str): The cvterm.name for the entity prop.
+            agr_note_type (str): The Controlled Vocabulary Term name for the Alliance Note.
+
+        Returns:
+            Returns a list of NoteDTO.dict_export() dict entities.
+
+        """
+        note_dtos = []
+        # Skip cases where the fb_prop_type of interest is not present for a specific entity.
+        if fb_prop_type not in fb_entity.props_by_type.keys():
+            return note_dtos
+        prop_list = fb_entity.props_by_type[fb_prop_type]
+        for fb_prop in prop_list:
+            free_text = clean_free_text(fb_prop.chado_obj.value)
+            pub_curies = self.lookup_pub_curies(fb_prop.pubs)
+            note_dto = agr_datatypes.NoteDTO(agr_note_type, free_text, pub_curies).dict_export()
+            note_dtos.append(note_dto)
+        return note_dtos

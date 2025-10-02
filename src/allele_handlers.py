@@ -16,7 +16,6 @@ from fb_datatypes import (
     FBAberration, FBAllele, FBBalancer
 )
 from feature_handler import FeatureHandler
-from harvdev_utils.char_conversions import clean_free_text
 from harvdev_utils.reporting import (
     Cvterm, Feature, FeatureCvterm, FeatureGenotype, FeatureRelationship,
     Genotype, Phenotype, PhenotypeCvterm, Phenstatement, Pub
@@ -1061,13 +1060,23 @@ class AberrationHandler(MetaAlleleHandler):
     test_set = {
         'FBab0000001': 'Df(2R)03072',           # Random selection.
         'FBab0000006': 'Df(3L)ZN47',            # Has many genes associated in many ways.
-        'FBab0000009': 'Df(3R)awd-KRB',         # Has "molecular_info" featureprop for Alliance "mutation_description".
+        'FBab0000009': 'Df(3R)awd-KRB',         # Has one "molecular_info" featureprop for Alliance "mutation_description".
+        'FBab0000189': 'Df(1)16-3-35',          # Has many "molecular_info" featureprops to map.
         'FBab0024587': 'Dp(1;f)8D',             # Unusual feature type: "free duplication".
         'FBab0005448': 'In(3LR)P88',            # Many distinct "wt_aberr" type CV term annotations.
         'FBab0038557': 'Dmau_Int(3)46.22',      # Unusual annotation: introgressed_chromosome_region (SO:0000664). Assign 'NCBITaxon:32644' (unidentified).
         'FBab0038658': 'Dsim_Int(2L)S',         # Unusual annotation: introgressed_chromosome_region (SO:0000664). Assign 'NCBITaxon:32644' (unidentified).
         'FBab0047489': 'Dp(3;3)NA18',           # Unusual annotation: direct_tandem_duplication (SO:1000039).
         'FBab0010504': 'T(2;3)G16DTE35B-3P',    # Unusual annotation: assortment_derived_deficiency_plus_duplication (SO:0000801).
+    }
+
+    # Simple mapping of props to Alliance note types, for cases where it is one-to-one correspondence.
+    # The key is the cvterm.name for the FlyBase prop type.
+    # The value is a tuple representing the Alliance note type, and where to append the note: (Alliance note type name, Alliance slot name).
+    # NB - This mapping is not for cases where FlyBase props need to be merged, split, or handled in ways that depend on the text of the prop.
+    # NB - the code assumes that the Alliance slot for these notes is multivalued.
+    aberration_prop_to_note_mapping = {
+        'molecular_info': ('mutation_description', 'note_dtos')
     }
 
     # Additional export sets.
@@ -1281,6 +1290,29 @@ class AberrationHandler(MetaAlleleHandler):
         self.log.info(f'Mapped {counter} mutation type annotations for aberrations.')
         return
 
+    def map_aberration_props_to_notes(self):
+        """Map aberration featureprops to Alliance notes."""
+        self.log.info('Map aberration featureprops to Alliance notes.')
+        NOTE_TYPE_NAME = 0
+        NOTE_SLOT_NAME = 1
+        for fb_prop_type, note_specs in self.aberration_prop_to_note_mapping.items():
+            ab_counter = 0
+            prop_counter = 0
+            agr_note_type_name = note_specs[NOTE_TYPE_NAME]
+            agr_slot_name = note_specs[NOTE_SLOT_NAME]
+            self.log.info(f'Map "{fb_prop_type}" aberration props to Alliance "{agr_note_type_name}" notes.')
+            for aberration in self.fb_data_entities.values():
+                if aberration.linkmldto is None:
+                    continue
+                agr_notes = self.convert_prop_to_note(aberration, fb_prop_type, agr_note_type_name)
+                agr_note_slot = getattr(aberration.linkmldto, agr_slot_name)
+                agr_note_slot.extend(agr_notes)
+                if agr_notes:
+                    ab_counter += 1
+                prop_counter += len(agr_notes)
+            self.log.info(f'For "{fb_prop_type}", mapped {prop_counter} props for {ab_counter} aberrations.')
+        return
+
     def map_aberration_gene_associations(self):
         """Map aberration-gene associations to Alliance object."""
         self.log.info('Map aberration-gene associations to Alliance object.')
@@ -1313,26 +1345,6 @@ class AberrationHandler(MetaAlleleHandler):
         self.log.info(f'Generated {counter} aberration-gene unique associations.')
         return
 
-    def map_aberration_mutation_description(self):
-        """Map aberration mutation description."""
-        self.log.info('Map aberration mutation description to Alliance object.')
-        ab_counter = 0
-        prop_counter = 0
-        for aberration in self.fb_data_entities.values():
-            if 'molecular_info' not in aberration.props_by_type.keys():
-                continue
-            ab_counter += 1
-            mol_info_props = aberration.props_by_type['molecular_info']
-            for mol_info_prop in mol_info_props:
-                note_type_name = 'mutation_description'
-                free_text = clean_free_text(mol_info_prop.chado_obj.value)
-                pub_curies = self.lookup_pub_curies(mol_info_prop.pubs)
-                mol_info_dto = agr_datatypes.NoteDTO(note_type_name, free_text, pub_curies).dict_export()
-                aberration.linkmldto.note_dtos.append(mol_info_dto)
-                prop_counter += 1
-        self.log.info(f'Generated {prop_counter} "mutation_description" notes for {ab_counter} aberrations.')
-        return
-
     # Elaborate on map_fb_data_to_alliance() for the AberrationHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the AberrationHandler."""
@@ -1342,7 +1354,7 @@ class AberrationHandler(MetaAlleleHandler):
         self.map_internal_metaallele_status()
         self.map_aberration_mutation_types()
         self.map_aberration_gene_associations()
-        self.map_aberration_mutation_description()
+        self.map_aberration_props_to_notes()
         self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
