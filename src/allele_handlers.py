@@ -1059,6 +1059,7 @@ class AberrationHandler(MetaAlleleHandler):
 
     test_set = {
         'FBab0000001': 'Df(2R)03072',           # Random selection.
+        'FBab0000003': 'Df(2R)02311',           # Has "internal_notes" prop.
         'FBab0000006': 'Df(3L)ZN47',            # Has many genes associated in many ways.
         'FBab0000009': 'Df(3R)awd-KRB',         # Has one "molecular_info" featureprop for Alliance "mutation_description".
         'FBab0000189': 'Df(1)16-3-35',          # Has many "molecular_info" featureprops to map.
@@ -1074,9 +1075,10 @@ class AberrationHandler(MetaAlleleHandler):
     # The key is the cvterm.name for the FlyBase prop type.
     # The value is a tuple representing the Alliance note type, and where to append the note: (Alliance note type name, Alliance slot name).
     # NB - This mapping is not for cases where FlyBase props need to be merged, split, or handled in ways that depend on the text of the prop.
-    # NB - the code assumes that the Alliance slot for these notes is multivalued.
+    # NB - the code assumes that the Alliance slot for these notes is multivalued (props in FlyBase are almost always multivalued).
     aberration_prop_to_note_mapping = {
-        'molecular_info': ('mutation_description', 'note_dtos')
+        'molecular_info': ('mutation_description', 'note_dtos'),
+        'internal_notes': ('internal_note', 'note_dtos'),    # BOB - just here for testing that internal thing works.
     }
 
     # Additional export sets.
