@@ -1306,7 +1306,7 @@ class AberrationHandler(MetaAlleleHandler):
                     continue
                 ab_counter += 1
                 agr_notes = self.convert_prop_to_note(aberration, fb_prop_type, agr_note_type_name)
-                agr_note_slot = getattr(aberration.linkml, agr_slot_name)
+                agr_note_slot = getattr(aberration.linkmldto, agr_slot_name)
                 agr_note_slot.extend(agr_notes)
                 prop_counter += len(agr_notes)
             self.log.info(f'For "{fb_prop_type}", mapped {prop_counter} props for {ab_counter} aberrations.')
