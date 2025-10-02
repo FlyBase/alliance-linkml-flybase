@@ -1078,7 +1078,7 @@ class AberrationHandler(MetaAlleleHandler):
     # NB - the code assumes that the Alliance slot for these notes is multivalued (props in FlyBase are almost always multivalued).
     aberration_prop_to_note_mapping = {
         'molecular_info': ('mutation_description', 'note_dtos'),
-        'internal_notes': ('internal_note', 'note_dtos'),    # BOB - just here for testing that internal thing works.
+        # 'internal_notes': ('internal_note', 'note_dtos'),    # At the moment, just for code development.
     }
 
     # Additional export sets.
