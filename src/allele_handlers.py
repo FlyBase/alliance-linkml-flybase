@@ -1302,7 +1302,7 @@ class AberrationHandler(MetaAlleleHandler):
             agr_slot_name = note_specs[NOTE_SLOT_NAME]
             self.log.info(f'Map "{fb_prop_type}" aberration props to Alliance "{agr_note_type_name}" notes.')
             for aberration in self.fb_data_entities.values():
-                if aberration.linkml_dto is None:
+                if aberration.linkmldto is None:
                     continue
                 ab_counter += 1
                 agr_notes = self.convert_prop_to_note(aberration, fb_prop_type, agr_note_type_name)
