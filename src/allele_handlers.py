@@ -135,6 +135,8 @@ class AlleleHandler(MetaAlleleHandler):
         self.fbti_entities = {}                # Will be feature_id-keyed FBAllele objects generated from FBti insertions.
 
     test_set = {
+        'FBal0386858': 'SppL[CR70402-TG4.1]',   # Insertion allele superceded by FBti0226866 (superseded_by_at_locus_insertion).
+        'FBal0386745': 'Scer_GAL4[SppL...]',    # Insertion allele superceded by FBti0226866 too (superseded_by_at_locus_insertion).
         'FBal0137236': 'gukh[142]',             # Insertion allele superceded by FBti0000040 (superseded_by_at_locus_insertion).
         'FBal0137618': 'Xrp1[142]',             # Insertion allele superceded by FBti0000040 too (superseded_by_at_locus_insertion).
         'FBal0036007': 'wg[en11]',              # Insertion allele superceded by FBti0002065 (superseded_by_at_locus_insertion).
@@ -161,6 +163,18 @@ class AlleleHandler(MetaAlleleHandler):
     allele_gene_associations = []         # Will be the final list of gene-allele FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
     allele_construct_rels = {}            # Will be (allele feature_id, construct feature_id) tuples keying lists of FBRelationships.
     allele_construct_associations = []    # Will be the final list of construct-allele FBRelationships to export (AlleleConstructAssociationDTO).
+
+    # Simple mapping of props to Alliance note types, for cases where it is one-to-one correspondence.
+    # The key is the cvterm.name for the FlyBase prop type.
+    # The value is a tuple representing the Alliance note type, and where to append the note: (Alliance note type name, Alliance slot name).
+    # NB - This mapping is not for cases where FlyBase props need to be merged, split, or handled in ways that depend on the text of the prop.
+    # NB - the code assumes that the Alliance slot for these notes is multivalued (props in FlyBase are almost always multivalued).
+    allele_prop_to_note_mapping = {
+        'aminoacid_rep': ('mutation_description', 'note_dtos'),
+        'molecular_info': ('mutation_description', 'note_dtos'),
+        'nucleotide_sub': ('mutation_description', 'note_dtos'),
+        # 'internal_notes': ('internal_note', 'note_dtos'),    # At the moment, just for code development.
+    }
 
     # Additional reference info.
     allele_class_terms = []          # A list of cvterm_ids for child terms of "allele_class" (FBcv:0000286).
@@ -933,6 +947,7 @@ class AlleleHandler(MetaAlleleHandler):
         self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
+        self.map_entity_props_to_notes('allele_prop_to_note_mapping')
         self.map_extinction_info()
         self.map_collections()
         self.map_inheritance_modes()
@@ -968,6 +983,7 @@ class InsertionHandler(MetaAlleleHandler):
     # Types: 228747 transposable_element_insertion_site; 7726 insertion_site; 5753 transposable element; 3573 match (internal).
     # Relationships: 234754 FBti(producedby)FBtp; 64920 FBal(associated_with)FBti.
     test_set = {
+        'FBti0226866': 'TI{CRIMIC.TG4.1}SppL[]',    # Supercedes FBal0386858, FBal0386745 (superseded_by_at_locus_insertion).
         'FBti0012506': 'P{hs-yCDC42.V12}AM1',       # Supercedes FBal0062057 (superseded_by_transgnc_insertions).
         'FBti0249909': 'P{hs-yCDC42.V12}unsp',      # Supercedes FBal0062057 (superseded_by_transgnc_insertions).
         'FBti0099413': 'P{GD9857}v25458',           # Supercedes FBal0198528 (superseded_by_transgnc_insertions).
@@ -1292,29 +1308,6 @@ class AberrationHandler(MetaAlleleHandler):
         self.log.info(f'Mapped {counter} mutation type annotations for aberrations.')
         return
 
-    def map_aberration_props_to_notes(self):
-        """Map aberration featureprops to Alliance notes."""
-        self.log.info('Map aberration featureprops to Alliance notes.')
-        NOTE_TYPE_NAME = 0
-        NOTE_SLOT_NAME = 1
-        for fb_prop_type, note_specs in self.aberration_prop_to_note_mapping.items():
-            ab_counter = 0
-            prop_counter = 0
-            agr_note_type_name = note_specs[NOTE_TYPE_NAME]
-            agr_slot_name = note_specs[NOTE_SLOT_NAME]
-            self.log.info(f'Map "{fb_prop_type}" aberration props to Alliance "{agr_note_type_name}" notes.')
-            for aberration in self.fb_data_entities.values():
-                if aberration.linkmldto is None:
-                    continue
-                agr_notes = self.convert_prop_to_note(aberration, fb_prop_type, agr_note_type_name)
-                agr_note_slot = getattr(aberration.linkmldto, agr_slot_name)
-                agr_note_slot.extend(agr_notes)
-                if agr_notes:
-                    ab_counter += 1
-                prop_counter += len(agr_notes)
-            self.log.info(f'For "{fb_prop_type}", mapped {prop_counter} props for {ab_counter} aberrations.')
-        return
-
     def map_aberration_gene_associations(self):
         """Map aberration-gene associations to Alliance object."""
         self.log.info('Map aberration-gene associations to Alliance object.')
@@ -1356,10 +1349,10 @@ class AberrationHandler(MetaAlleleHandler):
         self.map_internal_metaallele_status()
         self.map_aberration_mutation_types()
         self.map_aberration_gene_associations()
-        self.map_aberration_props_to_notes()
         self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
+        self.map_entity_props_to_notes('aberration_prop_to_note_mapping')
         self.map_extinction_info()
         self.map_collections()
         self.map_pubs()

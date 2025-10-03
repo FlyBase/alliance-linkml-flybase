@@ -485,8 +485,8 @@ class FBRelationship(FBExportEntity):
         self.chado_obj = chado_obj
         self.db_primary_id = getattr(chado_obj, f'{table_name}_id')
         self.entity_desc = f'{table_name}_id={self.db_primary_id}'
+        self.pubs = []             # Will be list of Pub.pub_ids supporting the relationship.
         self.props_by_type = {}    # Lists of FBProp objects keyed by prop type name.
-        self.pubs = []    # Will be list of Pub.pub_ids supporting the relationship.
 
 
 class FBCVTermAnnotation(FBExportEntity):
@@ -503,8 +503,8 @@ class FBCVTermAnnotation(FBExportEntity):
         self.chado_obj = chado_obj
         self.db_primary_id = getattr(chado_obj, f'{table_name}_id')
         self.entity_desc = f'{table_name}_id={self.db_primary_id}'
-        self.props_by_type = {}    # Lists of FBProp objects keyed by prop type name.
         self.pub_id = self.chado_obj.pub_id
+        self.props_by_type = {}    # Lists of FBProp objects keyed by prop type name.
 
 
 class FBExpressionCvterm(object):

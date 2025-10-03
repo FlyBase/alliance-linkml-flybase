@@ -656,7 +656,7 @@ class PrimaryEntityHandler(DataHandler):
                 distinct()
         prop_pub_counter = 0
         for prop_pub_result in prop_pub_results:
-            prop_id = getattr(prop_result, f'{chado_type}prop_id')
+            prop_id = getattr(prop_pub_result, f'{chado_type}prop_id')
             try:
                 prop_dict[prop_id].pubs.append(prop_pub_result.pub_id)
                 prop_pub_counter += 1
@@ -1175,7 +1175,6 @@ class PrimaryEntityHandler(DataHandler):
         Returns:
             Returns a list of NoteDTO.dict_export() dict entities.
 
-
         Notes:
             If the fb_prop_type given is recognized as an "internal" type of FlyBase prop, the output NoteDTO is set to internal.
 
@@ -1189,6 +1188,9 @@ class PrimaryEntityHandler(DataHandler):
             'internal_notes',
             'internalnotes',
         ]
+        # First, build text-keyed lists of pub_ids to allow for removal of redundant statements.
+        text_keyed_props = {}
+        # The final unique set of notes are added to this list.
         note_dtos = []
         # Skip cases where the fb_prop_type of interest is not present for a specific entity.
         if fb_prop_type not in fb_entity.props_by_type.keys():
@@ -1196,9 +1198,39 @@ class PrimaryEntityHandler(DataHandler):
         prop_list = fb_entity.props_by_type[fb_prop_type]
         for fb_prop in prop_list:
             free_text = clean_free_text(fb_prop.chado_obj.value)
-            pub_curies = self.lookup_pub_curies(fb_prop.pubs)
+            try:
+                text_keyed_props[free_text].extend(fb_prop.pubs)
+            except KeyError:
+                text_keyed_props[free_text] = fb_prop.pubs
+        for free_text, fb_prop_pub_ids in text_keyed_props.items():
+            uniq_fb_prop_pub_ids = list(set(fb_prop_pub_ids))
+            pub_curies = self.lookup_pub_curies(uniq_fb_prop_pub_ids)
             note_dto = agr_datatypes.NoteDTO(agr_note_type, free_text, pub_curies)
             if fb_prop_type in internal_note_types:
                 note_dto.internal = True
             note_dtos.append(note_dto.dict_export())
         return note_dtos
+
+    def map_entity_props_to_notes(self, mapping_dict_name):
+        """Map entity props to Alliance notes."""
+        self.log.info(f'Map "{self.datatype}" props to Alliance notes.')
+        NOTE_TYPE_NAME = 0
+        NOTE_SLOT_NAME = 1
+        mapping_dict = getattr(self, mapping_dict_name)
+        for fb_prop_type, note_specs in mapping_dict.items():
+            entity_counter = 0
+            prop_counter = 0
+            agr_note_type_name = note_specs[NOTE_TYPE_NAME]
+            agr_slot_name = note_specs[NOTE_SLOT_NAME]
+            self.log.info(f'Map "{fb_prop_type}" "{self.datatype}" props to Alliance "{agr_note_type_name}" notes.')
+            for entity in self.fb_data_entities.values():
+                if entity.linkmldto is None:
+                    continue
+                agr_notes = self.convert_prop_to_note(entity, fb_prop_type, agr_note_type_name)
+                agr_note_slot = getattr(entity.linkmldto, agr_slot_name)
+                agr_note_slot.extend(agr_notes)
+                if agr_notes:
+                    entity_counter += 1
+                prop_counter += len(agr_notes)
+            self.log.info(f'For "{fb_prop_type}", mapped {prop_counter} props for {entity_counter} {self.datatype}s.')
+        return
