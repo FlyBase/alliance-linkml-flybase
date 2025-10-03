@@ -162,6 +162,18 @@ class AlleleHandler(MetaAlleleHandler):
     allele_construct_rels = {}            # Will be (allele feature_id, construct feature_id) tuples keying lists of FBRelationships.
     allele_construct_associations = []    # Will be the final list of construct-allele FBRelationships to export (AlleleConstructAssociationDTO).
 
+    # Simple mapping of props to Alliance note types, for cases where it is one-to-one correspondence.
+    # The key is the cvterm.name for the FlyBase prop type.
+    # The value is a tuple representing the Alliance note type, and where to append the note: (Alliance note type name, Alliance slot name).
+    # NB - This mapping is not for cases where FlyBase props need to be merged, split, or handled in ways that depend on the text of the prop.
+    # NB - the code assumes that the Alliance slot for these notes is multivalued (props in FlyBase are almost always multivalued).
+    aberration_prop_to_note_mapping = {
+        'aminoacid_rep': ('mutation_description', 'note_dtos'),
+        'molecular_info': ('mutation_description', 'note_dtos'),
+        'nucleotide_sub': ('mutation_description', 'note_dtos'),
+        # 'internal_notes': ('internal_note', 'note_dtos'),    # At the moment, just for code development.
+    }
+
     # Additional reference info.
     allele_class_terms = []          # A list of cvterm_ids for child terms of "allele_class" (FBcv:0000286).
     allele_mutant_type_terms = []    # A list of cvterm_ids for child terms of chromosome_structure_variation or sequence_alteration.
@@ -933,6 +945,7 @@ class AlleleHandler(MetaAlleleHandler):
         self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
+        self.map_entity_props_to_notes('allele_prop_to_note_mapping')
         self.map_extinction_info()
         self.map_collections()
         self.map_inheritance_modes()
@@ -1292,29 +1305,6 @@ class AberrationHandler(MetaAlleleHandler):
         self.log.info(f'Mapped {counter} mutation type annotations for aberrations.')
         return
 
-    def map_aberration_props_to_notes(self):
-        """Map aberration featureprops to Alliance notes."""
-        self.log.info('Map aberration featureprops to Alliance notes.')
-        NOTE_TYPE_NAME = 0
-        NOTE_SLOT_NAME = 1
-        for fb_prop_type, note_specs in self.aberration_prop_to_note_mapping.items():
-            ab_counter = 0
-            prop_counter = 0
-            agr_note_type_name = note_specs[NOTE_TYPE_NAME]
-            agr_slot_name = note_specs[NOTE_SLOT_NAME]
-            self.log.info(f'Map "{fb_prop_type}" aberration props to Alliance "{agr_note_type_name}" notes.')
-            for aberration in self.fb_data_entities.values():
-                if aberration.linkmldto is None:
-                    continue
-                agr_notes = self.convert_prop_to_note(aberration, fb_prop_type, agr_note_type_name)
-                agr_note_slot = getattr(aberration.linkmldto, agr_slot_name)
-                agr_note_slot.extend(agr_notes)
-                if agr_notes:
-                    ab_counter += 1
-                prop_counter += len(agr_notes)
-            self.log.info(f'For "{fb_prop_type}", mapped {prop_counter} props for {ab_counter} aberrations.')
-        return
-
     def map_aberration_gene_associations(self):
         """Map aberration-gene associations to Alliance object."""
         self.log.info('Map aberration-gene associations to Alliance object.')
@@ -1356,11 +1346,10 @@ class AberrationHandler(MetaAlleleHandler):
         self.map_internal_metaallele_status()
         self.map_aberration_mutation_types()
         self.map_aberration_gene_associations()
-        # self.map_aberration_props_to_notes()    # BOB - suppress while testing more generic approach
-        self.map_entity_props_to_notes('aberration_prop_to_note_mapping')
         self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
+        self.map_entity_props_to_notes('aberration_prop_to_note_mapping')
         self.map_extinction_info()
         self.map_collections()
         self.map_pubs()
