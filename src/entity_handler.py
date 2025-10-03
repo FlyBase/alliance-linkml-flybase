@@ -1198,10 +1198,9 @@ class PrimaryEntityHandler(DataHandler):
         prop_list = fb_entity.props_by_type[fb_prop_type]
         for fb_prop in prop_list:
             free_text = clean_free_text(fb_prop.chado_obj.value)
-            try:
-                text_keyed_props[free_text].extend(fb_prop.pubs)
-            except KeyError:
-                text_keyed_props[free_text] = fb_prop.pubs
+            if free_text not in text_keyed_props.keys():
+                text_keyed_props[free_text] = []
+            text_keyed_props[free_text].extend(fb_prop.pubs)
         for free_text, fb_prop_pub_ids in text_keyed_props.items():
             uniq_fb_prop_pub_ids = list(set(fb_prop_pub_ids))
             pub_curies = self.lookup_pub_curies(uniq_fb_prop_pub_ids)
