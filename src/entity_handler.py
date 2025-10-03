@@ -1202,3 +1202,27 @@ class PrimaryEntityHandler(DataHandler):
                 note_dto.internal = True
             note_dtos.append(note_dto.dict_export())
         return note_dtos
+
+    def map_entity_props_to_notes(self, mapping_dict_name):
+        """Map entity props to Alliance notes."""
+        self.log.info(f'Map "{self.datatype}" props to Alliance notes.')
+        NOTE_TYPE_NAME = 0
+        NOTE_SLOT_NAME = 1
+        mapping_dict = getattr(self, mapping_dict_name)
+        for fb_prop_type, note_specs in mapping_dict.items():
+            entity_counter = 0
+            prop_counter = 0
+            agr_note_type_name = note_specs[NOTE_TYPE_NAME]
+            agr_slot_name = note_specs[NOTE_SLOT_NAME]
+            self.log.info(f'Map "{fb_prop_type}" "{self.datatype}" props to Alliance "{agr_note_type_name}" notes.')
+            for entity in self.fb_data_entities.values():
+                if entity.linkmldto is None:
+                    continue
+                agr_notes = self.convert_prop_to_note(entity, fb_prop_type, agr_note_type_name)
+                agr_note_slot = getattr(entity.linkmldto, agr_slot_name)
+                agr_note_slot.extend(agr_notes)
+                if agr_notes:
+                    entity_counter += 1
+                prop_counter += len(agr_notes)
+            self.log.info(f'For "{fb_prop_type}", mapped {prop_counter} props for {entity_counter} {self.datatype}s.')
+        return

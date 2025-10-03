@@ -1356,7 +1356,8 @@ class AberrationHandler(MetaAlleleHandler):
         self.map_internal_metaallele_status()
         self.map_aberration_mutation_types()
         self.map_aberration_gene_associations()
-        self.map_aberration_props_to_notes()
+        # self.map_aberration_props_to_notes()    # BOB - suppress while testing more generic approach
+        self.map_entity_props_to_notes('aberration_prop_to_note_mapping')
         self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
