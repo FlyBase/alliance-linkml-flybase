@@ -135,6 +135,8 @@ class AlleleHandler(MetaAlleleHandler):
         self.fbti_entities = {}                # Will be feature_id-keyed FBAllele objects generated from FBti insertions.
 
     test_set = {
+        'FBal0386858': 'SppL[CR70402-TG4.1]',   # Insertion allele superceded by FBti0226866 (superseded_by_at_locus_insertion).
+        'FBal0386745': 'Scer_GAL4[SppL...]',    # Insertion allele superceded by FBti0226866 too (superseded_by_at_locus_insertion).
         'FBal0137236': 'gukh[142]',             # Insertion allele superceded by FBti0000040 (superseded_by_at_locus_insertion).
         'FBal0137618': 'Xrp1[142]',             # Insertion allele superceded by FBti0000040 too (superseded_by_at_locus_insertion).
         'FBal0036007': 'wg[en11]',              # Insertion allele superceded by FBti0002065 (superseded_by_at_locus_insertion).
@@ -981,6 +983,7 @@ class InsertionHandler(MetaAlleleHandler):
     # Types: 228747 transposable_element_insertion_site; 7726 insertion_site; 5753 transposable element; 3573 match (internal).
     # Relationships: 234754 FBti(producedby)FBtp; 64920 FBal(associated_with)FBti.
     test_set = {
+        'FBti0226866': 'TI{CRIMIC.TG4.1}SppL[]',    # Supercedes FBal0386858, FBal0386745 (superseded_by_at_locus_insertion).
         'FBti0012506': 'P{hs-yCDC42.V12}AM1',       # Supercedes FBal0062057 (superseded_by_transgnc_insertions).
         'FBti0249909': 'P{hs-yCDC42.V12}unsp',      # Supercedes FBal0062057 (superseded_by_transgnc_insertions).
         'FBti0099413': 'P{GD9857}v25458',           # Supercedes FBal0198528 (superseded_by_transgnc_insertions).
