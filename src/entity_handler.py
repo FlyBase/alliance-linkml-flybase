@@ -1188,6 +1188,9 @@ class PrimaryEntityHandler(DataHandler):
             'internal_notes',
             'internalnotes',
         ]
+        # First, build text-keyed lists of pub_ids to allow for removal of redundant statements.
+        text_keyed_props = {}
+        # The final unique set of notes are added to this list.
         note_dtos = []
         # Skip cases where the fb_prop_type of interest is not present for a specific entity.
         if fb_prop_type not in fb_entity.props_by_type.keys():
@@ -1195,7 +1198,13 @@ class PrimaryEntityHandler(DataHandler):
         prop_list = fb_entity.props_by_type[fb_prop_type]
         for fb_prop in prop_list:
             free_text = clean_free_text(fb_prop.chado_obj.value)
-            pub_curies = self.lookup_pub_curies(fb_prop.pubs)
+            try:
+                text_keyed_props[free_text].extend(fb_prop.pubs)
+            except KeyError:
+                text_keyed_props[free_text] = fb_prop.pubs
+        for free_text, fb_prop_pub_ids in text_keyed_props.items():
+            uniq_fb_prop_pub_ids = list(set(fb_prop_pub_ids))
+            pub_curies = self.lookup_pub_curies(uniq_fb_prop_pub_ids)
             note_dto = agr_datatypes.NoteDTO(agr_note_type, free_text, pub_curies)
             if fb_prop_type in internal_note_types:
                 note_dto.internal = True

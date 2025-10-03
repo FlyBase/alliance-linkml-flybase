@@ -169,7 +169,7 @@ class AlleleHandler(MetaAlleleHandler):
     # The value is a tuple representing the Alliance note type, and where to append the note: (Alliance note type name, Alliance slot name).
     # NB - This mapping is not for cases where FlyBase props need to be merged, split, or handled in ways that depend on the text of the prop.
     # NB - the code assumes that the Alliance slot for these notes is multivalued (props in FlyBase are almost always multivalued).
-    aberration_prop_to_note_mapping = {
+    allele_prop_to_note_mapping = {
         'aminoacid_rep': ('mutation_description', 'note_dtos'),
         'molecular_info': ('mutation_description', 'note_dtos'),
         'nucleotide_sub': ('mutation_description', 'note_dtos'),
