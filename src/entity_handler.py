@@ -1198,7 +1198,7 @@ class PrimaryEntityHandler(DataHandler):
         prop_list = fb_entity.props_by_type[fb_prop_type]
         for fb_prop in prop_list:
             free_text = clean_free_text(fb_prop.chado_obj.value)
-            self.log.debug(f'BOB1: Have these pub_ids: {uniq_fb_prop_pub_ids}')
+            self.log.debug(f'BOB1: Have these pub_ids: {fb_prop.pubs}')
             try:
                 text_keyed_props[free_text].extend(fb_prop.pubs)
             except KeyError:
