@@ -1204,13 +1204,13 @@ class PrimaryEntityHandler(DataHandler):
                 text_keyed_props[free_text] = fb_prop.pubs
         for free_text, fb_prop_pub_ids in text_keyed_props.items():
             uniq_fb_prop_pub_ids = list(set(fb_prop_pub_ids))
+            self.log.debug(f'BOB: Have these pub_ids: {uniq_fb_prop_pub_ids}')
             pub_curies = self.lookup_pub_curies(uniq_fb_prop_pub_ids)
             self.log.debug(f'BOB: Have these pub_curies: {pub_curies}')
             note_dto = agr_datatypes.NoteDTO(agr_note_type, free_text, pub_curies)
             if fb_prop_type in internal_note_types:
                 note_dto.internal = True
             note_dtos.append(note_dto.dict_export())
-            self.log.debug(f'BOB: Have this note_dto_exported: {note_dto.dict_export()}')
         return note_dtos
 
     def map_entity_props_to_notes(self, mapping_dict_name):
