@@ -1198,16 +1198,13 @@ class PrimaryEntityHandler(DataHandler):
         prop_list = fb_entity.props_by_type[fb_prop_type]
         for fb_prop in prop_list:
             free_text = clean_free_text(fb_prop.chado_obj.value)
-            self.log.debug(f'BOB1: Have these pub_ids: {fb_prop.pubs}')
             try:
                 text_keyed_props[free_text].extend(fb_prop.pubs)
             except KeyError:
                 text_keyed_props[free_text] = fb_prop.pubs
         for free_text, fb_prop_pub_ids in text_keyed_props.items():
             uniq_fb_prop_pub_ids = list(set(fb_prop_pub_ids))
-            self.log.debug(f'BOB2: Have these pub_ids: {uniq_fb_prop_pub_ids}')
             pub_curies = self.lookup_pub_curies(uniq_fb_prop_pub_ids)
-            self.log.debug(f'BOB3: Have these pub_curies: {pub_curies}')
             note_dto = agr_datatypes.NoteDTO(agr_note_type, free_text, pub_curies)
             if fb_prop_type in internal_note_types:
                 note_dto.internal = True
