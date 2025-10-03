@@ -1198,7 +1198,7 @@ class PrimaryEntityHandler(DataHandler):
         prop_list = fb_entity.props_by_type[fb_prop_type]
         for fb_prop in prop_list:
             free_text = clean_free_text(fb_prop.chado_obj.value)
-            if not free_text in text_keyed_props.keys():
+            if free_text not in text_keyed_props.keys():
                 text_keyed_props[free_text] = []
             text_keyed_props[free_text].extend(fb_prop.pubs)
         for free_text, fb_prop_pub_ids in text_keyed_props.items():
