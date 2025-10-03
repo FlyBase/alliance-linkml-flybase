@@ -1175,7 +1175,6 @@ class PrimaryEntityHandler(DataHandler):
         Returns:
             Returns a list of NoteDTO.dict_export() dict entities.
 
-
         Notes:
             If the fb_prop_type given is recognized as an "internal" type of FlyBase prop, the output NoteDTO is set to internal.
 
