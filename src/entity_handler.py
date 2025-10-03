@@ -656,7 +656,7 @@ class PrimaryEntityHandler(DataHandler):
                 distinct()
         prop_pub_counter = 0
         for prop_pub_result in prop_pub_results:
-            prop_id = getattr(prop_result, f'{chado_type}prop_id')
+            prop_id = getattr(prop_pub_result, f'{chado_type}prop_id')
             try:
                 prop_dict[prop_id].pubs.append(prop_pub_result.pub_id)
                 prop_pub_counter += 1
