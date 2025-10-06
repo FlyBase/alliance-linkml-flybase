@@ -30,35 +30,35 @@ class ConstructHandler(FeatureHandler):
         self.primary_export_set = 'construct_ingest_set'
 
     test_set = {
-        'FBtp0008631': 'P{UAS-wg.H.T:HA1}',                       # Expresses FBgn wg, regulated by FBto UASt.
-        'FBtp0010648': 'P{wg.FRT.B}',                             # Expresses FBgn wg, regulated by FBgn sev, has FBto FRT.
-        'FBtp0145675': 'PBac{UAS-hHTT.ex1.Q97.S13D.mCherry}',     # Expresses FBgn Hsap\HTT, regulated by FBto UAS, tagged with FBto mCherry.
-        'FBtp0000074': 'P{ftzG}',                                 # Expresses FBgn ftz, regulated by FBgn ftz.
-        'FBtp0000326': 'P{SEV5}',                                 # Expresses FBgn sev, tagged with FBto MYC.
-        'FBtp0161516': 'P{lush-GAL4.3}',                          # Expresses FBto GAL4, regulated by FBgn lush.
-        'FBtp0057873': 'P{GMR16C10-GAL4}',                        # Expresses FBto GAL4, regulated by GMR16C10 (related to two genes, Brf and lute).
-        'FBtp0032215': 'P{GD5007}',                               # Targets FBgn wg, regulated by FBto UASt.
-        'FBtp0031452': 'P{GD4157}',                               # Targets FBgn lbe, regulated by FBto UASt.
-        'FBtp0145396': 'P{TOE.GS00055}',                          # Targets FBgn wg, regulated by FBto UASt.
-        'FBtp0145394': 'P{TKO.GS00469}',                          # Targets FBgn Alp9, Alp10, regulated by FBto UASt.
+        # 'FBtp0008631': 'P{UAS-wg.H.T:HA1}',                       # Expresses FBgn wg, regulated by FBto UASt.
+        # 'FBtp0010648': 'P{wg.FRT.B}',                             # Expresses FBgn wg, regulated by FBgn sev, has FBto FRT.
+        # 'FBtp0145675': 'PBac{UAS-hHTT.ex1.Q97.S13D.mCherry}',     # Expresses FBgn Hsap\HTT, regulated by FBto UAS, tagged with FBto mCherry.
+        # 'FBtp0000074': 'P{ftzG}',                                 # Expresses FBgn ftz, regulated by FBgn ftz.
+        # 'FBtp0000326': 'P{SEV5}',                                 # Expresses FBgn sev, tagged with FBto MYC.
+        # 'FBtp0161516': 'P{lush-GAL4.3}',                          # Expresses FBto GAL4, regulated by FBgn lush.
+        # 'FBtp0057873': 'P{GMR16C10-GAL4}',                        # Expresses FBto GAL4, regulated by GMR16C10 (related to two genes, Brf and lute).
+        # 'FBtp0032215': 'P{GD5007}',                               # Targets FBgn wg, regulated by FBto UASt.
+        # 'FBtp0031452': 'P{GD4157}',                               # Targets FBgn lbe, regulated by FBto UASt.
+        # 'FBtp0145396': 'P{TOE.GS00055}',                          # Targets FBgn wg, regulated by FBto UASt.
+        # 'FBtp0145394': 'P{TKO.GS00469}',                          # Targets FBgn Alp9, Alp10, regulated by FBto UASt.
         'FBtp0000352': 'P{GawB}',                                 # Expresses FBto GAL4, FBgn Scer\GAL4. Report both?
-        'FBtp0161256': 'PBac{UAS-G-CEPIA1::TM-2A-TagRFP::TM}',    # 2 FBal; expresses FBto G-CEPIA1, RFP; expresses FBgn Equa\eqFP578, GFP; regulated by UAS.
-        'FBtp0051705': 'M{MtnBcDNA-MtnDcDNA.EGFP}',               # has_reg_region MtnB.
-        'FBtp0080088': 'P{UAS-Brainbow}',                         # Expresses EBFP2, EGFP, mKO2, has_reg_region UAS; tagged_with HA, MYC, V5; carries lox.
-        'FBtp0083738': 'P{GR}',                                   # Is regulated_by FBgn Act5C.
-        'FBtp0017594': 'P{UAS(-FRT)ptc.Deltaloop2}',              # Obsolete, has only a non-current symbol synonym - for testing feature lookup.
-        'FBtp0001701': 'P{hs-yCDC42.V12}',                        # Expresses Scer CDC42 (SGD:S000004219).
-        'FBtp0001650': 'P{UAS-Cele_ced-3.S}',                     # Expresses Cele ced-3 (WB:WBGene00000417).
-        'FBtp0010091': 'P{hs-Drer_nkx2.7.P}',                     # Expresses Drer nkx2.7 (ZFIN:ZDB-GENE-990415-179).
-        'FBtp0007421': 'P{hb-Xlh1}',                              # Expresses Xlae h (no XB ID in FB).
-        'FBtp0002652': 'P{UAS-mCD8::GFP.L}',                      # Expresses Mmus Cd8a (MGI:88346).
-        'FBtp0001429': 'P{UAS-MAP2.A}',                           # Expresses Rnor Map2 (RGD:3044).
-        'FBtp0000463': 'P{UAS-MAPT.A}',                           # Expresses Human MAPT (HGNC:6893).
-        'FBtp0150381': 'PBac{UAS-SARS-CoV-2-nsp13.B}',            # Expresses SARS-CoV-2 nsp13 (REFSEQ:YP_009725308).
+        # 'FBtp0161256': 'PBac{UAS-G-CEPIA1::TM-2A-TagRFP::TM}',    # 2 FBal; expresses FBto G-CEPIA1, RFP; expresses FBgn Equa\eqFP578, GFP; regulated by UAS.
+        # 'FBtp0051705': 'M{MtnBcDNA-MtnDcDNA.EGFP}',               # has_reg_region MtnB.
+        # 'FBtp0080088': 'P{UAS-Brainbow}',                         # Expresses EBFP2, EGFP, mKO2, has_reg_region UAS; tagged_with HA, MYC, V5; carries lox.
+        # 'FBtp0083738': 'P{GR}',                                   # Is regulated_by FBgn Act5C.
+        # 'FBtp0017594': 'P{UAS(-FRT)ptc.Deltaloop2}',              # Obsolete, has only a non-current symbol synonym - for testing feature lookup.
+        # 'FBtp0001701': 'P{hs-yCDC42.V12}',                        # Expresses Scer CDC42 (SGD:S000004219).
+        # 'FBtp0001650': 'P{UAS-Cele_ced-3.S}',                     # Expresses Cele ced-3 (WB:WBGene00000417).
+        # 'FBtp0010091': 'P{hs-Drer_nkx2.7.P}',                     # Expresses Drer nkx2.7 (ZFIN:ZDB-GENE-990415-179).
+        # 'FBtp0007421': 'P{hb-Xlh1}',                              # Expresses Xlae h (no XB ID in FB).
+        # 'FBtp0002652': 'P{UAS-mCD8::GFP.L}',                      # Expresses Mmus Cd8a (MGI:88346).
+        # 'FBtp0001429': 'P{UAS-MAP2.A}',                           # Expresses Rnor Map2 (RGD:3044).
+        # 'FBtp0000463': 'P{UAS-MAPT.A}',                           # Expresses Human MAPT (HGNC:6893).
+        # 'FBtp0150381': 'PBac{UAS-SARS-CoV-2-nsp13.B}',            # Expresses SARS-CoV-2 nsp13 (REFSEQ:YP_009725308).
     }
 
     # Additional set for export added to the handler.
-    construct_associations = []            # Will be a list of FBExportEntity objects (relationships), map to ConstructGenomicEntityAssociationDTO.
+    construct_associations = []    # Will be a list of FBExportEntity objects (relationships), map to ConstructGenomicEntityAssociationDTO.
 
     # Elaborate on get_general_data() for the ConstructHandler.
     def get_general_data(self, session):
@@ -362,16 +362,22 @@ class ConstructHandler(FeatureHandler):
             for construct in self.fb_data_entities.values():
                 pruning_list = []
                 slot_bin = getattr(construct, slot_name)
+                self.log.debug(f'BOB1: Assess {slot_name} for {construct}. Feature_ids = {slot_bin.keys()}')
                 for feature_id in slot_bin.keys():
+                    feature = self.feature_lookup[feature_id]
+                    self.log.debug(f'BOB2: Assess {slot_name}, {construct}, {feature["name"]} ({feature["uniquename"]}).')
                     try:
                         all_gene_related_tool_ids = set(self.gene_tool_lookup[feature_id])
+                        self.log.debug(f'BOB3a: {feature["name"]} ({feature["uniquename"]}) has these tool feature_ids: {all_gene_related_tool_ids}.')
                         tool_overlap = all_gene_related_tool_ids.intersection(set(slot_bin.keys()))
+                        self.log.debug(f'BOB3b: {feature["name"]} ({feature["uniquename"]}) has these overlapping tool feature_ids: {tool_overlap}.')
                         if tool_overlap:
                             pruning_list.append(feature_id)
                             pruned_gene = f'{self.feature_lookup[feature_id]["name"]} ({self.feature_lookup[feature_id]["uniquename"]})'
                             tool_overlap_str = '|'.join([f'{self.feature_lookup[i]["name"]} ({self.feature_lookup[i]["uniquename"]})' for i in tool_overlap])
                             self.log.debug(f'For {construct}, suppress {pruned_gene} since related tools are more informative: {tool_overlap_str}')
                     except KeyError:
+                        self.log.debug(f'BOB3c: {feature["name"]} ({feature["uniquename"]}) has no tool feature_ids.')
                         pass
                 for gene_id in pruning_list:
                     tool_gene_bin = getattr(construct, tool_gene_slot_name)
@@ -420,6 +426,7 @@ class ConstructHandler(FeatureHandler):
         }
         counter = 0
         for construct in self.fb_data_entities.values():
+            self.log.debug(f'Assess components for {construct}.')
             for slot_name, rel_type in component_slots.items():
                 slot_bin = getattr(construct, slot_name)
                 for feature_id, pub_ids in slot_bin.items():
@@ -458,7 +465,7 @@ class ConstructHandler(FeatureHandler):
                 for feature_id, pub_ids in component_slot.items():
                     # Associations are currently limited to genes.
                     # Expand to tools (FBto) and seq features (FBsf) once those are submitted to the Alliance.
-                    if self.feature_lookup[feature_id]['type'] != 'gene' or not self.feature_lookup[feature_id]['uniquename'].startswith('FBgn'):
+                    if self.feature_lookup[feature_id]['type'] != 'gene' or not self.feature_lookup[feature_id]['curie'].startswith('FB:FBgn'):
                         continue
                     cons_curie = f'FB:{construct.uniquename}'
                     obj_curie = self.feature_lookup[feature_id]['curie']
