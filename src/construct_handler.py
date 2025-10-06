@@ -463,9 +463,6 @@ class ConstructHandler(FeatureHandler):
                     # Filter out genes that are better represented as tools for this construct.
                     if feature_id in construct.expressed_tool_genes or feature_id in construct.regulating_tool_genes:
                         continue
-                    # Filter out genes that have any direct tool association.
-                    if feature_id in self.gene_tool_lookup.keys():
-                        continue
                     # Limit reported associations to genes lacking a MOD curie (i.e., only FBgn IDs).
                     if not self.feature_lookup[feature_id]['curie'].startswith('FB:FBgn'):
                         continue
