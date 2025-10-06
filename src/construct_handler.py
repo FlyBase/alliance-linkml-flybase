@@ -421,7 +421,6 @@ class ConstructHandler(FeatureHandler):
         }
         counter = 0
         for construct in self.fb_data_entities.values():
-            self.log.debug(f'Assess components for {construct}.')
             for slot_name, rel_type in component_slots.items():
                 slot_bin = getattr(construct, slot_name)
                 for feature_id, pub_ids in slot_bin.items():
