@@ -48,6 +48,7 @@ class ConstructHandler(FeatureHandler):
         'FBtp0083738': 'P{GR}',                                   # Is regulated_by FBgn Act5C.
         'FBtp0017594': 'P{UAS(-FRT)ptc.Deltaloop2}',              # Obsolete, has only a non-current symbol synonym - for testing feature lookup.
         'FBtp0001701': 'P{hs-yCDC42.V12}',                        # Expresses Scer CDC42 (SGD:S000004219).
+        'FBtp0131348': 'P{UAS-Scer_RCR1.MYC}',                    # Expresses Scer RCR1 (SGD:S000000209).
         'FBtp0001650': 'P{UAS-Cele_ced-3.S}',                     # Expresses Cele ced-3 (WB:WBGene00000417).
         'FBtp0010091': 'P{hs-Drer_nkx2.7.P}',                     # Expresses Drer nkx2.7 (ZFIN:ZDB-GENE-990415-179).
         'FBtp0007421': 'P{hb-Xlh1}',                              # Expresses Xlae h (no XB ID in FB).
@@ -58,7 +59,7 @@ class ConstructHandler(FeatureHandler):
     }
 
     # Additional set for export added to the handler.
-    construct_associations = []            # Will be a list of FBExportEntity objects (relationships), map to ConstructGenomicEntityAssociationDTO.
+    construct_associations = []    # Will be a list of FBExportEntity objects (relationships), map to ConstructGenomicEntityAssociationDTO.
 
     # Elaborate on get_general_data() for the ConstructHandler.
     def get_general_data(self, session):
@@ -456,9 +457,20 @@ class ConstructHandler(FeatureHandler):
             for construct in self.fb_data_entities.values():
                 component_slot = getattr(construct, feature_slot_name)
                 for feature_id, pub_ids in component_slot.items():
-                    # Associations are currently limited to genes.
-                    # Expand to tools (FBto) and seq features (FBsf) once those are submitted to the Alliance.
-                    if self.feature_lookup[feature_id]['type'] != 'gene' or not self.feature_lookup[feature_id]['uniquename'].startswith('FBgn'):
+                    # Limit reported associations to genes: expand to tools (FBto) and seq features (FBsf) eventually.
+                    if self.feature_lookup[feature_id]['type'] != 'gene':
+                        continue
+                    # Filter out genes that are better represented as tools for this construct.
+                    if feature_id in construct.expressed_tool_genes or feature_id in construct.regulating_tool_genes:
+                        continue
+                    # Filter out genes that have any direct tool association.
+                    if feature_id in self.gene_tool_lookup.keys():
+                        continue
+                    # Limit reported associations to genes lacking a MOD curie (i.e., only FBgn IDs).
+                    if not self.feature_lookup[feature_id]['curie'].startswith('FB:FBgn'):
+                        continue
+                    # Limit reported associations to Drosophilid genes.
+                    if self.organism_lookup[self.feature_lookup[feature_id]['organism_id']]['is_drosophilid'] is False:
                         continue
                     cons_curie = f'FB:{construct.uniquename}'
                     obj_curie = self.feature_lookup[feature_id]['curie']
