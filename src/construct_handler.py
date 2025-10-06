@@ -461,10 +461,13 @@ class ConstructHandler(FeatureHandler):
                     # Limit reported associations to genes: expand to tools (FBto) and seq features (FBsf) eventually.
                     if self.feature_lookup[feature_id]['type'] != 'gene':
                         continue
-                    # Limit reported associations for genes that are better represented as tools.
+                    # Filter out genes that are better represented as tools for this construct.
+                    if feature_id in self.expressed_tool_genes.keys() or feature_id in self.regulating_tool_genes.keys():
+                        continue
+                    # Filter out genes that have any direct tool association.
                     if feature_id in self.gene_tool_lookup.keys():
                         continue
-                    # Limit reported associations to non-MOD genes.
+                    # Limit reported associations to genes lacking a MOD curie (i.e., only FBgn IDs).
                     if not self.feature_lookup[feature_id]['curie'].startswith('FB:FBgn'):
                         continue
                     # Limit reported associations to Drosophilid genes.
