@@ -462,7 +462,7 @@ class ConstructHandler(FeatureHandler):
                     if self.feature_lookup[feature_id]['type'] != 'gene':
                         continue
                     # Filter out genes that are better represented as tools for this construct.
-                    if feature_id in self.expressed_tool_genes.keys() or feature_id in self.regulating_tool_genes.keys():
+                    if feature_id in construct.expressed_tool_genes.keys() or feature_id in construct.regulating_tool_genes.keys():
                         continue
                     # Filter out genes that have any direct tool association.
                     if feature_id in self.gene_tool_lookup.keys():
