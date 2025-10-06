@@ -465,11 +465,11 @@ class ConstructHandler(FeatureHandler):
                     if feature_id in self.gene_tool_lookup.keys():
                         continue
                     # Limit reported associations to non-MOD genes.
-                    # if not self.feature_lookup[feature_id]['curie'].startswith('FB:FBgn'):
-                    #     continue
+                    if not self.feature_lookup[feature_id]['curie'].startswith('FB:FBgn'):
+                        continue
                     # Limit reported associations to Drosophilid genes.
-                    # if self.organism_lookup[self.feature_lookup[feature_id]['organism_id']]['is_drosophilid'] is False:
-                    #     continue
+                    if self.organism_lookup[self.feature_lookup[feature_id]['organism_id']]['is_drosophilid'] is False:
+                        continue
                     cons_curie = f'FB:{construct.uniquename}'
                     obj_curie = self.feature_lookup[feature_id]['curie']
                     pub_curies = self.lookup_pub_curies(pub_ids)
