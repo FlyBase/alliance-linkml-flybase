@@ -136,7 +136,8 @@ class DataHandler(object):
         'genotype': r'^FBgo[0-9]{7}$',
         'strain': r'^FBsn[0-9]{7}$',
         'library': r'^FBlc[0-9]{7}$',
-        'cell': r'^FBcl[0-9]{7}$',
+        'cell_line': r'^FBtc[0-9]{7}$',
+        'clone': r'^FBcl[0-9]{7}$',
         'panther': r'PTHR[0-9]{5}',
         'systematic_name': r'^(D[a-z]{3}\\|)(CG|CR|G[A-Z])[0-9]{4,5}',
     }
