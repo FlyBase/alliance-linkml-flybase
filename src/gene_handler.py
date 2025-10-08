@@ -212,6 +212,24 @@ class GeneHandler(FeatureHandler):
         self.log.info(f'Flagged {counter} genes as internal for gene-specific reasons')
         return
 
+    def map_gene_gcrp_xrefs(self):
+        """Pick out the gene GCRP xref for the GeneDTO."""
+        self.log.info('Pick out the gene GCRP xref for the GeneDTO')
+        # Resource descriptor page area conversions.
+        for gene in self.fb_data_entities.values():
+            if gene.linkmldto is None:
+                continue
+            for xref in gene.dbxrefs:
+                if xref.dbxref.db.name != 'UniProt/GCRP':
+                    continue
+                prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
+                page_area = self.agr_page_area_dict[prefix]
+                curie = f'{prefix}:{xref.dbxref.accession}'
+                display_name = curie
+                xref_dto = agr_datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
+                gene.linkmldto.gcrp_cross_reference_dto = xref_dto
+        return
+
     # Elaborate on map_fb_data_to_alliance() for the GeneHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the GeneHandler."""
@@ -220,6 +238,7 @@ class GeneHandler(FeatureHandler):
         self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
+        self.map_gene_gcrp_xrefs()
         # self.map_pubs()    # Suppress until LinkML Gene gets reference_curies slot.
         self.map_timestamps()
         self.map_secondary_ids('gene_secondary_id_dtos')
