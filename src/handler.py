@@ -95,6 +95,7 @@ class DataHandler(object):
         'RNAcentral': 'RNAcentral',
         'UniProt/Swiss-Prot': 'UniProtKB',
         'UniProt/TrEMBL': 'UniProtKB',
+        'UniProt/GCRP': 'UniProtKB',
         'SGD': 'SGD',
         'WormBase': 'WB',
         'ZFIN': 'ZFIN',
