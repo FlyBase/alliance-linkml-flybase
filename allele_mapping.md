@@ -32,7 +32,9 @@ The logic for these allele conversions is as follows.
 Case 1. Non-converted alleles.  
 FBal alleles are exported "as themselves", and not converted, in the following cases:  
 The allele is not the result of an FBtp construct genomic insertion: e.g., point mutation.  
-The allele represents two or more closeby FBti insertions.  
+- in this case the FBal lacks both of the following feature_relationships: FBal "associated_with" current FBti AND FBal "associated_with" current FBtp.  
+The allele represents two or more closeby FBti insertions that affect the same gene.  
+- in this case, a single FBal has an FBal "associated_with" FBti feature_relationship to more than one current FBti.  
 The allele represents a mix of non-insertion and insertion events.  
 The FBal allele is directly "associated_with" more than one FBtp construct (the FBal-FBti mapping is not one-to-one).  
 
@@ -86,3 +88,10 @@ Just looking at production_chado, it still takes many steps to figure out if an 
 - In retrospect, it might be good to have some sort of relationship created when an FBal is superceded unambiguously by a single "unspecified" FBti insertion.
 - In retrospect, it might be good to have some way to flag alleles that should not be converted (case 1), or could not be converted (case 3 subset).
 - These changes would make it easier to determine if FBal-FBti conversion is required, not required, or not possible.
+Adopting the Alliance Cassette model for Constructs carrying engineered genes (Case 3)  
+- There should be no change needed to the GenotypeConversion when this happens.  
+- But, when we adopt this model:  
+  - each FBal allele representing each gene carried in the FBtp construct (i.e. FBal "associated_with" FBtp in the feature_relationship) in Case3 will need to be submitted as a 'Cassette' to the Alliance.  
+  - and we will need to submit a CassetteConstructAssociations type file that associates each Cassette to the relevant Construct(s) in the Alliance.  
+  - At that point, we will need to re-assess "Upon export to the Alliance, information from the FBal is propagated to all related FBti insertions (the "unspecified" one, plus any curated ones)." as some of the FBal information should just be propagated to the Cassette and not propagated to all related FBti.  
+
