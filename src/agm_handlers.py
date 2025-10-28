@@ -516,12 +516,11 @@ class GenotypeHandler(PrimaryEntityHandler):
             for syno_dict in genotype.synonym_dict.values():
                 # Convert SGML to plain text for genotype names
                 syno_dict_converted = syno_dict.copy()
-                if syno_dict_converted:
-                    syno_dict_converted['format_text'] = sub_sup_sgml_to_plain_text(syno_dict_converted)
-                    syno_dict_converted['format_text'] = sgml_to_plain_text(syno_dict_converted['format_text'])
-                    # Convert SGML to unicode etc.
-                    syno_dict_converted = syno_dict.copy()
-                    syno_dict_converted['display_text'] = sgml_to_unicode(syno_dict_converted)
+                syno_dict_converted['format_text'] = sub_sup_sgml_to_plain_text(syno_dict_converted['format_text'])
+                syno_dict_converted['format_text'] = sgml_to_plain_text(syno_dict_converted['format_text'])
+                # Convert SGML to unicode etc.
+                syno_dict_converted = syno_dict.copy()
+                syno_dict_converted['display_text'] = sgml_to_unicode(syno_dict_converted['display_text'])
 
                 name_dto = agr_datatypes.NameSlotAnnotationDTO('full_name', syno_dict_converted['format_text'],
                                                                syno_dict_converted['display_text'], syno_dict_converted['pub_curies']).dict_export()
