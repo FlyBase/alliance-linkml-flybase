@@ -113,8 +113,7 @@ def main():
         if len(association_export_dict['construct_genomic_entity_association_ingest_set']) == 0:
             log.error('The "construct_genomic_entity_association_ingest_set" is unexpectedly empty.')
             raise ValueError('The "construct_genomic_entity_association_ingest_set" is unexpectedly empty.')
-        else:
-            generate_export_file(association_export_dict, log, association_output_filename)
+        generate_export_file(association_export_dict, log, association_output_filename)
 
     log.info('Ended main function.\n')
 
