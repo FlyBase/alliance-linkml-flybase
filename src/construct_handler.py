@@ -431,6 +431,9 @@ class ConstructHandler(FeatureHandler):
                         continue
                     elif slot_name == 'regulating_features' and feature_id in construct.regulating_tool_genes:
                         continue
+                    # These are dumped out in the associations
+                    if self.feature_lookup[feature_id]['curie'].startswith('FB:FBgn'):
+                        continue
                     feature = self.feature_lookup[feature_id]
                     symbol = feature['symbol']
                     organism_id = feature['organism_id']
@@ -451,9 +454,9 @@ class ConstructHandler(FeatureHandler):
             'targeted_features': 'targets',
             'regulating_features': 'is_regulated_by',
         }
+        counter = 0
         for feature_slot_name, rel_type in slot_rel_types.items():
             self.log.info(f'Sort out Alliance genomic entities from "{feature_slot_name}" to "{rel_type}" associations.')
-            counter = 0
             for construct in self.fb_data_entities.values():
                 component_slot = getattr(construct, feature_slot_name)
                 for feature_id, pub_ids in component_slot.items():
