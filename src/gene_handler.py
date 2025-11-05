@@ -54,6 +54,9 @@ class GeneHandler(FeatureHandler):
     # Additional reference info.
     pthr_dict = {}                   # Will be an 1:1 FBgn_ID-PTHR xref dict.
 
+    gene_prop_to_note_mapping = {
+        'misc': ('related_notes', 'note_dtos'),
+    }
     # Elaborate on get_general_data() for the GeneHandler.
     def get_general_data(self, session):
         """Extend the method for the GeneHandler."""
@@ -249,6 +252,7 @@ class GeneHandler(FeatureHandler):
         self.flag_internal_genes()
         self.flag_internal_fb_entities('fb_data_entities')
         self.flag_unexportable_genes()
+        self.map_entity_props_to_notes('gene_prop_to_note_mapping')
         return
 
     # Elaborate on query_chado_and_export() for the GeneHandler.
