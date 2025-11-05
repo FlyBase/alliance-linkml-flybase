@@ -55,7 +55,7 @@ class GeneHandler(FeatureHandler):
     pthr_dict = {}                   # Will be an 1:1 FBgn_ID-PTHR xref dict.
 
     gene_prop_to_note_mapping = {
-        'misc': ('related_notes', 'note_dtos'),
+        'misc': ('comment', 'note_dtos'),
     }
     # Elaborate on get_general_data() for the GeneHandler.
     def get_general_data(self, session):
