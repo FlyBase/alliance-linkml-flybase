@@ -432,7 +432,8 @@ class ConstructHandler(FeatureHandler):
                     elif slot_name == 'regulating_features' and feature_id in construct.regulating_tool_genes:
                         continue
                     # These are dumped out in the associations
-                    if self.feature_lookup[feature_id]['curie'].startswith('FB:FBgn') & self.organism_lookup[self.feature_lookup[feature_id]['organism_id']]['is_drosophilid'] is True:
+                    if self.feature_lookup[feature_id]['curie'].startswith('FB:FBgn') & \
+                            self.organism_lookup[self.feature_lookup[feature_id]['organism_id']]['is_drosophilid'] is True:
                         continue
                     feature = self.feature_lookup[feature_id]
                     symbol = feature['symbol']
