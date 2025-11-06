@@ -117,7 +117,7 @@ class GeneDTO(GenomicEntityDTO):
         self.gene_type_curie = None             # SO term ID for gene's promoted_gene_type.
         self.gene_secondary_id_dtos = []        # Annotation IDs and 2o FlyBase IDs.
         # self.reference_curies = []              # Not yet part of LinkML, so not exported - should be added to LinkML model?
-        self.related_notes = []                 # Will be NoteDTO objects.
+        self.note_dtos = []                     # Will be NoteDTO objects.
         self.gcrp_cross_reference_dto = None    # Will be a single CrossReferenceDTO object for UniProt/GCRP xref, if any.
         self.required_fields.extend(['gene_symbol_dto'])
 
