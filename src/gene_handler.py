@@ -57,6 +57,7 @@ class GeneHandler(FeatureHandler):
     gene_prop_to_note_mapping = {
         'misc': ('comment', 'note_dtos'),
     }
+
     # Elaborate on get_general_data() for the GeneHandler.
     def get_general_data(self, session):
         """Extend the method for the GeneHandler."""
