@@ -9,8 +9,8 @@ Author(s):
 
 """
 
-import csv
-import re
+# import csv
+# import re
 from logging import Logger
 import agr_datatypes
 import fb_datatypes
@@ -34,7 +34,6 @@ class ExperimentalToolHandler(FeatureHandler):
     exptool_prop_to_note_mapping = {
         'misc': ('comment', 'note_dtos'),
     }
-
 
     def get_datatype_data(self, session):
         """Extend the method for the ExperimentalToolHandler."""

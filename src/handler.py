@@ -152,6 +152,7 @@ class DataHandler(object):
         'balancer': True,
         'chemical': False,
         'construct': True,
+        'engineered_region': True,
         'gene': True,
         'insertion': True,
         'polypeptide': False,
@@ -171,6 +172,7 @@ class DataHandler(object):
         'balancer': ['chromosome_structure_variation'],
         'chemical': ['chemical entity'],
         'construct': ['engineered_transposable_element', 'engineered_region', 'transgenic_transposable_element'],
+        'engineered_region': ['engineered_region'],
         'gene': ['gene'],
         'insertion': ['insertion_site', 'transposable_element', 'transposable_element_insertion_site'],    # Excludes internal "match" (name=FBti ID).
         'polypeptide': None,
