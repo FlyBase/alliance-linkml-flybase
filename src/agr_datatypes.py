@@ -134,7 +134,8 @@ class TransgenicToolDTO(GenomicEntityDTO):
         self.secondary_identifiers = []            # Annotation IDs and 2o FlyBase IDs.
         self.note_dtos = []                         # Will be NoteDTO objects.
         # self.required_fields.extend(['gene_symbol_dto'])
-        self.required_fields.remove('taxon_curie') # Does not have it!
+        self.required_fields.remove('taxon_curie')  # Does not have it!
+
 
 class ReagentDTO(SubmittedObjectDTO):
     """ReagentDTO class."""
