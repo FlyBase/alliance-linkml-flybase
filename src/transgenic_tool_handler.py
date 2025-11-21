@@ -56,8 +56,8 @@ class ExperimentalToolHandler(FeatureHandler):
 
     # Add methods to be run by map_fb_data_to_alliance() below.
     def map_tool_basic(self):
-        """Map basic FlyBase gene data to the Alliance LinkML object."""
-        self.log.info('Map basic gene info to Alliance object.')
+        """Map basic FlyBase transgenic tool data to the Alliance LinkML object."""
+        self.log.info('Map basic transgenic tool info to Alliance object.')
         for tool in self.fb_data_entities.values():
             agr_tool = self.agr_export_type()
             agr_tool.obsolete = tool.chado_obj.is_obsolete
