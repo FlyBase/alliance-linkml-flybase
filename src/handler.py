@@ -199,9 +199,6 @@ class DataHandler(object):
         if primary_key_column is None:
             self.log.error(f'Could not get primary_key Column from {chado_table}')
             raise ValueError
-        else:
-            pass
-            # self.log.debug(f'Found primary_key column: {primary_key_column.name}')
         return primary_key_column
 
     def get_foreign_key_column(self, chado_table, column_name):
@@ -210,9 +207,6 @@ class DataHandler(object):
         if foreign_key_column is None:
             self.log.error(f'Could not get foreign_key Column {column_name} from {chado_table}')
             raise ValueError
-        else:
-            pass
-            # self.log.debug(f'Found primary_key column: {foreign_key_column.name}')
         return foreign_key_column
 
     # Sub-methods for the get_general_data() wrapper.
