@@ -30,6 +30,9 @@ class ExperimentalToolHandler(FeatureHandler):
 
     test_set = {
         'FBto0000001': 'C-Cerulean',  # First one
+        'FBto0000027': 'EGFP',
+        'FBto0000417': 'sgGFP',
+        'FBto0000921': 'Sapphire',
     }
 
     transgenic_tool_prop_to_note_mapping = {
