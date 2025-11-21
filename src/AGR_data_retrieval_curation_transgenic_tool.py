@@ -95,11 +95,6 @@ def main():
         'alliance_member_release_version': database_release,
     }
     export_dict[tool_handler.primary_export_set] = tool_handler.export_data[tool_handler.primary_export_set]
-    print(tool_handler.export_data)
-    log.debug(tool_handler.export_data)
-    for bob in tool_handler.export_data.keys():
-        print(f"{bob}: {tool_handler.export_data[bob]}")
-        log.debug(f"{bob}: {tool_handler.export_data[bob]}")
     if len(export_dict[tool_handler.primary_export_set]) == 0:
         if reference_session:
             log.info('No updates to report.')
