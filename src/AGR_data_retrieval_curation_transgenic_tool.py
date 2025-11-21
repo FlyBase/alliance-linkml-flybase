@@ -95,12 +95,17 @@ def main():
         'alliance_member_release_version': database_release,
     }
     export_dict[tool_handler.primary_export_set] = tool_handler.export_data[tool_handler.primary_export_set]
+    print(tool_handler.export_data)
+    log.debug(tool_handler.export_data)
+    for bob in tool_handler.export_data.keys():
+        print(f"{bob}: {tool_handler.export_data[bob]}")
+        log.debug(f"{bob}: {tool_handler.export_data[bob]}")
     if len(export_dict[tool_handler.primary_export_set]) == 0:
         if reference_session:
             log.info('No updates to report.')
         else:
-            log.error('The "exptool_ingest_set" is unexpectedly empty.')
-            raise ValueError('The "exptool_ingest_set" is unexpectedly empty.')
+            log.error(f'The "{tool_handler.primary_export_set}" is unexpectedly empty.')
+            raise ValueError(f'The "{tool_handler.primary_export_set}" is unexpectedly empty.')
     else:
         generate_export_file(export_dict, log, output_filename)
 

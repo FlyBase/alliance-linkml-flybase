@@ -31,7 +31,7 @@ class ExperimentalToolHandler(FeatureHandler):
         'FBto0000001': 'C-Cerulean',  # First one
     }
 
-    exptool_prop_to_note_mapping = {
+    transgenic_tool_prop_to_note_mapping = {
         'misc': ('comment', 'note_dtos'),
     }
 
