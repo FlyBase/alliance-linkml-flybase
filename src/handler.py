@@ -124,7 +124,7 @@ class DataHandler(object):
         'chemical': r'^FBch[0-9]{7}$',
         'consins': r'^FB(tp|ti)[0-9]{7}$',
         'construct': r'^FBtp[0-9]{7}$',
-        'engineered_region': r'FBtp[0-9]{7}$',
+        'engineered_region': r'FBto[0-9]{7}$',
         'fb_curie': r'^FB:FB[a-z]{2}[0-9]{7,10}$',
         'fb_uniquename': r'^FB[a-z]{2}[0-9]{7,10}$',
         'gene': r'^FBgn[0-9]{7}$',
@@ -181,7 +181,8 @@ class DataHandler(object):
         'tool': ['engineered_region'],
         'transcript': None,
         'transposon': ['natural_transposable_element'],
-        'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion', 'point_mutation', 'sequence_alteration', 'sequence_variant'],
+        'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion',
+                      'point_mutation', 'sequence_alteration', 'sequence_variant'],
         'bogus symbol': ['bogus symbol'],
     }
 
