@@ -356,8 +356,8 @@ class FBTool(FBFeature):
         """Create the FBTool object."""
         super().__init__(chado_obj)
         # Processed FB data.
-        self.gene_type_name = 'gene'        # Update this default gene to SO term name from "promoted_gene_type" Featureprop, if available.
-        self.gene_type_id = 'SO:0000704'    # Update this default gene ID to SO term ID from "promoted_gene_type" Featureprop, if available.
+        # self.gene_type_name = 'gene'        # Update this default gene to SO term name from "promoted_gene_type" Featureprop, if available.
+        # self.gene_type_id = 'SO:0000704'    # Update this default gene ID to SO term ID from "promoted_gene_type" Featureprop, if available.
 
 
 class FBStrain(FBDataEntity):

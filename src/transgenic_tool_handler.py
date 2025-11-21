@@ -43,3 +43,25 @@ class ExperimentalToolHandler(FeatureHandler):
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
         return
+
+    # Elaborate on map_fb_data_to_alliance() for the ExpToolHandler.
+    def map_fb_data_to_alliance(self):
+        """Extend the method for the GeneHandler."""
+        super().map_fb_data_to_alliance()
+        self.map_tool_basic()
+        self.map_synonyms()
+        self.map_data_provider_dto()
+        self.map_xrefs()
+
+    # Add methods to be run by map_fb_data_to_alliance() below.
+    def map_tool_basic(self):
+        """Map basic FlyBase gene data to the Alliance LinkML object."""
+        self.log.info('Map basic gene info to Alliance object.')
+        for tool in self.fb_data_entities.values():
+            agr_tool = self.agr_export_type()
+            agr_tool.obsolete = tool.chado_obj.is_obsolete
+            agr_tool.primary_external_id = f'FB:{tool.uniquename}'
+            # agr_gene.mod_internal_id = f'FB.feature_id={gene.db_primary_id}'
+            agr_tool.taxon_curie = tool.ncbi_taxon_id
+            tool.linkmldto = agr_tool
+        return
