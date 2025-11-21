@@ -22,7 +22,8 @@ class ExperimentalToolHandler(FeatureHandler):
     def __init__(self, log: Logger, testing: bool):
         """Create the ExperimentalToolHandler object."""
         super().__init__(log, testing)
-        self.datatype = 'engineered_region'
+        #  self.datatype = 'engineered_region'
+        self.datatype = 'feature'
         self.fb_export_type = fb_datatypes.FBTool
         self.agr_export_type = agr_datatypes.TransgenicToolDTO
         self.primary_export_set = 'transgenic_tool_ingest_set'
