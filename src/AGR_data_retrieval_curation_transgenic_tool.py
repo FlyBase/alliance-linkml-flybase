@@ -103,7 +103,9 @@ def main():
             raise ValueError(f'The "{tool_handler.primary_export_set}" is unexpectedly empty.')
     else:
         generate_export_file(export_dict, log, output_filename)
-
+        log.debug(export_dict)
+        for bob in export_dict[tool_handler.primary_export_set]:
+            log.debug(bob)
     log.info('Ended main function.\n')
 
 
