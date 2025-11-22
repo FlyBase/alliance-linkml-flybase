@@ -15,14 +15,22 @@ from logging import Logger
 from sqlalchemy.orm import aliased
 from harvdev_utils.char_conversions import sub_sup_sgml_to_html, sub_sup_to_sgml, clean_free_text
 from harvdev_utils.reporting import (
-    Cv, Cvterm, Db, Dbxref, CellLine, CellLineCvterm, CellLineCvtermprop, CellLineDbxref, CellLineprop, CellLinepropPub, CellLinePub, CellLineRelationship,
-    CellLineSynonym, Feature, FeatureCvterm, FeatureCvtermprop, FeatureDbxref, Featureprop, FeaturepropPub, FeaturePub, FeatureRelationship,
-    FeatureRelationshipPub, FeatureRelationshipprop, FeatureRelationshippropPub, FeatureSynonym, Genotype, GenotypeCvterm, GenotypeCvtermprop, GenotypeDbxref,
-    Genotypeprop, GenotypepropPub, GenotypePub, GenotypeSynonym, Grp, GrpCvterm, GrpDbxref, Grpprop, GrppropPub, GrpPub, GrpRelationship, GrpRelationshipPub,
-    GrpSynonym, Humanhealth, HumanhealthCvterm, HumanhealthCvtermprop, HumanhealthDbxref, Humanhealthprop, HumanhealthpropPub, HumanhealthPub,
-    HumanhealthRelationship, HumanhealthRelationshipPub, HumanhealthSynonym, Library, LibraryCvterm, LibraryCvtermprop, LibraryDbxref, Libraryprop,
-    LibrarypropPub, LibraryPub, LibraryRelationship, LibraryRelationshipPub, LibrarySynonym, Strain, StrainCvterm, StrainCvtermprop, StrainDbxref, Strainprop,
-    StrainpropPub, StrainPub, StrainRelationship, StrainRelationshipPub, StrainSynonym
+    Cv, Cvterm, Db, Dbxref, CellLine, CellLineCvterm, CellLineCvtermprop, CellLineDbxref,
+    CellLineprop, CellLinepropPub, CellLinePub, CellLineRelationship, CellLineSynonym,
+    Feature, FeatureCvterm, FeatureCvtermprop, FeatureDbxref, Featureprop, FeaturepropPub,
+    FeaturePub, FeatureRelationship, FeatureRelationshipPub, FeatureRelationshipprop,
+    FeatureRelationshippropPub, FeatureSynonym,
+    Genotype, GenotypeCvterm, GenotypeCvtermprop, GenotypeDbxref, Genotypeprop, GenotypepropPub,
+    GenotypePub, GenotypeSynonym,
+    Grp, GrpCvterm, GrpDbxref, Grpprop, GrppropPub, GrpPub, GrpRelationship, GrpRelationshipPub,
+    GrpSynonym,
+    Humanhealth, HumanhealthCvterm, HumanhealthCvtermprop, HumanhealthDbxref, Humanhealthprop,
+    HumanhealthpropPub, HumanhealthPub, HumanhealthRelationship, HumanhealthRelationshipPub,
+    HumanhealthSynonym,
+    Library, LibraryCvterm, LibraryCvtermprop, LibraryDbxref, Libraryprop, LibrarypropPub,
+    LibraryPub, LibraryRelationship, LibraryRelationshipPub, LibrarySynonym,
+    Strain, StrainCvterm, StrainCvtermprop, StrainDbxref, Strainprop, StrainpropPub, StrainPub,
+    StrainRelationship, StrainRelationshipPub, StrainSynonym
 )
 import agr_datatypes
 import fb_datatypes
@@ -50,7 +58,8 @@ class PrimaryEntityHandler(DataHandler):
         'genotype': 'homepage',
     }
 
-    # Mappings of main data types to chado tables with associated data like cvterms, props, synonyms, etc.
+    # Mappings of main data types to chado tables with associated data
+    # like cvterms, props, synonyms, etc.
     chado_tables = {
         'main_table': {
             'cell_line': CellLine,
@@ -732,9 +741,11 @@ class PrimaryEntityHandler(DataHandler):
         results = session.query(asso_chado_table).\
             filter(*filters).\
             distinct()
+        self.log.debug(f"filters {filters}")
         counter = 0
         pass_counter = 0
         for result in results:
+            self.log.debug(f'Found {result} processing')
             entity_pkey_id = getattr(result, main_pkey_name)
             try:
                 self.fb_data_entities[entity_pkey_id].synonyms.append(result)

@@ -124,6 +124,7 @@ class DataHandler(object):
         'chemical': r'^FBch[0-9]{7}$',
         'consins': r'^FB(tp|ti)[0-9]{7}$',
         'construct': r'^FBtp[0-9]{7}$',
+        'engineered_region': r'FBto[0-9]{7}$',
         'fb_curie': r'^FB:FB[a-z]{2}[0-9]{7,10}$',
         'fb_uniquename': r'^FB[a-z]{2}[0-9]{7,10}$',
         'gene': r'^FBgn[0-9]{7}$',
@@ -152,6 +153,7 @@ class DataHandler(object):
         'balancer': True,
         'chemical': False,
         'construct': True,
+        'engineered_region': True,
         'gene': True,
         'insertion': True,
         'polypeptide': False,
@@ -171,6 +173,7 @@ class DataHandler(object):
         'balancer': ['chromosome_structure_variation'],
         'chemical': ['chemical entity'],
         'construct': ['engineered_transposable_element', 'engineered_region', 'transgenic_transposable_element'],
+        'engineered_region': ['engineered_region'],
         'gene': ['gene'],
         'insertion': ['insertion_site', 'transposable_element', 'transposable_element_insertion_site'],    # Excludes internal "match" (name=FBti ID).
         'polypeptide': None,
@@ -178,7 +181,8 @@ class DataHandler(object):
         'tool': ['engineered_region'],
         'transcript': None,
         'transposon': ['natural_transposable_element'],
-        'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion', 'point_mutation', 'sequence_alteration', 'sequence_variant'],
+        'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion',
+                      'point_mutation', 'sequence_alteration', 'sequence_variant'],
         'bogus symbol': ['bogus symbol'],
     }
 
@@ -195,9 +199,6 @@ class DataHandler(object):
         if primary_key_column is None:
             self.log.error(f'Could not get primary_key Column from {chado_table}')
             raise ValueError
-        else:
-            pass
-            # self.log.debug(f'Found primary_key column: {primary_key_column.name}')
         return primary_key_column
 
     def get_foreign_key_column(self, chado_table, column_name):
@@ -206,9 +207,6 @@ class DataHandler(object):
         if foreign_key_column is None:
             self.log.error(f'Could not get foreign_key Column {column_name} from {chado_table}')
             raise ValueError
-        else:
-            pass
-            # self.log.debug(f'Found primary_key column: {foreign_key_column.name}')
         return foreign_key_column
 
     # Sub-methods for the get_general_data() wrapper.
