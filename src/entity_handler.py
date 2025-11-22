@@ -735,6 +735,8 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Get synonyms for {self.datatype} data entities from {asso_chado_table}.')
         main_pkey_name = f'{chado_type}_id'
         fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
+        self.log{f"fkey_col {fkey_col}")
+        self.log(f"fkey_col in {self.fb_data_entities.keys()}")
         filters = (
             fkey_col.in_((self.fb_data_entities.keys())),
         )
@@ -1129,6 +1131,7 @@ class PrimaryEntityHandler(DataHandler):
             # Create NameSlotAnnotationDTO objects and sort them out.
             for syno_dict in fb_data_entity.synonym_dict.values():
                 # Sort into current symbol, current fullname or synonym.
+                self.log.debug(f"synonym {syno_dict}")
                 name_dto = agr_datatypes.NameSlotAnnotationDTO(syno_dict['name_type_name'], syno_dict['format_text'],
                                                                syno_dict['display_text'], syno_dict['pub_curies']).dict_export()
                 name_dto['internal'] = syno_dict['is_internal']
