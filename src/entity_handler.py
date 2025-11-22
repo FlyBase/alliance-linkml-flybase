@@ -735,8 +735,8 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Get synonyms for {self.datatype} data entities from {asso_chado_table}.')
         main_pkey_name = f'{chado_type}_id'
         fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
-        self.log{f"fkey_col {fkey_col}")
-        self.log(f"fkey_col in {self.fb_data_entities.keys()}")
+        self.log.debug(f"fkey_col {fkey_col}")
+        self.log.debug(f"fkey_col in {self.fb_data_entities.keys()}")
         filters = (
             fkey_col.in_((self.fb_data_entities.keys())),
         )
