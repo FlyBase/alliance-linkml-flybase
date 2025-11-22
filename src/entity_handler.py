@@ -741,9 +741,11 @@ class PrimaryEntityHandler(DataHandler):
         results = session.query(asso_chado_table).\
             filter(*filters).\
             distinct()
+        self.log.debug(f"filters {filters}")
         counter = 0
         pass_counter = 0
         for result in results:
+            self.log.debug(f'Found {result} processing')
             entity_pkey_id = getattr(result, main_pkey_name)
             try:
                 self.fb_data_entities[entity_pkey_id].synonyms.append(result)
