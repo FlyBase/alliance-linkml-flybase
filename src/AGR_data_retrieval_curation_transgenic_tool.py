@@ -77,7 +77,7 @@ else:
 def generate_tsv_file(export_dict, filename):
 
     with open(filename, 'w') as outfile:
-        outfile.write("# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms")
+        outfile.write("# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms\n")
         for entity_dict in export_dict["transgenic_tool_ingest_set"]:
             primary = entity_dict["primary_external_id"]
             symbol = ''
@@ -85,9 +85,9 @@ def generate_tsv_file(export_dict, filename):
             secondary = []
             syns = []
             if "transgenic_tool_full_name_dto" in entity_dict:
-                name = entity_dict["transgenic_tool_full_name_dto"]
+                name = entity_dict["transgenic_tool_full_name_dto"]["format_text"]
             if "transgenic_tool_symbol_dto" in entity_dict:
-                symbol = entity_dict["transgenic_tool_symbol_dto"]
+                symbol = entity_dict["transgenic_tool_symbol_dto"]["format_text"]
             if "transgenic_tool_synonym_dtos" in entity_dict:
                 for synonym in entity_dict["transgenic_tool_synonym_dtos"]:
                     syns.append(synonym["format_text"])
