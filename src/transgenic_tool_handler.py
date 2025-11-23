@@ -48,6 +48,7 @@ class ExperimentalToolHandler(FeatureHandler):
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
         self.get_entity_xrefs()
+        self.get_entity_fb_xrefs()
         # self.build_feature_lookup(session)
         return
 
@@ -81,7 +82,6 @@ class ExperimentalToolHandler(FeatureHandler):
         super().synthesize_info()
         self.synthesize_synonyms()
         self.synthesize_secondary_ids()
-
 
     # Elaborate on query_chado_and_export() for the TransgenicToolHandler.
     def query_chado_and_export(self, session):
