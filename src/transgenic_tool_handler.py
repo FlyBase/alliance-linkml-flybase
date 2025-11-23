@@ -47,6 +47,7 @@ class ExperimentalToolHandler(FeatureHandler):
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
+        self.get_entity_xrefs()
         # self.build_feature_lookup(session)
         return
 
