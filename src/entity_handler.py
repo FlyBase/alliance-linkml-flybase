@@ -1132,6 +1132,7 @@ class PrimaryEntityHandler(DataHandler):
             }
             # Create NameSlotAnnotationDTO objects and sort them out.
             self.log.debug(f"COME ON {fb_data_entity.synonym_dict}")
+            self.log.debug(f"COME ON TWO {fb_data_entity.synonyms}")
             for syno_dict in fb_data_entity.synonym_dict.values():
                 # Sort into current symbol, current fullname or synonym.
                 self.log.debug(f"SYNONYM {syno_dict}")
