@@ -79,7 +79,7 @@ def generate_tsv_file(export_dict, filename):
     with open(filename, 'w') as outfile:
         outfile.write("# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms")
         for entity_dict in export_dict["transgenic_tool_ingest_set"]:
-            primary = entity_dict["transgenic_tool_full_name_dto"]
+            primary = entity_dict["primary_external_id"]
             symbol = ''
             name = ''
             secondary = []
