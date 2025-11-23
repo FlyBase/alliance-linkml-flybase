@@ -91,6 +91,8 @@ def generate_tsv_file(export_dict, filename):
             if "transgenic_tool_synonym_dtos" in entity_dict:
                 for synonym in entity_dict["transgenic_tool_synonym_dtos"]:
                     syns.append(synonym["format_text"])
+            if "secondary_identifiers" in entity_dict:
+                secondary = entity_dict["secondary_identifiers"]
             outfile.write(f"{primary}\t{symbol}\t{name}\t{'|'.join(secondary)}\t{'|'.join(syns)}\n")
 
 
