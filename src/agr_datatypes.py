@@ -131,9 +131,9 @@ class TransgenicToolDTO(GenomicEntityDTO):
         self.transgenic_tool_full_name_dto = None   # One NameSlotAnnotationDTO.
         self.transgenic_tool_synonym_dtos = []      # Many NameSlotAnnotationDTO objects.
         self.gene_type_curie = None                 # SO term ID for gene's promoted_gene_type.
-        self.secondary_identifiers = []            # Annotation IDs and 2o FlyBase IDs.
+        self.secondary_identifiers = []             # Annotation IDs and 2o FlyBase IDs.
         self.note_dtos = []                         # Will be NoteDTO objects.
-        # self.required_fields.extend(['gene_symbol_dto'])
+        self.required_fields.extend(['transgenic_tool_symbol_dto'])
         self.required_fields.remove('taxon_curie')  # Does not have it!
 
 
