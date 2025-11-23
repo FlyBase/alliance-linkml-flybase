@@ -735,19 +735,15 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Get synonyms for {self.datatype} data entities from {asso_chado_table}.')
         main_pkey_name = f'{chado_type}_id'
         fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
-        self.log.debug(f"fkey_col {fkey_col}")
-        self.log.debug(f"fkey_col in {self.fb_data_entities.keys()}")
         filters = (
             fkey_col.in_((self.fb_data_entities.keys())),
         )
         results = session.query(asso_chado_table).\
             filter(*filters).\
             distinct()
-        self.log.debug(f"filters {filters}")
         counter = 0
         pass_counter = 0
         for result in results:
-            self.log.debug(f'Found {result} processing')
             entity_pkey_id = getattr(result, main_pkey_name)
             try:
                 self.fb_data_entities[entity_pkey_id].synonyms.append(result)
@@ -1120,9 +1116,7 @@ class PrimaryEntityHandler(DataHandler):
         else:
             self.log.info(f'Have these linkml name dto slots to fill in: {linkml_synonym_slots.values()}')
         for fb_data_entity in self.fb_data_entities.values():
-            self.log.debug(f"FB_DATA_ENTITY {fb_data_entity}")
             if fb_data_entity.linkmldto is None:
-                self.log.debug(f"SKIPPING {fb_data_entity}")
                 continue
             linkml_synonym_bins = {
                 'symbol_bin': [],
@@ -1131,11 +1125,8 @@ class PrimaryEntityHandler(DataHandler):
                 'synonym_bin': []
             }
             # Create NameSlotAnnotationDTO objects and sort them out.
-            self.log.debug(f"COME ON {fb_data_entity.synonym_dict}")
-            self.log.debug(f"COME ON TWO {fb_data_entity.synonyms}")
             for syno_dict in fb_data_entity.synonym_dict.values():
                 # Sort into current symbol, current fullname or synonym.
-                self.log.debug(f"SYNONYM {syno_dict}")
                 name_dto = agr_datatypes.NameSlotAnnotationDTO(syno_dict['name_type_name'], syno_dict['format_text'],
                                                                syno_dict['display_text'], syno_dict['pub_curies']).dict_export()
                 name_dto['internal'] = syno_dict['is_internal']

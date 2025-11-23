@@ -47,7 +47,7 @@ class ExperimentalToolHandler(FeatureHandler):
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
-        self.build_feature_lookup(session)
+        # self.build_feature_lookup(session)
         return
 
     # Elaborate on map_fb_data_to_alliance() for the ExpToolHandler.
