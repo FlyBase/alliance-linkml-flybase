@@ -61,8 +61,8 @@ class ExperimentalToolHandler(FeatureHandler):
             secondary_id_dtos = []
             for secondary_id in fb_data_entity.alt_fb_ids:
                 self.log.debug(f"SEC ID {secondary_id}")
-                sec_dto = agr_datatypes.SecondaryIdSlotAnnotationDTO(secondary_id, []).dict_export()
-                secondary_id_dtos.append(sec_dto)
+                # sec_dto = agr_datatypes.SecondaryIdSlotAnnotationDTO(secondary_id, []).dict_export()
+                secondary_id_dtos.append(secondary_id)
             sec_id_list = getattr(fb_data_entity.linkmldto, slot_name)
             sec_id_list.extend(secondary_id_dtos)
         return
