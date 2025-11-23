@@ -1120,6 +1120,7 @@ class PrimaryEntityHandler(DataHandler):
         else:
             self.log.info(f'Have these linkml name dto slots to fill in: {linkml_synonym_slots.values()}')
         for fb_data_entity in self.fb_data_entities.values():
+            self.log.debug(f"FB_DATA_ENTITY {fb_data_entity}")
             if fb_data_entity.linkmldto is None:
                 self.log.debug(f"SKIPPING {fb_data_entity}")
                 continue
@@ -1130,6 +1131,7 @@ class PrimaryEntityHandler(DataHandler):
                 'synonym_bin': []
             }
             # Create NameSlotAnnotationDTO objects and sort them out.
+            self.log.debug(f"COME ON {fb_data_entity.synonym_dict}")
             for syno_dict in fb_data_entity.synonym_dict.values():
                 # Sort into current symbol, current fullname or synonym.
                 self.log.debug(f"SYNONYM {syno_dict}")
