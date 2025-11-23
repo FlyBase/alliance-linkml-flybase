@@ -58,6 +58,7 @@ class ExperimentalToolHandler(FeatureHandler):
         self.map_synonyms()
         self.map_data_provider_dto()
         self.map_xrefs()
+        self.map_entity_props_to_notes('transgenic_tool_prop_to_note_mapping')
 
     # Add methods to be run by map_fb_data_to_alliance() below.
     def map_tool_basic(self):
@@ -70,4 +71,16 @@ class ExperimentalToolHandler(FeatureHandler):
             # agr_gene.mod_internal_id = f'FB.feature_id={gene.db_primary_id}'
             agr_tool.taxon_curie = tool.ncbi_taxon_id
             tool.linkmldto = agr_tool
+        return
+
+    # Elaborate on synthesize_info() for the Handler.
+    def synthesize_info(self):
+        """Extend the method for the ConstructHandler."""
+        super().synthesize_info()
+        self.synthesize_synonyms()
+
+    # Elaborate on query_chado_and_export() for the TransgenicToolHandler.
+    def query_chado_and_export(self, session):
+        """Elaborate on query_chado_and_export method for the TransgenicToolHandler."""
+        super().query_chado_and_export(session)
         return

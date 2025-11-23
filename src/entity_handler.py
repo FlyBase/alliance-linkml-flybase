@@ -925,7 +925,7 @@ class PrimaryEntityHandler(DataHandler):
 
     def synthesize_synonyms(self):
         """Synthesize synonyms from Synonym association objects."""
-        self.log.info('Synthesize synonyms.')
+        self.log.info('#### Synthesize synonyms.')
         # Dict for converting FB synonym types to AGR synonym types.
         synonym_type_conversion = {
             'symbol': 'nomenclature_symbol',
