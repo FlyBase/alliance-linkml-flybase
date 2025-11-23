@@ -74,6 +74,26 @@ else:
     reference_session = None
 
 
+def generate_tsv_file(export_dict, filename):
+
+    with open(filename, 'w') as outfile:
+        outfile.write("# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms")
+        for entity_dict in export_dict["transgenic_tool_ingest_set"]:
+            primary = entity_dict["transgenic_tool_full_name_dto"]
+            symbol = ''
+            name = ''
+            secondary = []
+            syns = []
+            if "transgenic_tool_full_name_dto" in entity_dict:
+                name = entity_dict["transgenic_tool_full_name_dto"]
+            if "transgenic_tool_symbol_dto" in entity_dict:
+                symbol = entity_dict["transgenic_tool_symbol_dto"]
+            if "transgenic_tool_synonym_dtos" in entity_dict:
+                for synonym in entity_dict["transgenic_tool_synonym_dtos"]:
+                    syns.append(synonym["format_text"])
+            outfile.write(f"{primary}\t{symbol}\t{name}\t{'|'.join(secondary)}\t{'|'.join(syns)}\n")
+
+
 # The main process.
 def main():
     """Run the steps for exporting LinkML-compliant FlyBase AGM."""
@@ -103,9 +123,8 @@ def main():
             raise ValueError(f'The "{tool_handler.primary_export_set}" is unexpectedly empty.')
     else:
         generate_export_file(export_dict, log, output_filename)
-        log.debug(export_dict)
-        for bob in export_dict[tool_handler.primary_export_set]:
-            log.debug(bob)
+        generate_tsv_file(export_dict, set_up_dict['output_filename'])
+
     log.info('Ended main function.\n')
 
 
