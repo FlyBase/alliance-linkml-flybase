@@ -66,6 +66,7 @@ class ExperimentalToolHandler(FeatureHandler):
             sec_id_list = getattr(fb_data_entity.linkmldto, slot_name)
             sec_id_list.extend(secondary_id_dtos)
         return
+
     # Elaborate on map_fb_data_to_alliance() for the ExpToolHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the GeneHandler."""
