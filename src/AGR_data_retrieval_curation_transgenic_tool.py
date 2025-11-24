@@ -1,6 +1,6 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Data retrieval of FlyBase gene for Alliance curation database.
+"""Data retrieval of FlyBase experimental tool for Alliance curation database.
 
 Author(s):
     Ian Longden ilongden@morgan.harvard.edu
@@ -14,7 +14,7 @@ Example:
     -l v1.1.2
     -r fb_2024_06_reporting
 Notes:
-    This script exports FlyBase gene data as a JSON file conforming to the
+    This script exports FlyBase experimental tool data as a JSON file conforming to the
     transgenic_tool LinkML specs for the Alliance persistent curation database.
     A chado database with a full "audit_chado" table is required.
 
