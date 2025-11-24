@@ -96,6 +96,7 @@ class DataHandler(object):
         'UniProt/Swiss-Prot': 'UniProtKB',
         'UniProt/TrEMBL': 'UniProtKB',
         'UniProt/GCRP': 'UniProtKB',
+        'UniProtKB': 'UniProtKB',
         'SGD': 'SGD',
         'WormBase': 'WB',
         'ZFIN': 'ZFIN',
