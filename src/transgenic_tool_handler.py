@@ -59,8 +59,10 @@ class ExperimentalToolHandler(FeatureHandler):
             if fb_data_entity.linkmldto is None:
                 continue
             secondary_id_dtos = []
-            for bob in fb_data_entity.keys():
-                self.log.debug(f"{bob}: {fb_data_entity[bob]}")
+            for bob in fb_data_entity.dbxrefs:
+                self.log.debug(f"DBX: {bob}")
+            for bob in fb_data_entity.alt_fb_ids:
+                self.log.debug(f"ALT DBX: {bob}")
             for secondary_id in fb_data_entity.alt_fb_ids:
                 secondary_id_dtos.append(secondary_id)
             sec_id_list = getattr(fb_data_entity.linkmldto, slot_name)
