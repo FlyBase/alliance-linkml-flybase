@@ -124,7 +124,6 @@ class DataHandler(object):
         'chemical': r'^FBch[0-9]{7}$',
         'consins': r'^FB(tp|ti)[0-9]{7}$',
         'construct': r'^FBtp[0-9]{7}$',
-        # 'engineered_region': r'FBto[0-9]{7}$', I don't think we want the FBto regex to map to engineered_region (as the 'enginerred_region' SO term is used to type both FBto and some FBtp in chado, as already listedas in the feature_subtypes below) I think we just want the FBto to match 'tool' as a few lines below this - so have suggested removing this line
         'fb_curie': r'^FB:FB[a-z]{2}[0-9]{7,10}$',
         'fb_uniquename': r'^FB[a-z]{2}[0-9]{7,10}$',
         'gene': r'^FBgn[0-9]{7}$',
@@ -153,7 +152,6 @@ class DataHandler(object):
         'balancer': True,
         'chemical': False,
         'construct': True,
-        # 'engineered_region': True, # engineered_region is not a primary data class, so don't think we will want to export these as a separate class, and so suggest removing this line
         'gene': True,
         'insertion': True,
         'polypeptide': False,
@@ -173,7 +171,6 @@ class DataHandler(object):
         'balancer': ['chromosome_structure_variation'],
         'chemical': ['chemical entity'],
         'construct': ['engineered_transposable_element', 'engineered_region', 'transgenic_transposable_element'],
-        # 'engineered_region': ['engineered_region'], # engineered_region is not a primary data class, so don't think we want to treat them as separate class - the term is just used to type two different primary data class ('tool' and 'construct') in chado (as shown by the presence of 'engineered_region' in constuct and tool keys of this mapping hash). so suggest remove this line
         'gene': ['gene'],
         'insertion': ['insertion_site', 'transposable_element', 'transposable_element_insertion_site'],    # Excludes internal "match" (name=FBti ID).
         'polypeptide': None,
