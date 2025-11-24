@@ -23,7 +23,8 @@ class ExperimentalToolHandler(FeatureHandler):
         """Create the ExperimentalToolHandler object."""
         super().__init__(log, testing)
         #  self.datatype = 'engineered_region'
-        self.datatype = 'feature'
+        # self.datatype = 'feature' # suggest remove this line and replace with line below (not sure if correct !!)
+        self.datatype = 'tool' # I don't know if this is correct, but would it work to use dataype = 'tool' here instead of 'feature' (along with suggested removal of 'engineered_region' as a class in its own right in the handler.py mappings) - if its feature, would that not get all types of features (not just FBto) when it does get_datatype_data whereas setting it to tool should filter it down to the right subset using the regex(tool) and feature_subtypes(tool) info ??
         self.fb_export_type = fb_datatypes.FBTool
         self.agr_export_type = agr_datatypes.TransgenicToolDTO
         self.primary_export_set = 'transgenic_tool_ingest_set'
