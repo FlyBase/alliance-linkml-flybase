@@ -59,8 +59,6 @@ class ExperimentalToolHandler(FeatureHandler):
                 continue
             secondary_id_dtos = []
             for secondary_id in fb_data_entity.alt_fb_ids:
-                self.log.debug(f"SEC ID {secondary_id}")
-                # sec_dto = agr_datatypes.SecondaryIdSlotAnnotationDTO(secondary_id, []).dict_export()
                 secondary_id_dtos.append(secondary_id)
             sec_id_list = getattr(fb_data_entity.linkmldto, slot_name)
             sec_id_list.extend(secondary_id_dtos)
@@ -85,7 +83,6 @@ class ExperimentalToolHandler(FeatureHandler):
             agr_tool = self.agr_export_type()
             agr_tool.obsolete = tool.chado_obj.is_obsolete
             agr_tool.primary_external_id = f'FB:{tool.uniquename}'
-            # agr_gene.mod_internal_id = f'FB.feature_id={gene.db_primary_id}'
             agr_tool.taxon_curie = tool.ncbi_taxon_id
             tool.linkmldto = agr_tool
         return
