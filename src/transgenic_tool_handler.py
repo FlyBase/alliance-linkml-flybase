@@ -32,6 +32,7 @@ class ExperimentalToolHandler(FeatureHandler):
         'FBto0000027': 'EGFP',
         'FBto0000417': 'sgGFP',
         'FBto0000921': 'Sapphire',
+        'FBto0000606': 'AflIII',    # Has UniProtKB:E3VX96
     }
 
     transgenic_tool_prop_to_note_mapping = {
