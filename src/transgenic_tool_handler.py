@@ -35,7 +35,10 @@ class ExperimentalToolHandler(FeatureHandler):
     }
 
     transgenic_tool_prop_to_note_mapping = {
+        'description': ('summary', 'note_dtos'),
         'misc': ('comment', 'note_dtos'),
+        # At the moment, just for code development. (line below)
+        # 'internal_notes': ('internal_note', 'note_dtos'),
     }
 
     def get_datatype_data(self, session):
@@ -48,7 +51,6 @@ class ExperimentalToolHandler(FeatureHandler):
         self.get_entity_xrefs(session)
         self.get_entity_fb_xrefs(session)
         # self.build_feature_lookup(session)
-        return
 
     def map_secondary_ids(self, slot_name):
         """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for a FlyBase entity."""

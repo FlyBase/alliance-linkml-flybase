@@ -74,7 +74,7 @@ else:
 
 
 def generate_tsv_file(export_dict, filename):
-
+    """Generate tsv files for curators to read more easily. This can be commented out later."""
     with open(filename, 'w') as outfile:
         outfile.write("# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms\n")
         for entity_dict in export_dict["transgenic_tool_ingest_set"]:
@@ -93,6 +93,16 @@ def generate_tsv_file(export_dict, filename):
             if "secondary_identifiers" in entity_dict:
                 secondary = entity_dict["secondary_identifiers"]
             outfile.write(f"{primary}\t{symbol}\t{name}\t{'|'.join(secondary)}\t{'|'.join(syns)}\n")
+
+    filename = filename.replace('.tsv', '_notes.tsv')
+    with open(filename, 'w') as outfile:
+        outfile.write("# Primary FBid\ttype\tcomment\n")
+        for entity_dict in export_dict["transgenic_tool_ingest_set"]:
+            primary = entity_dict["primary_external_id"]
+            for note in entity_dict["note_dtos"]:
+                ntype = note["note_type_name"]
+                txt = note['free_text']
+                outfile.write(f"{primary}\t{ntype}\t{txt}")
 
 
 # The main process.
