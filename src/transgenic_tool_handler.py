@@ -82,7 +82,6 @@ class ExperimentalToolHandler(FeatureHandler):
             agr_tool = self.agr_export_type()
             agr_tool.obsolete = tool.chado_obj.is_obsolete
             agr_tool.primary_external_id = f'FB:{tool.uniquename}'
-            agr_tool.taxon_curie = tool.ncbi_taxon_id
             tool.linkmldto = agr_tool
         return
 
