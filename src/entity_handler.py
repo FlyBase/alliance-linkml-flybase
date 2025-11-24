@@ -815,6 +815,7 @@ class PrimaryEntityHandler(DataHandler):
                 self.fb_data_entities[entity_pkey_id].dbxrefs.append(result)
                 counter += 1
             except KeyError:
+                self.log.debug(f"BOB: ignoring {entity_pkey_id}: {result}")
                 pass_counter += 1
         self.log.info(f'Found {counter} xrefs for {self.datatype} entities.')
         self.log.info(f'Ignored {pass_counter} xrefs for irrelevant {self.datatype} entities.')
