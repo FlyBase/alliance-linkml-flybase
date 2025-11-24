@@ -48,8 +48,8 @@ class ExperimentalToolHandler(FeatureHandler):
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
-        self.get_entity_xrefs(session)
         self.get_entity_fb_xrefs(session)
+        self.get_entity_xrefs(session)
         # self.build_feature_lookup(session)
 
     def map_secondary_ids(self, slot_name):
@@ -59,6 +59,8 @@ class ExperimentalToolHandler(FeatureHandler):
             if fb_data_entity.linkmldto is None:
                 continue
             secondary_id_dtos = []
+            for bob in fb_data_entity.keys():
+                self.log.debug(f"{bob}: {fb_data_entity[bob]}")
             for secondary_id in fb_data_entity.alt_fb_ids:
                 secondary_id_dtos.append(secondary_id)
             sec_id_list = getattr(fb_data_entity.linkmldto, slot_name)
