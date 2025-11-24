@@ -350,6 +350,14 @@ class FBGene(FBFeature):
         self.gene_type_id = 'SO:0000704'    # Update this default gene ID to SO term ID from "promoted_gene_type" Featureprop, if available.
 
 
+class FBTool(FBFeature):
+    """A FlyBase experimental tool entity with all its related data."""
+    def __init__(self, chado_obj):
+        """Create the FBTool object."""
+        super().__init__(chado_obj)
+        # Processed FB data.
+
+
 class FBStrain(FBDataEntity):
     """A FlyBase strain entity with all its related data."""
     def __init__(self, chado_obj):
