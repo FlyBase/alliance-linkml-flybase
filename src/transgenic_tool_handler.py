@@ -26,7 +26,6 @@ class ExperimentalToolHandler(FeatureHandler):
         self.fb_export_type = fb_datatypes.FBTool
         self.agr_export_type = agr_datatypes.TransgenicToolDTO
         self.primary_export_set = 'transgenic_tool_ingest_set'
-        self.ncbi_taxon_id = 'NCBITaxon:7227'    # Default Dmel, adjusted later if needed.
 
     test_set = {
         'FBto0000001': 'C-Cerulean',  # First one
