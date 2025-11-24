@@ -72,10 +72,8 @@ if reference_db:
 else:
     reference_session = None
 
-
 def generate_tsv_file(export_dict, filename):
-    """ Generate tsv files for the curators to read more easily.
-        This can be commented out later."""
+    """ Generate tsv files for curators to read more easily. This can be commented out later."""
     with open(filename, 'w') as outfile:
         outfile.write("# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms\n")
         for entity_dict in export_dict["transgenic_tool_ingest_set"]:
