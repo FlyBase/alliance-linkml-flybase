@@ -776,7 +776,6 @@ class PrimaryEntityHandler(DataHandler):
             distinct()
         counter = 0
         pass_counter = 0
-        db_list = set()
         for result in results:
             entity_pkey_id = getattr(result, main_pkey_name)
             try:
@@ -787,8 +786,6 @@ class PrimaryEntityHandler(DataHandler):
                 pass_counter += 1
         self.log.info(f'Found {counter} FB xrefs for {self.datatype} entities.')
         self.log.info(f'Ignored {pass_counter} FB xrefs for irrelevant {self.datatype} entities.')
-        for bob in db_list:
-            self.log.debug(f"BOB: db not in list {bob}")
         return
 
     def get_entity_xrefs(self, session):
@@ -814,20 +811,16 @@ class PrimaryEntityHandler(DataHandler):
             distinct()
         counter = 0
         pass_counter = 0
-        db_list = set()
         for result in results:
             entity_pkey_id = getattr(result, main_pkey_name)
             try:
                 self.fb_data_entities[entity_pkey_id].dbxrefs.append(result)
                 counter += 1
             except KeyError:
-                db_list.add(entity_pkey_id)
                 # self.log.debug(f"BOB XREFS: ignoring {entity_pkey_id}: {result}")
                 pass_counter += 1
         self.log.info(f'Found {counter} xrefs for {self.datatype} entities.')
         self.log.info(f'Ignored {pass_counter} xrefs for irrelevant {self.datatype} entities.')
-        for bob in db_list:
-            self.log.debug(f"BOB: No reference to db {bob}")
         return
 
     def get_entity_timestamps(self, session):
@@ -1059,6 +1052,7 @@ class PrimaryEntityHandler(DataHandler):
         """Add a list of Alliance CrossReferenceDTO dicts to a FlyBase entity."""
         self.log.info('Map xrefs to Alliance object.')
         # Resource descriptor page area conversions.
+        db_list = {}
         for fb_data_entity in self.fb_data_entities.values():
             if fb_data_entity.linkmldto is None:
                 continue
@@ -1077,7 +1071,6 @@ class PrimaryEntityHandler(DataHandler):
                 fb_xref_dto = agr_datatypes.CrossReferenceDTO('FB', curie, page_area, display_name).dict_export()
                 cross_reference_dtos.append(fb_xref_dto)
             # Second, add external xrefs.
-            db_list = {}
             for xref in fb_data_entity.dbxrefs:
                 # Build Alliance xref DTO
                 if xref.dbxref.db.name not in self.fb_agr_db_dict:
@@ -1106,9 +1099,10 @@ class PrimaryEntityHandler(DataHandler):
                 display_name = curie
                 xref_dto = agr_datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
                 cross_reference_dtos.append(xref_dto)
-            for bob in db_list.keys():
-                self.log.debug(f'BOB: {bob} missing from DB list found {db_list[bob]} times')
+
             fb_data_entity.linkmldto.cross_reference_dtos = cross_reference_dtos
+        for bob in db_list.keys():
+            self.log.debug(f'BOB: {bob} missing from DB list found {db_list[bob]} times')
         return
 
     def map_synonyms(self):
