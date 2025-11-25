@@ -1081,7 +1081,7 @@ class PrimaryEntityHandler(DataHandler):
             for xref in fb_data_entity.dbxrefs:
                 # Build Alliance xref DTO
                 if xref.dbxref.db.name not in self.fb_agr_db_dict:
-                    db_list.add(xref.dbxref.db)
+                    db_list.add(xref.dbxref.db.name)
                     continue
                 prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
                 # The page_area assignment assumes that the self.datatype has a matching value in the Alliance resourceDescriptors.yaml page.
