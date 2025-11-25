@@ -1077,8 +1077,12 @@ class PrimaryEntityHandler(DataHandler):
                 fb_xref_dto = agr_datatypes.CrossReferenceDTO('FB', curie, page_area, display_name).dict_export()
                 cross_reference_dtos.append(fb_xref_dto)
             # Second, add external xrefs.
+            db_list = set()
             for xref in fb_data_entity.dbxrefs:
                 # Build Alliance xref DTO
+                if xref.dbxref.db.name not in self.fb_agr_db_dict:
+                    db_list.add(xref.dbxref.db)
+                    continue
                 prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
                 # The page_area assignment assumes that the self.datatype has a matching value in the Alliance resourceDescriptors.yaml page.
                 try:
@@ -1099,6 +1103,8 @@ class PrimaryEntityHandler(DataHandler):
                 display_name = curie
                 xref_dto = agr_datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
                 cross_reference_dtos.append(xref_dto)
+            for bob in db_list:
+                self.log.debug(f'BOB: {bob} missing form DB list')
             fb_data_entity.linkmldto.cross_reference_dtos = cross_reference_dtos
         return
 
