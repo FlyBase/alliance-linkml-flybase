@@ -99,10 +99,11 @@ def generate_tsv_file(export_dict, filename):
         outfile.write("# Primary FBid\ttype\tcomment\n")
         for entity_dict in export_dict["transgenic_tool_ingest_set"]:
             primary = entity_dict["primary_external_id"]
-            for note in entity_dict["note_dtos"]:
-                ntype = note["note_type_name"]
-                txt = note['free_text']
-                outfile.write(f"{primary}\t{ntype}\t{txt}")
+            if "note_dtos" in entity_dict:
+                for note in entity_dict["note_dtos"]:
+                    ntype = note["note_type_name"]
+                    txt = note['free_text']
+                    outfile.write(f"{primary}\t{ntype}\t{txt}")
 
 
 # The main process.
