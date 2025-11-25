@@ -883,12 +883,12 @@ class PrimaryEntityHandler(DataHandler):
                     fb_data_entity.is_new_addition = True
                     new_addition_counter += 1
             else:
-                if (fb_data_entity.chado_obj.is_obsolete is False and
-                        fb_data_entity.db_primary_id not in self.fb_reference_entity_ids):
+                if (fb_data_entity.chado_obj.is_obsolete is False
+                        and fb_data_entity.db_primary_id not in self.fb_reference_entity_ids):
                     fb_data_entity.is_new_addition = True
                     new_addition_counter += 1
-                elif (fb_data_entity.chado_obj.is_obsolete is True and
-                      fb_data_entity.db_primary_id in self.fb_reference_entity_ids):
+                elif (fb_data_entity.chado_obj.is_obsolete is True
+                      and fb_data_entity.db_primary_id in self.fb_reference_entity_ids):
                     fb_data_entity.is_new_obsolete = True
                     new_obsolete_counter += 1
         self.log.info(f'Found {new_addition_counter} new {self.datatype} entities in chado relative to the reference db.')
@@ -954,8 +954,8 @@ class PrimaryEntityHandler(DataHandler):
             for syno_dict in fb_data_entity.synonym_dict.values():
                 # Then modify attributes as needed.
                 # Identify systematic names.
-                if (re.match(self.regex['systematic_name'], syno_dict['format_text']) and
-                        syno_dict['name_type_name'] == 'nomenclature_symbol'):
+                if (re.match(self.regex['systematic_name'], syno_dict['format_text'])
+                        and syno_dict['name_type_name'] == 'nomenclature_symbol'):
                     syno_dict['name_type_name'] = 'systematic_name'
                 # Classify is_current (convert list of booleans into a single boolean).
                 if True in syno_dict['is_current']:
