@@ -810,16 +810,20 @@ class PrimaryEntityHandler(DataHandler):
             distinct()
         counter = 0
         pass_counter = 0
+        db_list = set()
         for result in results:
             entity_pkey_id = getattr(result, main_pkey_name)
             try:
                 self.fb_data_entities[entity_pkey_id].dbxrefs.append(result)
                 counter += 1
             except KeyError:
-                self.log.debug(f"BOB XREFS: ignoring {entity_pkey_id}: {result}")
+                db_list.add(entity_pkey_id)
+                # self.log.debug(f"BOB XREFS: ignoring {entity_pkey_id}: {result}")
                 pass_counter += 1
         self.log.info(f'Found {counter} xrefs for {self.datatype} entities.')
         self.log.info(f'Ignored {pass_counter} xrefs for irrelevant {self.datatype} entities.')
+        for bob in db_list:
+            self.log.debug(f"BOB: No reference to db {bob}")
         return
 
     def get_entity_timestamps(self, session):
