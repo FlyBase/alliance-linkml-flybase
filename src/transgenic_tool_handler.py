@@ -1,8 +1,8 @@
 """Module:: tool_handler.
 
 Synopsis:
-    A data handler that exports FlyBase data for experimental tools to Alliance TransgenicTool LinkML
-    objects.
+    A data handler that exports FlyBase data for experimental tools to Alliance
+    TransgenicTool LinkML objects.
 
 Author(s):
     Ian Longden ilongden@morgan.harvard.edu
