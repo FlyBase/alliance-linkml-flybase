@@ -803,8 +803,8 @@ class PrimaryEntityHandler(DataHandler):
         fkey_col = self.get_foreign_key_column(asso_chado_table, main_pkey_name)
         filters = (
             fkey_col.in_((self.fb_data_entities.keys())),
-            asso_chado_table.is_current.is_(True),
-            Db.name.in_((self.fb_agr_db_dict.keys()))
+            asso_chado_table.is_current.is_(True)
+            # Db.name.in_((self.fb_agr_db_dict.keys()))
         )
         results = session.query(asso_chado_table).\
             join(Dbxref, (Dbxref.dbxref_id == asso_chado_table.dbxref_id)).\
