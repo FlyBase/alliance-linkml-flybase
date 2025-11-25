@@ -1,8 +1,8 @@
 """Module:: tool_handler.
 
 Synopsis:
-    A data handler that exports FlyBase data for experimental tools to Alliance TransgenicTool LinkML
-    objects.
+    A data handler that exports FlyBase data for experimental tools to Alliance
+    TransgenicTool LinkML objects.
 
 Author(s):
     Ian Longden ilongden@morgan.harvard.edu
@@ -32,6 +32,7 @@ class ExperimentalToolHandler(FeatureHandler):
         'FBto0000027': 'EGFP',
         'FBto0000417': 'sgGFP',
         'FBto0000921': 'Sapphire',
+        'FBto0000606': 'AflIII',    # Has UniProtKB:E3VX96
     }
 
     transgenic_tool_prop_to_note_mapping = {
@@ -48,8 +49,8 @@ class ExperimentalToolHandler(FeatureHandler):
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
-        self.get_entity_xrefs(session)
         self.get_entity_fb_xrefs(session)
+        self.get_entity_xrefs(session)
         # self.build_feature_lookup(session)
 
     def map_secondary_ids(self, slot_name):

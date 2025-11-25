@@ -187,7 +187,8 @@ class PrimaryEntityHandler(DataHandler):
             self.log.info(f'Use this regex: {self.regex[self.datatype]}')
             filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
         if self.datatype in self.feature_subtypes.keys():
-            self.log.info(f'Filter main table by these feature_subtypes: {self.feature_subtypes[self.datatype]}')
+            sub = self.feature_subtypes[self.datatype]
+            self.log.info(f'Filter main table by these feature_subtypes: {sub}')
             filters += (Cvterm.name.in_((self.feature_subtypes[self.datatype])), )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
@@ -783,8 +784,8 @@ class PrimaryEntityHandler(DataHandler):
                 counter += 1
             except KeyError:
                 pass_counter += 1
-        self.log.info(f'Found {counter} 2o FB xrefs for {self.datatype} entities.')
-        self.log.info(f'Ignored {pass_counter} 2o FB xrefs for irrelevant {self.datatype} entities.')
+        self.log.info(f'Found {counter} FB xrefs for {self.datatype} entities.')
+        self.log.info(f'Ignored {pass_counter} FB xrefs for irrelevant {self.datatype} entities.')
         return
 
     def get_entity_xrefs(self, session):
@@ -800,7 +801,8 @@ class PrimaryEntityHandler(DataHandler):
         filters = (
             fkey_col.in_((self.fb_data_entities.keys())),
             asso_chado_table.is_current.is_(True),
-            Db.name.in_((self.fb_agr_db_dict.keys()))
+            Db.name != 'FlyBase',
+            # Db.name.in_((self.fb_agr_db_dict.keys()))
         )
         results = session.query(asso_chado_table).\
             join(Dbxref, (Dbxref.dbxref_id == asso_chado_table.dbxref_id)).\
@@ -866,7 +868,6 @@ class PrimaryEntityHandler(DataHandler):
                 audit_chado_counter += 1
         self.log.info(f'Obtained {entity_table_counter} timestamps directly from the {chado_type} table.')
         self.log.info(f'Obtained {audit_chado_counter} timestamps directly from the audit_chado table.')
-        return
 
     # Add methods to be run by synthesize_info() below.
     def flag_new_additions_and_obsoletes(self):
@@ -882,10 +883,10 @@ class PrimaryEntityHandler(DataHandler):
                     fb_data_entity.is_new_addition = True
                     new_addition_counter += 1
             else:
-                if fb_data_entity.chado_obj.is_obsolete is False and fb_data_entity.db_primary_id not in self.fb_reference_entity_ids:
+                if (fb_data_entity.chado_obj.is_obsolete is False and fb_data_entity.db_primary_id not in self.fb_reference_entity_ids):
                     fb_data_entity.is_new_addition = True
                     new_addition_counter += 1
-                elif fb_data_entity.chado_obj.is_obsolete is True and fb_data_entity.db_primary_id in self.fb_reference_entity_ids:
+                elif (fb_data_entity.chado_obj.is_obsolete is True and fb_data_entity.db_primary_id in self.fb_reference_entity_ids):
                     fb_data_entity.is_new_obsolete = True
                     new_obsolete_counter += 1
         self.log.info(f'Found {new_addition_counter} new {self.datatype} entities in chado relative to the reference db.')
@@ -951,7 +952,7 @@ class PrimaryEntityHandler(DataHandler):
             for syno_dict in fb_data_entity.synonym_dict.values():
                 # Then modify attributes as needed.
                 # Identify systematic names.
-                if re.match(self.regex['systematic_name'], syno_dict['format_text']) and syno_dict['name_type_name'] == 'nomenclature_symbol':
+                if (re.match(self.regex['systematic_name'], syno_dict['format_text']) and syno_dict['name_type_name'] == 'nomenclature_symbol'):
                     syno_dict['name_type_name'] = 'systematic_name'
                 # Classify is_current (convert list of booleans into a single boolean).
                 if True in syno_dict['is_current']:
@@ -1049,6 +1050,7 @@ class PrimaryEntityHandler(DataHandler):
         """Add a list of Alliance CrossReferenceDTO dicts to a FlyBase entity."""
         self.log.info('Map xrefs to Alliance object.')
         # Resource descriptor page area conversions.
+        db_list = {}
         for fb_data_entity in self.fb_data_entities.values():
             if fb_data_entity.linkmldto is None:
                 continue
@@ -1069,6 +1071,12 @@ class PrimaryEntityHandler(DataHandler):
             # Second, add external xrefs.
             for xref in fb_data_entity.dbxrefs:
                 # Build Alliance xref DTO
+                if xref.dbxref.db.name not in self.fb_agr_db_dict:
+                    if xref.dbxref.db.name not in db_list:
+                        db_list[xref.dbxref.db.name] = 1
+                    else:
+                        db_list[xref.dbxref.db.name] += 1
+                    continue
                 prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
                 # The page_area assignment assumes that the self.datatype has a matching value in the Alliance resourceDescriptors.yaml page.
                 try:
@@ -1089,7 +1097,10 @@ class PrimaryEntityHandler(DataHandler):
                 display_name = curie
                 xref_dto = agr_datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
                 cross_reference_dtos.append(xref_dto)
+
             fb_data_entity.linkmldto.cross_reference_dtos = cross_reference_dtos
+        for bob in db_list.keys():
+            self.log.debug(f'BOB: {bob} missing from DB list found {db_list[bob]} times')
         return
 
     def map_synonyms(self):
