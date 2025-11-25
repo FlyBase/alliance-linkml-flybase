@@ -788,7 +788,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Found {counter} FB xrefs for {self.datatype} entities.')
         self.log.info(f'Ignored {pass_counter} FB xrefs for irrelevant {self.datatype} entities.')
         for bob in db_list:
-            self.log.debug(f"BOB: db not in list {bob})
+            self.log.debug(f"BOB: db not in list {bob}")
         return
 
     def get_entity_xrefs(self, session):
