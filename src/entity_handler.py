@@ -776,16 +776,19 @@ class PrimaryEntityHandler(DataHandler):
             distinct()
         counter = 0
         pass_counter = 0
+        db_list = set()
         for result in results:
             entity_pkey_id = getattr(result, main_pkey_name)
             try:
                 self.fb_data_entities[entity_pkey_id].fb_sec_dbxrefs.append(result)
                 counter += 1
             except KeyError:
-                self.log.debug(f"ALT BOB: ignoring {entity_pkey_id}: {result}")
+                set.add(entity_pkey_id)
                 pass_counter += 1
         self.log.info(f'Found {counter} FB xrefs for {self.datatype} entities.')
         self.log.info(f'Ignored {pass_counter} FB xrefs for irrelevant {self.datatype} entities.')
+        for bob in db_list:
+            self.log.debug(f"BOB: db not in list {bob})
         return
 
     def get_entity_xrefs(self, session):
