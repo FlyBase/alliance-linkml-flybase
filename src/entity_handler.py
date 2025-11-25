@@ -187,7 +187,8 @@ class PrimaryEntityHandler(DataHandler):
             self.log.info(f'Use this regex: {self.regex[self.datatype]}')
             filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
         if self.datatype in self.feature_subtypes.keys():
-            self.log.info(f'Filter main table by these feature_subtypes: {self.feature_subtypes[self.datatype]}')
+            sub = self.feature_subtypes[self.datatype]
+            self.log.info(f'Filter main table by these feature_subtypes: {sub}')
             filters += (Cvterm.name.in_((self.feature_subtypes[self.datatype])), )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
@@ -782,7 +783,6 @@ class PrimaryEntityHandler(DataHandler):
                 self.fb_data_entities[entity_pkey_id].fb_sec_dbxrefs.append(result)
                 counter += 1
             except KeyError:
-                set.add(entity_pkey_id)
                 pass_counter += 1
         self.log.info(f'Found {counter} FB xrefs for {self.datatype} entities.')
         self.log.info(f'Ignored {pass_counter} FB xrefs for irrelevant {self.datatype} entities.')
@@ -868,7 +868,6 @@ class PrimaryEntityHandler(DataHandler):
                 audit_chado_counter += 1
         self.log.info(f'Obtained {entity_table_counter} timestamps directly from the {chado_type} table.')
         self.log.info(f'Obtained {audit_chado_counter} timestamps directly from the audit_chado table.')
-        return
 
     # Add methods to be run by synthesize_info() below.
     def flag_new_additions_and_obsoletes(self):
@@ -884,10 +883,12 @@ class PrimaryEntityHandler(DataHandler):
                     fb_data_entity.is_new_addition = True
                     new_addition_counter += 1
             else:
-                if fb_data_entity.chado_obj.is_obsolete is False and fb_data_entity.db_primary_id not in self.fb_reference_entity_ids:
+                if (fb_data_entity.chado_obj.is_obsolete is False and
+                    fb_data_entity.db_primary_id not in self.fb_reference_entity_ids):
                     fb_data_entity.is_new_addition = True
                     new_addition_counter += 1
-                elif fb_data_entity.chado_obj.is_obsolete is True and fb_data_entity.db_primary_id in self.fb_reference_entity_ids:
+                elif (fb_data_entity.chado_obj.is_obsolete is True and
+                     fb_data_entity.db_primary_id in self.fb_reference_entity_ids):
                     fb_data_entity.is_new_obsolete = True
                     new_obsolete_counter += 1
         self.log.info(f'Found {new_addition_counter} new {self.datatype} entities in chado relative to the reference db.')
@@ -953,7 +954,8 @@ class PrimaryEntityHandler(DataHandler):
             for syno_dict in fb_data_entity.synonym_dict.values():
                 # Then modify attributes as needed.
                 # Identify systematic names.
-                if re.match(self.regex['systematic_name'], syno_dict['format_text']) and syno_dict['name_type_name'] == 'nomenclature_symbol':
+                if (re.match(self.regex['systematic_name'], syno_dict['format_text']) and
+                    syno_dict['name_type_name'] == 'nomenclature_symbol'):
                     syno_dict['name_type_name'] = 'systematic_name'
                 # Classify is_current (convert list of booleans into a single boolean).
                 if True in syno_dict['is_current']:
