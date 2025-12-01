@@ -137,6 +137,23 @@ def main():
         generate_export_file(export_dict, log, output_filename)
         generate_tsv_file(export_dict, set_up_dict['output_filename'])
 
+
+    if not reference_session:
+        # Export the gene-allele associations to a separate file.
+        association_output_filename = output_filename.replace('tool', 'tool_association')
+        association_export_dict = {
+            'linkml_version': linkml_release,
+            'alliance_member_release_version': database_release,
+        }
+        # tool_tool associations.
+        association_export_dict['tool_association_ingest_set'] = []
+        association_export_dict['tool_association_ingest_set'].extend(tool_handler.export_data['tool_association_ingest_set'])
+        if len(association_export_dict['tool_association_ingest_set']) == 0:
+            log.error('The "tool_association_ingest_set" is unexpectedly empty.')
+            raise ValueError('The "tool_association_ingest_set" is unexpectedly empty.')
+        # Print the output file.
+        generate_export_file(association_export_dict, log, association_output_filename)
+
     log.info('Ended main function.\n')
 
 
