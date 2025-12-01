@@ -92,15 +92,18 @@ class ExperimentalToolHandler(FeatureHandler):
         return
 
     def synthesize_tool_associations(self):
+        self.log.info('Synthesize transgenic tool.')
         sub_tool_counter = 0
         obj_tool_counter = 0
         for tool in self.fb_data_entities.values():
+            self.log.debug(f"TOOL {tool}")
             relevant_tool_rels = tool.recall_relationships(self.log, entity_role='subject', rel_types='compatible_tool',
                                                              rel_entity_types='engineered_region')
             if relevant_tool_rels:
                 sub_tool_counter += 1
             # self.log.debug(f'For {gene}, found {len(relevant_tool_rels)} tool rels to review.')
             for tool_rel in relevant_tool_rels:
+                self.log.debug(f"TOOL REL {tool_rel}")
                 tool_feature_id = tool_rel.chado_obj.object_id
                 tool = self.feature_lookup[tool_feature_id]
                 # Suppress tool-gene associations involving non-Drosophilid genes (which are not exported to the Alliance).
@@ -153,7 +156,7 @@ class ExperimentalToolHandler(FeatureHandler):
             pub_curies = self.lookup_pub_curies(all_pub_ids)
             # Adjust allele-gene relation_type as needed.
             rel_type_name = 'compatible_tool'
-            rel_dto = agr_datatypes.AlleleGeneAssociationDTO(allele_curie, rel_type_name, gene_curie, pub_curies)
+            rel_dto = agr_datatypes.TransgenicToolAssociationDTO(allele_curie, rel_type_name, gene_curie, pub_curies)
             if allele.is_obsolete is True or gene['is_obsolete'] is True:
                 rel_dto.obsolete = True
                 rel_dto.internal = True

@@ -138,6 +138,13 @@ class TransgenicToolDTO(GenomicEntityDTO):
         self.required_fields.remove('taxon_curie')  # Does not have it!
 
 
+class TransgenicToolAssociationDTO(AuditedObjectDTO):
+    """TransgenicToolAssociationDTO class."""
+    def __init__(self):
+        """Create TransgenicToolAssociationDTO for FlyBase object."""
+        super().__init__()
+
+
 class ReagentDTO(SubmittedObjectDTO):
     """ReagentDTO class."""
     def __init__(self):
