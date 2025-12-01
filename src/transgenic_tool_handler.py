@@ -92,13 +92,14 @@ class ExperimentalToolHandler(FeatureHandler):
         return
 
     def synthesize_tool_associations(self):
+        """Get tool relationships"""
         self.log.info('Synthesize transgenic tool.')
         sub_tool_counter = 0
         obj_tool_counter = 0
         for tool in self.fb_data_entities.values():
             self.log.debug(f"TOOL {tool}")
-            relevant_tool_rels = tool.recall_relationships(self.log, entity_role='subject', rel_types='compatible_tool',
-                                                             rel_entity_types='engineered_region')
+            relevant_tool_rels = tool.recall_relationships(self.log, entity_role='subject', rel_types='compatible_tool')
+            # rel_entity_types='engineered_region')
             if relevant_tool_rels:
                 sub_tool_counter += 1
             # self.log.debug(f'For {gene}, found {len(relevant_tool_rels)} tool rels to review.')

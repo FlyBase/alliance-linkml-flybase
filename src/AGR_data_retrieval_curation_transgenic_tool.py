@@ -137,7 +137,6 @@ def main():
         generate_export_file(export_dict, log, output_filename)
         generate_tsv_file(export_dict, set_up_dict['output_filename'])
 
-
     if not reference_session:
         # Export the gene-allele associations to a separate file.
         association_output_filename = output_filename.replace('tool', 'tool_association')
