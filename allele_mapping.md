@@ -55,7 +55,6 @@ For these, there is a script "make_unspecified_construct_insertions.py" from the
 This script creates a new "unspecified" FBti feature representing a generic insertion for every FBtp. The name of the FBti is the name of the FBtp with the "unspecified" suffix.  
 This new "unspecified" FBti insertion is in addition to any specific FBti insertions (at curated locations) that may already exist.  
 This script is run every epicycle (data_validation_p2 > updateAlleleInsertionRelationships).  
-Upon export to the Alliance, information from the FBal is propagated to all related FBti insertions (the "unspecified" one, plus any curated ones).  
 
 Every epicycle, the "alliance_allele_conversion_production_chado" SVN file is generated, which reports to curators the FB-to-Alliance FBal-FBti conversions.  
 This is file is generated every epicycle by the "report_alliance_allele_mappings.py" script from the "harvdev-epicycle" repo.  
@@ -93,5 +92,10 @@ Adopting the Alliance Cassette model for Constructs carrying engineered genes (C
 - But, when we adopt this model:  
   - each FBal allele representing each gene carried in the FBtp construct (i.e. FBal "associated_with" FBtp in the feature_relationship) in Case3 will need to be submitted as a 'Cassette' to the Alliance.  
   - and we will need to submit a CassetteConstructAssociations type file that associates each Cassette to the relevant Construct(s) in the Alliance.  
-  - At that point, we will need to re-assess "Upon export to the Alliance, information from the FBal is propagated to all related FBti insertions (the "unspecified" one, plus any curated ones)." as some of the FBal information should just be propagated to the Cassette and not propagated to all related FBti.  
+  - The documentation for Case3 FBal above originally said "Upon export to the Alliance, information from the FBal is propagated to all related FBti insertions (the "unspecified" one, plus any curated ones)."  
+  - If this propagation of data to FBti was happening for Case3 FBal, then we'd need to reassess that as we implement Cassette, as some/all of the FBal information should just be propagated to the Cassette and *not* propagated to all/any of the related FBti.  
+  - However, I'm fairly sure that this (probably unwanted) propagation of FBal to FBti data is not actually happening at the moment:  
+     - although `merge_fbti_fbal` in `allele_handlers.py` does have a loop that calls `add_fbal_to_fbti` (the method that does the propagating) for Case3 alleles (`elif allele.db_primary_id in self.transgenic_fbal_fbti_dict.keys():` loop), so could be propagating FBal data to related FBti,    
+     - in `add_fbal_to_fbti` (also in `allele_handlers.py`) itself, the loop for Case3 alleles (`if allele.superseded_by_transgnc_insertions:` loop) is just doing the following `# For transgenic alleles, just add the export warning and move on.`, ie. it does not appear to be propagating any data, so may be fine as is.  
+
 
