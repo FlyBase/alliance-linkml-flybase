@@ -167,8 +167,9 @@ class ExperimentalToolHandler(FeatureHandler):
 
             # Adjust allele-gene relation_type as needed.
             rel_type_name = 'compatible_tool'
-            rel_dto = agr_datatypes.TransgenicToolAssociationDTO(subject_curie, object_curie,
-                 pub_curies, False, rel_type_name)
+            rel_dto = agr_datatypes.TransgenicToolAssociationDTO(
+                subject_curie, object_curie,
+                pub_curies, False, rel_type_name)
             if f_object.is_obsolete is True or subject['is_obsolete'] is True:
                 rel_dto.obsolete = True
                 rel_dto.internal = True
