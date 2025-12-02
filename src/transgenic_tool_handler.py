@@ -101,7 +101,7 @@ class ExperimentalToolHandler(FeatureHandler):
         return
 
     def synthesize_tool_associations(self):
-        """Get tool relationships"""
+        """Get tool relationships."""
         self.log.info('Synthesize transgenic tool.')
         sub_tool_counter = 0
         obj_tool_counter = 0
@@ -116,14 +116,14 @@ class ExperimentalToolHandler(FeatureHandler):
                 self.log.debug(f"TOOL REL {tool_rel}")
                 tool_feature_id = tool_rel.chado_obj.subject_id
                 sub_tool = self.feature_lookup[tool_feature_id]
-                ## Suppress tool-gene associations involving non-Drosophilid genes (which are not exported to the Alliance).
+                # Suppress tool-gene associations involving non-Drosophilid genes (which are not exported to the Alliance).
                 # if self.organism_lookup[tool['organism_id']]['is_drosophilid'] is False:
                 #    continue
                 for bob in sub_tool.keys():
                     self.log.warning(f"BOB {bob} {sub_tool[bob]}")
                 try:
                     tool_tool_key = (sub_tool['feature_id'], tool_feature_id)
-                    self.log.warning(f"BOB MAPPING {tool_tool_key}")
+                    self.log.warning(f"BOB MAPPING {tool_tool_key} obj: {tool_rel.chado_obj.object_id}")
                 except AttributeError:
                     self.log.warning(f"BOB ERROR {tool} {tool_feature_id}")
                     raise
