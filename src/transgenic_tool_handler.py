@@ -160,11 +160,11 @@ class ExperimentalToolHandler(FeatureHandler):
                 tool_tool_counter[tool_tool_key[OBJECT]] = 1
         # Now, go through alleles and make the allele-gene associations.
         for tool_tool_key, tool_tool_rels in self.tool_tool_rels.items():
-            allele_feature_id = tool_tool_key[OBJECT]
-            allele = self.fb_data_entities[allele_feature_id]
-            allele_curie = f'FB:{allele.uniquename}'
-            gene = self.feature_lookup[tool_tool_key[SUBJECT]]
-            gene_curie = f'FB:{gene["uniquename"]}'
+            object_feature_id = tool_tool_key[OBJECT]
+            f_object = self.fb_data_entities[object_feature_id]
+            object_curie = f'FB:{f_object.uniquename}'
+            subject = self.feature_lookup[tool_tool_key[SUBJECT]]
+            subject_curie = f'FB:{subject["uniquename"]}'
             first_feat_rel = tool_tool_rels[0]
             all_pub_ids = []
             for tool_tool_rel in tool_tool_rels:
@@ -173,8 +173,9 @@ class ExperimentalToolHandler(FeatureHandler):
             pub_curies = self.lookup_pub_curies(all_pub_ids)
             # Adjust allele-gene relation_type as needed.
             rel_type_name = 'compatible_tool'
-            rel_dto = agr_datatypes.TransgenicToolAssociationDTO(allele_curie, rel_type_name, gene_curie, pub_curies)
-            if allele.is_obsolete is True or gene['is_obsolete'] is True:
+            rel_dto = agr_datatypes.TransgenicToolAssociationDTO(subject_curie, object_curie,
+                 pub_curies, False, rel_type_name)
+            if f_object.is_obsolete is True or subject['is_obsolete'] is True:
                 rel_dto.obsolete = True
                 rel_dto.internal = True
             first_feat_rel.linkmldto = rel_dto

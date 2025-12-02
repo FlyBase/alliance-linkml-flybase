@@ -140,9 +140,17 @@ class TransgenicToolDTO(GenomicEntityDTO):
 
 class TransgenicToolAssociationDTO(AuditedObjectDTO):
     """TransgenicToolAssociationDTO class."""
-    def __init__(self):
+    def __init__(self, transgenic_tool_association_subject, transgenic_tool_association_object,
+                 evidence, obsolete, relation):
         """Create TransgenicToolAssociationDTO for FlyBase object."""
         super().__init__()
+        self.transgenic_tool_association_subject = transgenic_tool_association_subject
+        self.transgenic_tool_transgenic_tool_association_object = transgenic_tool_association_object
+        self.evidence = evidence
+        self.obsolete = obsolete
+        self.relation = relation
+        self.required_fields.extend(['transgenic_tool_association_subject',
+                                     'transgenic_tool_transgenic_tool_association_object'])
 
 
 class ReagentDTO(SubmittedObjectDTO):
