@@ -121,7 +121,7 @@ class ExperimentalToolHandler(FeatureHandler):
                 #    continue
                 for bob in tool.keys():
                     self.log.warning(f"BOB {bob} {tool[bob]}")
-                tool_tool_key = (tool.db_primary_id, tool_feature_id)
+                tool_tool_key = (tool.feature_id, tool_feature_id)
                 try:
                     self.tool_tool_rels[tool_tool_key].append(tool_rel)
                 except KeyError:
