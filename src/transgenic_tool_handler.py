@@ -176,7 +176,7 @@ class ExperimentalToolHandler(FeatureHandler):
             if not all_pub_ids:
                 self.log.warning(f"No pubs for {object_curie}")
             else:
-
+                self.log.warning(f"BOB REL pubs for {object_curie} {all_pub_ids}")
             # Adjust allele-gene relation_type as needed.
             rel_type_name = 'compatible_tool'
             rel_dto = agr_datatypes.TransgenicToolAssociationDTO(subject_curie, object_curie,
