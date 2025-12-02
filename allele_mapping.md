@@ -83,7 +83,7 @@ CRITICAL - the `GenotypeAnnotation` object has the logic required to convert eac
 CRITICAL - The AGMDiseaseHandler should be run on a production version of chado (not a release), such that any new genotypes are created in production (and not an offshoot reporting instance).
 
 ## FutureWork
-Just looking at production_chado, it still takes many steps to figure out if an allele needs to be converted, because FBal-is_represented_at_alliance_as-FBti relationships only cover case 1.
+Just looking at production_chado, it still takes many steps to figure out if an allele needs to be converted, because FBal-is_represented_at_alliance_as-FBti relationships only cover case 2.
 - So, at the moment, if an allele lacks such an "is_represented_at_alliance_as" relationship to an FBti, it could represent case 1 (should not be converted) or a subset of case 3.
 - In retrospect, it might be good to have some sort of relationship created when an FBal is superceded unambiguously by a single "unspecified" FBti insertion.
 - In retrospect, it might be good to have some way to flag alleles that should not be converted (case 1), or could not be converted (case 3 subset).
