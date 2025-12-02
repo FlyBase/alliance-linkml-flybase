@@ -169,10 +169,12 @@ class ExperimentalToolHandler(FeatureHandler):
                 self.log.warning(f"No pubs for {object_curie}")
             else:
                 self.log.warning(f"BOB REL pubs for {object_curie} {all_pub_ids}")
+            self.log.warning(f"BOB REL pub curies for {object_curie} {pub_curies}")
             # Adjust allele-gene relation_type as needed.
             rel_type_name = 'compatible_tool'
             rel_dto = agr_datatypes.TransgenicToolAssociationDTO(subject_curie, object_curie,
                  pub_curies, False, rel_type_name)
+            self.log.warning(f"BOB REL {rel_dto}")
             if f_object.is_obsolete is True or subject['is_obsolete'] is True:
                 rel_dto.obsolete = True
                 rel_dto.internal = True
