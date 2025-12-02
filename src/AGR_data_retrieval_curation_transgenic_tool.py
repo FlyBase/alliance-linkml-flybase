@@ -103,7 +103,7 @@ def generate_tsv_file(export_dict, filename):
                 for note in entity_dict["note_dtos"]:
                     ntype = note["note_type_name"]
                     txt = note['free_text']
-                    outfile.write(f"{primary}\t{ntype}\t{txt}")
+                    outfile.write(f"{primary}\t{ntype}\t{txt}\n")
 
 
 def generate_association_tsv_file(export_dict, filename):
@@ -113,7 +113,7 @@ def generate_association_tsv_file(export_dict, filename):
         for entity_dict in export_dict['tool_association_ingest_set']:
             obj = entity_dict['transgenic_tool_transgenic_tool_association_object']
             sub = entity_dict['transgenic_tool_association_subject']
-            outfile.write(f"{obj}\t{sub}")
+            outfile.write(f"{obj}\t{sub}\n")
 
 
 # The main process.
