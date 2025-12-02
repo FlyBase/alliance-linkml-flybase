@@ -113,6 +113,8 @@ class ExperimentalToolHandler(FeatureHandler):
                 sub_tool_counter += 1
             # self.log.debug(f'For {gene}, found {len(relevant_tool_rels)} tool rels to review.')
             for tool_rel in relevant_tool_rels:
+                for bob in tool_rel.keys():
+                    self.log.warning(f"BOB REL keys {bob} {tool_rel[bob]}")
                 self.log.debug(f"TOOL REL {tool_rel.chado_obj.object_id} -> {tool_rel.chado_obj.subject_id}")
                 # tool_feature_id = tool_rel.chado_obj.object_id
                 # sub_tool = self.feature_lookup[tool_feature_id]
@@ -171,6 +173,10 @@ class ExperimentalToolHandler(FeatureHandler):
                 all_pub_ids.extend(tool_tool_rel.pubs)
             first_feat_rel.pubs = all_pub_ids
             pub_curies = self.lookup_pub_curies(all_pub_ids)
+            if not all_pub_ids:
+                self.log.warning(f"No pubs for {object_curie}")
+            else:
+
             # Adjust allele-gene relation_type as needed.
             rel_type_name = 'compatible_tool'
             rel_dto = agr_datatypes.TransgenicToolAssociationDTO(subject_curie, object_curie,
