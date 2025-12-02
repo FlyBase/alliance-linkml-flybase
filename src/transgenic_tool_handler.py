@@ -114,7 +114,7 @@ class ExperimentalToolHandler(FeatureHandler):
             # self.log.debug(f'For {gene}, found {len(relevant_tool_rels)} tool rels to review.')
             for tool_rel in relevant_tool_rels:
                 self.log.debug(f"TOOL REL {tool_rel}")
-                tool_feature_id = tool_rel.chado_obj.subject_id
+                tool_feature_id = tool_rel.chado_obj.object_id
                 sub_tool = self.feature_lookup[tool_feature_id]
                 # Suppress tool-gene associations involving non-Drosophilid genes (which are not exported to the Alliance).
                 # if self.organism_lookup[tool['organism_id']]['is_drosophilid'] is False:
@@ -123,7 +123,7 @@ class ExperimentalToolHandler(FeatureHandler):
                     self.log.warning(f"BOB {bob} {sub_tool[bob]}")
                 try:
                     tool_tool_key = (sub_tool['feature_id'], tool_feature_id)
-                    self.log.warning(f"BOB MAPPING {tool_tool_key} obj: {tool_rel.chado_obj.object_id}")
+                    self.log.warning(f"BOB MAPPING {tool_tool_key} obj: {tool_rel.chado_obj.subject_id}")
                 except AttributeError:
                     self.log.warning(f"BOB ERROR {tool} {tool_feature_id}")
                     raise
@@ -146,8 +146,8 @@ class ExperimentalToolHandler(FeatureHandler):
     def map_tool_associations(self):
         """Map transgenic tool associations to Alliance object."""
         self.log.info('Map tool associations to Alliance object.')
-        ALLELE = 0
-        GENE = 1
+        OBJECT = 0
+        SUBJECT = 1
         counter = 0
         # First, find alleles that have many associated genes (especially FBti insertions that hit many genes).
         # This will affect the allele-gene relation_type term used.
@@ -155,15 +155,15 @@ class ExperimentalToolHandler(FeatureHandler):
         for tool_tool_key in self.tool_tool_rels.keys():
             self.log.debug(f'Mapping {tool_tool_key} to Alliance object. {self.tool_tool_rels[tool_tool_key]}')
             try:
-                tool_tool_counter[tool_tool_key[ALLELE]] += 1
+                tool_tool_counter[tool_tool_key[OBJECT]] += 1
             except KeyError:
-                tool_tool_counter[tool_tool_key[ALLELE]] = 1
+                tool_tool_counter[tool_tool_key[OBJECT]] = 1
         # Now, go through alleles and make the allele-gene associations.
         for tool_tool_key, tool_tool_rels in self.tool_tool_rels.items():
-            allele_feature_id = tool_tool_key[ALLELE]
+            allele_feature_id = tool_tool_key[OBJECT]
             allele = self.fb_data_entities[allele_feature_id]
             allele_curie = f'FB:{allele.uniquename}'
-            gene = self.feature_lookup[tool_tool_key[GENE]]
+            gene = self.feature_lookup[tool_tool_key[SUBJECT]]
             gene_curie = f'FB:{gene["uniquename"]}'
             first_feat_rel = tool_tool_rels[0]
             all_pub_ids = []
