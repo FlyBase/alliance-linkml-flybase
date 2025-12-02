@@ -106,6 +106,16 @@ def generate_tsv_file(export_dict, filename):
                     outfile.write(f"{primary}\t{ntype}\t{txt}")
 
 
+def generate_association_tsv_file(export_dict, filename):
+    filename = filename.replace('.tsv', '_associations.tsv')
+    with open(filename, 'w') as outfile:
+        outfile.write("# Object curie\tSubject curie\n")
+        for entity_dict in export_dict['tool_association_ingest_set']:
+            obj = entity_dict['transgenic_tool_transgenic_tool_association_object']
+            sub = entity_dict['transgenic_tool_association_subject']
+            outfile.write(f"{obj}\t{sub}")
+
+
 # The main process.
 def main():
     """Run the steps for exporting LinkML-compliant FlyBase AGM."""
@@ -152,7 +162,7 @@ def main():
             raise ValueError('The "tool_association_ingest_set" is unexpectedly empty.')
         # Print the output file.
         generate_export_file(association_export_dict, log, association_output_filename)
-
+        generate_association_tsv_file(association_export_dict, association_output_filename)
     log.info('Ended main function.\n')
 
 

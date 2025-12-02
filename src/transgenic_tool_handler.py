@@ -107,10 +107,8 @@ class ExperimentalToolHandler(FeatureHandler):
         obj_tool_counter = 0
         for tool in self.fb_data_entities.values():
             relevant_tool_rels = tool.recall_relationships(self.log, entity_role='object', rel_types='compatible_tool')
-            # rel_entity_types='engineered_region')
             if relevant_tool_rels:
                 sub_tool_counter += 1
-            # self.log.debug(f'For {gene}, found {len(relevant_tool_rels)} tool rels to review.')
             for tool_rel in relevant_tool_rels:
                 try:
                     tool_tool_key = (tool_rel.chado_obj.object_id, tool_rel.chado_obj.subject_id)
@@ -139,8 +137,7 @@ class ExperimentalToolHandler(FeatureHandler):
         OBJECT = 0
         SUBJECT = 1
         counter = 0
-        # First, find alleles that have many associated genes (especially FBti insertions that hit many genes).
-        # This will affect the allele-gene relation_type term used.
+
         tool_tool_counter = {}
         for tool_tool_key in self.tool_tool_rels.keys():
             self.log.debug(f'Mapping {tool_tool_key} to Alliance object. {self.tool_tool_rels[tool_tool_key]}')
@@ -148,7 +145,7 @@ class ExperimentalToolHandler(FeatureHandler):
                 tool_tool_counter[tool_tool_key[OBJECT]] += 1
             except KeyError:
                 tool_tool_counter[tool_tool_key[OBJECT]] = 1
-        # Now, go through alleles and make the allele-gene associations.
+
         for tool_tool_key, tool_tool_rels in self.tool_tool_rels.items():
             object_feature_id = tool_tool_key[OBJECT]
             f_object = self.fb_data_entities[object_feature_id]
