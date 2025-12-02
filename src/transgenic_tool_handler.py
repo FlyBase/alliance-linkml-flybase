@@ -114,14 +114,18 @@ class ExperimentalToolHandler(FeatureHandler):
             # self.log.debug(f'For {gene}, found {len(relevant_tool_rels)} tool rels to review.')
             for tool_rel in relevant_tool_rels:
                 self.log.debug(f"TOOL REL {tool_rel}")
-                tool_feature_id = tool_rel.chado_obj.object_id
+                tool_feature_id = tool_rel.chado_obj.subject_id
                 tool = self.feature_lookup[tool_feature_id]
                 ## Suppress tool-gene associations involving non-Drosophilid genes (which are not exported to the Alliance).
                 # if self.organism_lookup[tool['organism_id']]['is_drosophilid'] is False:
                 #    continue
                 for bob in tool.keys():
                     self.log.warning(f"BOB {bob} {tool[bob]}")
-                tool_tool_key = (tool.feature_id, tool_feature_id)
+                try:
+                    tool_tool_key = (tool.feature_id, tool_feature_id)
+                except AttributeError:
+                    self.log.warning(f"BOB ERROR {tool} {tool_feature_id}")
+                    raise
                 try:
                     self.tool_tool_rels[tool_tool_key].append(tool_rel)
                 except KeyError:
