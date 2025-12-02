@@ -122,7 +122,7 @@ class ExperimentalToolHandler(FeatureHandler):
                 for bob in tool.keys():
                     self.log.warning(f"BOB {bob} {tool[bob]}")
                 try:
-                    tool_tool_key = (tool.feature_id, tool_feature_id)
+                    tool_tool_key = (tool['feature_id'], tool_feature_id)
                 except AttributeError:
                     self.log.warning(f"BOB ERROR {tool} {tool_feature_id}")
                     raise
