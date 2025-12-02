@@ -47,7 +47,7 @@ class ExperimentalToolHandler(FeatureHandler):
     def get_general_data(self, session):
         """Extend the method for the AlleleHandler."""
         super().get_general_data(session)
-        self.build_feature_lookup(session, feature_types=['engineered_region'])
+        self.build_feature_lookup(session, feature_types=['tool'])
         return
 
     def get_datatype_data(self, session):
