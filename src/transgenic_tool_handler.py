@@ -119,6 +119,8 @@ class ExperimentalToolHandler(FeatureHandler):
                 ## Suppress tool-gene associations involving non-Drosophilid genes (which are not exported to the Alliance).
                 # if self.organism_lookup[tool['organism_id']]['is_drosophilid'] is False:
                 #    continue
+                for bob in tool.keys():
+                    self.log.warning(f"BOB {bob} {tool[bob]}")
                 tool_tool_key = (tool.db_primary_id, tool_feature_id)
                 try:
                     self.tool_tool_rels[tool_tool_key].append(tool_rel)
