@@ -53,6 +53,9 @@ class ExperimentalToolHandler(FeatureHandler):
         self.get_entity_synonyms(session)
         self.get_entity_fb_xrefs(session)
         self.get_entity_xrefs(session)
+        self.get_entity_relationships(session, 'object', rel_type='compatible_tool',
+                                      entity_type='engineered_region', entity_regex=self.regex['tool'])
+
         # self.build_feature_lookup(session)
 
     def map_secondary_ids(self, slot_name):
