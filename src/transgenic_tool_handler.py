@@ -106,20 +106,16 @@ class ExperimentalToolHandler(FeatureHandler):
         sub_tool_counter = 0
         obj_tool_counter = 0
         for tool in self.fb_data_entities.values():
-            self.log.debug(f"TOOL {tool}")
             relevant_tool_rels = tool.recall_relationships(self.log, entity_role='object', rel_types='compatible_tool')
             # rel_entity_types='engineered_region')
             if relevant_tool_rels:
                 sub_tool_counter += 1
             # self.log.debug(f'For {gene}, found {len(relevant_tool_rels)} tool rels to review.')
             for tool_rel in relevant_tool_rels:
-                self.log.debug(f"TOOL REL {tool_rel}")
-                self.log.debug(f"TOOL REL {tool_rel.chado_obj.object_id} -> {tool_rel.chado_obj.subject_id}")
                 try:
                     tool_tool_key = (tool_rel.chado_obj.object_id, tool_rel.chado_obj.subject_id)
-                    self.log.warning(f"BOB MAPPING {tool_tool_key}")
                 except AttributeError:
-                    self.log.warning(f"BOB ERROR {tool} {tool_rel}")
+                    self.log.error(f"problem {tool} {tool_rel}")
                     raise
                 try:
                     self.tool_tool_rels[tool_tool_key].append(tool_rel)
@@ -164,17 +160,15 @@ class ExperimentalToolHandler(FeatureHandler):
             for tool_tool_rel in tool_tool_rels:
                 all_pub_ids.extend(tool_tool_rel.pubs)
             first_feat_rel.pubs = all_pub_ids
+            # NOTE: pub 383755 | FlyBase Experimental Tool information Is the only one used
+            # for tools. But not in lookup pub curies!
+            # So pub_curies will be empty.
             pub_curies = self.lookup_pub_curies(all_pub_ids)
-            if not all_pub_ids:
-                self.log.warning(f"No pubs for {object_curie}")
-            else:
-                self.log.warning(f"BOB REL pubs for {object_curie} {all_pub_ids}")
-            self.log.warning(f"BOB REL pub curies for {object_curie} {pub_curies}")
+
             # Adjust allele-gene relation_type as needed.
             rel_type_name = 'compatible_tool'
             rel_dto = agr_datatypes.TransgenicToolAssociationDTO(subject_curie, object_curie,
                  pub_curies, False, rel_type_name)
-            self.log.warning(f"BOB REL {rel_dto}")
             if f_object.is_obsolete is True or subject['is_obsolete'] is True:
                 rel_dto.obsolete = True
                 rel_dto.internal = True
