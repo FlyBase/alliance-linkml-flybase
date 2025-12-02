@@ -162,7 +162,7 @@ def main():
             raise ValueError('The "tool_association_ingest_set" is unexpectedly empty.')
         # Print the output file.
         generate_export_file(association_export_dict, log, association_output_filename)
-        generate_association_tsv_file(association_export_dict, association_output_filename)
+        generate_association_tsv_file(association_export_dict, set_up_dict['output_filename'])
     log.info('Ended main function.\n')
 
 
