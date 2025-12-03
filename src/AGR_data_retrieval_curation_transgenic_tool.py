@@ -103,7 +103,18 @@ def generate_tsv_file(export_dict, filename):
                 for note in entity_dict["note_dtos"]:
                     ntype = note["note_type_name"]
                     txt = note['free_text']
-                    outfile.write(f"{primary}\t{ntype}\t{txt}")
+                    outfile.write(f"{primary}\t{ntype}\t{txt}\n")
+
+
+def generate_association_tsv_file(export_dict, filename):
+    filename = filename.replace('.tsv', '_associations.tsv')
+    with open(filename, 'w') as outfile:
+        outfile.write("# Object curie\tSubject curie\tPub\n")
+        for entity_dict in export_dict['tool_association_ingest_set']:
+            obj = entity_dict['transgenic_tool_transgenic_tool_association_object']
+            sub = entity_dict['transgenic_tool_association_subject']
+            pubs = "|".join(entity_dict['evidence'])
+            outfile.write(f"{obj}\t{sub}\t{pubs}\n")
 
 
 # The main process.
@@ -137,6 +148,22 @@ def main():
         generate_export_file(export_dict, log, output_filename)
         generate_tsv_file(export_dict, set_up_dict['output_filename'])
 
+    if not reference_session:
+        # Export tool associations to a separate file.
+        association_output_filename = output_filename.replace('tool', 'tool_association')
+        association_export_dict = {
+            'linkml_version': linkml_release,
+            'alliance_member_release_version': database_release,
+        }
+        # tool_tool associations.
+        association_export_dict['tool_association_ingest_set'] = []
+        association_export_dict['tool_association_ingest_set'].extend(tool_handler.export_data['tool_association_ingest_set'])
+        if len(association_export_dict['tool_association_ingest_set']) == 0:
+            log.error('The "tool_association_ingest_set" is unexpectedly empty.')
+            raise ValueError('The "tool_association_ingest_set" is unexpectedly empty.')
+        # Print the output file.
+        generate_export_file(association_export_dict, log, association_output_filename)
+        generate_association_tsv_file(association_export_dict, set_up_dict['output_filename'])
     log.info('Ended main function.\n')
 
 

@@ -41,6 +41,15 @@ class ExperimentalToolHandler(FeatureHandler):
         # At the moment, just for code development. (line below)
         # 'internal_notes': ('internal_note', 'note_dtos'),
     }
+    tool_associations = []
+    tool_tool_rels = {}
+
+    def get_general_data(self, session):
+        """Extend the method for the AlleleHandler."""
+        super().get_general_data(session)
+        self.build_bibliography(session)
+        self.build_feature_lookup(session, feature_types=['tool'])
+        return
 
     def get_datatype_data(self, session):
         """Extend the method for the ExperimentalToolHandler."""
@@ -51,6 +60,9 @@ class ExperimentalToolHandler(FeatureHandler):
         self.get_entity_synonyms(session)
         self.get_entity_fb_xrefs(session)
         self.get_entity_xrefs(session)
+        self.get_entity_relationships(session, 'object', rel_type='compatible_tool',
+                                      entity_type='engineered_region', entity_regex=self.regex['tool'])
+
         # self.build_feature_lookup(session)
 
     def map_secondary_ids(self, slot_name):
@@ -76,6 +88,7 @@ class ExperimentalToolHandler(FeatureHandler):
         self.map_xrefs()
         self.map_entity_props_to_notes('transgenic_tool_prop_to_note_mapping')
         self.map_secondary_ids('secondary_identifiers')
+        self.map_tool_associations()
 
     # Add methods to be run by map_fb_data_to_alliance() below.
     def map_tool_basic(self):
@@ -88,15 +101,86 @@ class ExperimentalToolHandler(FeatureHandler):
             tool.linkmldto = agr_tool
         return
 
+    def synthesize_tool_associations(self):
+        """Get tool relationships."""
+        self.log.info('Synthesize transgenic tool.')
+        sub_tool_counter = 0
+        obj_tool_counter = 0
+        for tool in self.fb_data_entities.values():
+            relevant_tool_rels = tool.recall_relationships(self.log, entity_role='object', rel_types='compatible_tool')
+            if relevant_tool_rels:
+                sub_tool_counter += 1
+            for tool_rel in relevant_tool_rels:
+                try:
+                    tool_tool_key = (tool_rel.chado_obj.object_id, tool_rel.chado_obj.subject_id)
+                except AttributeError:
+                    self.log.error(f"problem {tool} {tool_rel}")
+                    raise
+                try:
+                    self.tool_tool_rels[tool_tool_key].append(tool_rel)
+                except KeyError:
+                    self.tool_tool_rels[tool_tool_key] = [tool_rel]
+                    obj_tool_counter += 1
+        self.log.info(f'Found {obj_tool_counter} tools for {sub_tool_counter} tools.')
+        return
+
     # Elaborate on synthesize_info() for the Handler.
     def synthesize_info(self):
         """Extend the method for the ConstructHandler."""
         super().synthesize_info()
         self.synthesize_synonyms()
         self.synthesize_secondary_ids()
+        self.synthesize_tool_associations()
+
+    def map_tool_associations(self):
+        """Map transgenic tool associations to Alliance object."""
+        self.log.info('Map tool associations to Alliance object.')
+        OBJECT = 0
+        SUBJECT = 1
+        counter = 0
+
+        tool_tool_counter = {}
+        for tool_tool_key in self.tool_tool_rels.keys():
+            self.log.debug(f'Mapping {tool_tool_key} to Alliance object. {self.tool_tool_rels[tool_tool_key]}')
+            try:
+                tool_tool_counter[tool_tool_key[OBJECT]] += 1
+            except KeyError:
+                tool_tool_counter[tool_tool_key[OBJECT]] = 1
+
+        for tool_tool_key, tool_tool_rels in self.tool_tool_rels.items():
+            object_feature_id = tool_tool_key[OBJECT]
+            f_object = self.fb_data_entities[object_feature_id]
+            object_curie = f'FB:{f_object.uniquename}'
+            subject = self.feature_lookup[tool_tool_key[SUBJECT]]
+            subject_curie = f'FB:{subject["uniquename"]}'
+            first_feat_rel = tool_tool_rels[0]
+            all_pub_ids = []
+            for tool_tool_rel in tool_tool_rels:
+                all_pub_ids.extend(tool_tool_rel.pubs)
+            first_feat_rel.pubs = all_pub_ids
+            # NOTE: pub 383755 | FlyBase Experimental Tool information Is the only one used
+            # for tools. But not in lookup pub curies!
+            # So pub_curies will be empty.
+            pub_curies = self.lookup_pub_curies(all_pub_ids)
+
+            # Adjust allele-gene relation_type as needed.
+            rel_type_name = 'compatible_tool'
+            rel_dto = agr_datatypes.TransgenicToolAssociationDTO(
+                subject_curie, object_curie,
+                pub_curies, False, rel_type_name)
+            if f_object.is_obsolete is True or subject['is_obsolete'] is True:
+                rel_dto.obsolete = True
+                rel_dto.internal = True
+            first_feat_rel.linkmldto = rel_dto
+            self.tool_associations.append(first_feat_rel)
+            counter += 1
+        self.log.info(f'Generated {counter} tool-tool unique associations.')
+        return
 
     # Elaborate on query_chado_and_export() for the TransgenicToolHandler.
     def query_chado_and_export(self, session):
         """Elaborate on query_chado_and_export method for the TransgenicToolHandler."""
         super().query_chado_and_export(session)
+        self.generate_export_dict(self.tool_associations, 'tool_association_ingest_set')
+
         return
