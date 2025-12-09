@@ -55,8 +55,6 @@ class ExperimentalToolHandler(FeatureHandler):
         """Extend the method for the ExperimentalToolHandler."""
         super().get_datatype_data(session)
         self.get_entities(session)
-        for pkey_id in self.fb_data_entities.keys():
-            self.log.debug(f"BOB: {pkey_id}: {self.fb_data_entities[pkey_id]}")
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
