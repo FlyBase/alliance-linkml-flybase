@@ -28,7 +28,7 @@ from cassette_handler import CassetteHandler
 from utils import export_chado_data, generate_export_file
 
 # Data types handled by this script.
-REPORT_LABEL = 'casssette_curation'
+REPORT_LABEL = 'cassette_curation'
 
 # Now proceed with generic setup.
 set_up_dict = set_up_db_reading(REPORT_LABEL)

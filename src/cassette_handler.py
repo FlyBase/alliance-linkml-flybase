@@ -34,7 +34,7 @@ class CassetteHandler(FeatureHandler):
         'FBal0322754': 'flfl[DeltaRanBD.UAS.Venus]',
         'FBal0296109': 'sSemp1[R41G.UAS]',
         'FBal0193766': 'Gr63a[UAS.cJa]',
-        'FBal0239883 ': 'sd[RNAi.N.UAS]',
+        'FBal0239883': 'sd[RNAi.N.UAS]',
     }
 
     def get_general_data(self, session):
@@ -64,9 +64,7 @@ class CassetteHandler(FeatureHandler):
            Cvterm 'associated_with'
         Args:
             session (Session): SQLAlchemy session for the query.
-
-        Kwargs:
-            reference (bool): If True, retrieves only non-obsolete objects from
+            reference_set (bool): If True, retrieves only non-obsolete objects from
                               a previous reference database; for incremental
                               updates.
 
@@ -142,7 +140,7 @@ class CassetteHandler(FeatureHandler):
     # Add methods to be run by map_fb_data_to_alliance() below.
     def map_cassette_basic(self):
         """Map basic FlyBase transgenic tool data to the Alliance LinkML object."""
-        self.log.info('Map basic cassstte info to Alliance object.')
+        self.log.info('Map basic cassette info to Alliance object.')
         for cass in self.fb_data_entities.values():
             agr_cass = self.agr_export_type()
             agr_cass.obsolete = cass.chado_obj.is_obsolete
