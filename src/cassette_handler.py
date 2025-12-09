@@ -18,6 +18,7 @@ from feature_handler import FeatureHandler
 from harvdev_utils.reporting import Cvterm, Feature, FeatureRelationship
 from sqlalchemy.orm import aliased
 
+
 class CassetteHandler(FeatureHandler):
     """This object gets, synthesizes and filters cassette data for export."""
     def __init__(self, log: Logger, testing: bool):
