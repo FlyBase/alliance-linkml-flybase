@@ -15,8 +15,8 @@ from logging import Logger
 import agr_datatypes
 import fb_datatypes
 from feature_handler import FeatureHandler
-from harvdev_utils.reporting import Cvterm
-
+from harvdev_utils.reporting import Cvterm, Feature, FeatureRelationship
+from sqlalchemy.orm import aliased
 
 class CassetteHandler(FeatureHandler):
     """This object gets, synthesizes and filters cassette data for export."""
@@ -44,8 +44,23 @@ class CassetteHandler(FeatureHandler):
         return
 
     def get_entities(self, session, **kwargs):
-        """Get primary FlyBase data entities.
+        """Extend the method for the CassetteHandler."""
+        reference_set = False
+        if 'reference' in kwargs.keys() and kwargs['reference'] is True:
+            reference_set = True
+            self.incremental_update = True
 
+        # Get the main set of cassettes
+        self.get_main_entities(session, reference_set)
+        # Get the second set.
+        # Get the anonymous ones?
+
+    def get_main_entities(self, session, reference_set):
+        """Get simple FlyBase cassette/allele data entities.
+
+        So Subject FBal linked to
+           Object FBtp  linked via
+           Cvterm 'associated_with'
         Args:
             session (Session): SQLAlchemy session for the query.
 
@@ -55,23 +70,30 @@ class CassetteHandler(FeatureHandler):
                               updates.
 
         """
-        reference_set = False
-        if 'reference' in kwargs.keys() and kwargs['reference'] is True:
-            reference_set = True
-            self.incremental_update = True
         if self.datatype in self.feat_type_export.keys():
             chado_type = 'feature'
         else:
             chado_type = self.datatype
+
         if reference_set is True:
-            self.log.info(f'Get {self.datatype} data entities from {chado_type} table (previous reference db for incremental update).')
+            mess = f'Get {self.datatype} data entities from {chado_type}'
+            mess += ' table (previous reference db for incremental update).'
+            self.log.info(mess)
         else:
             self.log.info(f'Get {self.datatype} data entities from {chado_type} table.')
+
+        feat_object = aliased(Feature)
+        rel_type = aliased(Cvterm)
         chado_table = self.chado_tables['main_table'][chado_type]
+
         filters = ()
-        if self.datatype in self.regex.keys():
-            self.log.info(f'Use this regex: {self.regex[self.datatype]}')
-            filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
+        # Subject is the allele.
+        filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
+        # Object should be a FBtp object (construct)
+        filters += (feat_object.uniquename.op('~')(self.regex['construct']), )
+        # 'associated_with' in relationship table
+        filters += (rel_type.name == 'associated_with', )
+
         if self.datatype in self.feature_subtypes.keys():
             sub = self.feature_subtypes[self.datatype]
             self.log.info(f'Filter main table by these feature_subtypes: {sub}')
@@ -83,16 +105,15 @@ class CassetteHandler(FeatureHandler):
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
 
-        if self.datatype in self.feature_subtypes.keys():
-            results = session.query(chado_table).\
-                select_from(chado_table).\
-                join(Cvterm, (Cvterm.cvterm_id == chado_table.type_id)).\
-                filter(*filters).\
-                distinct()
-        else:
-            results = session.query(chado_table).\
-                filter(*filters).\
-                distinct()
+        results = session.query(chado_table).\
+            select_from(chado_table).\
+            join(Cvterm, (Cvterm.cvterm_id == chado_table.type_id)).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == chado_table.feature_id)).\
+            join(feat_object, (feat_object.feature_id == FeatureRelationship.object_id)).\
+            join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+
         pkey_name = f'{chado_type}_id'
         self.log.info(f'Have this primary_key name: {pkey_name}')
         counter = 0
