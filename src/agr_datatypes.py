@@ -117,7 +117,7 @@ class CassetteDTO(GenomicEntityDTO):
         self.secondary_identifiers = []             # Annotation IDs and 2o FlyBase IDs.
         self.note_dtos = []                         # Will be NoteDTO objects.
         self.cross_reference_dtos = []
-        self.required_fields.extend(['transgenic_tool_symbol_dto'])
+        self.required_fields.extend(['cassette_symbol_dto'])
         self.required_fields.remove('taxon_curie')  # Does not have it!
 
 
