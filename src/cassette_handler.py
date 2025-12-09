@@ -131,6 +131,22 @@ class CassetteHandler(FeatureHandler):
             self.log.info(f'Found {counter} FlyBase {self.datatype} entities in chado.')
         return
 
+    def map_fb_data_to_alliance(self):
+        """Extend the method for the GeneHandler."""
+        super().map_fb_data_to_alliance()
+        self.map_tool_basic()
+
+    # Add methods to be run by map_fb_data_to_alliance() below.
+    def map_cassette_basic(self):
+        """Map basic FlyBase transgenic tool data to the Alliance LinkML object."""
+        self.log.info('Map basic cassstte info to Alliance object.')
+        for cass in self.fb_data_entities.values():
+            agr_cass = self.agr_export_type()
+            agr_cass.obsolete = cass.chado_obj.is_obsolete
+            agr_cass.primary_external_id = f'FB:{cass.uniquename}'
+            cass.linkmldto = agr_cass
+        return
+
     def get_datatype_data(self, session):
         """Extend the method for the CassetteHandler."""
         super().get_datatype_data(session)
@@ -140,5 +156,5 @@ class CassetteHandler(FeatureHandler):
         self.get_entity_synonyms(session)
         self.get_entity_fb_xrefs(session)
         self.get_entity_xrefs(session)
-        self.get_entity_relationships(session, 'object', rel_type='compatible_tool',
-                                      entity_type='engineered_region', entity_regex=self.regex['tool'])
+        # self.get_entity_relationships(session, 'object', rel_type='associated_with',
+        #                              entity_type='engineered_region', entity_regex=self.regex['tool'])
