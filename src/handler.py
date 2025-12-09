@@ -980,6 +980,7 @@ class DataHandler(object):
         missing_required_info_counter = 0
         no_export_counter = 0
         for i in input_list:
+            self.log.debug(f"BOB: item in input_list {i}")
             input_counter += 1
             # for attr in self.required_fields[output_set_name]:
             if i.linkmldto is None:
