@@ -15,8 +15,8 @@ from logging import Logger
 import agr_datatypes
 import fb_datatypes
 from feature_handler import FeatureHandler
-from harvdev_utils.reporting import (
-    Cvterm)
+from harvdev_utils.reporting import Cvterm
+
 
 class CassetteHandler(FeatureHandler):
     """This object gets, synthesizes and filters cassette data for export."""
