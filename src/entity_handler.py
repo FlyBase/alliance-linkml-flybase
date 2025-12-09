@@ -199,6 +199,7 @@ class PrimaryEntityHandler(DataHandler):
         if filters == () and self.datatype != 'genotype':
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
+
         if reference_set is True:
             # Get only current entitites from a reference db.
             # The cell_line table, oddly, has no "is_obsolete" column.

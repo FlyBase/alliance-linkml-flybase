@@ -315,6 +315,11 @@ class FBBalancer(FBFeature):
         super().__init__(chado_obj)
 
 
+class FBCassette(FBFeature):
+    def __init__(self, chado_obj):
+        """Create the FBCassette object."""
+        super().__init__(chado_obj)
+
 class FBConstruct(FBFeature):
     """A FlyBase construct entity with all its related data."""
     def __init__(self, chado_obj):
