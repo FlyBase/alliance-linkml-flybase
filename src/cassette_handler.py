@@ -135,7 +135,7 @@ class CassetteHandler(FeatureHandler):
         self.map_cassette_basic()
         self.map_synonyms()
         self.map_data_provider_dto()
-        self.map_xrefs()
+        # self.map_xrefs()
 
     # Add methods to be run by map_fb_data_to_alliance() below.
     def map_cassette_basic(self):
@@ -155,7 +155,7 @@ class CassetteHandler(FeatureHandler):
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
-        self.get_entity_fb_xrefs(session)
-        self.get_entity_xrefs(session)
+        # self.get_entity_fb_xrefs(session)
+        # self.get_entity_xrefs(session)
         # self.get_entity_relationships(session, 'object', rel_type='associated_with',
         #                              entity_type='engineered_region', entity_regex=self.regex['tool'])
