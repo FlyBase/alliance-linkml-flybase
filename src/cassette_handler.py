@@ -135,6 +135,9 @@ class CassetteHandler(FeatureHandler):
         """Extend the method for the GeneHandler."""
         super().map_fb_data_to_alliance()
         self.map_cassette_basic()
+        self.map_synonyms()
+        self.map_data_provider_dto()
+        self.map_xrefs()
 
     # Add methods to be run by map_fb_data_to_alliance() below.
     def map_cassette_basic(self):
