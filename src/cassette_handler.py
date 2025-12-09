@@ -30,11 +30,11 @@ class CassetteHandler(FeatureHandler):
         self.primary_export_set = 'cassette_ingest_set'
 
     test_set = {
-        'FBal0028611': 'C-Cerulean',  # ivc only
-        'FBto0000027': 'EGFP',
-        'FBto0000417': 'sgGFP',
-        'FBto0000921': 'Sapphire',
-        'FBto0000606': 'AflIII',    # Has UniProtKB:E3VX96
+        'FBal0322755': 'Mcm3[+tBa]',
+        'FBal0322754': 'flfl[DeltaRanBD.UAS.Venus]',
+        'FBal0296109': 'sSemp1[R41G.UAS]',
+        'FBal0193766': 'Gr63a[UAS.cJa]',
+        'FBal0239883 ': 'sd[RNAi.N.UAS]',
     }
 
     def get_general_data(self, session):
