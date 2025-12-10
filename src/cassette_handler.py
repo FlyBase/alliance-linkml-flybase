@@ -15,7 +15,7 @@ from logging import Logger
 import agr_datatypes
 import fb_datatypes
 from feature_handler import FeatureHandler
-from harvdev_utils.reporting import Cvterm, Feature, FeatureRelationship,FeatureCvterm
+from harvdev_utils.reporting import Cvterm, Feature, FeatureRelationship, FeatureCvterm
 from sqlalchemy.orm import aliased
 
 
@@ -58,7 +58,6 @@ class CassetteHandler(FeatureHandler):
         self.get_main_entities(session, reference_set)
         # Get in vitro set of cassettes
         self.add_in_vitro_allele_entries(session, reference_set)
-
 
     def add_in_vitro_allele_entries(self, session, reference_set):
         """Extend list of entities."""
