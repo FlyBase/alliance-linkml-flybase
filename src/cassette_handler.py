@@ -53,7 +53,6 @@ class CassetteHandler(FeatureHandler):
     }
     cassette_associations = []
 
-
     def get_general_data(self, session):
         """Extend the method for the CassetteHandler."""
         super().get_general_data(session)
