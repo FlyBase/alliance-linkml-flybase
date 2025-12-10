@@ -680,14 +680,6 @@ class PrimaryEntityHandler(DataHandler):
         for prop in prop_dict.values():
             # Assign the prop to the appropriate entity.
             subject_id = getattr(prop.chado_obj, subject_key_name)
-            self.log.debug(f"BOB: sub_id:{subject_id} prop:{prop}")
-            self.log.debug(f"BOB: prop type:{prop.chado_obj.type}")
-            self.log.debug(f"BOB: prop type name:{prop.chado_obj.type.name}")
-            try:
-                self.log.debug(f"BOB: props by type:{self.fb_data_entities[subject_id].props_by_type}")
-            except KeyError:
-                self.log.error(f"BOB: {self.fb_data_entities[subject_id]} HAS NO props_by_type!!")
-                self.fb_data_entities[subject_id].props_by_type = {}
             try:
                 self.fb_data_entities[subject_id].props_by_type[prop.chado_obj.type.name].append(prop)
                 assignment_counter += 1
