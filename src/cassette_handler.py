@@ -37,7 +37,7 @@ class CassetteHandler(FeatureHandler):
         'FBal0193766': 'Gr63a[UAS.cJa]',
         'FBal0239883': 'sd[RNAi.N.UAS]',
         'FBal0000531': 'Amy-p[IX]',  # in vitro
-        'FBal0028766': 'Adh[DeltaIVS1]',  # in vitro
+        'FBal0028742': 'Act88F[E334K]',  # in vitro
         'FBal0410565': 'Cdkl[KD.UAS]',  # in vitro
     }
 
@@ -60,10 +60,10 @@ class CassetteHandler(FeatureHandler):
         for bob in self.fb_data_entities:
             self.log.debug(f"1st) BOB: {bob}")
         # Get in vitro set of cassettes
-        # self.add_in_vitro_allele_entries(session, reference_set)
-        # self.log.debug("2nd) BOB: give list")
-        # for bob in self.fb_data_entities:
-        #     self.log.debug(f"2nd) BOB: {bob}")
+        self.add_in_vitro_allele_entries(session, reference_set)
+        self.log.debug("2nd) BOB: give list")
+        for bob in self.fb_data_entities:
+            self.log.debug(f"2nd) BOB: {bob}")
 
     def add_in_vitro_allele_entries(self, session, reference_set):
         """Extend list of entities."""
