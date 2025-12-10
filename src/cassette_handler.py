@@ -212,7 +212,7 @@ class CassetteHandler(FeatureHandler):
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
-        # self.get_entity_fb_xrefs(session)
+        self.get_entity_fb_xrefs(session)
         # self.get_entity_xrefs(session)
         # self.get_entity_relationships(session, 'object', rel_type='associated_with',
         #                              entity_type='engineered_region', entity_regex=self.regex['tool'])
