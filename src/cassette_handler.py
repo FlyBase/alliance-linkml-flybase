@@ -39,7 +39,9 @@ class CassetteHandler(FeatureHandler):
         'FBal0000531': 'Amy-p[IX]',
         'FBal0028742': 'Act88F[E334K]',
         'FBal0410565': 'Cdkl[KD.UAS]',
-        'FBal0410448': 'Rev1[DeltaCTD.UASp.Tag:FLAG]',  # in vitro only
+        'FBal0212171': r'Avic\GFP[UAS.FRT1]',  # in vitro only
+        'FBal0290956': 'Csas[21]',  # in vitro only
+        'FBal0392043': r'Avic\GFP[EYFP.3xP3.cUa]',  # in vitro only
     }
 
     cassette_prop_to_note_mapping = {
@@ -68,14 +70,12 @@ class CassetteHandler(FeatureHandler):
 
         # Get the main set of cassettes
         self.get_main_entities(session, reference_set)
-        self.log.debug("1st) BOB: give list")
-        for bob in self.fb_data_entities:
-            self.log.debug(f"1st) BOB: {bob}")
         # Get in vitro set of cassettes
         self.add_in_vitro_allele_entries(session, reference_set)
-        self.log.debug("2nd) BOB: give list")
-        for bob in self.fb_data_entities:
-            self.log.debug(f"2nd) BOB: {bob}")
+        if self.testing:
+            self.log.debug("BOB: print list")
+            for bob in self.fb_data_entities:
+                self.log.debug(f"BOB: {bob}")
 
     def add_in_vitro_allele_entries(self, session, reference_set):
         """Extend list of entities."""
@@ -101,13 +101,12 @@ class CassetteHandler(FeatureHandler):
                 self.fb_reference_entity_ids.append(pkey_id)
             else:
                 if pkey_id not in self.fb_data_entities:
-                    self.log.warning(f'BOBBY: {pkey_id} Not already there.')
-                self.fb_data_entities[pkey_id] = self.fb_export_type(result)
-            counter += 1
+                    self.fb_data_entities[pkey_id] = self.fb_export_type(result)
+                    counter += 1
         if reference_set is True:
-            self.log.info(f'Found {counter} FlyBase {self.datatype} in vitro entities in reference chado instance.')
+            self.log.info(f'Found {counter} FlyBase {self.datatype} in vitro entities in reference chado instance not in main set.')
         else:
-            self.log.info(f'Found {counter} FlyBase {self.datatype} in vitro entities in chado.')
+            self.log.info(f'Found {counter} FlyBase {self.datatype} in vitro entities in chado not in main set.')
 
     def get_main_entities(self, session, reference_set):
         """Get simple FlyBase cassette/allele data entities.
