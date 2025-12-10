@@ -38,7 +38,6 @@ class CassetteHandler(FeatureHandler):
         'FBal0239883': 'sd[RNAi.N.UAS]',
         'FBal0000531': 'Amy-p[IX]',
         'FBal0028742': 'Act88F[E334K]',
-        'FBal0410565': 'Cdkl[KD.UAS]',  # Not sure about this one, seems okay but not appearing?
         'FBal0212171': r'Avic\GFP[UAS.FRT1]',  # in vitro only
         'FBal0290956': 'Csas[21]',  # in vitro only
         'FBal0392043': r'Avic\GFP[EYFP.3xP3.cUa]',  # in vitro only
