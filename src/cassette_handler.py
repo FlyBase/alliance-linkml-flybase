@@ -68,7 +68,7 @@ class CassetteHandler(FeatureHandler):
     def add_in_vitro_allele_entries(self, session, reference_set):
         """Extend list of entities."""
         self.log.info('Add entities for alleles having "in vitro construct" annotations.')
-
+        counter = 0
         filters = (
             Feature.is_obsolete.is_(False),
             Feature.uniquename.op('~')(self.regex['allele']),
@@ -89,6 +89,11 @@ class CassetteHandler(FeatureHandler):
                 self.fb_reference_entity_ids.append(pkey_id)
             else:
                 self.fb_data_entities[pkey_id] = self.fb_export_type(result)
+            counter += 1
+        if reference_set is True:
+            self.log.info(f'Found {counter} FlyBase {self.datatype} in vitro entities in reference chado instance.')
+        else:
+            self.log.info(f'Found {counter} FlyBase {self.datatype} in vitro entities in chado.')
 
     def get_main_entities(self, session, reference_set):
         """Get simple FlyBase cassette/allele data entities.
@@ -162,10 +167,9 @@ class CassetteHandler(FeatureHandler):
                 self.fb_data_entities[pkey_id] = self.fb_export_type(result)
             counter += 1
         if reference_set is True:
-            self.log.info(f'Found {counter} FlyBase {self.datatype} entities in reference chado instance.')
+            self.log.info(f'Found {counter} FlyBase {self.datatype} main entities in reference chado instance.')
         else:
-            self.log.info(f'Found {counter} FlyBase {self.datatype} entities in chado.')
-        return
+            self.log.info(f'Found {counter} FlyBase {self.datatype} main entities in chado.')
 
     def map_fb_data_to_alliance(self):
         """Extend the method for the GeneHandler."""
