@@ -15,7 +15,7 @@ from logging import Logger
 import agr_datatypes
 import fb_datatypes
 from feature_handler import FeatureHandler
-from harvdev_utils.reporting import Cvterm, Feature, FeatureRelationship
+from harvdev_utils.reporting import Cvterm, Feature, FeatureRelationship,FeatureCvterm
 from sqlalchemy.orm import aliased
 
 
@@ -28,6 +28,7 @@ class CassetteHandler(FeatureHandler):
         self.fb_export_type = fb_datatypes.FBCassette
         self.agr_export_type = agr_datatypes.CassetteDTO
         self.primary_export_set = 'cassette_ingest_set'
+        self.incremental_update = False
 
     test_set = {
         'FBal0322755': 'Mcm3[+tBa]',
@@ -35,6 +36,9 @@ class CassetteHandler(FeatureHandler):
         'FBal0296109': 'sSemp1[R41G.UAS]',
         'FBal0193766': 'Gr63a[UAS.cJa]',
         'FBal0239883': 'sd[RNAi.N.UAS]',
+        'FBal0000531': 'Amy-p[IX]',  # in vitro
+        'FBal0028766': 'Adh[DeltaIVS1]',  # in vitro
+        'FBal0410565': 'Cdkl[KD.UAS]',  # in vitro
     }
 
     def get_general_data(self, session):
@@ -42,7 +46,6 @@ class CassetteHandler(FeatureHandler):
         super().get_general_data(session)
         self.build_bibliography(session)
         self.build_feature_lookup(session, feature_types=['cassette'])
-        return
 
     def get_entities(self, session, **kwargs):
         """Extend the method for the CassetteHandler."""
@@ -53,8 +56,30 @@ class CassetteHandler(FeatureHandler):
 
         # Get the main set of cassettes
         self.get_main_entities(session, reference_set)
-        # Get the second set.
-        # Get the anonymous ones?
+        # Get in vitro set of cassettes
+        self.add_in_vitro_allele_entries(session, reference_set)
+
+    def add_in_vitro_allele_entries(self, session, reference_set):
+        """Extend list of entities."""
+        self.log.info('Add entities for alleles having "in vitro construct" annotations.')
+
+        filters = (
+            Feature.is_obsolete.is_(False),
+            Feature.uniquename.op('~')(self.regex['allele']),
+            Cvterm.name == 'in vitro construct',
+        )
+        results = session.query(Feature). \
+            select_from(Feature). \
+            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)). \
+            join(Cvterm, (Cvterm.cvterm_id == FeatureCvterm.cvterm_id)). \
+            filter(*filters). \
+            distinct()
+        for result in results:
+            pkey_id = getattr(result, 'feature_id')
+            if reference_set is True:
+                self.fb_reference_entity_ids.append(pkey_id)
+            else:
+                self.fb_data_entities[pkey_id] = self.fb_export_type(result)
 
     def get_main_entities(self, session, reference_set):
         """Get simple FlyBase cassette/allele data entities.
@@ -86,10 +111,14 @@ class CassetteHandler(FeatureHandler):
         chado_table = self.chado_tables['main_table'][chado_type]
 
         filters = ()
-        # Subject is the allele.
+        # Subject is the allele and has s specific regex.
         filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
+        # Allele is not obsolete
+        filters += (chado_table.is_obsolete.is_(False), )
         # Object should be a FBtp object (construct)
         filters += (feat_object.uniquename.op('~')(self.regex['construct']), )
+        # Construct is not obsolete
+        filters += (feat_object.is_obsolete.is_(False),)
         # 'associated_with' in relationship table
         filters += (rel_type.name == 'associated_with', )
 
@@ -146,7 +175,6 @@ class CassetteHandler(FeatureHandler):
             agr_cass.obsolete = cass.chado_obj.is_obsolete
             agr_cass.primary_external_id = f'FB:{cass.uniquename}'
             cass.linkmldto = agr_cass
-        return
 
     def get_datatype_data(self, session):
         """Extend the method for the CassetteHandler."""
