@@ -60,10 +60,10 @@ class CassetteHandler(FeatureHandler):
         for bob in self.fb_data_entities:
             self.log.debug(f"1st) BOB: {bob}")
         # Get in vitro set of cassettes
-        self.add_in_vitro_allele_entries(session, reference_set)
-        self.log.debug("2nd) BOB: give list")
-        for bob in self.fb_data_entities:
-            self.log.debug(f"2nd) BOB: {bob}")
+        # self.add_in_vitro_allele_entries(session, reference_set)
+        # self.log.debug("2nd) BOB: give list")
+        # for bob in self.fb_data_entities:
+        #     self.log.debug(f"2nd) BOB: {bob}")
 
     def add_in_vitro_allele_entries(self, session, reference_set):
         """Extend list of entities."""
