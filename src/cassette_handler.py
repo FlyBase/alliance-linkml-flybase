@@ -39,6 +39,7 @@ class CassetteHandler(FeatureHandler):
         'FBal0000531': 'Amy-p[IX]',
         'FBal0028742': 'Act88F[E334K]',
         'FBal0410565': 'Cdkl[KD.UAS]',
+        'FBal0410448': 'Rev1[DeltaCTD.UASp.Tag:FLAG]',  # in vitro only
     }
 
     cassette_prop_to_note_mapping = {
@@ -100,7 +101,7 @@ class CassetteHandler(FeatureHandler):
             if reference_set is True:
                 self.fb_reference_entity_ids.append(pkey_id)
             else:
-                if pkey_id not in self.fb_reference_entity_ids:
+                if pkey_id not in self.fb_data_entities:
                     self.log.warning(f'BOBBY: {pkey_id} Not already there.')
                 self.fb_data_entities[pkey_id] = self.fb_export_type(result)
             counter += 1
