@@ -59,6 +59,7 @@ class CassetteHandler(FeatureHandler):
         # Get in vitro set of cassettes
         self.add_in_vitro_allele_entries(session, reference_set)
 
+
     def add_in_vitro_allele_entries(self, session, reference_set):
         """Extend list of entities."""
         self.log.info('Add entities for alleles having "in vitro construct" annotations.')
@@ -68,6 +69,9 @@ class CassetteHandler(FeatureHandler):
             Feature.uniquename.op('~')(self.regex['allele']),
             Cvterm.name == 'in vitro construct',
         )
+        if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            filters += (Feature.uniquename.in_((self.test_set.keys())), )
         results = session.query(Feature). \
             select_from(Feature). \
             join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)). \
