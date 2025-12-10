@@ -36,10 +36,22 @@ class CassetteHandler(FeatureHandler):
         'FBal0296109': 'sSemp1[R41G.UAS]',
         'FBal0193766': 'Gr63a[UAS.cJa]',
         'FBal0239883': 'sd[RNAi.N.UAS]',
-        'FBal0000531': 'Amy-p[IX]',  # in vitro
-        'FBal0028742': 'Act88F[E334K]',  # in vitro
-        'FBal0410565': 'Cdkl[KD.UAS]',  # in vitro
+        'FBal0000531': 'Amy-p[IX]',
+        'FBal0028742': 'Act88F[E334K]',
+        'FBal0410565': 'Cdkl[KD.UAS]',
     }
+
+    cassette_prop_to_note_mapping = {
+        'description': ('summary', 'note_dtos'),
+        'misc': ('comment', 'note_dtos'),
+        'aminoacid_rep': ('comment', 'note_dtos'),
+        'molecular_info': ('comment', 'note_dtos'),
+        'nucleotide_sub': ('comment', 'note_dtos'),
+        # At the moment, just for code development. (line below)
+        # 'internal_notes': ('internal_note', 'note_dtos'),
+    }
+    cassette_associations = []
+
 
     def get_general_data(self, session):
         """Extend the method for the CassetteHandler."""
@@ -88,6 +100,8 @@ class CassetteHandler(FeatureHandler):
             if reference_set is True:
                 self.fb_reference_entity_ids.append(pkey_id)
             else:
+                if pkey_id not in self.fb_reference_entity_ids:
+                    self.log.warning(f'BOBBY: {pkey_id} Not already there.')
                 self.fb_data_entities[pkey_id] = self.fb_export_type(result)
             counter += 1
         if reference_set is True:
@@ -177,6 +191,7 @@ class CassetteHandler(FeatureHandler):
         self.map_cassette_basic()
         self.map_synonyms()
         self.map_data_provider_dto()
+        self.map_entity_props_to_notes('cassette_prop_to_note_mapping')
         # self.map_xrefs()
 
     # Add methods to be run by map_fb_data_to_alliance() below.
