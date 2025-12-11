@@ -149,7 +149,7 @@ def main():
         generate_export_file(export_dict, log, output_filename)
         generate_tsv_file(export_dict, set_up_dict['output_filename'])
 
-    ignore = True
+    ignore = False
     if not reference_session and not ignore:
         # Export cassette_associations to a separate file.
         association_output_filename = output_filename.replace('cassette', 'cassette_association')
