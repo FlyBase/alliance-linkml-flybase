@@ -221,3 +221,11 @@ class CassetteHandler(FeatureHandler):
         self.get_entity_relationships(session, 'subject')
         # , rel_type)='has_reg_region',
         #                             entity_type='engineered_region', entity_regex=self.regex['tool'])
+
+    # Elaborate on query_chado_and_export() for the CassetteHandler.
+    def query_chado_and_export(self, session):
+        """Elaborate on query_chado_and_export method for the CassetteHandler."""
+        super().query_chado_and_export(session)
+        self.generate_export_dict(self.cassette_associations, 'cassette_association_ingest_set')
+
+        return
