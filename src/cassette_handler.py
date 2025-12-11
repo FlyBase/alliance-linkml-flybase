@@ -213,5 +213,11 @@ class CassetteHandler(FeatureHandler):
         self.get_entity_synonyms(session)
         self.get_entity_fb_xrefs(session)
         # self.get_entity_xrefs(session)
-        # self.get_entity_relationships(session, 'object', rel_type='associated_with',
-        #                              entity_type='engineered_region', entity_regex=self.regex['tool'])
+        # Text form From FTA-134 next 3 lines:-
+        # feature_relationship, type 'has_reg_region', subject = FBal, object in (FBto, FBsf, FBgn) # from GA30e field
+        # feature_relationship, type 'tagged_with', subject = FBal, object in (FBto, FBsf) # from GA30a field
+        # feature_relationship, type 'carries_tool' subject = FBal, object in (FBto, FBsf) # from GA30b field
+
+        self.get_entity_relationships(session, 'subject')
+        # , rel_type)='has_reg_region',
+        #                             entity_type='engineered_region', entity_regex=self.regex['tool'])
