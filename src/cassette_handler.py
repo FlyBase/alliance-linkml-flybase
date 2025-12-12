@@ -53,6 +53,7 @@ class CassetteHandler(FeatureHandler):
         # 'internal_notes': ('internal_note', 'note_dtos'),
     }
     cassette_associations = []
+    cassette_cassette_rels = {}
 
     def get_general_data(self, session):
         """Extend the method for the CassetteHandler."""
@@ -196,7 +197,7 @@ class CassetteHandler(FeatureHandler):
 
     # Add methods to be run by map_fb_data_to_alliance() below.
     def map_cassette_basic(self):
-        """Map basic FlyBase transgenic tool data to the Alliance LinkML object."""
+        """Map basic FlyBase transgenic cassette data to the Alliance LinkML object."""
         self.log.info('Map basic cassette info to Alliance object.')
         for cass in self.fb_data_entities.values():
             agr_cass = self.agr_export_type()
@@ -229,3 +230,34 @@ class CassetteHandler(FeatureHandler):
         self.generate_export_dict(self.cassette_associations, 'cassette_association_ingest_set')
 
         return
+
+    def synthesize_cassette_associations(self):
+        """Get cassette relationships."""
+        self.log.info('Synthesize cassette.')
+        sub_cassette_counter = 0
+        obj_cassette_counter = 0
+        for cassette in self.fb_data_entities.values():
+            relevant_cassette_rels = cassette.recall_relationships(self.log, entity_role='subject', rel_types='has_reg_region')
+            if relevant_cassette_rels:
+                sub_cassette_counter += 1
+            for cassette_rel in relevant_cassette_rels:
+                try:
+                    cassette_cassette_key = (cassette_rel.chado_obj.object_id, cassette_rel.chado_obj.subject_id)
+                except AttributeError:
+                    self.log.error(f"problem {cassette} {cassette_rel}")
+                    raise
+                try:
+                    self.cassette_cassette_rels[cassette_cassette_key].append(cassette_rel)
+                except KeyError:
+                    self.cassette_cassette_rels[cassette_cassette_key] = [cassette_rel]
+                    obj_cassette_counter += 1
+        self.log.info(f'Found {obj_cassette_counter} cassettes for {sub_cassette_counter} cassettes.')
+        return
+
+    # Elaborate on synthesize_info() for the Handler.
+    def synthesize_info(self):
+        """Extend the method for the ConstructHandler."""
+        super().synthesize_info()
+        self.synthesize_synonyms()
+        self.synthesize_secondary_ids()
+        self.synthesize_cassette_associations()
