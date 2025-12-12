@@ -116,8 +116,9 @@ def generate_association_tsv_file(export_dict, filename):
             log.debug(f"BOB: entity_dict keys: {entity_dict.keys()}")
             obj = entity_dict['cassette_cassette_association_object']
             sub = entity_dict['cassette_association_subject']
+            rel_type = entity_dict['relation']
             pubs = "|".join(entity_dict['evidence'])
-            outfile.write(f"{obj}\t{sub}\t{pubs}\n")
+            outfile.write(f"{obj}\t{sub}\t{rel_type}\t{pubs}\n")
 
 
 # The main process.

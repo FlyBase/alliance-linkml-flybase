@@ -266,14 +266,7 @@ class CassetteHandler(FeatureHandler):
 
             # Adjust allele-gene relation_type as needed.
 
-            self.log.debug(f"BOB: cas cass rel: {cassette_cassette_rels}")
-            self.log.debug(f"BOB: chado_obj: {cassette_cassette_rels[0].chado_obj}")
-            self.log.debug(f"BOB: chado_obj: {dir(cassette_cassette_rels[0].chado_obj)}")
-            self.log.debug(f"BOB: chado_obj: {cassette_cassette_rels[0].chado_obj.type}")
-            self.log.debug(f"BOB: chado_obj: {dir(cassette_cassette_rels[0].chado_obj.type)}")
-            # rel_type_name = 'compatible_tool'
             rel_type_name = cassette_cassette_rels[0].chado_obj.type.name
-            # self.log.debug(f"BOB: cassette_cassette_rels[0]: {cassette_cassette_rels[0]}")
             rel_dto = agr_datatypes.CassetteAssociationDTO(
                 subject_curie, object_curie,
                 pub_curies, False, rel_type_name)
@@ -298,8 +291,6 @@ class CassetteHandler(FeatureHandler):
             if relevant_cassette_rels:
                 sub_cassette_counter += 1
             for cassette_rel in relevant_cassette_rels:
-                if self.testing:
-                    self.log.debug(f"BOB: cassette_rel:{cassette_rel}")
                 try:
                     cassette_cassette_key = (cassette_rel.chado_obj.object_id, cassette_rel.chado_obj.subject_id)
                 except AttributeError:
