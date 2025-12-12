@@ -266,7 +266,7 @@ class CassetteHandler(FeatureHandler):
 
             # Adjust allele-gene relation_type as needed.
             rel_type_name = 'compatible_tool'
-            rel_dto = agr_datatypes.TransgenicToolAssociationDTO(
+            rel_dto = agr_datatypes.CassetteAssociationDTO(
                 subject_curie, object_curie,
                 pub_curies, False, rel_type_name)
             if f_object.is_obsolete is True or subject['is_obsolete'] is True:

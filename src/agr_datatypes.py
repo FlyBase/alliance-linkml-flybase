@@ -121,6 +121,19 @@ class CassetteDTO(GenomicEntityDTO):
         self.required_fields.remove('taxon_curie')  # Does not have it!
 
 
+class CassetteAssociationDTO(AuditedObjectDTO):
+    """CassetteAssociationDTO class."""
+    def __init__(self, cassette_association_subject, cassette_association_object,
+                 pub_curies, obsolete, relation):
+        """Create TransgenicToolAssociationDTO for FlyBase object."""
+        super().__init__()
+        self.cassette_association_subject = cassette_association_subject
+        self.cassette_cassette_association_object = cassette_association_object
+        self.evidence = pub_curies
+        self.obsolete = obsolete
+        self.relation = relation
+
+
 class GeneDTO(GenomicEntityDTO):
     """GeneDTO class."""
     def __init__(self):
