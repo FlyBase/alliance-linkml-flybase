@@ -195,7 +195,7 @@ class CassetteHandler(FeatureHandler):
         self.map_entity_props_to_notes('cassette_prop_to_note_mapping')
         # self.map_xrefs()
         self.map_secondary_ids('secondary_identifiers')
-        self.map_casstte_associations()
+        self.map_cassette_associations()
 
     # Add methods to be run by map_fb_data_to_alliance() below.
     def map_cassette_basic(self):
