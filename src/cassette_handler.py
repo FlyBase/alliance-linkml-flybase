@@ -265,7 +265,7 @@ class CassetteHandler(FeatureHandler):
             pub_curies = self.lookup_pub_curies(all_pub_ids)
 
             # Adjust allele-gene relation_type as needed.
-            rel_type_name = 'compatible_tool'
+            rel_type_name = cassette_cassette_rels[0]
             rel_dto = agr_datatypes.CassetteAssociationDTO(
                 subject_curie, object_curie,
                 pub_curies, False, rel_type_name)
