@@ -256,7 +256,7 @@ class CassetteHandler(FeatureHandler):
             subject_curie = f'FB:{subject["uniquename"]}'
             first_feat_rel = cassette_cassette_rels[0]
             all_pub_ids = []
-            for cassette_cassette_rel in cassette_cassette_rels:
+            for cassette_cassette_rel in cassette_cassette_rels[0]:
                 all_pub_ids.extend(cassette_cassette_rel.pubs)
             first_feat_rel.pubs = all_pub_ids
             # NOTE: pub 383755 | FlyBase Experimental Tool information Is the only one used
@@ -265,7 +265,10 @@ class CassetteHandler(FeatureHandler):
             pub_curies = self.lookup_pub_curies(all_pub_ids)
 
             # Adjust allele-gene relation_type as needed.
-            rel_type_name = cassette_cassette_rels[0]
+            rel_type_name = 'compatible_tool'
+            self.log.debug(f"BOB: cas cass rel: {cassette_cassette_rels}")
+            self.log.debug(f"BOB: cassette_cassette_rels[0]: {cassette_cassette_rels[0]}")
+
             rel_dto = agr_datatypes.CassetteAssociationDTO(
                 subject_curie, object_curie,
                 pub_curies, False, rel_type_name)
