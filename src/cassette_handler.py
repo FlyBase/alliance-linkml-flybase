@@ -267,6 +267,7 @@ class CassetteHandler(FeatureHandler):
             # Adjust allele-gene relation_type as needed.
             rel_type_name = 'compatible_tool'
             self.log.debug(f"BOB: cas cass rel: {cassette_cassette_rels}")
+            self.log.debug(f"BOB: chado_obj: {cassette_cassette_rels.chado_obj}")
             self.log.debug(f"BOB: cassette_cassette_rels[0]: {cassette_cassette_rels[0]}")
             rel_dto = agr_datatypes.CassetteAssociationDTO(
                 subject_curie, object_curie,
