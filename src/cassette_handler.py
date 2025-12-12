@@ -194,6 +194,8 @@ class CassetteHandler(FeatureHandler):
         self.map_data_provider_dto()
         self.map_entity_props_to_notes('cassette_prop_to_note_mapping')
         # self.map_xrefs()
+        self.map_secondary_ids('secondary_identifiers')
+        self.map_casstte_associations()
 
     # Add methods to be run by map_fb_data_to_alliance() below.
     def map_cassette_basic(self):
@@ -231,16 +233,65 @@ class CassetteHandler(FeatureHandler):
 
         return
 
+    def map_cassette_associations(self):
+        """Map transgenic cassette associations to Alliance object."""
+        self.log.info('Map cassette associations to Alliance object.')
+        OBJECT = 0
+        SUBJECT = 1
+        counter = 0
+
+        cassette_cassette_counter = {}
+        for cassette_cassette_key in self.cassette_cassette_rels.keys():
+            self.log.debug(f'Mapping {cassette_cassette_key} to Alliance object. {self.cassette_cassette_rels[cassette_cassette_key]}')
+            try:
+                cassette_cassette_counter[cassette_cassette_key[OBJECT]] += 1
+            except KeyError:
+                cassette_cassette_counter[cassette_cassette_key[OBJECT]] = 1
+
+        for cassette_cassette_key, cassette_cassette_rels in self.cassette_cassette_rels.items():
+            object_feature_id = cassette_cassette_key[OBJECT]
+            f_object = self.fb_data_entities[object_feature_id]
+            object_curie = f'FB:{f_object.uniquename}'
+            subject = self.feature_lookup[cassette_cassette_key[SUBJECT]]
+            subject_curie = f'FB:{subject["uniquename"]}'
+            first_feat_rel = cassette_cassette_rels[0]
+            all_pub_ids = []
+            for cassette_cassette_rel in cassette_cassette_rels:
+                all_pub_ids.extend(cassette_cassette_rel.pubs)
+            first_feat_rel.pubs = all_pub_ids
+            # NOTE: pub 383755 | FlyBase Experimental Tool information Is the only one used
+            # for cassettes. But not in lookup pub curies!
+            # So pub_curies will be empty.
+            pub_curies = self.lookup_pub_curies(all_pub_ids)
+
+            # Adjust allele-gene relation_type as needed.
+            rel_type_name = 'compatible_tool'
+            rel_dto = agr_datatypes.TransgenicToolAssociationDTO(
+                subject_curie, object_curie,
+                pub_curies, False, rel_type_name)
+            if f_object.is_obsolete is True or subject['is_obsolete'] is True:
+                rel_dto.obsolete = True
+                rel_dto.internal = True
+            first_feat_rel.linkmldto = rel_dto
+            self.cassette_associations.append(first_feat_rel)
+            counter += 1
+        self.log.info(f'Generated {counter} cassette-cassette unique associations.')
+        return
+
     def synthesize_cassette_associations(self):
         """Get cassette relationships."""
         self.log.info('Synthesize cassette.')
         sub_cassette_counter = 0
         obj_cassette_counter = 0
         for cassette in self.fb_data_entities.values():
-            relevant_cassette_rels = cassette.recall_relationships(self.log, entity_role='subject', rel_types='has_reg_region')
+            relevant_cassette_rels = cassette.recall_relationships(
+                self.log, entity_role='subject',
+                rel_types=['has_reg_region', 'tagged_with', 'carries_tool'])
             if relevant_cassette_rels:
                 sub_cassette_counter += 1
             for cassette_rel in relevant_cassette_rels:
+                if self.testing:
+                    self.log.debug(f"BOB: cassette_rel:{cassette_rel}")
                 try:
                     cassette_cassette_key = (cassette_rel.chado_obj.object_id, cassette_rel.chado_obj.subject_id)
                 except AttributeError:
