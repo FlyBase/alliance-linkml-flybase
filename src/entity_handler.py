@@ -340,8 +340,6 @@ class PrimaryEntityHandler(DataHandler):
             rel_id = getattr(rel_result, f'{chado_type}_relationship_id')
             rel_dict[rel_id] = fb_datatypes.FBRelationship(rel_result, f'{chado_type}_relationship')
             rel_counter += 1
-            if self.testing:
-                self.log.debug(f"BOB: FR {rel_id} {rel_result}")
         self.log.debug(f'Found {rel_counter} {chado_type}_relationships where the {self.datatype} is the {role}.')
         # Phase 2. Get pubs supporting relationships.
         if chado_rel_pub_table is None:

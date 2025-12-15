@@ -112,8 +112,6 @@ def generate_association_tsv_file(export_dict, filename):
     with open(filename, 'w') as outfile:
         outfile.write("# Object curie\tSubject curie\tPub\n")
         for entity_dict in export_dict['cassette_association_ingest_set']:
-            log.debug(f"BOB: entity_dict: {entity_dict} ")
-            log.debug(f"BOB: entity_dict keys: {entity_dict.keys()}")
             obj = entity_dict['cassette_cassette_association_object']
             sub = entity_dict['cassette_association_subject']
             rel_type = entity_dict['relation']
