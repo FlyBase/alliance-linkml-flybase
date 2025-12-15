@@ -316,6 +316,13 @@ class PrimaryEntityHandler(DataHandler):
         if filters == ():
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
+
+
+        # if bob:
+        #     # Only get for those we are interested in i.e. in self.fb_data_entities
+        #     self.log.error(f"BOBBOB2 : {self.fb_data_entities.keys()}")
+        #     filters += (chado_table.feature_id.in_((self.fb_data_entities.keys())),)
+
         if self.datatype in self.feature_subtypes.keys():
             rel_results = session.query(chado_rel_table).\
                 select_from(primary_entity).\
@@ -377,11 +384,6 @@ class PrimaryEntityHandler(DataHandler):
         if chado_type == 'feature':
             # First get feature_relationshipprops.
             filters += (rel_type.name.not_in((['orthologous_to', 'paralogous_to'])), )
-
-            # Only get for those we are interested in i.e. in self.fb_data_entities
-            self.log.error(f"BOBBOB2 : {self.fb_data_entities.keys()}")
-            filters += (chado_table.feature_id.in_((self.fb_data_entities.keys())),)
-
             rel_prop_results = session.query(FeatureRelationshipprop).\
                 select_from(primary_entity).\
                 join(primary_entity_type, (primary_entity_type.cvterm_id == primary_entity.type_id)).\
@@ -428,6 +430,8 @@ class PrimaryEntityHandler(DataHandler):
         for rel_id, rel in rel_dict.items():
             # First associate the relationship with the entity.
             entity_id = getattr(rel.chado_obj, f'{role}_id')
+            if entity_id not in self.fb_data_entities[entity_id].keys():
+                continue
             self.fb_data_entities[entity_id].rels_by_id[rel_id] = rel
             # Then sort the relationship into the appropriate relationship type bucket.
             rel_type = rel.chado_obj.type.name
@@ -689,6 +693,8 @@ class PrimaryEntityHandler(DataHandler):
         for prop in prop_dict.values():
             # Assign the prop to the appropriate entity.
             subject_id = getattr(prop.chado_obj, subject_key_name)
+            if subject_id not in self.fb_data_entities:
+                continue
             try:
                 self.fb_data_entities[subject_id].props_by_type[prop.chado_obj.type.name].append(prop)
                 assignment_counter += 1
