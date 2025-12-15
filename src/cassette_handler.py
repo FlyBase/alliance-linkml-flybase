@@ -162,6 +162,19 @@ class CassetteHandler(FeatureHandler):
         self.map_secondary_ids('secondary_identifiers')
         self.map_cassette_associations()
 
+    def map_secondary_ids(self, slot_name):
+        """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for a FlyBase entity."""
+        self.log.info('Map secondary IDs to Alliance object.')
+        for fb_data_entity in self.fb_data_entities.values():
+            if fb_data_entity.linkmldto is None:
+                continue
+            secondary_id_dtos = []
+            for secondary_id in fb_data_entity.alt_fb_ids:
+                secondary_id_dtos.append(secondary_id)
+            sec_id_list = getattr(fb_data_entity.linkmldto, slot_name)
+            sec_id_list.extend(secondary_id_dtos)
+        return
+
     # Add methods to be run by map_fb_data_to_alliance() below.
     def map_cassette_basic(self):
         """Map basic FlyBase transgenic cassette data to the Alliance LinkML object."""
