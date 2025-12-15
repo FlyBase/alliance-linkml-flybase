@@ -15,7 +15,7 @@ from logging import Logger
 from sqlalchemy.orm import aliased
 from harvdev_utils.reporting import (
     Cvterm, Db, Dbxref, Featureloc, Feature, FeatureDbxref, FeatureRelationship,
-    Library, LibraryFeature, LibraryFeatureprop
+    FeatureCvterm, Library, LibraryFeature, LibraryFeatureprop
 )
 import agr_datatypes
 from entity_handler import PrimaryEntityHandler
@@ -312,3 +312,70 @@ class FeatureHandler(PrimaryEntityHandler):
             curr_sec_id_dtos = getattr(fb_data_entity.linkmldto, slot_name)
             curr_sec_id_dtos.extend(anno_secondary_id_dtos)
         return anno_secondary_id_dtos
+
+    def get_cassettes_in_vitro_entries(self, session):
+        filters = (
+            Feature.is_obsolete.is_(False),
+            Feature.uniquename.op('~')(self.regex['allele']),
+            Cvterm.name == 'in vitro construct',
+        )
+        if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
+            filters += (Feature.uniquename.in_((self.test_set.keys())), )
+        results = session.query(Feature). \
+            select_from(Feature). \
+            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)). \
+            join(Cvterm, (Cvterm.cvterm_id == FeatureCvterm.cvterm_id)). \
+            filter(*filters). \
+            distinct()
+        return results
+
+    def get_cassette_main_entities(self, session, reference_set):
+        if self.datatype in self.feat_type_export.keys():
+            chado_type = 'feature'
+        else:
+            chado_type = self.datatype
+
+        if reference_set is True:
+            mess = f'Get {self.datatype} data entities from {chado_type}'
+            mess += ' table (previous reference db for incremental update).'
+            self.log.info(mess)
+        else:
+            self.log.info(f'Get {self.datatype} data entities from {chado_type} table.')
+
+        feat_object = aliased(Feature)
+        rel_type = aliased(Cvterm)
+        chado_table = self.chado_tables['main_table'][chado_type]
+
+        filters = ()
+        # Subject is the allele and has s specific regex.
+        filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
+        # Allele is not obsolete
+        filters += (chado_table.is_obsolete.is_(False), )
+        # Object should be a FBtp object (construct)
+        filters += (feat_object.uniquename.op('~')(self.regex['construct']), )
+        # Construct is not obsolete
+        filters += (feat_object.is_obsolete.is_(False),)
+        # 'associated_with' in relationship table
+        filters += (rel_type.name == 'associated_with', )
+
+        if self.datatype in self.feature_subtypes.keys():
+            sub = self.feature_subtypes[self.datatype]
+            self.log.info(f'Filter main table by these feature_subtypes: {sub}')
+            filters += (Cvterm.name.in_((self.feature_subtypes[self.datatype])), )
+        if self.testing:
+            self.log.info(f'TESTING: limit to these entities: {self.test_set.keys()}')
+            filters += (chado_table.uniquename.in_((self.test_set.keys())), )
+        if filters == ():
+            self.log.warning('Have no filters for the main FlyBase entity driver query.')
+            raise
+
+        results = session.query(chado_table).\
+            select_from(chado_table).\
+            join(Cvterm, (Cvterm.cvterm_id == chado_table.type_id)).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == chado_table.feature_id)).\
+            join(feat_object, (feat_object.feature_id == FeatureRelationship.object_id)).\
+            join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+        return results
