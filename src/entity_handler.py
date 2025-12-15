@@ -430,7 +430,7 @@ class PrimaryEntityHandler(DataHandler):
         for rel_id, rel in rel_dict.items():
             # First associate the relationship with the entity.
             entity_id = getattr(rel.chado_obj, f'{role}_id')
-            if entity_id not in self.fb_data_entities[entity_id].keys():
+            if entity_id not in self.fb_data_entities:
                 continue
             self.fb_data_entities[entity_id].rels_by_id[rel_id] = rel
             # Then sort the relationship into the appropriate relationship type bucket.
