@@ -78,7 +78,7 @@ class CassetteHandler(FeatureHandler):
         """Extend the method for the CassetteHandler."""
         super().get_general_data(session)
         self.build_bibliography(session)
-        self.build_feature_lookup(session, feature_types=['cassette', 'construct', 'allele', 'tool', 'gene', 'regulatory_region'])
+        self.build_feature_lookup(session, feature_types=['cassette', 'construct', 'allele', 'tool', 'gene', 'seqfeat'])
 
     def get_entities(self, session, **kwargs):
         """Extend the method for the CassetteHandler."""
