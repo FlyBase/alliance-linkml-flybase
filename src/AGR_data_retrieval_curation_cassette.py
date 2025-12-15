@@ -92,9 +92,9 @@ def generate_tsv_file(export_dict, filename):
                 for synonym in entity_dict["cassette_synonym_dtos"]:
                     syns.append(synonym["format_text"])
             if "secondary_identifiers" in entity_dict:
-                secondary_dict = entity_dict["secondary_identifiers"]
-                for sec in secondary_dict:
-                    secondary.append(sec["secondary_id"])
+                secondary = entity_dict["secondary_identifiers"]
+                # for sec in secondary_dict:
+                #     secondary.append(sec["secondary_id"])
             try:
                 outfile.write(f"{primary}\t{symbol}\t{name}\t{'|'.join(secondary)}\t{'|'.join(syns)}\n")
             except TypeError:
