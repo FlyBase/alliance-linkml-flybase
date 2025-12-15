@@ -60,6 +60,7 @@ class CassetteHandler(FeatureHandler):
         'FBal0212171': r'Avic\GFP[UAS.FRT1]',  # in vitro only
         'FBal0290956': 'Csas[21]',  # in vitro only
         'FBal0392043': r'Avic\GFP[EYFP.3xP3.cUa]',  # in vitro only
+        'FBal0028610': 'w[+mC]',    # Has a secondary identifier to test
     }
 
     cassette_prop_to_note_mapping = {
