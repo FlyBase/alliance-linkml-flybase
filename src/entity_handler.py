@@ -317,7 +317,6 @@ class PrimaryEntityHandler(DataHandler):
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
 
-
         # if bob:
         #     # Only get for those we are interested in i.e. in self.fb_data_entities
         #     self.log.error(f"BOBBOB2 : {self.fb_data_entities.keys()}")
@@ -460,6 +459,8 @@ class PrimaryEntityHandler(DataHandler):
         feat_type_skipped = 0
         for rel_id, rel in rel_dict.items():
             entity_id = getattr(rel.chado_obj, f'{role}_id')
+            if entity_id not in self.fb_data_entities:
+                continue
             entity_rel_dict = getattr(self.fb_data_entities[entity_id], role_feature_type_buckets[role])
             rel_feat_id = getattr(rel.chado_obj, f'{role_inverse[role]}_id')
             try:
