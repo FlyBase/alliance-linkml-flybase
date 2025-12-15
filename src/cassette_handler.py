@@ -15,7 +15,6 @@ from logging import Logger
 import agr_datatypes
 import fb_datatypes
 from feature_handler import FeatureHandler
-from sqlalchemy.orm import aliased
 
 
 class CassetteHandler(FeatureHandler):
@@ -30,6 +29,27 @@ class CassetteHandler(FeatureHandler):
         self.incremental_update = False
 
     test_set = {
+        'FBal0386858': 'SppL[CR70402-TG4.1]',   # Insertion allele superceded by FBti0226866 (superseded_by_at_locus_insertion).
+        'FBal0386745': 'Scer_GAL4[SppL...]',    # Insertion allele superceded by FBti0226866 too (superseded_by_at_locus_insertion).
+        'FBal0137236': 'gukh[142]',             # Insertion allele superceded by FBti0000040 (superseded_by_at_locus_insertion).
+        'FBal0137618': 'Xrp1[142]',             # Insertion allele superceded by FBti0000040 too (superseded_by_at_locus_insertion).
+        'FBal0036007': 'wg[en11]',              # Insertion allele superceded by FBti0002065 (superseded_by_at_locus_insertion).
+        'FBal0018482': 'wg[1]',                 # X-ray mutation.
+        'FBal0015148': 'Sb[Spi]',               # point mutation.
+        'FBal0043981': 'Ecol_lacZ[en-14]',      # Has an allele full name. Relationship to ARG has no pub support, superceded by FBti0002067.
+        'FBal0279489': 'Scer_GAL4[how-24B]',    # Has a 2o ID, superceded by FBti0150063.
+        'FBal0000010': 'alphaTub67C[3]',        # Has semidominant annotation from single locus homozygous genotype.
+        'FBal0403680': 'Atg8a[3-31]',           # Has recessive annotation from single locus homozygous genotype.
+        'FBal0011189': 'sti[1]',                # Has recessive annotation from single locus hemizygous genotype over a deficiency.
+        'FBal0007942': '18w[00053]',            # Has recessive annotation from single locus unspecified zygosity genotype.
+        'FBal0015410': 'sei[2]',                # Has codominant annotation from single locus unspecified zygosity genotype.
+        'FBal0198096': 'tal[1]',                # Allele of internal type gene tal (gene_with_polycistronic_transcript).
+        'FBal0055793': 'wg[UAS.Tag:HA]',        # Allele is directly related to a construct, superceded by FBti0256568 (superseded_by_transgnc_insertions).
+        'FBal0048226': 'Dmau_w[a23]',           # Non-Dmel allele related to non-Dmel insertion, superceded by FBti0014970 (superseded_by_at_locus_insertion).
+        'FBal0011649': 'Dsim_Lhr[1]',           # Non-Dmel classical allele.
+        'FBal0043132': 'Hsap_MAPT[UAS.cAa]',    # Transgenic, superceded by FBti0000969, FBti0249419 (superseded_by_transgnc_insertions).
+        'FBal0062057': 'Scer_CDC42[V12.hs]',    # Transgenic, superceded by FBti0012506, FBti0249909 (superseded_by_transgnc_insertions).
+        'FBal0198528': 'CG33269[HMJ22303]',     # Transegnic, superceded by four FBti (superseded_by_transgnc_insertions).
         'FBal0322755': 'Mcm3[+tBa]',
         'FBal0322754': 'flfl[DeltaRanBD.UAS.Venus]',
         'FBal0296109': 'sSemp1[R41G.UAS]',

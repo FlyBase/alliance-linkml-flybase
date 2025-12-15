@@ -314,6 +314,7 @@ class FeatureHandler(PrimaryEntityHandler):
         return anno_secondary_id_dtos
 
     def get_cassettes_in_vitro_entries(self, session):
+        """Get chado results for Cassettes of type in vitro."""
         filters = (
             Feature.is_obsolete.is_(False),
             Feature.uniquename.op('~')(self.regex['allele']),
@@ -331,6 +332,7 @@ class FeatureHandler(PrimaryEntityHandler):
         return results
 
     def get_cassette_main_entities(self, session, reference_set):
+        """Get chado results for Cassettes of type main."""
         if self.datatype in self.feat_type_export.keys():
             chado_type = 'feature'
         else:
