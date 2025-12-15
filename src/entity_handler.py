@@ -377,6 +377,11 @@ class PrimaryEntityHandler(DataHandler):
         if chado_type == 'feature':
             # First get feature_relationshipprops.
             filters += (rel_type.name.not_in((['orthologous_to', 'paralogous_to'])), )
+
+            # Only get for those we are interested in i.e. in self.fb_data_entities
+            self.log.error(f"BOBBOB2 : {self.fb_data_entities.keys()}")
+            filters += (chado_table.feature_id.in_((self.fb_data_entities.keys())),)
+
             rel_prop_results = session.query(FeatureRelationshipprop).\
                 select_from(primary_entity).\
                 join(primary_entity_type, (primary_entity_type.cvterm_id == primary_entity.type_id)).\
