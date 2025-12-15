@@ -78,7 +78,7 @@ class CassetteHandler(FeatureHandler):
         """Extend the method for the CassetteHandler."""
         super().get_general_data(session)
         self.build_bibliography(session)
-        self.build_feature_lookup(session, feature_types=['cassette', 'construct', 'allele', 'tool', 'gene'])
+        self.build_feature_lookup(session, feature_types=['cassette', 'construct', 'allele', 'tool', 'gene', 'regulatory_region'])
 
     def get_entities(self, session, **kwargs):
         """Extend the method for the CassetteHandler."""
@@ -206,7 +206,8 @@ class CassetteHandler(FeatureHandler):
 
         cassette_cassette_counter = {}
         for cassette_cassette_key in self.cassette_cassette_rels.keys():
-            self.log.debug(f'Mapping {cassette_cassette_key} to Alliance object. {self.cassette_cassette_rels[cassette_cassette_key]}')
+            if self.testing:
+                self.log.debug(f'Mapping {cassette_cassette_key} to Alliance object. {self.cassette_cassette_rels[cassette_cassette_key]}')
             try:
                 cassette_cassette_counter[cassette_cassette_key[OBJECT]] += 1
             except KeyError:
