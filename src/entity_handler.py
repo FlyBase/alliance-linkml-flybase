@@ -1040,6 +1040,7 @@ class PrimaryEntityHandler(DataHandler):
                 continue
             secondary_id_dtos = []
             for secondary_id in fb_data_entity.alt_fb_ids:
+                self.log.debug(f"BOB: map_secondary_ids {secondary_id}")
                 sec_dto = agr_datatypes.SecondaryIdSlotAnnotationDTO(secondary_id, []).dict_export()
                 secondary_id_dtos.append(sec_dto)
             sec_id_list = getattr(fb_data_entity.linkmldto, slot_name)
