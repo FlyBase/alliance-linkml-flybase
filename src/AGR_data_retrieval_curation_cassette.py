@@ -92,15 +92,18 @@ def generate_tsv_file(export_dict, filename):
                 for synonym in entity_dict["cassette_synonym_dtos"]:
                     syns.append(synonym["format_text"])
             if "secondary_identifiers" in entity_dict:
-                secondary = entity_dict["secondary_identifiers"]
+                secondary_dict = entity_dict["secondary_identifiers"]
+                for sec in secondary_dict:
+                    secondary.append(sec["secondary_id"])
             try:
                 outfile.write(f"{primary}\t{symbol}\t{name}\t{'|'.join(secondary)}\t{'|'.join(syns)}\n")
             except TypeError:
+                log.error(f"entity_dict: {entity_dict}")
                 log.error(f"primary: {primary}")
                 log.error(f"secondary {secondary}")
                 log.error(f"symbol: {symbol}")
-                log.erro(f"name: {name}")
-                log.error(f" syns: {syns}")
+                log.error(f"name: {name}")
+                log.error(f"syns: {syns}")
                 raise
 
     filename = filename.replace('.tsv', '_notes.tsv')
