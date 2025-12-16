@@ -184,9 +184,9 @@ def main():
                 # raise ValueError(f'The "{set_name}" is unexpectedly empty.')
                 continue
             # Print the output file.
-            association_output_filename = output_filename.replace('cassette', f'cassette_{set_name}_association')
+            association_output_filename = output_filename.replace('cassette', f'{set_name}_association')
             generate_export_file(association_export_dict, log, association_output_filename)
-            tsv_filename = f'cassette_{set_name}_association.tsv'
+            tsv_filename = association_output_filename.replace('.json', '.tsv')
             generate_association_tsv_file(association_export_dict, tsv_filename)
     log.info('Ended main function.\n')
 
