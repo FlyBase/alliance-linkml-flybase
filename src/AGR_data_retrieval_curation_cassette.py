@@ -163,21 +163,27 @@ def main():
 
     ignore = False
     if not reference_session and not ignore:
-        # Export cassette_associations to a separate file.
-        association_output_filename = output_filename.replace('cassette', 'cassette_association')
+        # Export cassette_associations to a separate files.
         association_export_dict = {
             'linkml_version': linkml_release,
             'alliance_member_release_version': database_release,
         }
         # cassette_cassetteassociations.
-        association_export_dict['cassette_association_ingest_set'] = []
-        association_export_dict['cassette_association_ingest_set'].extend(cassette_handler.export_data['cassette_association_ingest_set'])
-        if len(association_export_dict['cassette_association_ingest_set']) == 0:
-            log.error('The "cassette_association_ingest_set" is unexpectedly empty.')
-            raise ValueError('The "cassette_association_ingest_set" is unexpectedly empty.')
-        # Print the output file.
-        generate_export_file(association_export_dict, log, association_output_filename)
-        generate_association_tsv_file(association_export_dict, set_up_dict['output_filename'])
+        # cassette_component_free_associations = []
+        # cassette_tool_associations = []
+        # cassette_genomic_entity_associations = []
+        for sub_type in ('component_free', 'tool', 'genomic_entity'):
+            set_name = f"cassette_{sub_type}_association_ingest_set"
+            association_export_dict[set_name] = []
+            association_export_dict[set_name].extend(cassette_handler.export_data[set_name])
+            if len(association_export_dict[set_name]) == 0:
+                log.error(f'The "{set_name}" is unexpectedly empty.')
+                raise ValueError(f'The "{set_name}" is unexpectedly empty.')
+            # Print the output file.
+            association_output_filename = output_filename.replace('cassette', f'cassette_{set_name}_association')
+            generate_export_file(association_export_dict, log, association_output_filename)
+            tsv_filename = f'cassette_{set_name}_association.tsv'
+            generate_association_tsv_file(association_export_dict, tsv_filename)
     log.info('Ended main function.\n')
 
 
