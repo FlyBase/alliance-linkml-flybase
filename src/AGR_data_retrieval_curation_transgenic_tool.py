@@ -114,7 +114,7 @@ def generate_association_tsv_file(export_dict, filename):
             obj = entity_dict['transgenic_tool_object_identifier']
             sub = entity_dict['transgenic_tool_subject_identifier']
             # pubs = "|".join(entity_dict['evidence'])
-            rel = entity_dict['transgenic_tool_relation_name']
+            rel = entity_dict['relation_name']
             outfile.write(f"{obj}\t{sub}\t{rel}\n")
 
 
