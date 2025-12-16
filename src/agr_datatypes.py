@@ -125,7 +125,7 @@ class CassetteAssociationDTO(AuditedObjectDTO):
     """CassetteAssociationDTO class."""
     def __init__(self, cassette_association_subject, cassette_association_object,
                  pub_curies, obsolete, relation):
-        """Create TransgenicToolAssociationDTO for FlyBase object."""
+        """Create CassetteAssociationDTO for FlyBase object."""
         super().__init__()
         self.cassette_association_subject = cassette_association_subject
         self.cassette_cassette_association_object = cassette_association_object

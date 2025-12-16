@@ -218,6 +218,12 @@ class CassetteHandler(FeatureHandler):
         SUBJECT = 0
         counter = 0
 
+        # feature_relationship, type 'has_reg_region' -> Alliance 'is_regulated_by'
+        # feature_relationship, type 'tagged_with' -> Alliance 'tagged_with'
+        # feature_relationship, type 'carries_tool'-> Alliance 'contains'
+        map_relationship = {'has_reg_region': 'is_regulated_by',
+                            'tagged_with': 'tagged_with',
+                            'carries_tool': 'contains'}
         cassette_cassette_counter = {}
         for cassette_cassette_key in self.cassette_cassette_rels.keys():
             if self.testing:
@@ -227,6 +233,7 @@ class CassetteHandler(FeatureHandler):
             except KeyError:
                 cassette_cassette_counter[cassette_cassette_key[OBJECT]] = 1
 
+        bad_relationship_count = {}
         for cassette_cassette_key, cassette_cassette_rels in self.cassette_cassette_rels.items():
             object_feature_id = cassette_cassette_key[OBJECT]
             f_object = self.fb_data_entities[object_feature_id]
@@ -246,6 +253,13 @@ class CassetteHandler(FeatureHandler):
             # Adjust allele-gene relation_type as needed.
 
             rel_type_name = cassette_cassette_rels[0].chado_obj.type.name
+            if rel_type_name in map_relationship:
+                rel_type_name = map_relationship[rel_type_name]
+            else:
+                if rel_type_name not in bad_relationship_count:
+                    bad_relationship_count[rel_type_name] = 0
+                bad_relationship_count[rel_type_name] += 1
+                continue
             rel_dto = agr_datatypes.CassetteAssociationDTO(
                 subject_curie, object_curie,
                 pub_curies, False, rel_type_name)
@@ -255,6 +269,8 @@ class CassetteHandler(FeatureHandler):
             first_feat_rel.linkmldto = rel_dto
             self.cassette_associations.append(first_feat_rel)
             counter += 1
+        for key in bad_relationship_count:
+            self.log.error(f'Bad relationship count for {key}: {bad_relationship_count[key]}')
         self.log.info(f'Generated {counter} cassette-cassette unique associations.')
         return
 
