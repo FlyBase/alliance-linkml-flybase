@@ -194,14 +194,33 @@ class CassetteHandler(FeatureHandler):
         self.get_entity_synonyms(session)
         self.get_entity_fb_xrefs(session)
         # self.get_entity_xrefs(session)
-        # Text form From FTA-134 next 3 lines:-
-        # feature_relationship, type 'has_reg_region', subject = FBal, object in (FBto, FBsf, FBgn) # from GA30e field
-        # feature_relationship, type 'tagged_with', subject = FBal, object in (FBto, FBsf) # from GA30a field
-        # feature_relationship, type 'carries_tool' subject = FBal, object in (FBto, FBsf) # from GA30b field
-
         self.get_entity_relationships(session, 'subject')
-        # , rel_type)='has_reg_region',
-        #                             entity_type='engineered_region', entity_regex=self.regex['tool'])
+
+    def cassette_dto_type(self, feature):
+        self.log.debug("BOB: {feature}")
+
+        assoc_type = 'component_free_text'
+        # logic to decide which type of Alliance DTO object to use
+        if feature["uniquename"].startswith('FBto'):  # cassette component is a TransgenicTool (FBid is a FBto):
+            assoc_type = 'tool_association'
+
+        elif feature["uniquename"].startswith('FBsf'):  # cassette component is a seqfeat (FBid is a FBsf):
+            assoc_type = 'component_free_text'  # for now, will change to a CassetteGenomicEntityAssociationDTO once we start to submit FBsf features, so keep this loop in place for then even though at the moment its not actually changing the type !
+
+        elif feature["uniquename"].startswith('FBgn'):  # cassette component is a gene (FBid is a FBgn):
+            assoc_type =  'genomic_entity_association'
+            # if the gene is from another Alliance MOD species AND
+            # there is an unambigous mapping of the FBgn to a single Alliance MOD curie:
+            #    unless the gene is typically_used_as_tool:
+            #    type = 'genomic_entity_association'
+            #    # replace the original obj_curie with the single Alliance MOD curie to use
+            #      when the genomic_entity_association is made later
+            #    obj_curie = the single Alliance MOD curie
+            # else:
+            #    if the gene is being exported to the Alliance:
+            #        unless the gene is being submitted as 'internal':
+            #            type = 'genomic_entity_association'
+        return assoc_type
 
     # Elaborate on query_chado_and_export() for the CassetteHandler.
     def query_chado_and_export(self, session):
@@ -260,6 +279,9 @@ class CassetteHandler(FeatureHandler):
                     bad_relationship_count[rel_type_name] = 0
                 bad_relationship_count[rel_type_name] += 1
                 continue
+            assoc_type = self.cassette_dto_type(subject)
+            if assoc_type == 'component_free_text':
+                pass
             rel_dto = agr_datatypes.CassetteAssociationDTO(
                 subject_curie, object_curie,
                 pub_curies, False, rel_type_name)
