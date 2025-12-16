@@ -197,7 +197,8 @@ class CassetteHandler(FeatureHandler):
         self.get_entity_relationships(session, 'subject')
 
     def cassette_dto_type(self, feature):
-        self.log.debug("BOB: {feature}")
+        """Derive association type from the feature."""
+        self.log.debug(f"BOB: {feature}")
 
         assoc_type = 'component_free_text'
         # logic to decide which type of Alliance DTO object to use
@@ -205,10 +206,12 @@ class CassetteHandler(FeatureHandler):
             assoc_type = 'tool_association'
 
         elif feature["uniquename"].startswith('FBsf'):  # cassette component is a seqfeat (FBid is a FBsf):
-            assoc_type = 'component_free_text'  # for now, will change to a CassetteGenomicEntityAssociationDTO once we start to submit FBsf features, so keep this loop in place for then even though at the moment its not actually changing the type !
+            assoc_type = 'component_free_text'  # for now, will change to a CassetteGenomicEntityAssociationDTO
+            # once we start to submit FBsf features, so keep this loop in place for then even though at the
+            # moment its not actually changing the type !
 
         elif feature["uniquename"].startswith('FBgn'):  # cassette component is a gene (FBid is a FBgn):
-            assoc_type =  'genomic_entity_association'
+            assoc_type = 'genomic_entity_association'
             # if the gene is from another Alliance MOD species AND
             # there is an unambigous mapping of the FBgn to a single Alliance MOD curie:
             #    unless the gene is typically_used_as_tool:
@@ -237,9 +240,6 @@ class CassetteHandler(FeatureHandler):
         SUBJECT = 0
         counter = 0
 
-        # feature_relationship, type 'has_reg_region' -> Alliance 'is_regulated_by'
-        # feature_relationship, type 'tagged_with' -> Alliance 'tagged_with'
-        # feature_relationship, type 'carries_tool'-> Alliance 'contains'
         map_relationship = {'has_reg_region': 'is_regulated_by',
                             'tagged_with': 'tagged_with',
                             'carries_tool': 'contains'}
@@ -282,6 +282,8 @@ class CassetteHandler(FeatureHandler):
             assoc_type = self.cassette_dto_type(subject)
             if assoc_type == 'component_free_text':
                 pass
+            if self.testing:
+                self.log.debug(f"assoc type is {assoc_type}")
             rel_dto = agr_datatypes.CassetteAssociationDTO(
                 subject_curie, object_curie,
                 pub_curies, False, rel_type_name)
