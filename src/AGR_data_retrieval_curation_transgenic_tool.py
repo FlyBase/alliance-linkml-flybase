@@ -156,11 +156,12 @@ def main():
             'alliance_member_release_version': database_release,
         }
         # tool_tool associations.
-        association_export_dict['tool_association_ingest_set'] = []
-        association_export_dict['tool_association_ingest_set'].extend(tool_handler.export_data['tool_association_ingest_set'])
-        if len(association_export_dict['tool_association_ingest_set']) == 0:
-            log.error('The "tool_association_ingest_set" is unexpectedly empty.')
-            raise ValueError('The "tool_association_ingest_set" is unexpectedly empty.')
+        assoc = 'transgenic_tool_transgenic_tool_association_ingest_set'
+        association_export_dict[assoc] = []
+        association_export_dict[assoc].extend(tool_handler.export_data['tool_association_ingest_set'])
+        if len(association_export_dict[assoc]) == 0:
+            log.error(f'The "{assoc}" is unexpectedly empty.')
+            raise ValueError(f'The "{assoc}" is unexpectedly empty.')
         # Print the output file.
         generate_export_file(association_export_dict, log, association_output_filename)
         generate_association_tsv_file(association_export_dict, set_up_dict['output_filename'])
