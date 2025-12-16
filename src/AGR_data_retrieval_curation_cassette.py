@@ -178,7 +178,7 @@ def main():
             set_name = f"cassette_{sub_type}_associations"
             ingest_name = f"{set_name}_ingest_set"
             association_export_dict[ingest_name] = []
-            association_export_dict[ingest_name].extend(cassette_handler.export_data[set_name])
+            association_export_dict[ingest_name].extend(cassette_handler.export_data[ingest_name])
             if len(association_export_dict[ingest_name]) == 0:
                 log.error(f'The "{set_name}" is unexpectedly empty.')
                 raise ValueError(f'The "{set_name}" is unexpectedly empty.')
