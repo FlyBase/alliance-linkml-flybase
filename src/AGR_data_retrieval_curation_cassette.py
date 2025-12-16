@@ -181,7 +181,8 @@ def main():
             association_export_dict[ingest_name].extend(cassette_handler.export_data[ingest_name])
             if len(association_export_dict[ingest_name]) == 0:
                 log.error(f'The "{set_name}" is unexpectedly empty.')
-                raise ValueError(f'The "{set_name}" is unexpectedly empty.')
+                # raise ValueError(f'The "{set_name}" is unexpectedly empty.')
+                continue
             # Print the output file.
             association_output_filename = output_filename.replace('cassette', f'cassette_{set_name}_association')
             generate_export_file(association_export_dict, log, association_output_filename)
