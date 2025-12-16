@@ -72,7 +72,10 @@ class CassetteHandler(FeatureHandler):
         # At the moment, just for code development. (line below)
         # 'internal_notes': ('internal_note', 'note_dtos'),
     }
-    cassette_associations = []
+    cassette_associations = []  # Should delete this one later
+    cassette_component_free_associations = []
+    cassette_tool_associations = []
+    cassette_genomic_entity_associations = []
     cassette_cassette_rels = {}
 
     def get_general_data(self, session):
@@ -281,17 +284,34 @@ class CassetteHandler(FeatureHandler):
                 continue
             assoc_type = self.cassette_dto_type(subject)
             if assoc_type == 'component_free_text':
-                pass
+                # CassetteComponentSlotAnnotationDTO
+                rel_dto = agr_datatypes.CassetteAssociationDTO(
+                    subject_curie, object_curie,
+                    pub_curies, False, rel_type_name)
+                first_feat_rel.linkmldto = rel_dto
+                self.cassette_tool_associations.append(first_feat_rel)
+            elif assoc_type == 'tool_association':
+                # CassetteTransgenicToolAssociationDTO
+                rel_dto = agr_datatypes.CassetteAssociationDTO(  # need to change to above
+                    subject_curie, object_curie,
+                    pub_curies, False, rel_type_name)
+                first_feat_rel.linkmldto = rel_dto
+                self.cassette_tool_associations.append(first_feat_rel)
+            elif assoc_type == 'genomic_entity_association':
+                # CassetteGenomicEntityAssociationDTO
+                rel_dto = agr_datatypes.CassetteAssociationDTO(  # need to change to above
+                    subject_curie, object_curie,
+                    pub_curies, False, rel_type_name)
+                first_feat_rel.linkmldto = rel_dto
+                self.cassette_genomic_entity_associations.append(first_feat_rel)
             if self.testing:
-                self.log.debug(f"assoc type is {assoc_type}")
-            rel_dto = agr_datatypes.CassetteAssociationDTO(
-                subject_curie, object_curie,
-                pub_curies, False, rel_type_name)
+                self.log.debug(f"{object_curie} {subject_curie} assoc type is {assoc_type}")
             if f_object.is_obsolete is True or subject['is_obsolete'] is True:
-                rel_dto.obsolete = True
-                rel_dto.internal = True
-            first_feat_rel.linkmldto = rel_dto
-            self.cassette_associations.append(first_feat_rel)
+                self.log.error(f"{object_curie} {subject_curie} should never be obsolete??")
+                # rel_dto.obsolete = True
+                # rel_dto.internal = True
+            # first_feat_rel.linkmldto = rel_dto
+            # self.cassette_associations.append(first_feat_rel)
             counter += 1
         for key in bad_relationship_count:
             self.log.error(f'Bad relationship count for {key}: {bad_relationship_count[key]}')
