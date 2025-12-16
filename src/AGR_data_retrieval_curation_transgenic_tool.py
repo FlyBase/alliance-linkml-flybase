@@ -111,8 +111,8 @@ def generate_association_tsv_file(export_dict, filename):
     with open(filename, 'w') as outfile:
         outfile.write("# Object curie\tSubject curie\tPub\n")
         for entity_dict in export_dict['transgenic_tool_transgenic_tool_association_ingest_set']:
-            obj = entity_dict['transgenic_tool_association_object']
-            sub = entity_dict['transgenic_tool_association_subject']
+            obj = entity_dict['transgenic_tool_object_identifier']
+            sub = entity_dict['transgenic_tool_subject_identifier']
             pubs = "|".join(entity_dict['evidence'])
             outfile.write(f"{obj}\t{sub}\t{pubs}\n")
 
