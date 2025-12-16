@@ -173,10 +173,11 @@ def main():
         # cassette_tool_associations = []
         # cassette_genomic_entity_associations = []
         for sub_type in ('component_free', 'tool', 'genomic_entity'):
-            set_name = f"cassette_{sub_type}_association_ingest_set"
-            association_export_dict[set_name] = []
-            association_export_dict[set_name].extend(cassette_handler.export_data[set_name])
-            if len(association_export_dict[set_name]) == 0:
+            set_name = f"cassette_{sub_type}_association"
+            ingest_name = f"{set_name}_ingest_set"
+            association_export_dict[ingest_name] = []
+            association_export_dict[ingest_name].extend(cassette_handler.export_data[set_name])
+            if len(association_export_dict[ingest_name]) == 0:
                 log.error(f'The "{set_name}" is unexpectedly empty.')
                 raise ValueError(f'The "{set_name}" is unexpectedly empty.')
             # Print the output file.
