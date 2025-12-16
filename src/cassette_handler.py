@@ -289,7 +289,7 @@ class CassetteHandler(FeatureHandler):
                     subject_curie, object_curie,
                     pub_curies, False, rel_type_name)
                 first_feat_rel.linkmldto = rel_dto
-                self.cassette_tool_associations.append(first_feat_rel)
+                self.cassette_component_free_text_associations.append(first_feat_rel)
             elif assoc_type == 'tool_association':
                 # CassetteTransgenicToolAssociationDTO
                 rel_dto = agr_datatypes.CassetteAssociationDTO(  # need to change to above
