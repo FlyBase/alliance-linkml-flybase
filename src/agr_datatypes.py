@@ -175,7 +175,7 @@ class TransgenicToolAssociationDTO(AuditedObjectDTO):
         super().__init__()
         self.transgenic_tool_subject_identifier = transgenic_tool_subject_identifier
         self.transgenic_tool_object_identifier = transgenic_tool_object_identifier
-        self.evidence_curies = pub_curies
+        # self.evidence_curies = pub_curies  # ??
         # self.obsolete = obsolete
         self.relation_name = relation
         self.required_fields.extend(['transgenic_tool_subject_identifier',
