@@ -175,7 +175,7 @@ def main():
         for bob in cassette_handler.export_data.keys():
             log.debug(f"BOB: bob={bob}")
         for sub_type in ('component_free', 'tool', 'genomic_entity'):
-            set_name = f"cassette_{sub_type}_associations"
+            set_name = f"cassette_{sub_type}_association"
             ingest_name = f"{set_name}_ingest_set"
             association_export_dict[ingest_name] = []
             association_export_dict[ingest_name].extend(cassette_handler.export_data[ingest_name])
