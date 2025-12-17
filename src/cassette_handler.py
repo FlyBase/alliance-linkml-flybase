@@ -73,7 +73,7 @@ class CassetteHandler(FeatureHandler):
         # 'internal_notes': ('internal_note', 'note_dtos'),
     }
     cassette_associations = []  # Should delete this one later
-    cassette_component_free_associations = []
+    cassette_component_free_text_associations = []
     cassette_tool_associations = []
     cassette_genomic_entity_associations = []
     cassette_cassette_rels = {}
@@ -233,9 +233,12 @@ class CassetteHandler(FeatureHandler):
         """Elaborate on query_chado_and_export method for the CassetteHandler."""
         super().query_chado_and_export(session)
         # self.generate_export_dict(self.cassette_associations, 'cassette_association_ingest_set')
-        self.generate_export_dict(self.cassette_component_free_associations, 'cassette_str_association_ingest_set')
-        self.generate_export_dict(self.cassette_genomic_entity_associations, 'cassette_genomic_entity_association_ingest_set')
-        self.generate_export_dict(self.cassette_tool_associations, 'cassette_transgenic_tool_association_ingest_set')
+        self.generate_export_dict(self.cassette_component_free_text_associations,
+                                  'cassette_str_association_ingest_set')
+        self.generate_export_dict(self.cassette_genomic_entity_associations,
+                                  'cassette_genomic_entity_association_ingest_set')
+        self.generate_export_dict(self.cassette_tool_associations,
+                                  'cassette_transgenic_tool_association_ingest_set')
 
         return
 
@@ -288,21 +291,21 @@ class CassetteHandler(FeatureHandler):
             assoc_type = self.cassette_dto_type(subject)
             if assoc_type == 'component_free_text':
                 # CassetteComponentSlotAnnotationDTO
-                rel_dto = agr_datatypes.CassetteAssociationDTO(
+                rel_dto = agr_datatypes.CassetteStrAssociationDTO(
                     subject_curie, object_curie,
                     pub_curies, False, rel_type_name)
                 first_feat_rel.linkmldto = rel_dto
                 self.cassette_component_free_text_associations.append(first_feat_rel)
             elif assoc_type == 'tool_association':
                 # CassetteTransgenicToolAssociationDTO
-                rel_dto = agr_datatypes.CassetteAssociationDTO(  # need to change to above
+                rel_dto = agr_datatypes.CassetteTransgenicToolAssociationDTO(  # need to change to above
                     subject_curie, object_curie,
                     pub_curies, False, rel_type_name)
                 first_feat_rel.linkmldto = rel_dto
                 self.cassette_tool_associations.append(first_feat_rel)
             elif assoc_type == 'genomic_entity_association':
                 # CassetteGenomicEntityAssociationDTO
-                rel_dto = agr_datatypes.CassetteAssociationDTO(  # need to change to above
+                rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(  # need to change to above
                     subject_curie, object_curie,
                     pub_curies, False, rel_type_name)
                 first_feat_rel.linkmldto = rel_dto
