@@ -118,11 +118,11 @@ def generate_tsv_file(export_dict, filename):
                     outfile.write(f"{primary}\t{ntype}\t{txt}\n")
 
 
-def generate_association_tsv_file(export_dict, filename):
+def generate_association_tsv_file(export_dict, ingest_name, filename):
     filename = filename.replace('.tsv', '_associations.tsv')
     with open(filename, 'w') as outfile:
         outfile.write("# Object curie\tSubject curie\tPub\n")
-        for entity_dict in export_dict['cassette_association_ingest_set']:
+        for entity_dict in export_dict[ingest_name]:
             obj = entity_dict['cassette_cassette_association_object']
             sub = entity_dict['cassette_association_subject']
             rel_type = entity_dict['relation']
@@ -187,7 +187,7 @@ def main():
             association_output_filename = output_filename.replace('cassette', f'{set_name}_association')
             generate_export_file(association_export_dict, log, association_output_filename)
             tsv_filename = association_output_filename.replace('.json', '.tsv')
-            generate_association_tsv_file(association_export_dict, tsv_filename)
+            generate_association_tsv_file(association_export_dict, ingest_name, tsv_filename)
     log.info('Ended main function.\n')
 
 
