@@ -100,9 +100,8 @@ class CassetteHandler(FeatureHandler):
         # Get in vitro set of cassettes
         self.add_in_vitro_allele_entries(session, reference_set)
         if self.testing:
-            self.log.debug("BOB: print list")
-            for bob in self.fb_data_entities:
-                self.log.debug(f"BOB: {bob}")
+            for entity in self.fb_data_entities:
+                self.log.debug(f"Entities: {entity}")
 
     def add_in_vitro_allele_entries(self, session, reference_set):
         """Extend list of entities."""
@@ -147,7 +146,7 @@ class CassetteHandler(FeatureHandler):
         for result in results:
             pkey_id = getattr(result, pkey_name)
             if self.testing:
-                self.log.debug(f"BOB: {pkey_id}: {result}")
+                self.log.debug(f"Cassette entities: {pkey_id}: {result}")
             if reference_set is True:
                 self.fb_reference_entity_ids.append(pkey_id)
             else:
@@ -205,7 +204,6 @@ class CassetteHandler(FeatureHandler):
 
     def cassette_dto_type(self, feature):
         """Derive association type from the feature."""
-        self.log.debug(f"BOB: {feature}")
 
         assoc_type = 'component_free_text'
         # logic to decide which type of Alliance DTO object to use

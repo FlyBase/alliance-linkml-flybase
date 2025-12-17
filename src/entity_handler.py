@@ -1035,7 +1035,7 @@ class PrimaryEntityHandler(DataHandler):
             secondary_id_dtos = []
             for secondary_id in fb_data_entity.alt_fb_ids:
                 if self.testing:
-                    self.log.debug(f"BOB: map_secondary_ids {secondary_id}")
+                    self.log.debug(f"Entity Handler: map_secondary_ids {secondary_id}")
                 sec_dto = agr_datatypes.SecondaryIdSlotAnnotationDTO(secondary_id, []).dict_export()
                 secondary_id_dtos.append(sec_dto)
             sec_id_list = getattr(fb_data_entity.linkmldto, slot_name)
@@ -1112,8 +1112,8 @@ class PrimaryEntityHandler(DataHandler):
                 cross_reference_dtos.append(xref_dto)
 
             fb_data_entity.linkmldto.cross_reference_dtos = cross_reference_dtos
-        for bob in db_list.keys():
-            self.log.debug(f'BOB: {bob} missing from DB list found {db_list[bob]} times')
+        for dbname in db_list.keys():
+            self.log.debug(f'XREFS: {dbname} missing from DB list found {db_list[dbname]} times')
         return
 
     def map_synonyms(self):

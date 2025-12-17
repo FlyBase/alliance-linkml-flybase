@@ -174,9 +174,6 @@ def main():
             'linkml_version': linkml_release,
             'alliance_member_release_version': database_release,
         }
-        if testing:
-            for bob in cassette_handler.export_data.keys():
-                log.debug(f"BOB: bob={bob}")
         # add each set to association export dict
         # and output tsv's to separate files.
         for sub_type in ('str', 'transgenic_tool', 'genomic_entity'):
