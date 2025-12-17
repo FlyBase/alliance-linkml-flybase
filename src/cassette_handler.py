@@ -292,21 +292,21 @@ class CassetteHandler(FeatureHandler):
             if assoc_type == 'component_free_text':
                 # CassetteComponentSlotAnnotationDTO
                 rel_dto = agr_datatypes.CassetteStrAssociationDTO(
-                    subject_curie, object_curie,
+                    object_curie, subject_curie,
                     pub_curies, False, rel_type_name)
                 first_feat_rel.linkmldto = rel_dto
                 self.cassette_component_free_text_associations.append(first_feat_rel)
             elif assoc_type == 'tool_association':
                 # CassetteTransgenicToolAssociationDTO
                 rel_dto = agr_datatypes.CassetteTransgenicToolAssociationDTO(  # need to change to above
-                    subject_curie, object_curie,
+                    object_curie, subject_curie,
                     pub_curies, False, rel_type_name)
                 first_feat_rel.linkmldto = rel_dto
                 self.cassette_tool_associations.append(first_feat_rel)
             elif assoc_type == 'genomic_entity_association':
                 # CassetteGenomicEntityAssociationDTO
                 rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(  # need to change to above
-                    subject_curie, object_curie,
+                    object_curie, subject_curie,
                     pub_curies, False, rel_type_name)
                 first_feat_rel.linkmldto = rel_dto
                 self.cassette_genomic_entity_associations.append(first_feat_rel)
