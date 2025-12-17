@@ -204,7 +204,6 @@ class CassetteHandler(FeatureHandler):
 
     def cassette_dto_type(self, feature):
         """Derive association type from the feature."""
-
         assoc_type = 'component_free_text'
         # logic to decide which type of Alliance DTO object to use
         if feature["uniquename"].startswith('FBto'):  # cassette component is a TransgenicTool (FBid is a FBto):
