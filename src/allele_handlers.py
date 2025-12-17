@@ -156,7 +156,7 @@ class AlleleHandler(MetaAlleleHandler):
         'FBal0043132': 'Hsap_MAPT[UAS.cAa]',    # Transgenic, superceded by FBti0000969, FBti0249419 (superseded_by_transgnc_insertions).
         'FBal0062057': 'Scer_CDC42[V12.hs]',    # Transgenic, superceded by FBti0012506, FBti0249909 (superseded_by_transgnc_insertions).
         'FBal0198528': 'CG33269[HMJ22303]',     # Transegnic, superceded by four FBti (superseded_by_transgnc_insertions).
-        'FBal0322755': 'Mcm3[+tBa]',            # cassettes from here
+        'FBal0322755': 'Mcm3[+tBa]',            # Cassettes from here
         'FBal0322754': 'flfl[DeltaRanBD.UAS.Venus]',
         'FBal0296109': 'sSemp1[R41G.UAS]',
         'FBal0193766': 'Gr63a[UAS.cJa]',
@@ -167,6 +167,10 @@ class AlleleHandler(MetaAlleleHandler):
         'FBal0290956': 'Csas[21]',                  # in vitro only
         'FBal0392043': r'Avic\GFP[EYFP.3xP3.cUa]',  # in vitro only
         'FBal0028610': 'w[+mC]',  # Has a secondary identifier to test
+        'FBal0045138': 'Sry-delta[SDL1.lacZ]',               # Another Cassette so should not appear
+        'FBal0193109': 'Avic\GFP[EGFP.rho.PE.Tag:NLS(tra)]', # Another Cassette so should not appear
+        'FBal0250846': 'Scer\GAL4[GMR24E03]',                # Another Cassette so should not appear
+
     }
 
     # Additional export sets.
