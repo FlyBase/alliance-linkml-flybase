@@ -125,7 +125,7 @@ def generate_association_tsv_file(export_dict, ingest_name, filename):
         for entity_dict in export_dict[ingest_name]:
             obj = entity_dict['cassette_identifier']
             if ingest_name == 'cassette_transgenic_tool_association_ingest_set':
-                sub = entity_dict['cassette_association_subject']
+                sub = entity_dict['transgenic_tool_identifier']
             elif ingest_name == 'cassette_genomic_entity_association_ingest_set':
                 sub = entity_dict['genomic_entity_identifier']
             else:
