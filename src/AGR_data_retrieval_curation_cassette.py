@@ -123,9 +123,14 @@ def generate_association_tsv_file(export_dict, ingest_name, filename):
     with open(filename, 'w') as outfile:
         outfile.write("# Object curie\tSubject curie\tPub\n")
         for entity_dict in export_dict[ingest_name]:
-            obj = entity_dict['cassette_cassette_association_object']
-            sub = entity_dict['cassette_association_subject']
-            rel_type = entity_dict['relation']
+            obj = entity_dict['cassette_identifier']
+            if ingest_name == 'cassette_transgenic_tool_association_ingest_set':
+                sub = entity_dict['cassette_association_subject']
+            elif ingest_name == 'cassette_genomic_entity_association_ingest_set':
+                sub = entity_dict['genomic_entity_identifier']
+            else:
+                sub = entity_dict['sequence_targeting_reagent_identifier']
+            rel_type = entity_dict['relation_name']
             pubs = "|".join(entity_dict['evidence'])
             outfile.write(f"{obj}\t{sub}\t{rel_type}\t{pubs}\n")
 
