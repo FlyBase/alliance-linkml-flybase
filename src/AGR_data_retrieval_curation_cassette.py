@@ -150,13 +150,14 @@ def main():
         'linkml_version': linkml_release,
         'alliance_member_release_version': database_release,
     }
-    export_dict[cassette_handler.primary_export_set] = cassette_handler.export_data[cassette_handler.primary_export_set]
-    if len(export_dict[cassette_handler.primary_export_set]) == 0:
+    set_name = cassette_handler.primary_export_set
+    export_dict[set_name] = cassette_handler.export_data[set_name]
+    if len(export_dict[set_name]) == 0:
         if reference_session:
             log.info('No updates to report.')
         else:
-            log.error(f'The "{cassette_handler.primary_export_set}" is unexpectedly empty.')
-            raise ValueError(f'The "{cassette_handler.primary_export_set}" is unexpectedly empty.')
+            log.error(f'The "{set_name}" is unexpectedly empty.')
+            raise ValueError(f'The "{set_name}" is unexpectedly empty.')
     else:
         generate_export_file(export_dict, log, output_filename)
         generate_tsv_file(export_dict, set_up_dict['output_filename'])
@@ -168,13 +169,12 @@ def main():
             'linkml_version': linkml_release,
             'alliance_member_release_version': database_release,
         }
-        # cassette_cassetteassociations.
-        # cassette_component_free_associations = []
-        # cassette_tool_associations = []
-        # cassette_genomic_entity_associations = []
-        for bob in cassette_handler.export_data.keys():
-            log.debug(f"BOB: bob={bob}")
-        for sub_type in ('component_free', 'tool', 'genomic_entity'):
+        if testing:
+            for bob in cassette_handler.export_data.keys():
+                log.debug(f"BOB: bob={bob}")
+        # add each set to association export dict
+        # and output tsv's to separate files.
+        for sub_type in ('str', 'transgenic_tool', 'genomic_entity'):
             set_name = f"cassette_{sub_type}_association"
             ingest_name = f"{set_name}_ingest_set"
             association_export_dict[ingest_name] = []
@@ -183,11 +183,13 @@ def main():
                 log.error(f'The "{set_name}" is unexpectedly empty.')
                 # raise ValueError(f'The "{set_name}" is unexpectedly empty.')
                 continue
-            # Print the output file.
-            association_output_filename = output_filename.replace('cassette', f'{set_name}_association')
-            generate_export_file(association_export_dict, log, association_output_filename)
+            # Print the output tsv file.
+            association_output_filename = output_filename.replace('cassette', f'{set_name}')
             tsv_filename = association_output_filename.replace('.json', '.tsv')
             generate_association_tsv_file(association_export_dict, ingest_name, tsv_filename)
+        # output all association in one file.
+        association_output_filename = output_filename.replace('cassette', 'cassette_association')
+        generate_export_file(association_export_dict, log, association_output_filename)
     log.info('Ended main function.\n')
 
 

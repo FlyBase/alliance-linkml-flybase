@@ -233,9 +233,9 @@ class CassetteHandler(FeatureHandler):
         """Elaborate on query_chado_and_export method for the CassetteHandler."""
         super().query_chado_and_export(session)
         # self.generate_export_dict(self.cassette_associations, 'cassette_association_ingest_set')
-        self.generate_export_dict(self.cassette_component_free_associations, 'cassette_component_free_association_ingest_set')
+        self.generate_export_dict(self.cassette_component_free_associations, 'cassette_str_association_ingest_set')
         self.generate_export_dict(self.cassette_genomic_entity_associations, 'cassette_genomic_entity_association_ingest_set')
-        self.generate_export_dict(self.cassette_tool_associations, 'cassette_tool_association_ingest_set')
+        self.generate_export_dict(self.cassette_tool_associations, 'cassette_transgenic_tool_association_ingest_set')
 
         return
 
