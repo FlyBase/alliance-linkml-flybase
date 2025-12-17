@@ -121,17 +121,43 @@ class CassetteDTO(GenomicEntityDTO):
         self.required_fields.remove('taxon_curie')  # Does not have it!
 
 
-class CassetteAssociationDTO(AuditedObjectDTO):
-    """CassetteAssociationDTO class."""
+class CassetteTransgenicToolAssociationDTO(AuditedObjectDTO):
+    """CassetteTransgenicToolAssociationDTO class."""
     def __init__(self, cassette_association_subject, cassette_association_object,
                  pub_curies, obsolete, relation):
         """Create CassetteAssociationDTO for FlyBase object."""
         super().__init__()
-        self.cassette_association_subject = cassette_association_subject
-        self.cassette_cassette_association_object = cassette_association_object
+        self.cassette_identifier = cassette_association_subject
+        self.transgenic_tool_identifier = cassette_association_object
         self.evidence = pub_curies
         self.obsolete = obsolete
-        self.relation = relation
+        self.relation_name = relation
+
+
+class CassetteGenomicEntityAssociationDTO(AuditedObjectDTO):
+    """CassetteGenomicEntityAssociationDTO class."""
+    def __init__(self, cassette_association_subject, cassette_association_object,
+                 pub_curies, obsolete, relation):
+        """Create CassetteAssociationDTO for FlyBase object."""
+        super().__init__()
+        self.cassette_identifier = cassette_association_subject
+        self.genomic_entity_identifier = cassette_association_object
+        self.evidence = pub_curies
+        self.obsolete = obsolete
+        self.relation_name = relation
+
+
+class CassetteStrAssociationDTO(AuditedObjectDTO):
+    """CassetteStrAssociationDTO class."""
+    def __init__(self, cassette_association_subject, cassette_association_object,
+                 pub_curies, obsolete, relation):
+        """Create CassetteStrAssociationDTO for FlyBase object."""
+        super().__init__()
+        self.cassette_identifier = cassette_association_subject
+        self.sequence_targeting_reagent_identifier = cassette_association_object
+        self.evidence = pub_curies
+        self.obsolete = obsolete
+        self.relation_name = relation
 
 
 class GeneDTO(GenomicEntityDTO):
