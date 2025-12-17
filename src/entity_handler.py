@@ -317,11 +317,6 @@ class PrimaryEntityHandler(DataHandler):
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
 
-        # if bob:
-        #     # Only get for those we are interested in i.e. in self.fb_data_entities
-        #     self.log.error(f"BOBBOB2 : {self.fb_data_entities.keys()}")
-        #     filters += (chado_table.feature_id.in_((self.fb_data_entities.keys())),)
-
         if self.datatype in self.feature_subtypes.keys():
             rel_results = session.query(chado_rel_table).\
                 select_from(primary_entity).\
@@ -637,7 +632,6 @@ class PrimaryEntityHandler(DataHandler):
             else:
                 filters += (chado_table.uniquename.in_((self.test_set.keys())), )
                 # Only get for those we are interested in i.e. in self.fb_data_entities
-                self.log.error(f"BOBBOB: {self.fb_data_entities.keys()}")
                 filters += (chado_table.feature_id.in_((self.fb_data_entities.keys())), )
         if filters == () and self.datatype != 'genotype':
             self.log.warning('Have no filters for the main FlyBase entity driver query.')

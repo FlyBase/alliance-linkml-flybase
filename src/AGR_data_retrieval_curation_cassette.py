@@ -121,7 +121,7 @@ def generate_tsv_file(export_dict, filename):
 def generate_association_tsv_file(export_dict, ingest_name, filename):
     filename = filename.replace('.tsv', '_associations.tsv')
     with open(filename, 'w') as outfile:
-        outfile.write("# Object curie\tSubject curie\tPub\n")
+        outfile.write("# Object curie\tSubject curie\tRelationship\n")
         for entity_dict in export_dict[ingest_name]:
             obj = entity_dict['cassette_identifier']
             if ingest_name == 'cassette_transgenic_tool_association_ingest_set':
