@@ -28,6 +28,8 @@ class CassetteHandler(FeatureHandler):
         self.primary_export_set = 'cassette_ingest_set'
         self.incremental_update = False
 
+    # NOTE: We have general alleles in here too so we can check we only get the casssettes here.
+    #       Also Cassettes are in the Allele code to check we only get these once.
     test_set = {
         'FBal0386858': 'SppL[CR70402-TG4.1]',   # Insertion allele superceded by FBti0226866 (superseded_by_at_locus_insertion).
         'FBal0386745': 'Scer_GAL4[SppL...]',    # Insertion allele superceded by FBti0226866 too (superseded_by_at_locus_insertion).
