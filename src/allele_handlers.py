@@ -168,8 +168,8 @@ class AlleleHandler(MetaAlleleHandler):
         'FBal0392043': r'Avic\GFP[EYFP.3xP3.cUa]',  # in vitro only
         'FBal0028610': 'w[+mC]',  # Has a secondary identifier to test
         'FBal0045138': 'Sry-delta[SDL1.lacZ]',               # Another Cassette so should not appear
-        'FBal0193109': 'Avic\GFP[EGFP.rho.PE.Tag:NLS(tra)]', # Another Cassette so should not appear
-        'FBal0250846': 'Scer\GAL4[GMR24E03]',                # Another Cassette so should not appear
+        'FBal0193109': r'Avic\GFP[EGFP.rho.PE.Tag:NLS(tra)]', # Another Cassette so should not appear
+        'FBal0250846': r'Scer\GAL4[GMR24E03]',                # Another Cassette so should not appear
 
     }
 
