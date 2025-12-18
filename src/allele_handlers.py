@@ -356,6 +356,7 @@ class AlleleHandler(MetaAlleleHandler):
     def get_datatype_data(self, session):
         """Extend the method for the AlleleHandler."""
         super().get_datatype_data(session)
+        self.ignore_list = self.cassette_unique_ids(session)
         self.get_entities(session)
         self.get_entity_relationships(session, 'subject', rel_type='alleleof', entity_type='gene', entity_regex=self.regex['gene'])
         al_cons_fr_types = ['derived_tp_assoc_alleles', 'associated_with', 'gets_expression_data_from']

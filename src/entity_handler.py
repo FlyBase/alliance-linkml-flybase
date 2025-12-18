@@ -49,6 +49,7 @@ class PrimaryEntityHandler(DataHandler):
     def __init__(self, log: Logger, testing: bool):
         """Create the generic PrimaryEntityHandler object."""
         super().__init__(log, testing)
+        self.ignore_list = []
 
     # Conversion of FB datatype to "page_area".
     page_area_conversion = {
@@ -183,6 +184,8 @@ class PrimaryEntityHandler(DataHandler):
             self.log.info(f'Get {self.datatype} data entities from {chado_type} table.')
         chado_table = self.chado_tables['main_table'][chado_type]
         filters = ()
+        if self.ignore_list:
+            filters += (chado_table.uniquename.not_in(self.ignore_list), )
         if self.datatype in self.regex.keys() and self.datatype != 'genotype':
             self.log.info(f'Use this regex: {self.regex[self.datatype]}')
             filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
