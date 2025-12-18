@@ -389,10 +389,14 @@ class FeatureHandler(PrimaryEntityHandler):
         for result in results:
             key_id = getattr(result, 'feature_id')
             if key_id not in feat_ids:
+                if self.testing:
+                    self.log.debug(f"Ignore list item{getattr(result, 'uniquename')} {key_id}")
                 feat_ids.append(key_id)
         results = self.get_cassette_main_entities(session, False)
         for result in results:
             key_id = getattr(result, 'feature_id')
             if key_id not in feat_ids:
+                if self.testing:
+                    self.log.debug(f"BOB: IGNORE {getattr(result, 'uniquename')} {key_id}")
                 feat_ids.append(key_id)
         return feat_ids
