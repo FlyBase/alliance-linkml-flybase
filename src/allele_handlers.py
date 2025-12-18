@@ -362,7 +362,7 @@ class AlleleHandler(MetaAlleleHandler):
     def get_datatype_data(self, session):
         """Extend the method for the AlleleHandler."""
         super().get_datatype_data(session)
-        self.ignore_list = self.cassette_unique_ids(session)
+        self.ignore_list = self.cassette_feature_ids(session)
         if self.testing:
             for ignore_id in self.ignore_list:
                 self.log.error(f"BOB: Ignore list {ignore_id}")
