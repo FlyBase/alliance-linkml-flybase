@@ -185,7 +185,10 @@ class PrimaryEntityHandler(DataHandler):
         chado_table = self.chado_tables['main_table'][chado_type]
         filters = ()
         if self.ignore_list:
-            filters += (chado_table.uniquename.not_in(self.ignore_list), )
+            if self.datatype == 'genotype':
+                filters += (chado_table.genotype_id.not_in(self.ignore_list), )
+            else:
+                filters += (chado_table.feature_id.not_in(self.ignore_list),)
         if self.datatype in self.regex.keys() and self.datatype != 'genotype':
             self.log.info(f'Use this regex: {self.regex[self.datatype]}')
             filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
