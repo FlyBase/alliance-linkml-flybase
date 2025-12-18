@@ -589,6 +589,7 @@ class PrimaryEntityHandler(DataHandler):
                 continue
             elif entity_id not in self.fb_data_entities:
                 self.log.error(f"entity_id:{entity_id} not in list of data_entities")
+                self.log.error(f"ignore_list is {self.ignore_list}")
                 continue
             self.fb_data_entities[entity_id].cvt_annos_by_id[cvt_anno_id] = cvt_anno
             # Second, sort the CVTermAnnotations by CV name.

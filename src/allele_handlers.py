@@ -273,6 +273,12 @@ class AlleleHandler(MetaAlleleHandler):
             distinct()
         counter = 0
         for result in results:
+            if result.Feature.feature_id in self.ignore_list:
+                continue
+            elif result.Feature.feature_id not in self.fb_data_entities:
+                self.log.error(f"entity_id:{result.Feature.feature_id} not in list of data_entities")
+                self.log.error(f"ignore_list is {self.ignore_list}")
+                continue
             self.fb_data_entities[result.Feature.feature_id].phenstatements.append(result)
             counter += 1
         self.log.info(f'Found {counter} allele phenotypes from single locus genotypes.')
@@ -357,6 +363,9 @@ class AlleleHandler(MetaAlleleHandler):
         """Extend the method for the AlleleHandler."""
         super().get_datatype_data(session)
         self.ignore_list = self.cassette_unique_ids(session)
+        if self.testing:
+            for ignore_id in self.ignore_list:
+                self.log.error(f"BOB: Ignore list {ignore_id}")
         self.get_entities(session)
         self.get_entity_relationships(session, 'subject', rel_type='alleleof', entity_type='gene', entity_regex=self.regex['gene'])
         al_cons_fr_types = ['derived_tp_assoc_alleles', 'associated_with', 'gets_expression_data_from']
