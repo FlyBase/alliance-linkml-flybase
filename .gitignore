@@ -11,3 +11,4 @@
 *.jar
 __pycache__
 tmp/
+.idea

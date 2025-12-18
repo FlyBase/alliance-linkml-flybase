@@ -1,21 +1,21 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Data retrieval of FlyBase experimental tool for Alliance curation database.
+"""Data retrieval of FlyBase cassettefor Alliance curation database.
 
 Author(s):
     Ian Longden ilongden@morgan.harvard.edu
 
 Usage:
-    AGR_data_retrieval_curation_transgenic_tool.py [-h] [-v VERBOSE] [-c CONFIG] [-t TESTING]
+    AGR_data_retrieval_curation_cassette.py [-h] [-v VERBOSE] [-c CONFIG] [-t TESTING]
     [-l LINKML_RELEASE] [-r REFERENCE_DB] (OPTIONAL)
 
 Example:
-    python AGR_data_retrieval_curation_transgenic_tool.py -v -t -c /path/to/config.cfg
+    python AGR_data_retrieval_curation_cassette.py -v -t -c /path/to/config.cfg
     -l v1.1.2
     -r fb_2024_06_reporting
 Notes:
-    This script exports FlyBase experimental tool data as a JSON file conforming to the
-    transgenic_tool LinkML specs for the Alliance persistent curation database.
+    This script exports FlyBase cassette data as a JSON file conforming to the
+    cassetteLinkML specs for the Alliance persistent curation database.
     A chado database with a full "audit_chado" table is required.
 
 """
@@ -24,11 +24,11 @@ import argparse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
-from transgenic_tool_handler import ExperimentalToolHandler
+from cassette_handler import CassetteHandler
 from utils import export_chado_data, generate_export_file
 
 # Data types handled by this script.
-REPORT_LABEL = 'transgenic_tool_curation'
+REPORT_LABEL = 'cassette_curation'
 
 # Now proceed with generic setup.
 set_up_dict = set_up_db_reading(REPORT_LABEL)
@@ -48,12 +48,13 @@ parser = argparse.ArgumentParser(description='inputs')
 parser.add_argument('-l', '--linkml_release',
                     help='The "agr_curation_schema" LinkML release number.', required=True)
 parser.add_argument('-r', '--reference_db',
-                    help='The name of a previous reference db for incremental exports.', required=False)
+                    help='The name of a previous reference db for incremental exports.',
+                    required=False)
 
 # Use parse_known_args(), not parse_args(),
 # to handle args specific to this script (outside of set_up_db_reading()).
 args, extra_args = parser.parse_known_args()
-log.info('Parsing args specific to this script; ignoring these: {}'.format(extra_args))
+log.info(f'Parsing args specific to this script; ignoring these: {extra_args}')
 linkml_release = args.linkml_release
 reference_db = args.reference_db
 
@@ -77,27 +78,38 @@ def generate_tsv_file(export_dict, filename):
     """Generate tsv files for curators to read more easily. This can be commented out later."""
     with open(filename, 'w') as outfile:
         outfile.write("# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms\n")
-        for entity_dict in export_dict["transgenic_tool_ingest_set"]:
+        for entity_dict in export_dict["cassette_ingest_set"]:
             primary = entity_dict["primary_external_id"]
             symbol = ''
             name = ''
             secondary = []
             syns = []
-            if "transgenic_tool_full_name_dto" in entity_dict:
-                name = entity_dict["transgenic_tool_full_name_dto"]["format_text"]
-            if "transgenic_tool_symbol_dto" in entity_dict:
-                symbol = entity_dict["transgenic_tool_symbol_dto"]["format_text"]
-            if "transgenic_tool_synonym_dtos" in entity_dict:
-                for synonym in entity_dict["transgenic_tool_synonym_dtos"]:
+            if "cassette_full_name_dto" in entity_dict:
+                name = entity_dict["cassette_full_name_dto"]["format_text"]
+            if "cassette_symbol_dto" in entity_dict:
+                symbol = entity_dict["cassette_symbol_dto"]["format_text"]
+            if "cassette_synonym_dtos" in entity_dict:
+                for synonym in entity_dict["cassette_synonym_dtos"]:
                     syns.append(synonym["format_text"])
             if "secondary_identifiers" in entity_dict:
                 secondary = entity_dict["secondary_identifiers"]
-            outfile.write(f"{primary}\t{symbol}\t{name}\t{'|'.join(secondary)}\t{'|'.join(syns)}\n")
+                # for sec in secondary_dict:
+                #     secondary.append(sec["secondary_id"])
+            try:
+                outfile.write(f"{primary}\t{symbol}\t{name}\t{'|'.join(secondary)}\t{'|'.join(syns)}\n")
+            except TypeError:
+                log.error(f"entity_dict: {entity_dict}")
+                log.error(f"primary: {primary}")
+                log.error(f"secondary {secondary}")
+                log.error(f"symbol: {symbol}")
+                log.error(f"name: {name}")
+                log.error(f"syns: {syns}")
+                raise
 
     filename = filename.replace('.tsv', '_notes.tsv')
     with open(filename, 'w') as outfile:
         outfile.write("# Primary FBid\ttype\tcomment\n")
-        for entity_dict in export_dict["transgenic_tool_ingest_set"]:
+        for entity_dict in export_dict["cassette_ingest_set"]:
             primary = entity_dict["primary_external_id"]
             if "note_dtos" in entity_dict:
                 for note in entity_dict["note_dtos"]:
@@ -106,16 +118,21 @@ def generate_tsv_file(export_dict, filename):
                     outfile.write(f"{primary}\t{ntype}\t{txt}\n")
 
 
-def generate_association_tsv_file(export_dict, filename):
+def generate_association_tsv_file(export_dict, ingest_name, filename):
     filename = filename.replace('.tsv', '_associations.tsv')
     with open(filename, 'w') as outfile:
-        outfile.write("# Object curie\tSubject curie\tPub\n")
-        for entity_dict in export_dict['transgenic_tool_transgenic_tool_association_ingest_set']:
-            obj = entity_dict['transgenic_tool_object_identifier']
-            sub = entity_dict['transgenic_tool_subject_identifier']
-            # pubs = "|".join(entity_dict['evidence_curies'])
-            rel = entity_dict['relation_name']
-            outfile.write(f"{obj}\t{sub}\t{rel}\n")
+        outfile.write("# Object curie\tSubject curie\tRelationship\n")
+        for entity_dict in export_dict[ingest_name]:
+            obj = entity_dict['cassette_identifier']
+            if ingest_name == 'cassette_transgenic_tool_association_ingest_set':
+                sub = entity_dict['transgenic_tool_identifier']
+            elif ingest_name == 'cassette_genomic_entity_association_ingest_set':
+                sub = entity_dict['genomic_entity_identifier']
+            else:
+                sub = entity_dict['sequence_targeting_reagent_identifier']
+            rel_type = entity_dict['relation_name']
+            # pubs = "|".join(entity_dict['evidence'])
+            outfile.write(f"{obj}\t{sub}\t{rel_type}\n")
 
 
 # The main process.
@@ -127,45 +144,54 @@ def main():
     log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
 
     # Get the data and process it.
-    tool_handler = ExperimentalToolHandler(log, testing)
+    cassette_handler = CassetteHandler(log, testing)
     if reference_session:
-        export_chado_data(session, log, tool_handler, reference_session=reference_session)
+        export_chado_data(session, log, cassette_handler, reference_session=reference_session)
     else:
-        export_chado_data(session, log, tool_handler)
+        export_chado_data(session, log, cassette_handler)
 
     # Export the data.
     export_dict = {
         'linkml_version': linkml_release,
         'alliance_member_release_version': database_release,
     }
-    export_dict[tool_handler.primary_export_set] = tool_handler.export_data[tool_handler.primary_export_set]
-    if len(export_dict[tool_handler.primary_export_set]) == 0:
+    set_name = cassette_handler.primary_export_set
+    export_dict[set_name] = cassette_handler.export_data[set_name]
+    if len(export_dict[set_name]) == 0:
         if reference_session:
             log.info('No updates to report.')
         else:
-            log.error(f'The "{tool_handler.primary_export_set}" is unexpectedly empty.')
-            raise ValueError(f'The "{tool_handler.primary_export_set}" is unexpectedly empty.')
+            log.error(f'The "{set_name}" is unexpectedly empty.')
+            raise ValueError(f'The "{set_name}" is unexpectedly empty.')
     else:
         generate_export_file(export_dict, log, output_filename)
         generate_tsv_file(export_dict, set_up_dict['output_filename'])
 
-    if not reference_session:
-        # Export tool associations to a separate file.
-        association_output_filename = output_filename.replace('tool', 'tool_association')
+    ignore = False
+    if not reference_session and not ignore:
+        # Export cassette_associations to a separate files.
         association_export_dict = {
             'linkml_version': linkml_release,
             'alliance_member_release_version': database_release,
         }
-        # tool_tool associations.
-        assoc = 'transgenic_tool_transgenic_tool_association_ingest_set'
-        association_export_dict[assoc] = []
-        association_export_dict[assoc].extend(tool_handler.export_data['tool_association_ingest_set'])
-        if len(association_export_dict[assoc]) == 0:
-            log.error(f'The "{assoc}" is unexpectedly empty.')
-            raise ValueError(f'The "{assoc}" is unexpectedly empty.')
-        # Print the output file.
+        # add each set to association export dict
+        # and output tsv's to separate files.
+        for sub_type in ('str', 'transgenic_tool', 'genomic_entity'):
+            set_name = f"cassette_{sub_type}_association"
+            ingest_name = f"{set_name}_ingest_set"
+            association_export_dict[ingest_name] = []
+            association_export_dict[ingest_name].extend(cassette_handler.export_data[ingest_name])
+            if len(association_export_dict[ingest_name]) == 0:
+                log.error(f'The "{set_name}" is unexpectedly empty.')
+                # raise ValueError(f'The "{set_name}" is unexpectedly empty.')
+                continue
+            # Print the output tsv file.
+            association_output_filename = output_filename.replace('cassette', f'{set_name}')
+            tsv_filename = association_output_filename.replace('.json', '.tsv')
+            generate_association_tsv_file(association_export_dict, ingest_name, tsv_filename)
+        # output all association in one file.
+        association_output_filename = output_filename.replace('cassette', 'cassette_association')
         generate_export_file(association_export_dict, log, association_output_filename)
-        generate_association_tsv_file(association_export_dict, set_up_dict['output_filename'])
     log.info('Ended main function.\n')
 
 

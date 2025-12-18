@@ -156,6 +156,21 @@ class AlleleHandler(MetaAlleleHandler):
         'FBal0043132': 'Hsap_MAPT[UAS.cAa]',    # Transgenic, superceded by FBti0000969, FBti0249419 (superseded_by_transgnc_insertions).
         'FBal0062057': 'Scer_CDC42[V12.hs]',    # Transgenic, superceded by FBti0012506, FBti0249909 (superseded_by_transgnc_insertions).
         'FBal0198528': 'CG33269[HMJ22303]',     # Transegnic, superceded by four FBti (superseded_by_transgnc_insertions).
+        'FBal0322755': 'Mcm3[+tBa]',            # Cassettes from here
+        'FBal0322754': 'flfl[DeltaRanBD.UAS.Venus]',
+        'FBal0296109': 'sSemp1[R41G.UAS]',
+        'FBal0193766': 'Gr63a[UAS.cJa]',
+        'FBal0239883': 'sd[RNAi.N.UAS]',
+        'FBal0000531': 'Amy-p[IX]',
+        'FBal0028742': 'Act88F[E334K]',
+        'FBal0212171': r'Avic\GFP[UAS.FRT1]',       # in vitro only cassette
+        'FBal0290956': 'Csas[21]',                  # in vitro only
+        'FBal0392043': r'Avic\GFP[EYFP.3xP3.cUa]',  # in vitro only
+        'FBal0028610': 'w[+mC]',  # Has a secondary identifier to test
+        'FBal0045138': 'Sry-delta[SDL1.lacZ]',                 # Another Cassette so should not appear
+        'FBal0193109': r'Avic\GFP[EGFP.rho.PE.Tag:NLS(tra)]',  # Another Cassette so should not appear
+        'FBal0250846': r'Scer\GAL4[GMR24E03]',                 # Another Cassette so should not appear
+
     }
 
     # Additional export sets.
@@ -258,6 +273,12 @@ class AlleleHandler(MetaAlleleHandler):
             distinct()
         counter = 0
         for result in results:
+            if result.Feature.feature_id in self.ignore_list:
+                continue
+            elif result.Feature.feature_id not in self.fb_data_entities:
+                self.log.error(f"entity_id:{result.Feature.feature_id} not in list of data_entities")
+                self.log.error(f"ignore_list is {self.ignore_list}")
+                continue
             self.fb_data_entities[result.Feature.feature_id].phenstatements.append(result)
             counter += 1
         self.log.info(f'Found {counter} allele phenotypes from single locus genotypes.')
@@ -341,6 +362,7 @@ class AlleleHandler(MetaAlleleHandler):
     def get_datatype_data(self, session):
         """Extend the method for the AlleleHandler."""
         super().get_datatype_data(session)
+        self.ignore_list = self.cassette_feature_ids(session)
         self.get_entities(session)
         self.get_entity_relationships(session, 'subject', rel_type='alleleof', entity_type='gene', entity_regex=self.regex['gene'])
         al_cons_fr_types = ['derived_tp_assoc_alleles', 'associated_with', 'gets_expression_data_from']
@@ -357,11 +379,13 @@ class AlleleHandler(MetaAlleleHandler):
         self.get_entity_timestamps(session)
         self.get_direct_reagent_collections(session)
         self.get_indirect_reagent_collections(session, 'subject', 'associated_with', 'insertion')
-        self.get_indirect_reagent_collections(session, 'subject', 'associated_with', 'construct')
+        # this is now the 'main' casstte type.
+        # self.get_indirect_reagent_collections(session, 'subject', 'associated_with', 'construct')
         self.get_indirect_reagent_collections(session, 'subject', ['has_reg_region', 'encodes_tool'], 'seqfeat')
         self.get_very_indirect_reagent_collections(session)
         self.get_phenotypes(session)
-        self.find_in_vitro_alleles(session)
+        # in vitro now in cassettes
+        # self.find_in_vitro_alleles(session)
         self.get_fbal_fbti_replacements(session)
         self.get_insertion_entities(session)
         return

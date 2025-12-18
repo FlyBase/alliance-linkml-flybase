@@ -49,6 +49,7 @@ class PrimaryEntityHandler(DataHandler):
     def __init__(self, log: Logger, testing: bool):
         """Create the generic PrimaryEntityHandler object."""
         super().__init__(log, testing)
+        self.ignore_list = []
 
     # Conversion of FB datatype to "page_area".
     page_area_conversion = {
@@ -183,6 +184,11 @@ class PrimaryEntityHandler(DataHandler):
             self.log.info(f'Get {self.datatype} data entities from {chado_type} table.')
         chado_table = self.chado_tables['main_table'][chado_type]
         filters = ()
+        if self.ignore_list:
+            if self.datatype == 'genotype':
+                filters += (chado_table.genotype_id.not_in(self.ignore_list), )
+            else:
+                filters += (chado_table.feature_id.not_in(self.ignore_list),)
         if self.datatype in self.regex.keys() and self.datatype != 'genotype':
             self.log.info(f'Use this regex: {self.regex[self.datatype]}')
             filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
@@ -199,6 +205,7 @@ class PrimaryEntityHandler(DataHandler):
         if filters == () and self.datatype != 'genotype':
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
+
         if reference_set is True:
             # Get only current entitites from a reference db.
             # The cell_line table, oddly, has no "is_obsolete" column.
@@ -315,6 +322,7 @@ class PrimaryEntityHandler(DataHandler):
         if filters == ():
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
+
         if self.datatype in self.feature_subtypes.keys():
             rel_results = session.query(chado_rel_table).\
                 select_from(primary_entity).\
@@ -422,6 +430,8 @@ class PrimaryEntityHandler(DataHandler):
         for rel_id, rel in rel_dict.items():
             # First associate the relationship with the entity.
             entity_id = getattr(rel.chado_obj, f'{role}_id')
+            if entity_id not in self.fb_data_entities:
+                continue
             self.fb_data_entities[entity_id].rels_by_id[rel_id] = rel
             # Then sort the relationship into the appropriate relationship type bucket.
             rel_type = rel.chado_obj.type.name
@@ -450,6 +460,8 @@ class PrimaryEntityHandler(DataHandler):
         feat_type_skipped = 0
         for rel_id, rel in rel_dict.items():
             entity_id = getattr(rel.chado_obj, f'{role}_id')
+            if entity_id not in self.fb_data_entities:
+                continue
             entity_rel_dict = getattr(self.fb_data_entities[entity_id], role_feature_type_buckets[role])
             rel_feat_id = getattr(rel.chado_obj, f'{role_inverse[role]}_id')
             try:
@@ -576,6 +588,12 @@ class PrimaryEntityHandler(DataHandler):
         for cvt_anno_id, cvt_anno in cvterm_annotation_dict.items():
             # First, associate the relationship with the entity.
             entity_id = getattr(cvt_anno.chado_obj, f'{chado_type}_id')
+            if entity_id in self.ignore_list:
+                continue
+            elif entity_id not in self.fb_data_entities:
+                self.log.error(f"entity_id:{entity_id} not in list of data_entities")
+                self.log.error(f"ignore_list is {self.ignore_list}")
+                continue
             self.fb_data_entities[entity_id].cvt_annos_by_id[cvt_anno_id] = cvt_anno
             # Second, sort the CVTermAnnotations by CV name.
             cv_name = cvt_anno.chado_obj.cvterm.cv.name
@@ -625,9 +643,12 @@ class PrimaryEntityHandler(DataHandler):
                 filters += (chado_table.genotype_id.in_((self.test_set.keys())), )
             else:
                 filters += (chado_table.uniquename.in_((self.test_set.keys())), )
+                # Only get for those we are interested in i.e. in self.fb_data_entities
+                filters += (chado_table.feature_id.in_((self.fb_data_entities.keys())), )
         if filters == () and self.datatype != 'genotype':
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
+
         if self.datatype in self.feature_subtypes.keys():
             prop_results = session.query(chado_prop_table).\
                 select_from(chado_table).\
@@ -679,6 +700,8 @@ class PrimaryEntityHandler(DataHandler):
         for prop in prop_dict.values():
             # Assign the prop to the appropriate entity.
             subject_id = getattr(prop.chado_obj, subject_key_name)
+            if subject_id not in self.fb_data_entities:
+                continue
             try:
                 self.fb_data_entities[subject_id].props_by_type[prop.chado_obj.type.name].append(prop)
                 assignment_counter += 1
@@ -1023,6 +1046,8 @@ class PrimaryEntityHandler(DataHandler):
                 continue
             secondary_id_dtos = []
             for secondary_id in fb_data_entity.alt_fb_ids:
+                if self.testing:
+                    self.log.debug(f"Entity Handler: map_secondary_ids {secondary_id}")
                 sec_dto = agr_datatypes.SecondaryIdSlotAnnotationDTO(secondary_id, []).dict_export()
                 secondary_id_dtos.append(sec_dto)
             sec_id_list = getattr(fb_data_entity.linkmldto, slot_name)
@@ -1099,8 +1124,8 @@ class PrimaryEntityHandler(DataHandler):
                 cross_reference_dtos.append(xref_dto)
 
             fb_data_entity.linkmldto.cross_reference_dtos = cross_reference_dtos
-        for bob in db_list.keys():
-            self.log.debug(f'BOB: {bob} missing from DB list found {db_list[bob]} times')
+        for dbname in db_list.keys():
+            self.log.debug(f'XREFS: {dbname} missing from DB list found {db_list[dbname]} times')
         return
 
     def map_synonyms(self):
