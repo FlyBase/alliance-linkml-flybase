@@ -585,6 +585,11 @@ class PrimaryEntityHandler(DataHandler):
         for cvt_anno_id, cvt_anno in cvterm_annotation_dict.items():
             # First, associate the relationship with the entity.
             entity_id = getattr(cvt_anno.chado_obj, f'{chado_type}_id')
+            if entity_id in self.ignore_list:
+                continue
+            elif entity_id not in self.fb_data_entities:
+                self.log.error(f"entity_id:{entity_id} not in list of data_entities")
+                continue
             self.fb_data_entities[entity_id].cvt_annos_by_id[cvt_anno_id] = cvt_anno
             # Second, sort the CVTermAnnotations by CV name.
             cv_name = cvt_anno.chado_obj.cvterm.cv.name
