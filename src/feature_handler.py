@@ -381,3 +381,18 @@ class FeatureHandler(PrimaryEntityHandler):
             filter(*filters).\
             distinct()
         return results
+
+    def cassette_unique_ids(self, session):
+        """Get the list of unique ids that a cassette can have."""
+        unique_ids = []
+        results = self.get_cassettes_in_vitro_entries(session)
+        for result in results:
+            key_id = getattr(result, 'uniquename')
+            if key_id not in unique_ids:
+                unique_ids.append(key_id)
+        results = self.get_cassette_main_entities(session, False)
+        for result in results:
+            key_id = getattr(result, 'uniquename')
+            if key_id not in unique_ids:
+                unique_ids.append(key_id)
+        return unique_ids

@@ -372,11 +372,13 @@ class AlleleHandler(MetaAlleleHandler):
         self.get_entity_timestamps(session)
         self.get_direct_reagent_collections(session)
         self.get_indirect_reagent_collections(session, 'subject', 'associated_with', 'insertion')
-        self.get_indirect_reagent_collections(session, 'subject', 'associated_with', 'construct')
+        # this is now the 'main' casstte type.
+        # self.get_indirect_reagent_collections(session, 'subject', 'associated_with', 'construct')
         self.get_indirect_reagent_collections(session, 'subject', ['has_reg_region', 'encodes_tool'], 'seqfeat')
         self.get_very_indirect_reagent_collections(session)
         self.get_phenotypes(session)
-        self.find_in_vitro_alleles(session)
+        # in vitro now in cassettes
+        # self.find_in_vitro_alleles(session)
         self.get_fbal_fbti_replacements(session)
         self.get_insertion_entities(session)
         return
