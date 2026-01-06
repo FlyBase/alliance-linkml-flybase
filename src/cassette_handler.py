@@ -101,9 +101,6 @@ class CassetteHandler(FeatureHandler):
         self.get_main_entities(session, reference_set)
         # Get in vitro set of cassettes
         self.add_in_vitro_allele_entries(session, reference_set)
-        if self.testing:
-            for entity in self.fb_data_entities:
-                self.log.debug(f"Entities: {entity}")
 
     def add_in_vitro_allele_entries(self, session, reference_set):
         """Extend list of entities."""
