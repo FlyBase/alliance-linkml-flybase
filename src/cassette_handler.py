@@ -70,8 +70,6 @@ class CassetteHandler(FeatureHandler):
     }
 
     cassette_prop_to_note_mapping = {
-        'description': ('summary', 'note_dtos'),
-        'misc': ('comment', 'note_dtos'),
         'aminoacid_rep': ('comment', 'note_dtos'),
         'molecular_info': ('comment', 'note_dtos'),
         'nucleotide_sub': ('comment', 'note_dtos'),
