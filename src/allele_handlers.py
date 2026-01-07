@@ -164,7 +164,7 @@ class AlleleHandler(MetaAlleleHandler):
         'FBal0000531': 'Amy-p[IX]',
         'FBal0028742': 'Act88F[E334K]',
         'FBal0212171': r'Avic\GFP[UAS.FRT1]',       # in vitro only cassette
-        'FBal0290956': 'Csas[21]',                  # in vitro only
+        'FBal0290956': 'Csas[21]',                  # curator error: in vitro only in fb_2025_05, fixed for fb_2026_01 (now is classical allele reported_as_itself)
         'FBal0392043': r'Avic\GFP[EYFP.3xP3.cUa]',  # in vitro only
         'FBal0028610': 'w[+mC]',  # Has a secondary identifier to test
         'FBal0045138': 'Sry-delta[SDL1.lacZ]',                 # Another Cassette so should not appear
