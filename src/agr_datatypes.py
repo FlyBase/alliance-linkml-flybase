@@ -105,19 +105,6 @@ class AlleleDTO(GenomicEntityDTO):
         self.required_fields.extend(['allele_symbol_dto', 'primary_external_id'])
 
 
-class CassetteDTO(ReagentDTO):
-    """CassetteDTO class."""
-    def __init__(self):
-        """Create CassetteDTO for FlyBase object."""
-        super().__init__()
-        self.cassette_symbol_dto = None      # One NameSlotAnnotationDTO.
-        self.cassette_full_name_dto = None   # One NameSlotAnnotationDTO.
-        self.cassette_synonym_dtos = []      # Many NameSlotAnnotationDTO objects.
-        self.note_dtos = []                         # Will be NoteDTO objects.
-        # self.cross_reference_dtos = []
-        self.required_fields.extend(['cassette_symbol_dto'])
-
-
 class CassetteTransgenicToolAssociationDTO(AuditedObjectDTO):
     """CassetteTransgenicToolAssociationDTO class."""
     def __init__(self, cassette_association_subject, cassette_association_object,
@@ -174,19 +161,6 @@ class GeneDTO(GenomicEntityDTO):
         self.required_fields.extend(['gene_symbol_dto'])
 
 
-class TransgenicToolDTO(ReagentDTO):
-    """TransgenicToolDTO class."""
-    def __init__(self):
-        """Create TransgenicToolDTO for FlyBase object."""
-        super().__init__()
-        self.transgenic_tool_symbol_dto = None      # One NameSlotAnnotationDTO.
-        self.transgenic_tool_full_name_dto = None   # One NameSlotAnnotationDTO.
-        self.transgenic_tool_synonym_dtos = []      # Many NameSlotAnnotationDTO objects.
-        self.note_dtos = []                         # Will be NoteDTO objects.
-        self.cross_reference_dtos = []
-        self.required_fields.extend(['transgenic_tool_symbol_dto'])
-
-
 class TransgenicToolAssociationDTO(AuditedObjectDTO):
     """TransgenicToolAssociationDTO class."""
     def __init__(self, transgenic_tool_subject_identifier, transgenic_tool_object_identifier,
@@ -209,6 +183,32 @@ class ReagentDTO(SubmittedObjectDTO):
         super().__init__()
         self.secondary_identifiers = []    # Will be list of 2o FB curies (strings).
         self.required_fields.extend([])
+
+
+class TransgenicToolDTO(ReagentDTO):
+    """TransgenicToolDTO class."""
+    def __init__(self):
+        """Create TransgenicToolDTO for FlyBase object."""
+        super().__init__()
+        self.transgenic_tool_symbol_dto = None      # One NameSlotAnnotationDTO.
+        self.transgenic_tool_full_name_dto = None   # One NameSlotAnnotationDTO.
+        self.transgenic_tool_synonym_dtos = []      # Many NameSlotAnnotationDTO objects.
+        self.note_dtos = []                         # Will be NoteDTO objects.
+        self.cross_reference_dtos = []
+        self.required_fields.extend(['transgenic_tool_symbol_dto'])
+
+
+class CassetteDTO(ReagentDTO):
+    """CassetteDTO class."""
+    def __init__(self):
+        """Create CassetteDTO for FlyBase object."""
+        super().__init__()
+        self.cassette_symbol_dto = None      # One NameSlotAnnotationDTO.
+        self.cassette_full_name_dto = None   # One NameSlotAnnotationDTO.
+        self.cassette_synonym_dtos = []      # Many NameSlotAnnotationDTO objects.
+        self.note_dtos = []                         # Will be NoteDTO objects.
+        # self.cross_reference_dtos = []
+        self.required_fields.extend(['cassette_symbol_dto'])
 
 
 class ConstructDTO(ReagentDTO):
