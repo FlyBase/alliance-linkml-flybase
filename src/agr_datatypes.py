@@ -105,7 +105,7 @@ class AlleleDTO(GenomicEntityDTO):
         self.required_fields.extend(['allele_symbol_dto', 'primary_external_id'])
 
 
-class CassetteDTO(GenomicEntityDTO):
+class CassetteDTO(ReagentDTO):
     """CassetteDTO class."""
     def __init__(self):
         """Create CassetteDTO for FlyBase object."""
@@ -113,12 +113,9 @@ class CassetteDTO(GenomicEntityDTO):
         self.cassette_symbol_dto = None      # One NameSlotAnnotationDTO.
         self.cassette_full_name_dto = None   # One NameSlotAnnotationDTO.
         self.cassette_synonym_dtos = []      # Many NameSlotAnnotationDTO objects.
-        self.gene_type_curie = None                 # SO term ID for gene's promoted_gene_type.
-        self.secondary_identifiers = []             # Annotation IDs and 2o FlyBase IDs.
         self.note_dtos = []                         # Will be NoteDTO objects.
         # self.cross_reference_dtos = []
         self.required_fields.extend(['cassette_symbol_dto'])
-        self.required_fields.remove('taxon_curie')  # Does not have it!
 
 
 class CassetteTransgenicToolAssociationDTO(AuditedObjectDTO):
@@ -177,7 +174,7 @@ class GeneDTO(GenomicEntityDTO):
         self.required_fields.extend(['gene_symbol_dto'])
 
 
-class TransgenicToolDTO(GenomicEntityDTO):
+class TransgenicToolDTO(ReagentDTO):
     """TransgenicToolDTO class."""
     def __init__(self):
         """Create TransgenicToolDTO for FlyBase object."""
@@ -185,12 +182,9 @@ class TransgenicToolDTO(GenomicEntityDTO):
         self.transgenic_tool_symbol_dto = None      # One NameSlotAnnotationDTO.
         self.transgenic_tool_full_name_dto = None   # One NameSlotAnnotationDTO.
         self.transgenic_tool_synonym_dtos = []      # Many NameSlotAnnotationDTO objects.
-        self.gene_type_curie = None                 # SO term ID for gene's promoted_gene_type.
-        self.secondary_identifiers = []             # Annotation IDs and 2o FlyBase IDs.
         self.note_dtos = []                         # Will be NoteDTO objects.
         self.cross_reference_dtos = []
         self.required_fields.extend(['transgenic_tool_symbol_dto'])
-        self.required_fields.remove('taxon_curie')  # Does not have it!
 
 
 class TransgenicToolAssociationDTO(AuditedObjectDTO):
