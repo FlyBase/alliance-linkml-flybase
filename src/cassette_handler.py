@@ -87,6 +87,7 @@ class CassetteHandler(FeatureHandler):
         """Extend the method for the CassetteHandler."""
         super().get_general_data(session)
         self.build_bibliography(session)
+        self.build_organism_lookup(session)
         self.build_feature_lookup(session, feature_types=['cassette', 'construct', 'allele', 'tool', 'gene', 'seqfeat'])
 
     def get_entities(self, session, **kwargs):
@@ -290,7 +291,7 @@ class CassetteHandler(FeatureHandler):
             assoc_type = self.cassette_dto_type(subject)
             if assoc_type == 'component_free_text':
                 # CassetteComponentSlotAnnotationDTO
-                feature = self.feature_lookup[object_feature_id]  # Could be subject?
+                feature = self.feature_lookup[object_feature_id]
                 symbol = feature['symbol']
                 organism_id = feature['organism_id']
                 # pubs = self.lookup_pub_curies(pub_ids)
