@@ -290,21 +290,27 @@ class CassetteHandler(FeatureHandler):
             assoc_type = self.cassette_dto_type(subject)
             if assoc_type == 'component_free_text':
                 # CassetteComponentSlotAnnotationDTO
-                rel_dto = agr_datatypes.CassetteStrAssociationDTO(
-                    object_curie, subject_curie,
-                    pub_curies, False, rel_type_name)
+                feature = self.feature_lookup[object_feature_id]  # Could be subject?
+                symbol = feature['symbol']
+                organism_id = feature['organism_id']
+                # pubs = self.lookup_pub_curies(pub_ids)
+                taxon_text = self.organism_lookup[organism_id]['full_species_name']
+                taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
+                rel_dto = agr_datatypes.CassetteComponentSlotAnnotationDTO(
+                    rel_type_name, symbol, taxon_curie,
+                    taxon_text, pub_curies).dict_export()
                 first_feat_rel.linkmldto = rel_dto
                 self.cassette_component_free_text_associations.append(first_feat_rel)
             elif assoc_type == 'tool_association':
                 # CassetteTransgenicToolAssociationDTO
-                rel_dto = agr_datatypes.CassetteTransgenicToolAssociationDTO(  # need to change to above
+                rel_dto = agr_datatypes.CassetteTransgenicToolAssociationDTO(
                     object_curie, subject_curie,
                     pub_curies, False, rel_type_name)
                 first_feat_rel.linkmldto = rel_dto
                 self.cassette_tool_associations.append(first_feat_rel)
             elif assoc_type == 'genomic_entity_association':
                 # CassetteGenomicEntityAssociationDTO
-                rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(  # need to change to above
+                rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
                     object_curie, subject_curie,
                     pub_curies, False, rel_type_name)
                 first_feat_rel.linkmldto = rel_dto
