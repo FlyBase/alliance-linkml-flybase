@@ -113,7 +113,7 @@ class CassetteTransgenicToolAssociationDTO(AuditedObjectDTO):
         super().__init__()
         self.cassette_identifier = cassette_association_subject
         self.transgenic_tool_identifier = cassette_association_object
-        # self.evidence = pub_curies
+        self.evidence = pub_curies
         self.obsolete = obsolete
         self.relation_name = relation
 
@@ -126,7 +126,7 @@ class CassetteGenomicEntityAssociationDTO(AuditedObjectDTO):
         super().__init__()
         self.cassette_identifier = cassette_association_subject
         self.genomic_entity_identifier = cassette_association_object
-        # self.evidence = pub_curies
+        self.evidence = pub_curies
         self.obsolete = obsolete
         self.relation_name = relation
 
@@ -139,7 +139,7 @@ class CassetteStrAssociationDTO(AuditedObjectDTO):
         super().__init__()
         self.cassette_identifier = cassette_association_subject
         self.sequence_targeting_reagent_identifier = cassette_association_object
-        # self.evidence = pub_curies
+        self.evidence = pub_curies
         self.obsolete = obsolete
         self.relation_name = relation
 
@@ -544,6 +544,28 @@ class AlleleMutationTypeSlotAnnotationDTO(SlotAnnotationDTO):
         super().__init__(evidence_curies)
         self.mutation_type_curies = [mutation_type_curie]
         self.required_fields.extend(['mutation_type_curies'])
+
+
+class CassetteComponentSlotAnnotationDTO(SlotAnnotationDTO):
+    """ConstructComponentSlotAnnotationDTO class."""
+    def __init__(self, rel_type: str, component_symbol: str, taxon_curie: str, taxon_text: str, evidence_curies: list):
+        """Create a ConstructComponentSlotAnnotation for a FlyBase construct component.
+
+        Args:
+            rel_type (str): A CV term from "Construct Genomic Entity Association Relation": expressed, targets, or, is_regulated_by.
+            component_symbol (str): The symbol for the component.
+            taxon_curie (str): The NCBITaxon ID of the component.
+            taxon_text (str): The species name of the component.
+            evidence_curies (list): A list of FB:FBrf or PMID curies.
+
+        """
+        super().__init__(evidence_curies)
+        self.relation_name = rel_type
+        self.component_symbol = component_symbol
+        self.taxon_curie = taxon_curie
+        self.taxon_text = taxon_text
+        self.note_dtos = []
+        self.required_fields.extend([])
 
 
 class ConstructComponentSlotAnnotationDTO(SlotAnnotationDTO):
