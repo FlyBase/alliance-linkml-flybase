@@ -299,7 +299,7 @@ class CassetteHandler(FeatureHandler):
                 taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
                 rel_dto = agr_datatypes.CassetteComponentSlotAnnotationDTO(
                     rel_type_name, symbol, taxon_curie,
-                    taxon_text, pub_curies).dict_export()
+                    taxon_text, pub_curies)
                 first_feat_rel.linkmldto = rel_dto
                 self.cassette_component_free_text_associations.append(first_feat_rel)
             elif assoc_type == 'tool_association':
