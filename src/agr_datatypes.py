@@ -113,7 +113,7 @@ class CassetteTransgenicToolAssociationDTO(AuditedObjectDTO):
         super().__init__()
         self.cassette_identifier = cassette_association_subject
         self.transgenic_tool_identifier = cassette_association_object
-        self.evidence = pub_curies
+        self.evidence_curies = pub_curies
         self.obsolete = obsolete
         self.relation_name = relation
 
@@ -126,7 +126,7 @@ class CassetteGenomicEntityAssociationDTO(AuditedObjectDTO):
         super().__init__()
         self.cassette_identifier = cassette_association_subject
         self.genomic_entity_identifier = cassette_association_object
-        self.evidence = pub_curies
+        self.evidence_curies = pub_curies
         self.obsolete = obsolete
         self.relation_name = relation
 
