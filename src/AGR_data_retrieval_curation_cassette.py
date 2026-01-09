@@ -178,7 +178,7 @@ def main():
         }
         # add each set to association export dict
         # and output tsv's to separate files.
-        for sub_type in ('str', 'transgenic_tool', 'genomic_entity'):
+        for sub_type in ('transgenic_tool', 'genomic_entity'):
             set_name = f"cassette_{sub_type}_association"
             ingest_name = f"{set_name}_ingest_set"
             association_export_dict[ingest_name] = []
