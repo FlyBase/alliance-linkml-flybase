@@ -223,31 +223,6 @@ class AlleleHandler(MetaAlleleHandler):
         self.get_internal_genes(session)
         return
 
-    # Additional sub-methods for get_datatype_data().
-    def find_in_vitro_alleles(self, session):
-        """Find in vitro alleles."""
-        self.log.info('Find in vitro alleles.')
-        cvterm_name_regex = '^in vitro construct'
-        filters = (
-            Feature.uniquename.op('~')(self.regex['allele']),
-            Cvterm.name.op('~')(cvterm_name_regex)
-        )
-        if self.testing:
-            self.log.info(f'TESTING: limit to these entities: {self.test_set}')
-            filters += (Feature.uniquename.in_((self.test_set.keys())), )
-        ivt_alleles = session.query(Feature).\
-            select_from(Feature).\
-            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
-            join(Cvterm, (Cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
-            filter(*filters).\
-            distinct()
-        counter = 0
-        for result in ivt_alleles:
-            self.fb_data_entities[result.feature_id].in_vitro = True
-            counter += 1
-        self.log.info(f'Flagged {counter} alleles as "in vitro"')
-        return
-
     def get_phenotypes(self, session):
         """Get phenotypes from single locus genotypes related to alleles."""
         self.log.info('Get phenotypes from single locus genotypes related to alleles.')
@@ -385,8 +360,6 @@ class AlleleHandler(MetaAlleleHandler):
         self.get_indirect_reagent_collections(session, 'subject', ['has_reg_region', 'encodes_tool'], 'seqfeat')
         self.get_very_indirect_reagent_collections(session)
         self.get_phenotypes(session)
-        # in vitro now in cassettes
-        # self.find_in_vitro_alleles(session)
         self.get_fbal_fbti_replacements(session)
         self.get_insertion_entities(session)
         return
