@@ -207,8 +207,10 @@ class CassetteDTO(ReagentDTO):
         self.cassette_full_name_dto = None   # One NameSlotAnnotationDTO.
         self.cassette_synonym_dtos = []      # Many NameSlotAnnotationDTO objects.
         self.note_dtos = []                         # Will be NoteDTO objects.
-        # self.cross_reference_dtos = []
+        self.cassette_component_dtos = []    # CassetteComponentSlotAnnotationDTOs.
         self.required_fields.extend(['cassette_symbol_dto'])
+        self.cassette_use_dtos = []
+        self.reference_curies = []
 
 
 class ConstructDTO(ReagentDTO):
