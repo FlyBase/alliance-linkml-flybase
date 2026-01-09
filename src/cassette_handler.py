@@ -165,6 +165,7 @@ class CassetteHandler(FeatureHandler):
         self.map_entity_props_to_notes('cassette_prop_to_note_mapping')
         # self.map_xrefs()
         self.map_secondary_ids('secondary_identifiers')
+        self.map_cassette_components()
         self.map_cassette_associations()
 
     def map_secondary_ids(self, slot_name):
@@ -242,6 +243,40 @@ class CassetteHandler(FeatureHandler):
 
         return
 
+    def map_cassette_components(self):
+        """Map current construct components to the Alliance LinkML object."""
+        self.log.info('Map current construct components to the Alliance LinkML object.')
+        component_slots = {'has_reg_region': 'is_regulated_by',
+                            'tagged_with': 'tagged_with',
+                            'carries_tool': 'contains'}
+        counter = 0
+        for cassette in self.fb_data_entities.values():
+            for slot_name, rel_type in component_slots.items():
+                slot_bin = getattr(cassette, slot_name)
+                for feature_id, pub_ids in slot_bin.items():
+                    # Do not report obsolete components.
+                    if self.feature_lookup[feature_id]['is_obsolete'] is True:
+                        continue
+                    # These are dumped out in the associations
+                    if self.feature_lookup[feature_id]['curie'].startswith('FB:FBgn') & \
+                            self.organism_lookup[self.feature_lookup[feature_id]['organism_id']]['is_drosophilid'] is True:
+                        continue
+                    feature = self.feature_lookup[feature_id]
+                    assoc_type = self.cassette_dto_type(feature)
+                    if assoc_type != 'component_free_text':
+                        continue
+                    feature = self.feature_lookup[feature_id]
+                    symbol = feature['symbol']
+                    organism_id = feature['organism_id']
+                    pubs = self.lookup_pub_curies(pub_ids)
+                    taxon_text = self.organism_lookup[organism_id]['full_species_name']
+                    taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
+                    cassette_dto = agr_datatypes.ConstructComponentSlotAnnotationDTO(rel_type, symbol, taxon_curie, taxon_text, pubs).dict_export()
+                    cassette.linkmldto.construct_component_dtos.append(cassette_dto)
+                    counter += 1
+        self.log.info(f'Mapped cassette components to {counter} CassettecomponentDTOs.')
+        return
+
     def map_cassette_associations(self):
         """Map transgenic cassette associations to Alliance object."""
         self.log.info('Map cassette associations to Alliance object.')
@@ -273,9 +308,6 @@ class CassetteHandler(FeatureHandler):
             for cassette_cassette_rel in cassette_cassette_rels:
                 all_pub_ids.extend(cassette_cassette_rel.pubs)
             first_feat_rel.pubs = all_pub_ids
-            # NOTE: pub 383755 | FlyBase Experimental Tool information Is the only one used
-            # for cassettes. But not in lookup pub curies!
-            # So pub_curies will be empty.
             pub_curies = self.lookup_pub_curies(all_pub_ids)
 
             # Adjust allele-gene relation_type as needed.
@@ -289,20 +321,7 @@ class CassetteHandler(FeatureHandler):
                 bad_relationship_count[rel_type_name] += 1
                 continue
             assoc_type = self.cassette_dto_type(subject)
-            if assoc_type == 'component_free_text':
-                # CassetteComponentSlotAnnotationDTO
-                feature = self.feature_lookup[object_feature_id]
-                symbol = feature['symbol']
-                organism_id = feature['organism_id']
-                # pubs = self.lookup_pub_curies(pub_ids)
-                taxon_text = self.organism_lookup[organism_id]['full_species_name']
-                taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
-                rel_dto = agr_datatypes.CassetteComponentSlotAnnotationDTO(
-                    rel_type_name, symbol, taxon_curie,
-                    taxon_text, pub_curies)
-                first_feat_rel.linkmldto = rel_dto
-                self.cassette_component_free_text_associations.append(first_feat_rel)
-            elif assoc_type == 'tool_association':
+            if assoc_type == 'tool_association':
                 # CassetteTransgenicToolAssociationDTO
                 rel_dto = agr_datatypes.CassetteTransgenicToolAssociationDTO(
                     object_curie, subject_curie,
