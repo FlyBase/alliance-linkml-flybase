@@ -320,9 +320,9 @@ class FBCassette(FBFeature):
     def __init__(self, chado_obj):
         """Create the FBCassette object."""
         super().__init__(chado_obj)
-        self.has_reg_region = {}
-        self.tagged_with = {}
-        self.carries_tool = {}
+        self.has_reg_region = []
+        self.tagged_with = []
+        self.carries_tool = []
 
 
 class FBConstruct(FBFeature):
