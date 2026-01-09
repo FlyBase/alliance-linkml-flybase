@@ -253,7 +253,9 @@ class CassetteHandler(FeatureHandler):
         for cassette in self.fb_data_entities.values():
             for slot_name, rel_type in component_slots.items():
                 slot_bin = getattr(cassette, slot_name)
+                print(f"BOB: slot bin {slot_name}: {slot_bin}")
                 for feature_id, pub_ids in slot_bin.items():
+                    print(f"BOB: feature {feature_id}: {pub_ids}")
                     # Do not report obsolete components.
                     if self.feature_lookup[feature_id]['is_obsolete'] is True:
                         continue
