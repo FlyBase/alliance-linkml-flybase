@@ -298,7 +298,7 @@ class CassetteHandler(FeatureHandler):
                     rel_type_name, symbol, taxon_curie,
                     taxon_text, pub_curies)
                 first_feat_rel.linkmldto = rel_dto
-                self.cassette_tool_associations.append(first_feat_rel)
+                self.cassette_component_free_text_associations.append(first_feat_rel)
             elif assoc_type == 'tool_association':
                 # CassetteTransgenicToolAssociationDTO
                 rel_dto = agr_datatypes.CassetteTransgenicToolAssociationDTO(

@@ -17,7 +17,7 @@ from fb_datatypes import (
 )
 from feature_handler import FeatureHandler
 from harvdev_utils.reporting import (
-    Cvterm, Feature, FeatureCvterm, FeatureGenotype, FeatureRelationship,
+    Cvterm, Feature, FeatureGenotype, FeatureRelationship,
     Genotype, Phenotype, PhenotypeCvterm, Phenstatement, Pub
 )
 from utils import export_chado_data
