@@ -78,7 +78,7 @@ class CassetteHandler(FeatureHandler):
         # 'internal_notes': ('internal_note', 'note_dtos'),
     }
     cassette_associations = []  # Should delete this one later
-    cassette_component_free_text_associations = []
+    # cassette_component_free_text_associations = []
     cassette_tool_associations = []
     cassette_genomic_entity_associations = []
     cassette_cassette_rels = {}
@@ -232,9 +232,8 @@ class CassetteHandler(FeatureHandler):
     def query_chado_and_export(self, session):
         """Elaborate on query_chado_and_export method for the CassetteHandler."""
         super().query_chado_and_export(session)
-        # self.generate_export_dict(self.cassette_associations, 'cassette_association_ingest_set')
-        self.generate_export_dict(self.cassette_component_free_text_associations,
-                                  'cassette_str_association_ingest_set')
+        # self.generate_export_dict(self.cassette_component_free_text_associations,
+        #                           'cassette_str_association_ingest_set')
         self.generate_export_dict(self.cassette_genomic_entity_associations,
                                   'cassette_genomic_entity_association_ingest_set')
         self.generate_export_dict(self.cassette_tool_associations,
@@ -286,6 +285,7 @@ class CassetteHandler(FeatureHandler):
                 bad_relationship_count[rel_type_name] += 1
                 continue
             assoc_type = self.cassette_dto_type(subject)
+            print(f"BOB: rel_type_name = {rel_type_name}, assoc_type = {assoc_type}")
             if assoc_type == 'component_free_text':
                 # CassetteComponentSlotAnnotationDTO
                 feature = self.feature_lookup[object_feature_id]
