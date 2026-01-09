@@ -271,8 +271,9 @@ class CassetteHandler(FeatureHandler):
                     pubs = self.lookup_pub_curies(pub_ids)
                     taxon_text = self.organism_lookup[organism_id]['full_species_name']
                     taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
+                    print(f"BOB: rel_type: {rel_type}, symbol: {symbol}, taxon_curie: {taxon_curie}")
                     cassette_dto = agr_datatypes.ConstructComponentSlotAnnotationDTO(rel_type, symbol, taxon_curie, taxon_text, pubs).dict_export()
-                    cassette.linkmldto.construct_component_dtos.append(cassette_dto)
+                    cassette.linkmldto.cassette_component_dtos.append(cassette_dto)
                     counter += 1
         self.log.info(f'Mapped cassette components to {counter} CassettecomponentDTOs.')
         return
