@@ -124,7 +124,7 @@ def generate_tsv_file(export_dict, filename):
                 for comp in entity_dict["cassette_component_dtos"]:
                     symbol = comp["component_symbol"]
                     relation = comp['relation_name']
-                    taxon = comp['taxon_name']
+                    taxon = comp['taxon_curie']
                     evidence = '|'.join(comp['evidence_curies'])
                     outfile.write(f"{primary}\t{symbol}\t{relation}\t{taxon}\t{evidence}\n")
 
