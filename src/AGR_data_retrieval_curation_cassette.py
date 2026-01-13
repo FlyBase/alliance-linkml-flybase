@@ -93,8 +93,6 @@ def generate_tsv_file(export_dict, filename):
                     syns.append(synonym["format_text"])
             if "secondary_identifiers" in entity_dict:
                 secondary = entity_dict["secondary_identifiers"]
-                # for sec in secondary_dict:
-                #     secondary.append(sec["secondary_id"])
             try:
                 outfile.write(f"{primary}\t{symbol}\t{name}\t{'|'.join(secondary)}\t{'|'.join(syns)}\n")
             except TypeError:
@@ -116,6 +114,19 @@ def generate_tsv_file(export_dict, filename):
                     ntype = note["note_type_name"]
                     txt = note['free_text']
                     outfile.write(f"{primary}\t{ntype}\t{txt}\n")
+
+    filename = filename.replace('_notes.tsv', '_component_slots.tsv')
+    with open(filename, 'w') as outfile:
+        outfile.write("# Primary FBid\tsymbol\trelation\ttaxon\tevidence\n")
+        for entity_dict in export_dict["cassette_ingest_set"]:
+            primary = entity_dict["primary_external_id"]
+            if "cassette_component_dtos" in entity_dict:
+                for comp in entity_dict["cassette_component_dtos"]:
+                    symbol = comp["component_symbol"]
+                    relation = comp['relation_name']
+                    taxon = comp['taxon_name']
+                    evidence = '|'.join(comp['evidence_curies'])
+                    outfile.write(f"{primary}\t{symbol}\t{relation}\t{taxon}\t{evidence}\n")
 
 
 def generate_association_tsv_file(export_dict, ingest_name, filename):
