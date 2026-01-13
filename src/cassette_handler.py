@@ -198,7 +198,6 @@ class CassetteHandler(FeatureHandler):
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
         self.get_entity_fb_xrefs(session)
-        # self.get_entity_xrefs(session)
         self.get_entity_relationships(session, 'subject')
 
     def cassette_dto_type(self, feature):
