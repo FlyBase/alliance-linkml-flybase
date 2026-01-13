@@ -297,8 +297,7 @@ class CassetteHandler(FeatureHandler):
                     rel_type_name, symbol, taxon_curie,
                     taxon_text, pub_curies)
                 first_feat_rel.linkmldto = rel_dto
-                # self.cassette_component_free_text_associations.append(first_feat_rel)
-                f_object.has_reg_region.append(first_feat_rel)  # ?
+                f_object.linkmldto.cassette_component_dtos.append(first_feat_rel)
             elif assoc_type == 'tool_association':
                 # CassetteTransgenicToolAssociationDTO
                 rel_dto = agr_datatypes.CassetteTransgenicToolAssociationDTO(
@@ -317,10 +316,6 @@ class CassetteHandler(FeatureHandler):
                 self.log.debug(f"{object_curie} {subject_curie} assoc type is {assoc_type}")
             if f_object.is_obsolete is True or subject['is_obsolete'] is True:
                 self.log.error(f"{object_curie} {subject_curie} should never be obsolete??")
-                # rel_dto.obsolete = True
-                # rel_dto.internal = True
-            # first_feat_rel.linkmldto = rel_dto
-            # self.cassette_associations.append(first_feat_rel)
             counter += 1
         for key in bad_relationship_count:
             self.log.error(f'Bad relationship count for {key}: {bad_relationship_count[key]}')
