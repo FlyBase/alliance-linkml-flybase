@@ -263,9 +263,9 @@ class CassetteHandler(FeatureHandler):
         for cassette_cassette_key, cassette_cassette_rels in self.cassette_cassette_rels.items():
             object_feature_id = cassette_cassette_key[OBJECT]
             f_object = self.fb_data_entities[object_feature_id]
-            object_curie = f'FB:{f_object.uniquename}'
+            component_curie = f'FB:{f_object.uniquename}'
             subject = self.feature_lookup[cassette_cassette_key[SUBJECT]]
-            subject_curie = f'FB:{subject["uniquename"]}'
+            cassette_curie = f'FB:{subject["uniquename"]}'
             first_feat_rel = cassette_cassette_rels[0]
             all_pub_ids = []
             for cassette_cassette_rel in cassette_cassette_rels:
@@ -301,21 +301,21 @@ class CassetteHandler(FeatureHandler):
             elif assoc_type == 'tool_association':
                 # CassetteTransgenicToolAssociationDTO
                 rel_dto = agr_datatypes.CassetteTransgenicToolAssociationDTO(
-                    subject_curie, object_curie,
+                    cassette_curie, component_curie,
                     pub_curies, False, rel_type_name)
                 first_feat_rel.linkmldto = rel_dto
                 self.cassette_tool_associations.append(first_feat_rel)
             elif assoc_type == 'genomic_entity_association':
                 # CassetteGenomicEntityAssociationDTO
                 rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
-                    subject_curie, object_curie,
+                    cassette_curie, component_curie,
                     pub_curies, False, rel_type_name)
                 first_feat_rel.linkmldto = rel_dto
                 self.cassette_genomic_entity_associations.append(first_feat_rel)
             if self.testing:
-                self.log.debug(f"{subject_curie} {object_curie} assoc type is {assoc_type}")
+                self.log.debug(f"{cassette_curie} {component_curie} assoc type is {assoc_type}")
             if f_object.is_obsolete is True or subject['is_obsolete'] is True:
-                self.log.error(f"{subject_curie} {object_curie} should never be obsolete??")
+                self.log.error(f"{cassette_curie} {component_curie} should never be obsolete??")
             counter += 1
         for key in bad_relationship_count:
             self.log.error(f'Bad relationship count for {key}: {bad_relationship_count[key]}')
