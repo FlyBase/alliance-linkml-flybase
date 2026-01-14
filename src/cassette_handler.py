@@ -266,6 +266,7 @@ class CassetteHandler(FeatureHandler):
             component_curie = f'FB:{f_object.uniquename}'
             subject = self.feature_lookup[cassette_cassette_key[SUBJECT]]
             cassette_curie = f'FB:{subject["uniquename"]}'
+
             first_feat_rel = cassette_cassette_rels[0]
             all_pub_ids = []
             for cassette_cassette_rel in cassette_cassette_rels:
@@ -287,9 +288,11 @@ class CassetteHandler(FeatureHandler):
             print(f"BOB: rel_type_name = {rel_type_name}, assoc_type = {assoc_type}")
             if assoc_type == 'component_free_text':
                 # CassetteComponentSlotAnnotationDTO
-                feature = self.feature_lookup[object_feature_id]
-                symbol = feature['symbol']
-                organism_id = feature['organism_id']
+                if self.testing:
+                    print(f"BOB: comp:{component_curie} cass:{cassette_curie}")
+                # feature = self.feature_lookup[object_feature_id]
+                symbol = subject['symbol']
+                organism_id = subject['organism_id']
                 # pubs = self.lookup_pub_curies(pub_ids)
                 taxon_text = self.organism_lookup[organism_id]['full_species_name']
                 taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
