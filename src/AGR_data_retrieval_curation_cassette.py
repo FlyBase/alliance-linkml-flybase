@@ -142,7 +142,7 @@ def generate_association_tsv_file(export_dict, ingest_name, filename):
             else:
                 obj = entity_dict['sequence_targeting_reagent_identifier']
             rel_type = entity_dict['relation_name']
-            pubs = "|".join(entity_dict['evidence'])
+            pubs = "|".join(entity_dict['evidence_curies'])
             outfile.write(f"{sub}\t{obj}\t{rel_type}\t{pubs}\n")
 
 
