@@ -301,21 +301,21 @@ class CassetteHandler(FeatureHandler):
             elif assoc_type == 'tool_association':
                 # CassetteTransgenicToolAssociationDTO
                 rel_dto = agr_datatypes.CassetteTransgenicToolAssociationDTO(
-                    object_curie, subject_curie,
+                    subject_curie, object_curie,
                     pub_curies, False, rel_type_name)
                 first_feat_rel.linkmldto = rel_dto
                 self.cassette_tool_associations.append(first_feat_rel)
             elif assoc_type == 'genomic_entity_association':
                 # CassetteGenomicEntityAssociationDTO
                 rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
-                    object_curie, subject_curie,
+                    subject_curie, object_curie,
                     pub_curies, False, rel_type_name)
                 first_feat_rel.linkmldto = rel_dto
                 self.cassette_genomic_entity_associations.append(first_feat_rel)
             if self.testing:
-                self.log.debug(f"{object_curie} {subject_curie} assoc type is {assoc_type}")
+                self.log.debug(f"{subject_curie} {object_curie} assoc type is {assoc_type}")
             if f_object.is_obsolete is True or subject['is_obsolete'] is True:
-                self.log.error(f"{object_curie} {subject_curie} should never be obsolete??")
+                self.log.error(f"{subject_curie} {object_curie} should never be obsolete??")
             counter += 1
         for key in bad_relationship_count:
             self.log.error(f'Bad relationship count for {key}: {bad_relationship_count[key]}')
@@ -344,7 +344,7 @@ class CassetteHandler(FeatureHandler):
                 except KeyError:
                     self.cassette_cassette_rels[cassette_cassette_key] = [cassette_rel]
                     obj_cassette_counter += 1
-        self.log.info(f'Found {obj_cassette_counter} cassettes for {sub_cassette_counter} cassettes.')
+        self.log.info(f'Found {obj_cassette_counter} components for {sub_cassette_counter} cassettes.')
         return
 
     # Elaborate on synthesize_info() for the Handler.
