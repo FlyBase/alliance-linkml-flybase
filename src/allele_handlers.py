@@ -171,10 +171,10 @@ class AlleleHandler(MetaAlleleHandler):
         'FBal0045138': 'Sry-delta[SDL1.lacZ]',                 # Another Cassette so should not appear
         'FBal0193109': r'Avic\GFP[EGFP.rho.PE.Tag:NLS(tra)]',  # Another Cassette so should not appear
         'FBal0250846': r'Scer\GAL4[GMR24E03]',                 # Another Cassette so should not appear
-        'dlg1[DeltaSH3.UAS.Tag:FLAG]': 'FBal0083005', # Another Cassette so should not appear
-        'cic[Tag:HA]': 'FBal0137284', # Another Cassette so should not appear
-        'PGRP-LE[UAS.Tag:FLAG]': 'FBal0144698', # Another Cassette so should not appear
-        'wg[PE4.UAS.cCa.Tag:HA]': 'FBal0151333', # Another Cassette so should not appear
+        'dlg1[DeltaSH3.UAS.Tag:FLAG]': 'FBal0083005',  # Another Cassette so should not appear
+        'cic[Tag:HA]': 'FBal0137284',                  # Another Cassette so should not appear
+        'PGRP-LE[UAS.Tag:FLAG]': 'FBal0144698',        # Another Cassette so should not appear
+        'wg[PE4.UAS.cCa.Tag:HA]': 'FBal0151333',       # Another Cassette so should not appear
 
     }
 

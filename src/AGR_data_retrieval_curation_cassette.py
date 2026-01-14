@@ -132,10 +132,8 @@ def generate_tsv_file(export_dict, filename):
 def generate_association_tsv_file(export_dict, ingest_name, filename):
     filename = filename.replace('.tsv', '_associations.tsv')
     with open(filename, 'w') as outfile:
-        outfile.write("# Subject curie\tObject curie\tRelationship\n")
-        print(f"BOB: {ingest_name}")
+        outfile.write("# Subject curie\tObject curie\tRelationship\tEvidence\n")
         for entity_dict in export_dict[ingest_name]:
-            print(f"BOB: {entity_dict}")
             sub = entity_dict['cassette_identifier']
             if ingest_name == 'cassette_transgenic_tool_association_ingest_set':
                 obj = entity_dict['transgenic_tool_identifier']
@@ -144,8 +142,8 @@ def generate_association_tsv_file(export_dict, ingest_name, filename):
             else:
                 obj = entity_dict['sequence_targeting_reagent_identifier']
             rel_type = entity_dict['relation_name']
-            # pubs = "|".join(entity_dict['evidence'])
-            outfile.write(f"{sub}\t{obj}\t{rel_type}\n")
+            pubs = "|".join(entity_dict['evidence'])
+            outfile.write(f"{sub}\t{obj}\t{rel_type}\t{pubs}\n")
 
 
 # The main process.
