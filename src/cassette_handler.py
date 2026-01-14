@@ -68,6 +68,10 @@ class CassetteHandler(FeatureHandler):
         'FBal0193109': r'Avic\GFP[EGFP.rho.PE.Tag:NLS(tra)]',  # linked to an FBsf so a str association.
         'FBal0250846': r'Scer\GAL4[GMR24E03]',                 # linked to an FBsf so a str association.
         'FBal0041313': r'Ecol\lacZ[eve.1.55] ',                # linked to an FBsf so a str association.
+        'dlg1[DeltaSH3.UAS.Tag:FLAG]': 'FBal0083005', # two refs for same tagged_with (FBrf0099758, FBrf0130114), only one for has_reg_region (tool) (FBrf0099758)
+        'cic[Tag:HA]': 'FBal0137284', # single tagged_with (FBrf0144844, FBrf0180201), single has_reg_region (gene) (FBrf0144844, FBrf0180201)
+        'PGRP-LE[UAS.Tag:FLAG]': 'FBal0144698', # single tagged_with (FBrf0152317, FBrf0212747), two has_reg_region (tool) (UAS = FBrf0212747, UASt = FBrf0152317)
+        'wg[PE4.UAS.cCa.Tag:HA]': 'FBal0151333', # single also_carries (FBrf0173223), single tagged_with (FBrf0167661, FBrf0173223), two has_reg_region (tool) (UAS = FBrf0173223, UASt = FBrf0167661)
     }
 
     cassette_prop_to_note_mapping = {
