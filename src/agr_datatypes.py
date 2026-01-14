@@ -549,12 +549,12 @@ class AlleleMutationTypeSlotAnnotationDTO(SlotAnnotationDTO):
 
 
 class CassetteComponentSlotAnnotationDTO(SlotAnnotationDTO):
-    """ConstructComponentSlotAnnotationDTO class."""
+    """CassetteComponentSlotAnnotationDTO class."""
     def __init__(self, rel_type: str, component_symbol: str, taxon_curie: str, taxon_text: str, evidence_curies: list):
-        """Create a ConstructComponentSlotAnnotation for a FlyBase construct component.
+        """Create a CassetteComponentSlotAnnotation for a FlyBase cassette component.
 
         Args:
-            rel_type (str): A CV term from "Construct Genomic Entity Association Relation": expressed, targets, or, is_regulated_by.
+            rel_type (str): A CV term from "Cassette Genomic Entity Association Relation": expressed, targets, or, is_regulated_by.
             component_symbol (str): The symbol for the component.
             taxon_curie (str): The NCBITaxon ID of the component.
             taxon_text (str): The species name of the component.
