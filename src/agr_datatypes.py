@@ -105,6 +105,45 @@ class AlleleDTO(GenomicEntityDTO):
         self.required_fields.extend(['allele_symbol_dto', 'primary_external_id'])
 
 
+class CassetteTransgenicToolAssociationDTO(AuditedObjectDTO):
+    """CassetteTransgenicToolAssociationDTO class."""
+    def __init__(self, cassette_association_subject, cassette_association_object,
+                 pub_curies, obsolete, relation):
+        """Create CassetteAssociationDTO for FlyBase object."""
+        super().__init__()
+        self.cassette_identifier = cassette_association_subject
+        self.transgenic_tool_identifier = cassette_association_object
+        self.evidence_curies = pub_curies
+        self.obsolete = obsolete
+        self.relation_name = relation
+
+
+class CassetteGenomicEntityAssociationDTO(AuditedObjectDTO):
+    """CassetteGenomicEntityAssociationDTO class."""
+    def __init__(self, cassette_association_subject, cassette_association_object,
+                 pub_curies, obsolete, relation):
+        """Create CassetteAssociationDTO for FlyBase object."""
+        super().__init__()
+        self.cassette_identifier = cassette_association_subject
+        self.genomic_entity_identifier = cassette_association_object
+        self.evidence_curies = pub_curies
+        self.obsolete = obsolete
+        self.relation_name = relation
+
+
+class CassetteStrAssociationDTO(AuditedObjectDTO):
+    """CassetteStrAssociationDTO class."""
+    def __init__(self, cassette_association_subject, cassette_association_object,
+                 pub_curies, obsolete, relation):
+        """Create CassetteStrAssociationDTO for FlyBase object."""
+        super().__init__()
+        self.cassette_identifier = cassette_association_subject
+        self.sequence_targeting_reagent_identifier = cassette_association_object
+        self.evidence = pub_curies
+        self.obsolete = obsolete
+        self.relation_name = relation
+
+
 class GeneDTO(GenomicEntityDTO):
     """GeneDTO class."""
     def __init__(self):
@@ -122,35 +161,19 @@ class GeneDTO(GenomicEntityDTO):
         self.required_fields.extend(['gene_symbol_dto'])
 
 
-class TransgenicToolDTO(GenomicEntityDTO):
-    """TransgenicToolDTO class."""
-    def __init__(self):
-        """Create TransgenicToolDTO for FlyBase object."""
-        super().__init__()
-        self.transgenic_tool_symbol_dto = None      # One NameSlotAnnotationDTO.
-        self.transgenic_tool_full_name_dto = None   # One NameSlotAnnotationDTO.
-        self.transgenic_tool_synonym_dtos = []      # Many NameSlotAnnotationDTO objects.
-        self.gene_type_curie = None                 # SO term ID for gene's promoted_gene_type.
-        self.secondary_identifiers = []             # Annotation IDs and 2o FlyBase IDs.
-        self.note_dtos = []                         # Will be NoteDTO objects.
-        self.cross_reference_dtos = []
-        self.required_fields.extend(['transgenic_tool_symbol_dto'])
-        self.required_fields.remove('taxon_curie')  # Does not have it!
-
-
 class TransgenicToolAssociationDTO(AuditedObjectDTO):
     """TransgenicToolAssociationDTO class."""
-    def __init__(self, transgenic_tool_association_subject, transgenic_tool_association_object,
+    def __init__(self, transgenic_tool_subject_identifier, transgenic_tool_object_identifier,
                  pub_curies, obsolete, relation):
         """Create TransgenicToolAssociationDTO for FlyBase object."""
         super().__init__()
-        self.transgenic_tool_association_subject = transgenic_tool_association_subject
-        self.transgenic_tool_transgenic_tool_association_object = transgenic_tool_association_object
-        self.evidence = pub_curies
-        self.obsolete = obsolete
-        self.relation = relation
-        self.required_fields.extend(['transgenic_tool_association_subject',
-                                     'transgenic_tool_transgenic_tool_association_object'])
+        self.transgenic_tool_subject_identifier = transgenic_tool_subject_identifier
+        self.transgenic_tool_object_identifier = transgenic_tool_object_identifier
+        # self.evidence_curies = pub_curies  # ??
+        # self.obsolete = obsolete
+        self.relation_name = relation
+        self.required_fields.extend(['transgenic_tool_subject_identifier',
+                                     'transgenic_tool_object_identifier'])
 
 
 class ReagentDTO(SubmittedObjectDTO):
@@ -160,6 +183,34 @@ class ReagentDTO(SubmittedObjectDTO):
         super().__init__()
         self.secondary_identifiers = []    # Will be list of 2o FB curies (strings).
         self.required_fields.extend([])
+
+
+class TransgenicToolDTO(ReagentDTO):
+    """TransgenicToolDTO class."""
+    def __init__(self):
+        """Create TransgenicToolDTO for FlyBase object."""
+        super().__init__()
+        self.transgenic_tool_symbol_dto = None      # One NameSlotAnnotationDTO.
+        self.transgenic_tool_full_name_dto = None   # One NameSlotAnnotationDTO.
+        self.transgenic_tool_synonym_dtos = []      # Many NameSlotAnnotationDTO objects.
+        self.note_dtos = []                         # Will be NoteDTO objects.
+        self.cross_reference_dtos = []
+        self.required_fields.extend(['transgenic_tool_symbol_dto'])
+
+
+class CassetteDTO(ReagentDTO):
+    """CassetteDTO class."""
+    def __init__(self):
+        """Create CassetteDTO for FlyBase object."""
+        super().__init__()
+        self.cassette_symbol_dto = None      # One NameSlotAnnotationDTO.
+        self.cassette_full_name_dto = None   # One NameSlotAnnotationDTO.
+        self.cassette_synonym_dtos = []      # Many NameSlotAnnotationDTO objects.
+        self.note_dtos = []                         # Will be NoteDTO objects.
+        self.cassette_component_dtos = []    # CassetteComponentSlotAnnotationDTOs.
+        self.required_fields.extend(['cassette_symbol_dto'])
+        self.cassette_use_dtos = []
+        self.reference_curies = []
 
 
 class ConstructDTO(ReagentDTO):
@@ -495,6 +546,28 @@ class AlleleMutationTypeSlotAnnotationDTO(SlotAnnotationDTO):
         super().__init__(evidence_curies)
         self.mutation_type_curies = [mutation_type_curie]
         self.required_fields.extend(['mutation_type_curies'])
+
+
+class CassetteComponentSlotAnnotationDTO(SlotAnnotationDTO):
+    """CassetteComponentSlotAnnotationDTO class."""
+    def __init__(self, rel_type: str, component_symbol: str, taxon_curie: str, taxon_text: str, evidence_curies: list):
+        """Create a CassetteComponentSlotAnnotation for a FlyBase cassette component.
+
+        Args:
+            rel_type (str): A CV term from "Cassette Genomic Entity Association Relation": expressed, targets, or, is_regulated_by.
+            component_symbol (str): The symbol for the component.
+            taxon_curie (str): The NCBITaxon ID of the component.
+            taxon_text (str): The species name of the component.
+            evidence_curies (list): A list of FB:FBrf or PMID curies.
+
+        """
+        super().__init__(evidence_curies)
+        self.relation_name = rel_type
+        self.component_symbol = component_symbol
+        self.taxon_curie = taxon_curie
+        self.taxon_text = taxon_text
+        self.note_dtos = []
+        self.required_fields.extend([])
 
 
 class ConstructComponentSlotAnnotationDTO(SlotAnnotationDTO):

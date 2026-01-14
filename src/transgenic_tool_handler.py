@@ -141,7 +141,8 @@ class ExperimentalToolHandler(FeatureHandler):
 
         tool_tool_counter = {}
         for tool_tool_key in self.tool_tool_rels.keys():
-            self.log.debug(f'Mapping {tool_tool_key} to Alliance object. {self.tool_tool_rels[tool_tool_key]}')
+            if self.testing:
+                self.log.debug(f'Mapping {tool_tool_key} to Alliance object. {self.tool_tool_rels[tool_tool_key]}')
             try:
                 tool_tool_counter[tool_tool_key[OBJECT]] += 1
             except KeyError:

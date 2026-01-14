@@ -110,11 +110,12 @@ def generate_association_tsv_file(export_dict, filename):
     filename = filename.replace('.tsv', '_associations.tsv')
     with open(filename, 'w') as outfile:
         outfile.write("# Object curie\tSubject curie\tPub\n")
-        for entity_dict in export_dict['tool_association_ingest_set']:
-            obj = entity_dict['transgenic_tool_transgenic_tool_association_object']
-            sub = entity_dict['transgenic_tool_association_subject']
-            pubs = "|".join(entity_dict['evidence'])
-            outfile.write(f"{obj}\t{sub}\t{pubs}\n")
+        for entity_dict in export_dict['transgenic_tool_transgenic_tool_association_ingest_set']:
+            obj = entity_dict['transgenic_tool_object_identifier']
+            sub = entity_dict['transgenic_tool_subject_identifier']
+            # pubs = "|".join(entity_dict['evidence_curies'])
+            rel = entity_dict['relation_name']
+            outfile.write(f"{obj}\t{sub}\t{rel}\n")
 
 
 # The main process.
@@ -156,11 +157,12 @@ def main():
             'alliance_member_release_version': database_release,
         }
         # tool_tool associations.
-        association_export_dict['tool_association_ingest_set'] = []
-        association_export_dict['tool_association_ingest_set'].extend(tool_handler.export_data['tool_association_ingest_set'])
-        if len(association_export_dict['tool_association_ingest_set']) == 0:
-            log.error('The "tool_association_ingest_set" is unexpectedly empty.')
-            raise ValueError('The "tool_association_ingest_set" is unexpectedly empty.')
+        assoc = 'transgenic_tool_transgenic_tool_association_ingest_set'
+        association_export_dict[assoc] = []
+        association_export_dict[assoc].extend(tool_handler.export_data['tool_association_ingest_set'])
+        if len(association_export_dict[assoc]) == 0:
+            log.error(f'The "{assoc}" is unexpectedly empty.')
+            raise ValueError(f'The "{assoc}" is unexpectedly empty.')
         # Print the output file.
         generate_export_file(association_export_dict, log, association_output_filename)
         generate_association_tsv_file(association_export_dict, set_up_dict['output_filename'])
