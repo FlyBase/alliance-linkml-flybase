@@ -324,7 +324,7 @@ class CassetteHandler(FeatureHandler):
                 self.cassette_genomic_entity_associations.append(first_feat_rel)
             if self.testing:
                 self.log.debug(f"{cassette_curie} {component_curie} assoc type is {assoc_type}")
-            if cassette_object.is_obsolete is True or cassette_object['is_obsolete'] is True:
+            if other_object.is_obsolete is True or other_object['is_obsolete'] is True:
                 self.log.error(f"{cassette_curie} {component_curie} should never be obsolete??")
             counter += 1
         for key in bad_relationship_count:
