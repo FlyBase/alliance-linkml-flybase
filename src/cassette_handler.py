@@ -268,9 +268,9 @@ class CassetteHandler(FeatureHandler):
 
         bad_relationship_count = {}
         for cassette_cassette_key, cassette_cassette_rels in self.cassette_cassette_rels.items():
-            object_feature_id = cassette_cassette_key[SUBJECT]
+            object_feature_id = cassette_cassette_key[OBJECT]
             cassette_object = self.fb_data_entities[object_feature_id]
-            other_object = self.feature_lookup[cassette_cassette_key[OBJECT]]
+            other_object = self.feature_lookup[cassette_cassette_key[SUBJECT]]
             cassette_curie = f'FB:{cassette_object["uniquename"]}'
             component_curie = f'FB:{other_object.uniquename}'
             rel_type_name = cassette_cassette_rels[0].chado_obj.type.name
