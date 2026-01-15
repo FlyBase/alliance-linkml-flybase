@@ -131,19 +131,24 @@ def generate_tsv_file(export_dict, filename):
 
 def generate_association_tsv_file(export_dict, ingest_name, filename):
     filename = filename.replace('.tsv', '_associations.tsv')
+    # To help in debugging, the 'first_entity' and 'second_entity' variables are used:
+    # - to get the entities involved in the association out of the relevant 'export_dict[ingest_name]'
+    # - AND as the column headers in the tsv output file
+    first_entity = 'cassette_identifier'
+    if ingest_name == 'cassette_transgenic_tool_association_ingest_set':
+        second_entity = 'transgenic_tool_identifier'
+    elif ingest_name == 'cassette_genomic_entity_association_ingest_set':
+        second_entity = 'genomic_entity_identifier'
+    else:
+        second_entity = 'sequence_targeting_reagent_identifier'
     with open(filename, 'w') as outfile:
-        outfile.write("# Subject curie\tObject curie\tRelationship\tEvidence\n")
+        outfile.write(f"#{first_entity}\tRelationship\t{second_entity}\tEvidence\n")
         for entity_dict in export_dict[ingest_name]:
-            sub = entity_dict['cassette_identifier']
-            if ingest_name == 'cassette_transgenic_tool_association_ingest_set':
-                obj = entity_dict['transgenic_tool_identifier']
-            elif ingest_name == 'cassette_genomic_entity_association_ingest_set':
-                obj = entity_dict['genomic_entity_identifier']
-            else:
-                obj = entity_dict['sequence_targeting_reagent_identifier']
+            sub = entity_dict[first_entity]
+            obj = entity_dict[second_entity]
             rel_type = entity_dict['relation_name']
             pubs = "|".join(entity_dict['evidence_curies'])
-            outfile.write(f"{sub}\t{obj}\t{rel_type}\t{pubs}\n")
+            outfile.write(f"{sub}\t{rel_type}\t{obj}\t{pubs}\n")
 
 
 # The main process.
