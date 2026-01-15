@@ -271,8 +271,8 @@ class CassetteHandler(FeatureHandler):
             object_feature_id = cassette_cassette_key[OBJECT]
             cassette_object = self.fb_data_entities[object_feature_id]
             other_object = self.feature_lookup[cassette_cassette_key[SUBJECT]]
-            cassette_curie = f'FB:{cassette_object["uniquename"]}'
-            component_curie = f'FB:{other_object.uniquename}'
+            cassette_curie = f'FB:{cassette_object.uniquename}'
+            component_curie = f'FB:{other_object["uniquename"]}'
             rel_type_name = cassette_cassette_rels[0].chado_obj.type.name
             if self.testing:
                 print(f"BOB: cass:{cassette_curie} {rel_type_name} comp:{component_curie}")
