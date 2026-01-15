@@ -144,8 +144,8 @@ def generate_association_tsv_file(export_dict, ingest_name, filename):
     with open(filename, 'w') as outfile:
         outfile.write(f"#{first_entity}\tRelationship\t{second_entity}\tEvidence\n")
         for entity_dict in export_dict[ingest_name]:
-            sub = entity_dict[first_entity]
-            obj = entity_dict[second_entity]
+            obj = entity_dict[first_entity]
+            sub = entity_dict[second_entity]
             rel_type = entity_dict['relation_name']
             pubs = "|".join(entity_dict['evidence_curies'])
             outfile.write(f"{sub}\t{rel_type}\t{obj}\t{pubs}\n")
