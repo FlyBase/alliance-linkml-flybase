@@ -271,8 +271,8 @@ class CassetteHandler(FeatureHandler):
             object_feature_id = cassette_cassette_key[OBJECT]
             f_object = self.fb_data_entities[object_feature_id]
             component_curie = f'FB:{f_object.uniquename}'
-            subject = self.feature_lookup[cassette_cassette_key[SUBJECT]]
-            cassette_curie = f'FB:{subject["uniquename"]}'
+            f_subject = self.feature_lookup[cassette_cassette_key[SUBJECT]]
+            cassette_curie = f'FB:{f_subject["uniquename"]}'
 
             first_feat_rel = cassette_cassette_rels[0]
             all_pub_ids = []
@@ -291,14 +291,14 @@ class CassetteHandler(FeatureHandler):
                     bad_relationship_count[rel_type_name] = 0
                 bad_relationship_count[rel_type_name] += 1
                 continue
-            assoc_type = self.cassette_dto_type(subject)
+            assoc_type = self.cassette_dto_type(f_object)
             if assoc_type == 'component_free_text':
                 # CassetteComponentSlotAnnotationDTO
                 if self.testing:
                     print(f"map_cassette_associations: comp:{component_curie} cass:{cassette_curie}")
                 # feature = self.feature_lookup[object_feature_id]
-                symbol = subject['symbol']
-                organism_id = subject['organism_id']
+                symbol = f_object['symbol']
+                organism_id = f_object['organism_id']
                 # pubs = self.lookup_pub_curies(pub_ids)
                 taxon_text = self.organism_lookup[organism_id]['full_species_name']
                 taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
@@ -306,7 +306,7 @@ class CassetteHandler(FeatureHandler):
                     rel_type_name, symbol, taxon_curie,
                     taxon_text, pub_curies).dict_export()
                 # first_feat_rel.linkmldto = rel_dto
-                f_object.linkmldto.cassette_component_dtos.append(rel_dto)
+                f_subject.linkmldto.cassette_component_dtos.append(rel_dto)
             elif assoc_type == 'tool_association':
                 # CassetteTransgenicToolAssociationDTO
                 rel_dto = agr_datatypes.CassetteTransgenicToolAssociationDTO(
