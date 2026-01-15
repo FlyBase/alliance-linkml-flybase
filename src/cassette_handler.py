@@ -250,8 +250,8 @@ class CassetteHandler(FeatureHandler):
     def map_cassette_associations(self):
         """Map transgenic cassette associations to Alliance object."""
         self.log.info('Map cassette associations to Alliance object.')
-        OBJECT = 1
-        SUBJECT = 0
+        OBJECT = 0
+        SUBJECT = 1
         counter = 0
 
         map_relationship = {'has_reg_region': 'is_regulated_by',
