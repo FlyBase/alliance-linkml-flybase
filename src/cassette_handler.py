@@ -251,7 +251,7 @@ class CassetteHandler(FeatureHandler):
         """Map transgenic cassette associations to Alliance object."""
         self.log.info('Map cassette associations to Alliance object.')
         CASSETTE = 0
-        OBJECT = 1
+        COMPONENT = 1
         counter = 0
 
         map_relationship = {'has_reg_region': 'is_regulated_by',
@@ -271,8 +271,8 @@ class CassetteHandler(FeatureHandler):
             cassette_feature_id = cassette_cassette_key[CASSETTE]
             cassette = self.fb_data_entities[cassette_feature_id]
             cassette_curie = f'FB:{cassette.uniquename}'
-            subject = self.feature_lookup[cassette_cassette_key[OBJECT]]
-            component_curie = f'FB:{subject["uniquename"]}'
+            component = self.feature_lookup[cassette_cassette_key[COMPONENT]]
+            component_curie = f'FB:{component["uniquename"]}'
 
             first_feat_rel = cassette_cassette_rels[0]
             all_pub_ids = []
@@ -291,13 +291,13 @@ class CassetteHandler(FeatureHandler):
                     bad_relationship_count[rel_type_name] = 0
                 bad_relationship_count[rel_type_name] += 1
                 continue
-            assoc_type = self.cassette_dto_type(subject)
+            assoc_type = self.cassette_dto_type(component)
             if assoc_type == 'component_free_text':
                 # CassetteComponentSlotAnnotationDTO
                 if self.testing:
                     print(f"map_cassette_associations: comp:{component_curie} cass:{cassette_curie}")
-                symbol = subject['symbol']
-                organism_id = subject['organism_id']
+                symbol = component['symbol']
+                organism_id = component['organism_id']
                 # pubs = self.lookup_pub_curies(pub_ids)
                 taxon_text = self.organism_lookup[organism_id]['full_species_name']
                 taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
@@ -322,7 +322,7 @@ class CassetteHandler(FeatureHandler):
                 self.cassette_genomic_entity_associations.append(first_feat_rel)
             if self.testing:
                 self.log.debug(f"{cassette_curie} {component_curie} assoc type is {assoc_type}")
-            if cassette.is_obsolete is True or subject['is_obsolete'] is True:
+            if cassette.is_obsolete is True or component['is_obsolete'] is True:
                 self.log.error(f"{cassette_curie} {component_curie} should never be obsolete??")
             counter += 1
         for key in bad_relationship_count:
