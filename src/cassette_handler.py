@@ -250,8 +250,8 @@ class CassetteHandler(FeatureHandler):
     def map_cassette_associations(self):
         """Map transgenic cassette associations to Alliance object."""
         self.log.info('Map cassette associations to Alliance object.')
-        OBJECT = 1
         SUBJECT = 0
+        OBJECT = 1
         counter = 0
 
         map_relationship = {'has_reg_region': 'is_regulated_by',
@@ -262,17 +262,17 @@ class CassetteHandler(FeatureHandler):
             if self.testing:
                 self.log.debug(f'Mapping {cassette_cassette_key} to Alliance object. {self.cassette_cassette_rels[cassette_cassette_key]}')
             try:
-                cassette_cassette_counter[cassette_cassette_key[OBJECT]] += 1
+                cassette_cassette_counter[cassette_cassette_key[SUBJECT]] += 1
             except KeyError:
-                cassette_cassette_counter[cassette_cassette_key[OBJECT]] = 1
+                cassette_cassette_counter[cassette_cassette_key[SUBJECT]] = 1
 
         bad_relationship_count = {}
         for cassette_cassette_key, cassette_cassette_rels in self.cassette_cassette_rels.items():
-            object_feature_id = cassette_cassette_key[OBJECT]
+            object_feature_id = cassette_cassette_key[SUBJECT]
             f_object = self.fb_data_entities[object_feature_id]
-            component_curie = f'FB:{f_object.uniquename}'
-            subject = self.feature_lookup[cassette_cassette_key[SUBJECT]]
-            cassette_curie = f'FB:{subject["uniquename"]}'
+            cassette_curie = f'FB:{f_object.uniquename}'
+            subject = self.feature_lookup[cassette_cassette_key[OBJECT]]
+            component_curie = f'FB:{subject["uniquename"]}'
 
             first_feat_rel = cassette_cassette_rels[0]
             all_pub_ids = []
