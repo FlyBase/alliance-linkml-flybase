@@ -248,31 +248,33 @@ class CassetteHandler(FeatureHandler):
         return
 
     def map_cassette_associations(self):
-        """Map transgenic cassette associations to Alliance object."""
-        self.log.info('Map cassette associations to Alliance object.')
-        OBJECT = 1
-        SUBJECT = 0
+        """Map transgenic cassette-component associations to Alliance object."""
+        self.log.info('Map cassette-component associations to Alliance object.')
+        CASSETTE = 0
+        COMPONENT = 1
         counter = 0
 
         map_relationship = {'has_reg_region': 'is_regulated_by',
                             'tagged_with': 'tagged_with',
                             'carries_tool': 'contains'}
-        cassette_cassette_counter = {}
+        # cassette_cassette_counter = {}
         for cassette_cassette_key in self.cassette_cassette_rels.keys():
             if self.testing:
                 self.log.debug(f'Mapping {cassette_cassette_key} to Alliance object. {self.cassette_cassette_rels[cassette_cassette_key]}')
-            try:
-                cassette_cassette_counter[cassette_cassette_key[OBJECT]] += 1
-            except KeyError:
-                cassette_cassette_counter[cassette_cassette_key[OBJECT]] = 1
+            # don't think we need to worry about the count of cassettes to components
+            # try:
+            #    cassette_cassette_counter[cassette_cassette_key[CASSETTE]] += 1
+            # except KeyError:
+            #    cassette_cassette_counter[cassette_cassette_key[CASSETTE]] = 1
 
         bad_relationship_count = {}
+        # go through cassettes and make the cassette-component associations.
         for cassette_cassette_key, cassette_cassette_rels in self.cassette_cassette_rels.items():
-            object_feature_id = cassette_cassette_key[OBJECT]
-            f_object = self.fb_data_entities[object_feature_id]
-            component_curie = f'FB:{f_object.uniquename}'
-            subject = self.feature_lookup[cassette_cassette_key[SUBJECT]]
-            cassette_curie = f'FB:{subject["uniquename"]}'
+            cassette_feature_id = cassette_cassette_key[CASSETTE]
+            cassette = self.fb_data_entities[cassette_feature_id]
+            cassette_curie = f'FB:{cassette.uniquename}'
+            component = self.feature_lookup[cassette_cassette_key[COMPONENT]]
+            component_curie = f'FB:{component["uniquename"]}'
 
             first_feat_rel = cassette_cassette_rels[0]
             all_pub_ids = []
@@ -281,7 +283,7 @@ class CassetteHandler(FeatureHandler):
             first_feat_rel.pubs = all_pub_ids
             pub_curies = self.lookup_pub_curies(all_pub_ids)
 
-            # Adjust allele-gene relation_type as needed.
+            # Adjust cassette-component relation_type as needed.
 
             rel_type_name = cassette_cassette_rels[0].chado_obj.type.name
             if rel_type_name in map_relationship:
@@ -291,14 +293,13 @@ class CassetteHandler(FeatureHandler):
                     bad_relationship_count[rel_type_name] = 0
                 bad_relationship_count[rel_type_name] += 1
                 continue
-            assoc_type = self.cassette_dto_type(subject)
+            assoc_type = self.cassette_dto_type(component)
             if assoc_type == 'component_free_text':
                 # CassetteComponentSlotAnnotationDTO
                 if self.testing:
-                    print(f"map_cassette_associations: comp:{component_curie} cass:{cassette_curie}")
-                # feature = self.feature_lookup[object_feature_id]
-                symbol = subject['symbol']
-                organism_id = subject['organism_id']
+                    print(f"map_cassette_associations: cass:{cassette_curie} comp:{component_curie}")
+                symbol = component['symbol']
+                organism_id = component['organism_id']
                 # pubs = self.lookup_pub_curies(pub_ids)
                 taxon_text = self.organism_lookup[organism_id]['full_species_name']
                 taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
@@ -306,7 +307,7 @@ class CassetteHandler(FeatureHandler):
                     rel_type_name, symbol, taxon_curie,
                     taxon_text, pub_curies).dict_export()
                 # first_feat_rel.linkmldto = rel_dto
-                f_object.linkmldto.cassette_component_dtos.append(rel_dto)
+                cassette.linkmldto.cassette_component_dtos.append(rel_dto)
             elif assoc_type == 'tool_association':
                 # CassetteTransgenicToolAssociationDTO
                 rel_dto = agr_datatypes.CassetteTransgenicToolAssociationDTO(
@@ -323,28 +324,31 @@ class CassetteHandler(FeatureHandler):
                 self.cassette_genomic_entity_associations.append(first_feat_rel)
             if self.testing:
                 self.log.debug(f"{cassette_curie} {component_curie} assoc type is {assoc_type}")
-            if f_object.is_obsolete is True or subject['is_obsolete'] is True:
+            if cassette.is_obsolete is True or component['is_obsolete'] is True:
                 self.log.error(f"{cassette_curie} {component_curie} should never be obsolete??")
             counter += 1
         for key in bad_relationship_count:
             self.log.error(f'Bad relationship count for {key}: {bad_relationship_count[key]}')
-        self.log.info(f'Generated {counter} cassette-cassette unique associations.')
+        self.log.info(f'Generated {counter} cassette-component unique associations.')
         return
 
     def synthesize_cassette_associations(self):
-        """Get cassette relationships."""
-        self.log.info('Synthesize cassette.')
-        sub_cassette_counter = 0
-        obj_cassette_counter = 0
+        """Get cassette-to-component relationships."""
+        self.log.info('Synthesize cassette-to-component relationships.')
+        cassette_counter = 0
+        component_counter = 0
         for cassette in self.fb_data_entities.values():
             relevant_cassette_rels = cassette.recall_relationships(
                 self.log, entity_role='subject',
                 rel_types=['has_reg_region', 'tagged_with', 'carries_tool'])
             if relevant_cassette_rels:
-                sub_cassette_counter += 1
+                cassette_counter += 1
+            # put the data into cassette_cassette_key with the cassette (FBal) first and the component second
+            # cassette_rel.chado_obj.subject_id is the feature_of the cassette (chado subject_id)
+            # cassette_rel.chado_obj.object_id is the feature_id of the component (chado object_id)
             for cassette_rel in relevant_cassette_rels:
                 try:
-                    cassette_cassette_key = (cassette_rel.chado_obj.object_id, cassette_rel.chado_obj.subject_id)
+                    cassette_cassette_key = (cassette_rel.chado_obj.subject_id, cassette_rel.chado_obj.object_id)
                 except AttributeError:
                     self.log.error(f"problem {cassette} {cassette_rel}")
                     raise
@@ -352,8 +356,8 @@ class CassetteHandler(FeatureHandler):
                     self.cassette_cassette_rels[cassette_cassette_key].append(cassette_rel)
                 except KeyError:
                     self.cassette_cassette_rels[cassette_cassette_key] = [cassette_rel]
-                    obj_cassette_counter += 1
-        self.log.info(f'Found {obj_cassette_counter} components for {sub_cassette_counter} cassettes.')
+                    component_counter += 1
+        self.log.info(f'Found {component_counter} components for {cassette_counter} cassettes.')
         return
 
     # Elaborate on synthesize_info() for the Handler.
