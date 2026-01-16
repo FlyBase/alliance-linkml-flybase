@@ -333,14 +333,14 @@ class CassetteHandler(FeatureHandler):
     def synthesize_cassette_associations(self):
         """Get cassette relationships."""
         self.log.info('Synthesize cassette.')
-        sub_cassette_counter = 0
-        obj_cassette_counter = 0
+        cassette_counter = 0
+        component_counter = 0
         for cassette in self.fb_data_entities.values():
             relevant_cassette_rels = cassette.recall_relationships(
                 self.log, entity_role='subject',
                 rel_types=['has_reg_region', 'tagged_with', 'carries_tool'])
             if relevant_cassette_rels:
-                sub_cassette_counter += 1
+                cassette_counter += 1
             # put the data into cassette_component_key with the cassette (FBal) first and the component second
             # cassette_rel.chado_obj.subject_id is the feature_of the cassette (chado subject_id)
             # cassette_rel.chado_obj.object_id is the feature_id of the component (chado object_id)
@@ -354,8 +354,8 @@ class CassetteHandler(FeatureHandler):
                     self.cassette_cassette_rels[cassette_cassette_key].append(cassette_rel)
                 except KeyError:
                     self.cassette_cassette_rels[cassette_cassette_key] = [cassette_rel]
-                    obj_cassette_counter += 1
-        self.log.info(f'Found {obj_cassette_counter} components for {sub_cassette_counter} cassettes.')
+                    component_counter += 1
+        self.log.info(f'Found {component_counter} components for {cassette_counter} cassettes.')
         return
 
     # Elaborate on synthesize_info() for the Handler.
