@@ -342,9 +342,12 @@ class CassetteHandler(FeatureHandler):
                 rel_types=['has_reg_region', 'tagged_with', 'carries_tool'])
             if relevant_cassette_rels:
                 sub_cassette_counter += 1
+            # put the data into cassette_component_key with the cassette (FBal) first and the component second
+            # cassette_rel.chado_obj.subject_id is the feature_of the cassette (chado subject_id)
+            # cassette_rel.chado_obj.object_id is the feature_id of the component (chado object_id)
             for cassette_rel in relevant_cassette_rels:
                 try:
-                    cassette_cassette_key = (cassette_rel.chado_obj.object_id, cassette_rel.chado_obj.subject_id)
+                    cassette_component_key = (cassette_rel.chado_obj.subject_id, cassette_rel.chado_obj.object_id)
                 except AttributeError:
                     self.log.error(f"problem {cassette} {cassette_rel}")
                     raise
