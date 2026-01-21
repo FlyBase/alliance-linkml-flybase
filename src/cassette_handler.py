@@ -12,9 +12,14 @@ Author(s):
 # import csv
 # import re
 from logging import Logger
+from sqlalchemy.orm import aliased
 import agr_datatypes
 import fb_datatypes
 from feature_handler import FeatureHandler
+from harvdev_utils.reporting import (
+    Cvterm, Dbxref, Feature, FeatureCvterm, FeatureCvtermprop,
+    FeatureCvtermPub, FeatureRelationship, FeatureRelationshipPub
+)
 
 
 class CassetteHandler(FeatureHandler):
@@ -96,6 +101,8 @@ class CassetteHandler(FeatureHandler):
         self.build_bibliography(session)
         self.build_organism_lookup(session)
         self.build_feature_lookup(session, feature_types=['cassette', 'construct', 'allele', 'tool', 'gene', 'seqfeat'])
+        self.build_allele_gene_lookup(session)
+        self.build_cvterm_lookup(session)
 
     def get_entities(self, session, **kwargs):
         """Extend the method for the CassetteHandler."""
@@ -206,6 +213,150 @@ class CassetteHandler(FeatureHandler):
         self.get_entity_synonyms(session)
         self.get_entity_fb_xrefs(session)
         self.get_entity_relationships(session, 'subject')
+        # FTA-137: Get encodes_tool and transgenic_product_class data for cassettes.
+        self.get_cassette_encodes_tool_rels(session)
+        self.get_cassette_transgenic_product_class(session)
+        self.get_cassette_parent_genes(session)
+
+    # FTA-137: Methods for retrieving encodes_tool and transgenic_product_class data.
+    def get_cassette_encodes_tool_rels(self, session):
+        """Get encodes_tool relationships for cassettes (cassette is the allele subject)."""
+        self.log.info('Get encodes_tool relationships for cassettes.')
+        component = aliased(Feature, name='component')
+        filters = (
+            Feature.is_obsolete.is_(False),
+            Feature.uniquename.op('~')(self.regex['allele']),
+            component.is_obsolete.is_(False),
+            component.uniquename.op('~')(self.regex['fb_uniquename']),
+            Cvterm.name == 'encodes_tool',
+        )
+        results = session.query(FeatureRelationship).\
+            select_from(Feature).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == Feature.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+            join(component, (component.feature_id == FeatureRelationship.object_id)).\
+            filter(*filters).\
+            distinct()
+        # Build pub lookup for relationship results.
+        pub_results = session.query(FeatureRelationshipPub).\
+            select_from(Feature).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == Feature.feature_id)).\
+            join(FeatureRelationshipPub, (FeatureRelationshipPub.feature_relationship_id == FeatureRelationship.feature_relationship_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+            join(component, (component.feature_id == FeatureRelationship.object_id)).\
+            filter(*filters).\
+            distinct()
+        rel_pub_dict = {}
+        for pub_result in pub_results:
+            try:
+                rel_pub_dict[pub_result.feature_relationship_id].append(pub_result.pub_id)
+            except KeyError:
+                rel_pub_dict[pub_result.feature_relationship_id] = [pub_result.pub_id]
+        # Create cassette feature_id-keyed dict of encodes_tool FBRelationship objects.
+        cassette_tool_dict = {}
+        counter = 0
+        for result in results:
+            fb_rel = fb_datatypes.FBRelationship(result, 'feature_relationship')
+            if result.feature_relationship_id in rel_pub_dict.keys():
+                fb_rel.pubs = rel_pub_dict[result.feature_relationship_id]
+            try:
+                cassette_tool_dict[result.subject_id].append(fb_rel)
+                counter += 1
+            except KeyError:
+                cassette_tool_dict[result.subject_id] = [fb_rel]
+                counter += 1
+        self.log.info(f'Found {counter} cassette-to-component "encodes_tool" relationships.')
+        # Assign to cassette entities.
+        cassette_counter = 0
+        for cassette in self.fb_data_entities.values():
+            cassette_id = cassette.chado_obj.feature_id
+            if cassette_id in cassette_tool_dict.keys():
+                cassette.encodes_tool_rels.extend(cassette_tool_dict[cassette_id])
+                cassette_counter += 1
+        self.log.info(f'Assigned encodes_tool relationships to {cassette_counter} cassettes.')
+        return
+
+    def get_cassette_transgenic_product_class(self, session):
+        """Get transgenic_product_class (GA35) SO terms and their pubs for cassettes."""
+        self.log.info('Get transgenic_product_class (GA35) SO terms for cassettes.')
+        cvterm = aliased(Cvterm, name='cvterm')
+        qualifier = aliased(Cvterm, name='qualifier')
+        filters = (
+            Feature.uniquename.op('~')(self.regex['allele']),
+            cvterm.is_obsolete == 0,
+            qualifier.name == 'transgenic_product_class',
+        )
+        # Main query for GA35 terms.
+        results = session.query(Feature, FeatureCvterm, cvterm, Dbxref).\
+            select_from(Feature).\
+            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
+            join(cvterm, (cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
+            join(Dbxref, (Dbxref.dbxref_id == cvterm.dbxref_id)).\
+            join(FeatureCvtermprop, (FeatureCvtermprop.feature_cvterm_id == FeatureCvterm.feature_cvterm_id)).\
+            join(qualifier, (qualifier.cvterm_id == FeatureCvtermprop.type_id)).\
+            filter(*filters).\
+            distinct()
+        # Query for pubs associated with each FeatureCvterm.
+        pub_results = session.query(FeatureCvtermPub).\
+            select_from(Feature).\
+            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
+            join(cvterm, (cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
+            join(FeatureCvtermprop, (FeatureCvtermprop.feature_cvterm_id == FeatureCvterm.feature_cvterm_id)).\
+            join(qualifier, (qualifier.cvterm_id == FeatureCvtermprop.type_id)).\
+            join(FeatureCvtermPub, (FeatureCvtermPub.feature_cvterm_id == FeatureCvterm.feature_cvterm_id)).\
+            filter(*filters).\
+            distinct()
+        # Build feature_cvterm_id -> pub_ids lookup.
+        fc_pub_dict = {}
+        for pub_result in pub_results:
+            try:
+                fc_pub_dict[pub_result.feature_cvterm_id].append(pub_result.pub_id)
+            except KeyError:
+                fc_pub_dict[pub_result.feature_cvterm_id] = [pub_result.pub_id]
+        # Build cassette feature_id -> {term_name: [pub_ids]} and {term_name: curie} lookups.
+        cassette_ga35_dict = {}      # feature_id -> {term_name: [pub_ids]}
+        cassette_ga35_curie_dict = {}  # feature_id -> {term_name: curie}
+        counter = 0
+        for result in results:
+            feature_id = result.Feature.feature_id
+            term_name = result.cvterm.name
+            fc_id = result.FeatureCvterm.feature_cvterm_id
+            # Build SO curie from dbxref accession (e.g., "SO:0000001").
+            so_curie = f'SO:{result.Dbxref.accession}'
+            pub_ids = fc_pub_dict.get(fc_id, [])
+            if feature_id not in cassette_ga35_dict:
+                cassette_ga35_dict[feature_id] = {}
+                cassette_ga35_curie_dict[feature_id] = {}
+            if term_name not in cassette_ga35_dict[feature_id]:
+                cassette_ga35_dict[feature_id][term_name] = pub_ids
+                cassette_ga35_curie_dict[feature_id][term_name] = so_curie
+                counter += 1
+            else:
+                # Extend pub list if term already exists (shouldn't happen normally).
+                cassette_ga35_dict[feature_id][term_name].extend(pub_ids)
+        self.log.info(f'Found {counter} transgenic_product_class (GA35) term annotations.')
+        # Assign to cassette entities.
+        cassette_counter = 0
+        for cassette in self.fb_data_entities.values():
+            cassette_id = cassette.chado_obj.feature_id
+            if cassette_id in cassette_ga35_dict.keys():
+                cassette.transgenic_product_classes = cassette_ga35_dict[cassette_id]
+                cassette.transgenic_product_class_curies = cassette_ga35_curie_dict[cassette_id]
+                cassette_counter += 1
+        self.log.info(f'Assigned transgenic_product_class (GA35) data to {cassette_counter} cassettes.')
+        return
+
+    def get_cassette_parent_genes(self, session):
+        """Get parent gene for each cassette (via alleleof relationship)."""
+        self.log.info('Get parent gene for each cassette.')
+        cassette_counter = 0
+        for cassette in self.fb_data_entities.values():
+            cassette_id = cassette.chado_obj.feature_id
+            if cassette_id in self.allele_gene_lookup.keys():
+                cassette.parent_gene_id = self.allele_gene_lookup[cassette_id]
+                cassette_counter += 1
+        self.log.info(f'Assigned parent gene to {cassette_counter} cassettes.')
+        return
 
     def cassette_dto_type(self, feature):
         """Derive association type from the feature."""
@@ -360,10 +511,250 @@ class CassetteHandler(FeatureHandler):
         self.log.info(f'Found {component_counter} components for {cassette_counter} cassettes.')
         return
 
+    # FTA-137: Synthesis method for encodes_tool/transgenic_product_class (expresses/targets) associations.
+    def synthesize_cassette_encodes_targets(self):
+        """Synthesize expresses/targets associations for cassettes based on encodes_tool and GA35 data.
+
+        Logic:
+        1. Process encodes_tool relationships -> expresses associations to f_r object
+        2. Process GA35 terms -> expresses/targets associations to parent gene
+
+        For GA35 terms:
+        - 'RNAi_reagent', 'sgRNA', 'antisense' -> targets relationship
+        - Other terms -> expresses relationship (but only if no encodes_tool data for that term)
+
+        Reference comparison is done per-GA35 term to determine if GA35 info can be
+        folded into the encodes_tool association or needs a separate parent gene association.
+        """
+        self.log.info('Synthesize cassette encodes/targets associations (FTA-137).')
+        TARGETING_CLASSES = {'RNAi_reagent', 'sgRNA', 'antisense'}
+
+        expresses_counter = 0
+        targets_counter = 0
+        folded_counter = 0
+        unfoldable_counter = 0
+        parent_gene_expresses_counter = 0
+        parent_gene_targets_counter = 0
+
+        for cassette in self.fb_data_entities.values():
+            ga35_classes = set(cassette.transgenic_product_classes.keys())
+            has_encodes_tool = bool(cassette.encodes_tool_rels)
+            has_ga35 = bool(ga35_classes)
+
+            # === SECTION 1: Process encodes_tool relationships ===
+            for encodes_rel in cassette.encodes_tool_rels:
+                component_id = encodes_rel.chado_obj.object_id
+                rel_pubs = set(encodes_rel.pubs)
+
+                if not has_ga35:
+                    # No GA35 -> simple expresses, empty component_type_curies
+                    self._create_expresses_association(
+                        cassette, component_id, list(rel_pubs),
+                        component_type_curies=[])
+                    expresses_counter += 1
+
+                elif ga35_classes.intersection(TARGETING_CLASSES):
+                    # GA35 contains targeting terms -> expresses with empty curies
+                    # (GA35 will be used for targets in section 2)
+                    self._create_expresses_association(
+                        cassette, component_id, list(rel_pubs),
+                        component_type_curies=[])
+                    expresses_counter += 1
+
+                else:
+                    # GA35 is "something else" -> compare references PER TERM
+                    foldable_so_curies = []
+                    unfoldable_terms = []
+
+                    for ga35_term, ga35_term_pubs in cassette.transgenic_product_classes.items():
+                        if set(ga35_term_pubs) == rel_pubs:
+                            # This term's refs match -> can fold into component_type_curies
+                            so_curie = cassette.transgenic_product_class_curies.get(ga35_term)
+                            if so_curie:
+                                foldable_so_curies.append(so_curie)
+                                folded_counter += 1
+                        else:
+                            # This term's refs don't match -> needs separate association
+                            unfoldable_terms.append((ga35_term, ga35_term_pubs))
+                            unfoldable_counter += 1
+
+                    # Create expresses association to encodes_tool object with foldable curies
+                    self._create_expresses_association(
+                        cassette, component_id, list(rel_pubs),
+                        component_type_curies=foldable_so_curies)
+                    expresses_counter += 1
+
+                    # Track unfoldable terms for Section 2
+                    cassette.unfoldable_ga35_terms = unfoldable_terms
+                    if unfoldable_terms:
+                        self.log.info(
+                            f"Cassette {cassette.uniquename}: {len(unfoldable_terms)} GA35 terms "
+                            f"have mismatched refs - creating separate parent gene associations")
+
+            # === SECTION 2: Process GA35 for parent gene associations ===
+            if has_ga35 and cassette.parent_gene_id:
+                gene_id = cassette.parent_gene_id
+
+                if ga35_classes.intersection(TARGETING_CLASSES):
+                    # Targeting terms -> always make targets association to parent gene
+                    # Get the subset of GA35 terms that are targeting terms
+                    targeting_terms = ga35_classes.intersection(TARGETING_CLASSES)
+                    targeting_so_curies = []
+                    targeting_pubs = set()
+                    for term in targeting_terms:
+                        so_curie = cassette.transgenic_product_class_curies.get(term)
+                        if so_curie:
+                            targeting_so_curies.append(so_curie)
+                        targeting_pubs.update(cassette.transgenic_product_classes.get(term, []))
+
+                    self._create_targets_association(
+                        cassette, gene_id, list(targeting_pubs),
+                        component_type_curies=targeting_so_curies)
+                    targets_counter += 1
+                    parent_gene_targets_counter += 1
+
+                elif not has_encodes_tool:
+                    # Non-targeting GA35, no encodes_tool -> expresses to parent gene
+                    all_so_curies = list(cassette.transgenic_product_class_curies.values())
+                    all_ga35_pubs = set()
+                    for pubs in cassette.transgenic_product_classes.values():
+                        all_ga35_pubs.update(pubs)
+
+                    self._create_expresses_association(
+                        cassette, gene_id, list(all_ga35_pubs),
+                        component_type_curies=all_so_curies)
+                    expresses_counter += 1
+                    parent_gene_expresses_counter += 1
+
+                else:
+                    # Has encodes_tool - check for unfoldable terms that need separate associations
+                    if hasattr(cassette, 'unfoldable_ga35_terms') and cassette.unfoldable_ga35_terms:
+                        for ga35_term, ga35_term_pubs in cassette.unfoldable_ga35_terms:
+                            so_curie = cassette.transgenic_product_class_curies.get(ga35_term)
+                            so_curies = [so_curie] if so_curie else []
+                            self._create_expresses_association(
+                                cassette, gene_id, list(ga35_term_pubs),
+                                component_type_curies=so_curies)
+                            expresses_counter += 1
+                            parent_gene_expresses_counter += 1
+                            self.log.debug(
+                                f"Cassette {cassette.uniquename}: created separate parent gene "
+                                f"expresses association for GA35 term '{ga35_term}' with mismatched refs")
+                    else:
+                        # All GA35 terms were folded into encodes_tool association
+                        self.log.debug(
+                            f"Cassette {cassette.uniquename}: all GA35 terms folded into encodes_tool association")
+
+        self.log.info(f'Created {expresses_counter} expresses associations.')
+        self.log.info(f'Created {targets_counter} targets associations.')
+        self.log.info(f'Folded {folded_counter} GA35 terms into encodes_tool associations.')
+        self.log.info(f'Found {unfoldable_counter} GA35 terms with mismatched refs (separate associations needed).')
+        self.log.info(f'Created {parent_gene_expresses_counter} parent gene expresses associations.')
+        self.log.info(f'Created {parent_gene_targets_counter} parent gene targets associations.')
+        return
+
+    # FTA-137: Helper methods for creating associations.
+    def _create_expresses_association(self, cassette, component_id, pub_ids, component_type_curies):
+        """Create an expresses association for the cassette.
+
+        Args:
+            cassette: The FBCassette object.
+            component_id: The feature_id of the component (encodes_tool object or parent gene).
+            pub_ids: List of pub_ids for evidence.
+            component_type_curies: List of SO term curies for component_type_curies slot.
+
+        """
+        self._create_association(cassette, component_id, pub_ids, 'expresses', component_type_curies)
+
+    def _create_targets_association(self, cassette, component_id, pub_ids, component_type_curies):
+        """Create a targets association for the cassette.
+
+        Args:
+            cassette: The FBCassette object.
+            component_id: The feature_id of the component (parent gene).
+            pub_ids: List of pub_ids for evidence.
+            component_type_curies: List of SO term curies for component_type_curies slot.
+
+        """
+        self._create_association(cassette, component_id, pub_ids, 'targets', component_type_curies)
+
+    def _create_association(self, cassette, component_id, pub_ids, relation_name, component_type_curies):
+        """Create an association DTO and add it to the appropriate list.
+
+        Args:
+            cassette: The FBCassette object.
+            component_id: The feature_id of the component.
+            pub_ids: List of pub_ids for evidence.
+            relation_name: Either 'expresses' or 'targets'.
+            component_type_curies: List of SO term curies for component_type_curies slot.
+
+        """
+        # Check if component exists in feature_lookup
+        if component_id not in self.feature_lookup:
+            self.log.warning(f"Component {component_id} not found in feature_lookup for cassette {cassette.uniquename}")
+            return
+
+        component = self.feature_lookup[component_id]
+        cassette_curie = f'FB:{cassette.uniquename}'
+        component_curie = f'FB:{component["uniquename"]}'
+        pub_curies = self.lookup_pub_curies(pub_ids)
+
+        # Determine association type based on component type
+        assoc_type = self.cassette_dto_type(component)
+
+        if assoc_type == 'genomic_entity_association':
+            # CassetteGenomicEntityAssociationDTO - can use component_type_curies
+            rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
+                cassette_curie, component_curie,
+                pub_curies, False, relation_name)
+            if component_type_curies:
+                rel_dto.component_type_curies = component_type_curies
+            fb_rel = fb_datatypes.FBExportEntity()
+            fb_rel.linkmldto = rel_dto
+            self.cassette_genomic_entity_associations.append(fb_rel)
+
+        elif assoc_type == 'tool_association':
+            # CassetteTransgenicToolAssociationDTO - cannot use component_type_curies
+            rel_dto = agr_datatypes.CassetteTransgenicToolAssociationDTO(
+                cassette_curie, component_curie,
+                pub_curies, False, relation_name)
+            if component_type_curies:
+                # Add as notes since component_type_curies not allowed on tool associations
+                note_text = f"component_type: {', '.join(component_type_curies)}"
+                note_dto = agr_datatypes.NoteDTO('comment', note_text, pub_curies)
+                rel_dto.note_dtos = [note_dto.dict_export()]
+                self.log.warning(
+                    f"Cassette {cassette.uniquename}: component_type_curies added as note for "
+                    f"tool association to {component_curie} (not allowed on CassetteTransgenicToolAssociationDTO)")
+            fb_rel = fb_datatypes.FBExportEntity()
+            fb_rel.linkmldto = rel_dto
+            self.cassette_tool_associations.append(fb_rel)
+
+        else:  # component_free_text
+            # CassetteComponentSlotAnnotationDTO - inline in cassette
+            symbol = component['symbol']
+            organism_id = component['organism_id']
+            taxon_text = self.organism_lookup[organism_id]['full_species_name']
+            taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
+            rel_dto = agr_datatypes.CassetteComponentSlotAnnotationDTO(
+                relation_name, symbol, taxon_curie,
+                taxon_text, pub_curies)
+            if component_type_curies:
+                # Add as notes since component_type_curies not allowed on free text annotations
+                note_text = f"component_type: {', '.join(component_type_curies)}"
+                note_dto = agr_datatypes.NoteDTO('comment', note_text, pub_curies)
+                rel_dto.note_dtos = [note_dto.dict_export()]
+                self.log.warning(
+                    f"Cassette {cassette.uniquename}: component_type_curies added as note for "
+                    f"free text association to {component_curie} (not allowed on CassetteComponentSlotAnnotationDTO)")
+            cassette.linkmldto.cassette_component_dtos.append(rel_dto.dict_export())
+
     # Elaborate on synthesize_info() for the Handler.
     def synthesize_info(self):
-        """Extend the method for the ConstructHandler."""
+        """Extend the method for the CassetteHandler."""
         super().synthesize_info()
         self.synthesize_synonyms()
         self.synthesize_secondary_ids()
         self.synthesize_cassette_associations()
+        # FTA-137: Synthesize encodes_tool/transgenic_product_class associations.
+        self.synthesize_cassette_encodes_targets()
