@@ -129,6 +129,7 @@ class CassetteGenomicEntityAssociationDTO(AuditedObjectDTO):
         self.evidence_curies = pub_curies
         self.obsolete = obsolete
         self.relation_name = relation
+        self.component_type_curies = []    # List of SO term curies for transgenic product class (GA35).
 
 
 class CassetteStrAssociationDTO(AuditedObjectDTO):

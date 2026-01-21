@@ -323,6 +323,12 @@ class FBCassette(FBFeature):
         self.has_reg_region = []
         self.tagged_with = []
         self.carries_tool = []
+        # For encodes_tool / transgenic_product_class (GA35) handling (FTA-137).
+        self.encodes_tool_rels = []                 # List of FBRelationship objects for encodes_tool relationships.
+        self.transgenic_product_classes = {}        # GA35 SO term name -> list of pub_ids.
+        self.transgenic_product_class_curies = {}   # GA35 SO term name -> SO curie (e.g., 'SO:0000001').
+        self.parent_gene_id = None                  # The feature_id of the parent gene (via alleleof relationship).
+        self.unfoldable_ga35_terms = []             # List of (ga35_term, ga35_term_pubs) for terms with mismatched refs.
 
 
 class FBConstruct(FBFeature):
