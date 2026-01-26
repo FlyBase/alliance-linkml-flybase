@@ -301,7 +301,8 @@ class CassetteHandler(FeatureHandler):
                     for bob in cassette.expressed_features:
                         print(f"BOB: expressed_features {bob}")
                     for bob in cassette.regulating_features:
-                        print(f"BOB: regulating_features {bob}")
+                        component = self.feature_lookup[bob]
+                        print(f"BOB: regulating_features {bob} {component}")
                     for bob in cassette.expressed_tool_genes:
                         print(f"BOB: expressed_tool_genes {bob}")
                     for bob in cassette.regulating_tool_genes:
