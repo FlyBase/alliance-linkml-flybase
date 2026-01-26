@@ -273,6 +273,10 @@ class CassetteHandler(FeatureHandler):
         for cassette_cassette_key, cassette_cassette_rels in self.cassette_cassette_rels.items():
             cassette_feature_id = cassette_cassette_key[CASSETTE]
             cassette = self.fb_data_entities[cassette_feature_id]
+            if self.testing:
+                if cassette.cvt_anno_ids_by_prop:
+                    for bob in cassette.cvt_anno_ids_by_prop:
+                        print(f"BOB: cvterm {bob}")
             cassette_curie = f'FB:{cassette.uniquename}'
             component = self.feature_lookup[cassette_cassette_key[COMPONENT]]
             component_curie = f'FB:{component["uniquename"]}'
