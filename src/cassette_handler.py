@@ -259,7 +259,9 @@ class CassetteHandler(ConstructHandler):
 
         map_relationship = {'has_reg_region': 'is_regulated_by',
                             'tagged_with': 'tagged_with',
-                            'carries_tool': 'contains'}
+                            'carries_tool': 'contains',
+                            'expressed_features': 'expresses'
+        }
         # cassette_cassette_counter = {}
         for cassette_cassette_key in self.cassette_cassette_rels.keys():
             if self.testing:
