@@ -289,6 +289,9 @@ class CassetteHandler(FeatureHandler):
             if rel_type_name in map_relationship:
                 rel_type_name = map_relationship[rel_type_name]
             else:
+                if rel_type_name == 'encodes_tool':
+                    print("BOB: rel type 'encodes_tool' not implemented.")
+                    continue
                 if rel_type_name not in bad_relationship_count:
                     bad_relationship_count[rel_type_name] = 0
                 bad_relationship_count[rel_type_name] += 1
@@ -340,7 +343,7 @@ class CassetteHandler(FeatureHandler):
         for cassette in self.fb_data_entities.values():
             relevant_cassette_rels = cassette.recall_relationships(
                 self.log, entity_role='subject',
-                rel_types=['has_reg_region', 'tagged_with', 'carries_tool'])
+                rel_types=['has_reg_region', 'tagged_with', 'carries_tool', 'encodes_tool'])
             if relevant_cassette_rels:
                 cassette_counter += 1
             # put the data into cassette_cassette_key with the cassette (FBal) first and the component second
