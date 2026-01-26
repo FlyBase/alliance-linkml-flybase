@@ -329,6 +329,9 @@ class FBCassette(FBFeature):
         # Processed FB data.
         # Final relationship assessments for ConstructComponentSlotAnnotationDTO mapping.
         self.expressed_features = {}
+        self.regulating_features = {}     # Will be list of feature_id-keyed pub_id list for things that regulate the construct: FBgn, FBto and FBsf.
+        self.expressed_tool_genes = []    # Will be list of feature_ids for genes for which related tools are also associated in construct.expressed_features.
+        self.regulating_tool_genes = []   # Will be list of feature_ids for genes for which related tools are also associated in construct.targeted_features.
 
 
 class FBConstruct(FBFeature):
