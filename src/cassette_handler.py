@@ -298,6 +298,14 @@ class CassetteHandler(FeatureHandler):
             else:
                 if rel_type_name == 'encodes_tool':
                     print("BOB: rel type 'encodes_tool' not implemented.")
+                    for bob in cassette.expressed_features:
+                        print(f"BOB: expressed_features {bob}")
+                    for bob in cassette.regulating_features:
+                        print(f"BOB: regulating_features {bob}")
+                    for bob in cassette.expressed_tool_genes:
+                        print(f"BOB: expressed_tool_genes {bob}")
+                    for bob in cassette.regulating_tool_genes:
+                        print(f"BOB: regulating_tool_genes {bob}")
                     continue
                 if rel_type_name not in bad_relationship_count:
                     bad_relationship_count[rel_type_name] = 0
@@ -424,7 +432,7 @@ class CassetteHandler(FeatureHandler):
         for cassette in self.fb_data_entities.values():
             self.log.debug(f'Assess encoded tools for {cassette}.')
             # Reference of related alleles.
-            # cass_al_rels = construct.recall_relationships(self.log, entity_role='object', rel_types='associated_with', rel_entity_types='allele')
+            cass_al_rels = cassette.recall_relationships(self.log, entity_role='object', rel_types='associated_with', rel_entity_types='allele')
             # self.log.debug(f'{construct} has {len(cons_al_rels)} direct allele relationships.')
             # Direct encodes_tool relationships.
             cass_tool_rels = cassette.recall_relationships(self.log, entity_role='subject', rel_types='encodes_tool')
@@ -447,10 +455,10 @@ class CassetteHandler(FeatureHandler):
                 except KeyError:
                     cassette.expressed_features[component_id] = al_tool_rel.pubs
                 # Fold in pubs supporting the construct-allele relationship.
-                # for cass_al_rel in cass_al_rels:
-                #     if cass_al_rel.chado_obj.subject_id == allele_id:
-                #         cassette.expressed_features[component_id].extend(cons_al_rel.pubs)
-                #         # self.log.debug(f'{construct} has these pubs via allele-tool: {cons_al_rel.pubs}')
+                for cass_al_rel in cass_al_rels:
+                    if cass_al_rel.chado_obj.subject_id == allele_id:
+                        cassette.expressed_features[component_id].extend(cass_al_rel.pubs)
+                        # self.log.debug(f'{construct} has these pubs via allele-tool: {cons_al_rel.pubs}')
             counter += len(cassette.expressed_features.keys())
         self.log.info(f'Found {counter} encoded tools for constructs via direct and indirect (via allele) relationships.')
         return
