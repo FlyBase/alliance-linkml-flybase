@@ -28,13 +28,6 @@ class CassetteHandler(ConstructHandler):
         self.agr_export_type = agr_datatypes.CassetteDTO
         self.primary_export_set = 'cassette_ingest_set'
         self.incremental_update = False
-        self.al_encodes_tool_rels = []  # Indirect "encodes" relationships: a list of allele-to-FBto/FBsf FeatureRelationship objects.
-        self.al_reg_region_rels = []  # Indirect "has_reg_region" relationships: a list of allele-to-FBto/FBsf/FBgn FeatureRelationship objects.
-        self.al_genes = []  # Indirect gene relationships: a list of allele-to-FBgn FeatureRelationship objects.
-        # Processed FB data.
-        # Final relationship assessments for ConstructComponentSlotAnnotationDTO mapping.
-        self.expressed_features = {}
-
         # NOTE: We have general alleles in here too so we can check we only get the casssettes here.
     #       Also Cassettes are in the Allele code to check we only get these once.
     test_set = {
