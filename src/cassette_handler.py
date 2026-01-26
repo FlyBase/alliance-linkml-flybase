@@ -202,6 +202,7 @@ class CassetteHandler(FeatureHandler):
         super().get_datatype_data(session)
         self.get_entities(session)
         self.get_entityprops(session)
+        self.get_entity_cvterms(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
         self.get_entity_fb_xrefs(session)
