@@ -14,7 +14,8 @@ Author(s):
 from logging import Logger
 import agr_datatypes
 import fb_datatypes
-from feature_handler import FeatureHandler, ConstructHandler
+# from feature_handler import FeatureHandler
+from feature_handler import ConstructHandler
 
 
 class CassetteHandler(ConstructHandler):
