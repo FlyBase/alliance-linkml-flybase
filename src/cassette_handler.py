@@ -14,10 +14,10 @@ Author(s):
 from logging import Logger
 import agr_datatypes
 import fb_datatypes
-from feature_handler import FeatureHandler
+from feature_handler import FeatureHandler, ConstructHandler
 
 
-class CassetteHandler(FeatureHandler):
+class CassetteHandler(ConstructHandler):
     """This object gets, synthesizes and filters cassette data for export."""
     def __init__(self, log: Logger, testing: bool):
         """Create the CassetteHandler object."""
@@ -375,4 +375,6 @@ class CassetteHandler(FeatureHandler):
         super().synthesize_info()
         self.synthesize_synonyms()
         self.synthesize_secondary_ids()
+        self.synthesize_encoded_tools()
+        self.synthesize_component_genes()
         self.synthesize_cassette_associations()
