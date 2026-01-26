@@ -229,7 +229,6 @@ class ConstructHandler(FeatureHandler):
             # Direct encodes_tool relationships.
             cons_tool_rels = construct.recall_relationships(self.log, entity_role='subject', rel_types='encodes_tool')
             # self.log.debug(f'{construct} has {len(cons_tool_rels)} direct tool relationships.')
-            construct.expressed_features = {}
             for cons_tool_rel in cons_tool_rels:
                 component_id = cons_tool_rel.chado_obj.object_id
                 try:
