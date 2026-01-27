@@ -275,10 +275,6 @@ class CassetteHandler(FeatureHandler):
         for cassette_cassette_key, cassette_cassette_rels in self.cassette_cassette_rels.items():
             cassette_feature_id = cassette_cassette_key[CASSETTE]
             cassette = self.fb_data_entities[cassette_feature_id]
-            if self.testing:
-                if cassette.cvt_anno_ids_by_prop:
-                    for bob in cassette.cvt_anno_ids_by_prop:
-                        print(f"BOB: cvterm {bob}")
             cassette_curie = f'FB:{cassette.uniquename}'
             component = self.feature_lookup[cassette_cassette_key[COMPONENT]]
             component_curie = f'FB:{component["uniquename"]}'
@@ -297,17 +293,21 @@ class CassetteHandler(FeatureHandler):
                 rel_type_name = map_relationship[rel_type_name]
             else:
                 if rel_type_name == 'encodes_tool':
-                    print("BOB: rel type 'encodes_tool' not implemented.")
-                    for bob in cassette.expressed_features:
-                        component = self.feature_lookup[bob]
-                        print(f"BOB: expressed_features {bob} {component}")
-                    for bob in cassette.regulating_features:
-                        component = self.feature_lookup[bob]
-                        print(f"BOB: regulating_features {bob} {component}")
-                    for bob in cassette.expressed_tool_genes:
-                        print(f"BOB: expressed_tool_genes {bob}")
-                    for bob in cassette.regulating_tool_genes:
-                        print(f"BOB: regulating_tool_genes {bob}")
+                    if self.testing:
+                        print("BOB: rel type 'encodes_tool' not implemented.")
+                        for bob in cassette.expressed_features:
+                            component = self.feature_lookup[bob]
+                            print(f"\tBOB: expressed_features {bob} {component}")
+                        for bob in cassette.regulating_features:
+                            component = self.feature_lookup[bob]
+                            print(f"\tBOB: regulating_features {bob} {component}")
+                        for bob in cassette.expressed_tool_genes:
+                            print(f"\tBOB: expressed_tool_genes {bob}")
+                        for bob in cassette.regulating_tool_genes:
+                            print(f"\tBOB: regulating_tool_genes {bob}")
+                        if cassette.cvt_anno_ids_by_prop:
+                            for bob in cassette.cvt_anno_ids_by_prop:
+                                print(f"\tBOB: cvterm {bob}")
                     continue
                 if rel_type_name not in bad_relationship_count:
                     bad_relationship_count[rel_type_name] = 0
