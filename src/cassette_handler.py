@@ -300,7 +300,7 @@ class CassetteHandler(FeatureHandler):
                         print(f"BOB: {cassette.uniquename} rel type 'encodes_tool' not implemented.")
                         for bob in cassette.expressed_features:
                             component = self.feature_lookup[bob]
-                            print(f"\tBOB:\t expressed_features {bob} {component['uniquename']}")
+                            print(f"\tBOB:\t expressed_features {bob} {component['uniquename']} {component}")
                         for bob in cassette.regulating_features:
                             component = self.feature_lookup[bob]
                             print(f"\tBOB:\t regulating_features {bob} {component}")
