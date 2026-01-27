@@ -278,7 +278,10 @@ class CassetteHandler(FeatureHandler):
             cassette_curie = f'FB:{cassette.uniquename}'
             component = self.feature_lookup[cassette_cassette_key[COMPONENT]]
             component_curie = f'FB:{component["uniquename"]}'
-
+            if self.testing:
+                if cassette.cvt_anno_ids_by_prop:
+                    for bob in cassette.cvt_anno_ids_by_prop:
+                        print(f"BOB:{cassette.uniquename}\t cvterm {bob}")
             first_feat_rel = cassette_cassette_rels[0]
             all_pub_ids = []
             for cassette_cassette_rel in cassette_cassette_rels:
@@ -294,20 +297,20 @@ class CassetteHandler(FeatureHandler):
             else:
                 if rel_type_name == 'encodes_tool':
                     if self.testing:
-                        print("BOB: rel type 'encodes_tool' not implemented.")
+                        print(f"BOB: {cassette.uniquename} rel type 'encodes_tool' not implemented.")
                         for bob in cassette.expressed_features:
                             component = self.feature_lookup[bob]
-                            print(f"\tBOB: expressed_features {bob} {component}")
+                            print(f"\tBOB:\t expressed_features {bob} {component['uniquename']}")
                         for bob in cassette.regulating_features:
                             component = self.feature_lookup[bob]
-                            print(f"\tBOB: regulating_features {bob} {component}")
+                            print(f"\tBOB:\t regulating_features {bob} {component}")
                         for bob in cassette.expressed_tool_genes:
-                            print(f"\tBOB: expressed_tool_genes {bob}")
+                            print(f"BOB:\t expressed_tool_genes {bob}")
                         for bob in cassette.regulating_tool_genes:
-                            print(f"\tBOB: regulating_tool_genes {bob}")
+                            print(f"\tBOB:\t regulating_tool_genes {bob}")
                         if cassette.cvt_anno_ids_by_prop:
                             for bob in cassette.cvt_anno_ids_by_prop:
-                                print(f"\tBOB: cvterm {bob}")
+                                print(f"\tBOB:\t cvterm {bob}")
                     continue
                 if rel_type_name not in bad_relationship_count:
                     bad_relationship_count[rel_type_name] = 0
