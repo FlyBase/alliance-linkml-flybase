@@ -278,6 +278,7 @@ class CassetteHandler(FeatureHandler):
             cassette_curie = f'FB:{cassette.uniquename}'
             component = self.feature_lookup[cassette_cassette_key[COMPONENT]]
             component_curie = f'FB:{component["uniquename"]}'
+            assoc_type = self.cassette_dto_type(component)
             if self.testing:
                 if cassette.cvt_anno_ids_by_prop:
                     for bob in cassette.cvt_anno_ids_by_prop:
@@ -298,9 +299,15 @@ class CassetteHandler(FeatureHandler):
                 if rel_type_name == 'encodes_tool':
                     if self.testing:
                         print(f"BOB: {cassette.uniquename} rel type 'encodes_tool' not implemented.")
+                        component_type_curies = []
                         for bob in cassette.expressed_features:
-                            component = self.feature_lookup[bob]
-                            print(f"\tBOB:\t expressed_features {bob} {component['uniquename']} {component}")
+                            other = self.feature_lookup[bob]
+                            print(f"\tBOB:\t expressed_features {bob} {other['uniquename']} {other}")
+                            if other['type'] not in ('RNAi_reagent', 'sgRNA', 'antisense'):
+                                print("\tBOB: carry on as normal")
+                            else:
+                                print("\tBOB: Add component_type_curies")
+
                         for bob in cassette.regulating_features:
                             component = self.feature_lookup[bob]
                             print(f"\tBOB:\t regulating_features {bob} {component}")
@@ -309,14 +316,13 @@ class CassetteHandler(FeatureHandler):
                         for bob in cassette.regulating_tool_genes:
                             print(f"\tBOB:\t regulating_tool_genes {bob}")
                         if cassette.cvt_anno_ids_by_prop:
-                            for bob in cassette.cvt_anno_ids_by_prop:
-                                print(f"\tBOB:\t cvterm {bob}")
+                            for bob in cassette.cvt_anno_ids_by_prop.keys():
+                                print(f"\tBOB:\t cvterm {bob} {cassette.cvt_anno_ids_by_prop[bob]}")
                     continue
                 if rel_type_name not in bad_relationship_count:
                     bad_relationship_count[rel_type_name] = 0
                 bad_relationship_count[rel_type_name] += 1
                 continue
-            assoc_type = self.cassette_dto_type(component)
             if assoc_type == 'component_free_text':
                 # CassetteComponentSlotAnnotationDTO
                 if self.testing:
