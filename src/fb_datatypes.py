@@ -323,6 +323,15 @@ class FBCassette(FBFeature):
         self.has_reg_region = []
         self.tagged_with = []
         self.carries_tool = []
+        self.al_encodes_tool_rels = []  # Indirect "encodes" relationships: a list of allele-to-FBto/FBsf FeatureRelationship objects.
+        self.al_reg_region_rels = []  # Indirect "has_reg_region" relationships: a list of allele-to-FBto/FBsf/FBgn FeatureRelationship objects.
+        self.al_genes = []  # Indirect gene relationships: a list of allele-to-FBgn FeatureRelationship objects.
+        # Processed FB data.
+        # Final relationship assessments for ConstructComponentSlotAnnotationDTO mapping.
+        self.expressed_features = {}
+        self.regulating_features = {}     # Will be list of feature_id-keyed pub_id list for things that regulate the construct: FBgn, FBto and FBsf.
+        self.expressed_tool_genes = []    # Will be list of feature_ids for genes for which related tools are also associated in construct.expressed_features.
+        self.regulating_tool_genes = []   # Will be list of feature_ids for genes for which related tools are also associated in construct.targeted_features.
 
 
 class FBConstruct(FBFeature):
