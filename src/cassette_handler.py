@@ -319,7 +319,8 @@ class CassetteHandler(FeatureHandler):
                             print(f"\tBOB:\t regulating_tool_genes {bob}")
                         if cassette.cvt_anno_ids_by_prop:
                             for bob in cassette.cvt_anno_ids_by_prop.keys():
-                                print(f"\tBOB:\t cvterm {bob} {cassette.cvt_anno_ids_by_prop[bob]}")
+                                print(f"\tBOB:\t cvterm name {bob} {cassette.cvt_anno_ids_by_prop[bob]}")
+                                print(f"\tBOB:\t cvterm id: {bob} {cassette.cvt_annos_by_id[bob]}")
                     continue
                 if rel_type_name not in bad_relationship_count:
                     bad_relationship_count[rel_type_name] = 0
