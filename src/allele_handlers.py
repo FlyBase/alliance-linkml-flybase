@@ -175,9 +175,9 @@ class AlleleHandler(MetaAlleleHandler):
         'FBal0137284': 'cic[Tag:HA]',                  # Another Cassette so should not appear
         'FBal0144698': 'PGRP-LE[UAS.Tag:FLAG]',        # Another Cassette so should not appear
         'FBal0151333': 'wg[PE4.UAS.cCa.Tag:HA]',       # Another Cassette so should not appear
-        'FBal0137561': 'Crei\I-CreI[hs.PR]',  #
-        'FBal0404843': 'Hsap\CGA[UAS.cLa]',  #
-        'FBal0401141': 'Zzzz\VHH[deGradFP.UAS]',  #
+        'FBal0137561': r'Crei\I-CreI[hs.PR]',  #
+        'FBal0404843': r'Hsap\CGA[UAS.cLa]',  #
+        'FBal0401141': r'Zzzz\VHH[deGradFP.UAS]',  #
     }
 
     # Additional export sets.

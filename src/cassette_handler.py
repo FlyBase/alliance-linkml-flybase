@@ -74,9 +74,9 @@ class CassetteHandler(FeatureHandler):
                                                   # two has_reg_region (tool) (UAS = FBrf0212747, UASt = FBrf0152317)
         'FBal0151333': 'wg[PE4.UAS.cCa.Tag:HA]',  # single also_carries (FBrf0173223), single tagged_with (FBrf0167661, FBrf0173223),
                                                   # two has_reg_region (tool) (UAS = FBrf0173223, UASt = FBrf0167661)
-        'FBal0137561': 'Crei\I-CreI[hs.PR]',  #
-        'FBal0404843': 'Hsap\CGA[UAS.cLa]',  #
-        'FBal0401141': 'Zzzz\VHH[deGradFP.UAS]',  #
+        'FBal0137561': r'Crei\I-CreI[hs.PR]',  #
+        'FBal0404843': r'Hsap\CGA[UAS.cLa]',  #
+        'FBal0401141': r'Zzzz\VHH[deGradFP.UAS]',  #
     }
 
     cassette_prop_to_note_mapping = {
@@ -301,7 +301,7 @@ class CassetteHandler(FeatureHandler):
                 if rel_type_name == 'encodes_tool':
                     if self.testing:
                         print(f"BOB: {cassette.uniquename} rel type 'encodes_tool' not implemented.")
-                        component_type_curies = []
+                        # component_type_curies = []
                         for bob in cassette.expressed_features:
                             other = self.feature_lookup[bob]
                             print(f"\tBOB:\t expressed_features {bob} {other['uniquename']} {other}")
