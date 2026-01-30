@@ -320,6 +320,8 @@ class CassetteHandler(FeatureHandler):
                         if cassette.cvt_anno_ids_by_prop:
                             for bob in cassette.cvt_anno_ids_by_prop.keys():
                                 print(f"\tBOB:\t cvterm name {bob} {cassette.cvt_anno_ids_by_prop[bob]}")
+                        if cassette.cvt_anno_ids_by_id:
+                            for bob in cassette.cvt_anno_ids_by_id.keys():
                                 print(f"\tBOB:\t cvterm id: {bob} {cassette.cvt_annos_by_id[bob]}")
                     continue
                 if rel_type_name not in bad_relationship_count:
