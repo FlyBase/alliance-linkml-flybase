@@ -51,7 +51,8 @@ class CassetteHandler(FeatureHandler):
         'FBal0011649': 'Dsim_Lhr[1]',           # Non-Dmel classical allele.
         'FBal0043132': 'Hsap_MAPT[UAS.cAa]',    # Transgenic, superceded by FBti0000969, FBti0249419 (superseded_by_transgnc_insertions).
         'FBal0062057': 'Scer_CDC42[V12.hs]',    # Transgenic, superceded by FBti0012506, FBti0249909 (superseded_by_transgnc_insertions).
-        'FBal0198528': 'Pi4KIIalpha[GD9857]',   # Transegnic, superceded by four FBti (superseded_by_transgnc_insertions).        'FBal0322755': 'Mcm3[+tBa]',                 # cassette main type
+        'FBal0198528': 'Pi4KIIalpha[GD9857]',   # Transegnic, superceded by four FBti (superseded_by_transgnc_insertions).
+        'FBal0322755': 'Mcm3[+tBa]',                   # cassette main type
         'FBal0322754': 'flfl[DeltaRanBD.UAS.Venus]',
         'FBal0296109': 'sSemp1[R41G.UAS]',
         'FBal0193766': 'Gr63a[UAS.cJa]',
@@ -304,11 +305,11 @@ class CassetteHandler(FeatureHandler):
                         # component_type_curies = []
                         for bob in cassette.expressed_features:
                             other = self.feature_lookup[bob]
-                            print(f"\tBOB:\t expressed_features {bob} {other['uniquename']} {other}")
+                            print(f"\tBOB:{cassette.uniquename}\t expressed_features {bob} {other['uniquename']} {other}")
                             if other['type'] not in ('RNAi_reagent', 'sgRNA', 'antisense'):
-                                print("\tBOB: carry on as normal")
+                                print(f"\tBOB:{cassette.uniquename} carry on as normal")
                             else:
-                                print("\tBOB: Add component_type_curies")
+                                print(f"\tBOB:{cassette.uniquename} Add component_type_curies")
 
                         for bob in cassette.regulating_features:
                             component = self.feature_lookup[bob]
@@ -319,10 +320,10 @@ class CassetteHandler(FeatureHandler):
                             print(f"\tBOB:\t regulating_tool_genes {bob}")
                         if cassette.cvt_anno_ids_by_prop:
                             for bob in cassette.cvt_anno_ids_by_prop.keys():
-                                print(f"\tBOB:\t cvterm name {bob} {cassette.cvt_anno_ids_by_prop[bob]}")
+                                print(f"\tBOB:{cassette.uniquename}\t cvterm name {bob} {cassette.cvt_anno_ids_by_prop[bob]}")
                         if cassette.cvt_anno_ids_by_term:
                             for bob in cassette.cvt_anno_ids_by_term.keys():
-                                print(f"\tBOB:\t cvterm term: {bob} {cassette.cvt_anno_ids_by_term[bob]}")
+                                print(f"\tBOB:{cassette.uniquename}\t cvterm term: {bob} {cassette.cvt_anno_ids_by_term[bob]}")
                     continue
                 if rel_type_name not in bad_relationship_count:
                     bad_relationship_count[rel_type_name] = 0
