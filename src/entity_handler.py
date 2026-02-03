@@ -581,6 +581,7 @@ class PrimaryEntityHandler(DataHandler):
             entity_prop_type_name = self.cvterm_lookup[cvtermprop_result.type_id]['name']
             if self.testing:
                 print(f"BOB: cvtermprop sub id:{entity_cvterm_id} name:{entity_prop_type_name}")
+                print(dir(cvtermprop_result))
                 print(f"BOB: sub sub {cvtermprop_result.cvterm}")
                 print(f"BOB: sub sub {cvtermprop_result.cvterm.dbxref}")
             if entity_prop_type_name in cvterm_annotation_dict[entity_cvterm_id].props_by_type.keys():
