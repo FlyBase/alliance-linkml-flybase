@@ -582,7 +582,8 @@ class PrimaryEntityHandler(DataHandler):
             if self.testing:
                 print(f"\tBOB: cvtermprop sub id:{entity_cvterm_id} name:{entity_prop_type_name}")
                 print(dir(cvtermprop_result.feature_cvterm))
-                print(dir(cvtermprop_result))
+                print(dir(cvtermprop_result.feature_cvterm.cvterm))
+                print(dir(cvtermprop_result.feature_cvterm.cvterm.dbxref))
                 try:
                     print(F"BOBBY: {entity_prop_type_name} {cvtermprop_result.feature_cvterm.cvterm.name} {cvtermprop_result.feature_cvterm.cvterm.dbxref.accession}")
                 except:
