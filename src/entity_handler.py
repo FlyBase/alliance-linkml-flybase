@@ -584,11 +584,11 @@ class PrimaryEntityHandler(DataHandler):
                 print(dir(cvtermprop_result.feature_cvterm))
                 print(dir(cvtermprop_result))
                 try:
-                    print(F"BOBBY: {entity_prop_type_name} {cvtermprop_result.feature_cvterm.cvterm.name} {cvtermprop_result.feature_cvterm.cvterm.dbxref.name}")
+                    print(F"BOBBY: {entity_prop_type_name} {cvtermprop_result.feature_cvterm.cvterm.name} {cvtermprop_result.feature_cvterm.cvterm.dbxref.accession}")
                 except:
                     pass
                 print(f"\tBOB: sub sub {cvtermprop_result.feature_cvterm.cvterm}")
-                print(f"\tBOB: sub sub sub {cvtermprop_result.feature_cvterm.cvterm.dbxref.name}")
+                print(f"\tBOB: sub sub sub {cvtermprop_result.feature_cvterm.cvterm.dbxref.accession}")
                 print(f"\tBOB: feature_cvterm.type {cvtermprop_result.type}")
             if entity_prop_type_name in cvterm_annotation_dict[entity_cvterm_id].props_by_type.keys():
                 cvterm_annotation_dict[entity_cvterm_id].props_by_type[entity_prop_type_name].append(fb_datatypes.FBProp(cvtermprop_result))
