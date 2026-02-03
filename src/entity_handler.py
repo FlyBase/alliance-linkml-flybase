@@ -579,21 +579,31 @@ class PrimaryEntityHandler(DataHandler):
                 print(f"BOB: cvtermprop result {cvtermprop_result}")
             entity_cvterm_id = getattr(cvtermprop_result, f'{chado_type}_cvterm_id')
             entity_prop_type_name = self.cvterm_lookup[cvtermprop_result.type_id]['name']
+            print(f"BOBBY: {cvtermprop_result.feature_cvterm.feature.feature_id}")
+            entity = self.fb_data_entities[cvtermprop_result.feature_cvterm.feature.feature_id]
+
+            print(f"BOBBY: {self.fb_data_entities[cvtermprop_result.feature_cvterm.feature.feature_id]}")
+            if entity_prop_type_name in entity.prop_data:  # only store those we are interested in
+                prop_data = {'name': cvtermprop_result.feature_cvterm.cvterm.name,
+                             'type': cvtermprop_result.feature_cvterm.cvterm.cv.name,
+                             'accession':cvtermprop_result.feature_cvterm.cvterm.dbxref.accession}
+                entity.prop_data[entity_prop_type_name].append(prop_data)
+                print(f"BOBBY: prop_data{prop_data}")
             if self.testing:
                 print(f"\tBOB: cvtermprop sub id:{entity_cvterm_id} name:{entity_prop_type_name}")
-                print(dir(cvtermprop_result.feature_cvterm))
-                print(dir(cvtermprop_result.feature_cvterm.cvterm))
-                print(dir(cvtermprop_result.feature_cvterm.cvterm.dbxref))
-                try:
-                    print(f"BOBBY 1: {entity_prop_type_name}")
-                    print(f"BOBBY 2:{cvtermprop_result.feature_cvterm.cvterm.cv.name}")
-                    print(f"BOBBY 3:{cvtermprop_result.feature_cvterm.cvterm.name}")
-                    print(f"BOBBY 4: {cvtermprop_result.feature_cvterm.cvterm.dbxref.accession}")
-                except:
-                    pass
-                print(f"\tBOB: sub sub {cvtermprop_result.feature_cvterm.cvterm}")
-                print(f"\tBOB: sub sub sub {cvtermprop_result.feature_cvterm.cvterm.dbxref.accession}")
-                print(f"\tBOB: feature_cvterm.type {cvtermprop_result.type}")
+                # print(dir(cvtermprop_result.feature_cvterm))
+                # print(dir(cvtermprop_result.feature_cvterm.cvterm))
+                # print(dir(cvtermprop_result.feature_cvterm.cvterm.dbxref))
+                # try:
+                #    print(f"BOBBY 1: {entity_prop_type_name}")
+                #    print(f"BOBBY 2:{cvtermprop_result.feature_cvterm.cvterm.cv.name}")
+                #    print(f"BOBBY 3:{cvtermprop_result.feature_cvterm.cvterm.name}")
+                #    print(f"BOBBY 4: {cvtermprop_result.feature_cvterm.cvterm.dbxref.accession}")
+                # except:
+                #    pass
+                # print(f"\tBOB: sub sub {cvtermprop_result.feature_cvterm.cvterm}")
+                # print(f"\tBOB: sub sub sub {cvtermprop_result.feature_cvterm.cvterm.dbxref.accession}")
+                # print(f"\tBOB: feature_cvterm.type {cvtermprop_result.type}")
             if entity_prop_type_name in cvterm_annotation_dict[entity_cvterm_id].props_by_type.keys():
                 cvterm_annotation_dict[entity_cvterm_id].props_by_type[entity_prop_type_name].append(fb_datatypes.FBProp(cvtermprop_result))
                 cvterm_prop_counter += 1
