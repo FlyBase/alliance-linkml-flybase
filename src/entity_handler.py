@@ -585,7 +585,10 @@ class PrimaryEntityHandler(DataHandler):
                 print(dir(cvtermprop_result.feature_cvterm.cvterm))
                 print(dir(cvtermprop_result.feature_cvterm.cvterm.dbxref))
                 try:
-                    print(F"BOBBY: {entity_prop_type_name} {cvtermprop_result.feature_cvterm.cvterm.name} {cvtermprop_result.feature_cvterm.cvterm.dbxref.accession}")
+                    print(f"BOBBY 1: {entity_prop_type_name}")
+                    print(f"BOBBY 2:{cvtermprop_result.feature_cvterm.cvterm.cv.name}")
+                    print(f"BOBBY 3:{cvtermprop_result.feature_cvterm.cvterm.name}")
+                    print(f"BOBBY 4: {cvtermprop_result.feature_cvterm.cvterm.dbxref.accession}")
                 except:
                     pass
                 print(f"\tBOB: sub sub {cvtermprop_result.feature_cvterm.cvterm}")
