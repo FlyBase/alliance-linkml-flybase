@@ -579,10 +579,10 @@ class PrimaryEntityHandler(DataHandler):
                 print(f"BOB: cvtermprop result {cvtermprop_result}")
             entity_cvterm_id = getattr(cvtermprop_result, f'{chado_type}_cvterm_id')
             entity_prop_type_name = self.cvterm_lookup[cvtermprop_result.type_id]['name']
-            print(f"BOBBY: {cvtermprop_result.feature_cvterm.feature.feature_id}")
+            print(f"BOBBY: id = {cvtermprop_result.feature_cvterm.feature.feature_id}")
             entity = self.fb_data_entities[cvtermprop_result.feature_cvterm.feature.feature_id]
-
-            print(f"BOBBY: {self.fb_data_entities[cvtermprop_result.feature_cvterm.feature.feature_id]}")
+            print(f"BOBBY: id: {cvtermprop_result.feature_cvterm.feature.feature_id}")
+            print(f"BOBBY: entity {entity}")
             if entity_prop_type_name in entity.prop_data:  # only store those we are interested in
                 prop_data = {'name': cvtermprop_result.feature_cvterm.cvterm.name,
                              'type': cvtermprop_result.feature_cvterm.cvterm.cv.name,
