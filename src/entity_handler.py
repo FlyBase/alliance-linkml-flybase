@@ -580,10 +580,11 @@ class PrimaryEntityHandler(DataHandler):
             entity_cvterm_id = getattr(cvtermprop_result, f'{chado_type}_cvterm_id')
             entity_prop_type_name = self.cvterm_lookup[cvtermprop_result.type_id]['name']
             if self.testing:
-                print(f"BOB: cvtermprop sub id:{entity_cvterm_id} name:{entity_prop_type_name}")
+                print(f"\tBOB: cvtermprop sub id:{entity_cvterm_id} name:{entity_prop_type_name}")
                 print(dir(cvtermprop_result.feature_cvterm.cvterm))
-                print(f"BOB: sub sub {cvtermprop_result.feature_cvterm.cvterm}")
-                print(f"BOB: sub sub sub {cvtermprop_result.feature_cvterm.cvterm.dbxref}")
+                print(f"\tBOB: sub sub {cvtermprop_result.feature_cvterm.cvterm}")
+                print(f"\tBOB: sub sub sub {cvtermprop_result.feature_cvterm.cvterm.dbxref}")
+                print(f"\tBOB: feature_cvterm.cvterm {cvtermprop_result.cvterm}")
             if entity_prop_type_name in cvterm_annotation_dict[entity_cvterm_id].props_by_type.keys():
                 cvterm_annotation_dict[entity_cvterm_id].props_by_type[entity_prop_type_name].append(fb_datatypes.FBProp(cvtermprop_result))
                 cvterm_prop_counter += 1
