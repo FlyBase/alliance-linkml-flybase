@@ -311,10 +311,15 @@ class CassetteHandler(FeatureHandler):
                                 print(f"\tBOB:{cassette.uniquename} carry on as normal")
                             else:
                                 print(f"\tBOB:{cassette.uniquename} Add component_type_curies")
+                        #         self.props_by_type = {}           # Lists of FBProp objects keyed by prop type name.
+                        #         self.cvt_annos_by_id = {}         # entity_cvterm_id-keyed dict of FBCVtermAnnotation objects.
+                        #         self.cvt_anno_ids_by_cv = {}      # Cv.name-keyed lists of entity_cvterm_ids.
+                        #         self.cvt_anno_ids_by_term = {}    # Cvterm.name-keyed lists of entity_cvterm_ids.
+                        #         self.cvt_anno_ids_by_prop = {}    # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
                         for bob in cassette.props_by_type.keys():  # Lists of FBProp objects keyed by prop type name.
                             print(f"BOBBY: props_by_type {bob} {cassette.props_by_type[bob]}")
                         for bob in cassette.cvt_annos_by_id.keys():  # entity_cvterm_id-keyed dict of FBCVtermAnnotation objects.
-                            print(f"BOBBY: cvt_anno_ids_by_id {bob} {cassette.cvt_annos_ids_by_id}")
+                            print(f"BOBBY: cvt_anno_ids_by_id {bob} {cassette.cvt_annos_by_id}")
                         for bob in cassette.cvt_anno_ids_by_cv.keys():  # Cv.name-keyed lists of entity_cvterm_ids.
                             print(f"BOBBY: cvt_anno_ids_by_cv {bob} {cassette.cvt_anno_ids_by_cv[bob]}")
                         for bob in cassette.cvt_anno_ids_by_term.keys():  # Cvterm.name-keyed lists of entity_cvterm_ids.
