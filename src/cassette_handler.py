@@ -319,7 +319,8 @@ class CassetteHandler(FeatureHandler):
                         for bob in cassette.props_by_type.keys():  # Lists of FBProp objects keyed by prop type name.
                             print(f"BOBBY: props_by_type {bob} {cassette.props_by_type[bob]}")
                         for bob in cassette.cvt_annos_by_id.keys():  # entity_cvterm_id-keyed dict of FBCVtermAnnotation objects.
-                            print(f"BOBBY: cvt_anno_ids_by_id {bob} {cassette.cvt_annos_by_id}")
+                            print(f"BOBBY: cvt_annos_ids_by {bob} {cassette.cvt_annos_by_id[bob]}")
+
                         for bob in cassette.cvt_anno_ids_by_cv.keys():  # Cv.name-keyed lists of entity_cvterm_ids.
                             print(f"BOBBY: cvt_anno_ids_by_cv {bob} {cassette.cvt_anno_ids_by_cv[bob]}")
                         for bob in cassette.cvt_anno_ids_by_term.keys():  # Cvterm.name-keyed lists of entity_cvterm_ids.
