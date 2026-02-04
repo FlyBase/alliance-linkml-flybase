@@ -113,6 +113,20 @@ class CassetteHandler(FeatureHandler):
         # Get in vitro set of cassettes
         self.add_in_vitro_allele_entries(session, reference_set)
 
+        # sanity check of making sure ALL test data is in the entries.
+        unique_names = {}
+        # generate dict of uniquename in fb_data_entities
+        for entity_id in self.fb_data_entities:
+            unique_names[self.fb_data_entities[entity_id].uniquename] = entity_id
+        # Are all test examples in the fb_data_entities
+        for name, _ in self.test_set.items():
+            if name not in unique_names:
+                self.log.error(f"Missing {name} in fb_data_entities")
+        # Are all fb_data_entities in the test set
+        for entity_id, entity in self.fb_data_entities.items():
+            if entity.uniquename not in self.test_set:
+                self.log.error(f"Missing {entity.uniquename} in test set, could have extras?")
+
     def add_in_vitro_allele_entries(self, session, reference_set):
         """Extend list of entities."""
         self.log.info('Add entities for alleles having "in vitro construct" annotations.')
@@ -262,7 +276,7 @@ class CassetteHandler(FeatureHandler):
         map_relationship = {'has_reg_region': 'is_regulated_by',
                             'tagged_with': 'tagged_with',
                             'carries_tool': 'contains',
-                            'expressed_features': 'expresses'}
+                            'encodes_tool': 'expresses'}
         # cassette_cassette_counter = {}
         for cassette_cassette_key in self.cassette_cassette_rels.keys():
             if self.testing:
@@ -295,25 +309,26 @@ class CassetteHandler(FeatureHandler):
             if rel_type_name in map_relationship:
                 rel_type_name = map_relationship[rel_type_name]
             else:
-                if rel_type_name == 'encodes_tool':
-                    if self.testing:
-                        print(f"BOB: {cassette.uniquename} rel type 'encodes_tool' not implemented.")
-                        # component_type_curies = []
-                        for bob in cassette.expressed_features:
-                            other = self.feature_lookup[bob]
-                            print(f"\tBOB:{cassette.uniquename}\t expressed_features {bob} {other['uniquename']} {other}")
-                            if other['type'] not in ('RNAi_reagent', 'sgRNA', 'antisense'):
-                                print(f"\tBOB:{cassette.uniquename} carry on as normal")
-                            else:
-                                print(f"\tBOB:{cassette.uniquename} Add component_type_curies")
-                        # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
-                        for bob in cassette.prop_data.keys():
-                            print(f"BOBBY: prop_data {cassette.uniquename} {bob} {cassette.prop_data[bob]}")
-                    continue
-                if rel_type_name not in bad_relationship_count:
-                    bad_relationship_count[rel_type_name] = 0
-                bad_relationship_count[rel_type_name] += 1
+                self.log.error(f"Unknown relationship type {rel_type_name}")
                 continue
+            if rel_type_name == 'encodes_tool':
+                alliance_association = 'expresses'
+                if self.testing:
+                    print(f"BOB: {cassette.uniquename} rel type 'encodes_tool' not implemented.")
+                    # component_type_curies = []
+                    for bob in cassette.expressed_features:
+                        other = self.feature_lookup[bob]
+                        print(f"\tBOB:{cassette.uniquename}\t expressed_features {bob} {other['uniquename']} {other}")
+                        if other['type'] not in ('RNAi_reagent', 'sgRNA', 'antisense'):
+                            print(f"\tBOB:{cassette.uniquename} carry on as normal")
+                        else:
+                            print(f"\tBOB:{cassette.uniquename} Add component_type_curies")
+                    # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
+                    for bob in cassette.prop_data.keys():
+                        print(f"BOBBY: prop_data {cassette.uniquename} {bob} {cassette.prop_data[bob]}")
+            if rel_type_name not in bad_relationship_count:
+                bad_relationship_count[rel_type_name] = 0
+                bad_relationship_count[rel_type_name] += 1
             if assoc_type == 'component_free_text':
                 # CassetteComponentSlotAnnotationDTO
                 if self.testing:

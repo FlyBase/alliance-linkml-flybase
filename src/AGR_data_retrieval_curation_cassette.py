@@ -21,6 +21,7 @@ Notes:
 """
 
 import argparse
+import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
@@ -54,6 +55,7 @@ parser.add_argument('-r', '--reference_db',
 # Use parse_known_args(), not parse_args(),
 # to handle args specific to this script (outside of set_up_db_reading()).
 args, extra_args = parser.parse_known_args()
+
 log.info(f'Parsing args specific to this script; ignoring these: {extra_args}')
 linkml_release = args.linkml_release
 reference_db = args.reference_db
