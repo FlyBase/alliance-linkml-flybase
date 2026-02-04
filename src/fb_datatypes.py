@@ -647,3 +647,6 @@ class FBProp(object):
         """
         self.chado_obj = chado_obj    # The prop object: e.g., Featureprop, Strainprop, FeatureRelationshipprop, etc.
         self.pubs = []                # Will be a list of pub_ids.
+
+    def __str__(self):
+        return self.chado_obj

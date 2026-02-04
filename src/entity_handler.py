@@ -579,12 +579,13 @@ class PrimaryEntityHandler(DataHandler):
                 print(f"BOB: cvtermprop result {cvtermprop_result}")
             entity_cvterm_id = getattr(cvtermprop_result, f'{chado_type}_cvterm_id')
             entity_prop_type_name = self.cvterm_lookup[cvtermprop_result.type_id]['name']
-            print(f"BOBBY: id = {cvtermprop_result.feature_cvterm.feature.feature_id}")
+            if self.testing:
+                print(f"BOBBY: id = {cvtermprop_result.feature_cvterm.feature.feature_id}")
             entity_id = cvtermprop_result.feature_cvterm.feature.feature_id
             if entity_id in self.ignore_list:
                 continue
             elif entity_id not in self.fb_data_entities:
-                self.log.error(f"BOBBY: entity_id:{entity_id} not in list of data_entities")
+                self.log.error(f"BOBBY: entity_id:{entity_id} not in list of data_entities feature {cvtermprop_result.feature_cvterm.feature}")
                 self.log.error(f"BOBBY: ignore_list is {self.ignore_list}")
                 continue
             if entity_prop_type_name in self.fb_data_entities[entity_id].prop_data:  # only store those we are interested in
@@ -592,22 +593,8 @@ class PrimaryEntityHandler(DataHandler):
                              'type': cvtermprop_result.feature_cvterm.cvterm.cv.name,
                              'accession':cvtermprop_result.feature_cvterm.cvterm.dbxref.accession}
                 self.fb_data_entities[entity_id].prop_data[entity_prop_type_name].append(prop_data)
-                print(f"BOBBY: prop_data -> {prop_data}")
-            if self.testing:
-                print(f"\tBOB: cvtermprop sub id:{entity_cvterm_id} name:{entity_prop_type_name}")
-                # print(dir(cvtermprop_result.feature_cvterm))
-                # print(dir(cvtermprop_result.feature_cvterm.cvterm))
-                # print(dir(cvtermprop_result.feature_cvterm.cvterm.dbxref))
-                # try:
-                #    print(f"BOBBY 1: {entity_prop_type_name}")
-                #    print(f"BOBBY 2:{cvtermprop_result.feature_cvterm.cvterm.cv.name}")
-                #    print(f"BOBBY 3:{cvtermprop_result.feature_cvterm.cvterm.name}")
-                #    print(f"BOBBY 4: {cvtermprop_result.feature_cvterm.cvterm.dbxref.accession}")
-                # except:
-                #    pass
-                # print(f"\tBOB: sub sub {cvtermprop_result.feature_cvterm.cvterm}")
-                # print(f"\tBOB: sub sub sub {cvtermprop_result.feature_cvterm.cvterm.dbxref.accession}")
-                # print(f"\tBOB: feature_cvterm.type {cvtermprop_result.type}")
+                if self.testing:
+                    print(f"BOBBY: prop_data -> {prop_data}")
             if entity_prop_type_name in cvterm_annotation_dict[entity_cvterm_id].props_by_type.keys():
                 cvterm_annotation_dict[entity_cvterm_id].props_by_type[entity_prop_type_name].append(fb_datatypes.FBProp(cvtermprop_result))
                 cvterm_prop_counter += 1
@@ -623,7 +610,7 @@ class PrimaryEntityHandler(DataHandler):
             entity_id = getattr(cvt_anno.chado_obj, f'{chado_type}_id')
             if entity_id in self.ignore_list:
                 continue
-            elif entity_id not in self.fb_data_entities:
+            if entity_id not in self.fb_data_entities:
                 self.log.error(f"entity_id:{entity_id} not in list of data_entities")
                 self.log.error(f"ignore_list is {self.ignore_list}")
                 continue
