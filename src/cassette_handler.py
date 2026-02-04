@@ -309,7 +309,7 @@ class CassetteHandler(FeatureHandler):
                                 print(f"\tBOB:{cassette.uniquename} Add component_type_curies")
                         # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
                         for bob in cassette.prop_data.keys():
-                            print(f"BOBBY: prop_data {bob} {cassette.prop_data[bob]}")
+                            print(f"BOBBY: prop_data {cassette.uniquename} {bob} {cassette.prop_data[bob]}")
                     continue
                 if rel_type_name not in bad_relationship_count:
                     bad_relationship_count[rel_type_name] = 0
