@@ -649,5 +649,5 @@ class FBProp(object):
         self.pubs = []                # Will be a list of pub_ids.
 
     def __str__(self):
-        """Print nicely"""
+        """Print nicely."""
         return self.chado_obj
