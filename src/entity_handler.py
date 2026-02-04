@@ -575,12 +575,8 @@ class PrimaryEntityHandler(DataHandler):
                 distinct()
         cvterm_prop_counter = 0
         for cvtermprop_result in cvtermprop_results:
-            if self.testing:
-                print(f"BOB: cvtermprop result {cvtermprop_result}")
             entity_cvterm_id = getattr(cvtermprop_result, f'{chado_type}_cvterm_id')
             entity_prop_type_name = self.cvterm_lookup[cvtermprop_result.type_id]['name']
-            if self.testing:
-                print(f"BOBBY: id = {cvtermprop_result.feature_cvterm.feature.feature_id}")
             entity_id = cvtermprop_result.feature_cvterm.feature.feature_id
             if entity_id in self.ignore_list:
                 continue
