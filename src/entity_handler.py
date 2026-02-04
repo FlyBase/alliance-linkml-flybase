@@ -587,14 +587,12 @@ class PrimaryEntityHandler(DataHandler):
                 self.log.error(f"BOBBY: entity_id:{entity_id} not in list of data_entities")
                 self.log.error(f"BOBBY: ignore_list is {self.ignore_list}")
                 continue
-            print(f"BOBBY: dir {dir(self.fb_data_entities[entity_id])}")
-            print(f"BOBBY: type {type(self.fb_data_entities[entity_id])}")
             if entity_prop_type_name in self.fb_data_entities[entity_id].prop_data:  # only store those we are interested in
                 prop_data = {'name': cvtermprop_result.feature_cvterm.cvterm.name,
                              'type': cvtermprop_result.feature_cvterm.cvterm.cv.name,
                              'accession':cvtermprop_result.feature_cvterm.cvterm.dbxref.accession}
                 self.fb_data_entities[entity_id].prop_data[entity_prop_type_name].append(prop_data)
-                print(f"BOBBY: prop_data{prop_data}")
+                print(f"BOBBY: prop_data -> {prop_data}")
             if self.testing:
                 print(f"\tBOB: cvtermprop sub id:{entity_cvterm_id} name:{entity_prop_type_name}")
                 # print(dir(cvtermprop_result.feature_cvterm))
