@@ -121,7 +121,7 @@ class CassetteHandler(FeatureHandler):
         # Are all test examples in the fb_data_entities
         for name, _ in self.test_set.items():
             if name not in unique_names:
-                self.log.error(f"Missing {name} in fb_data_entities")
+                self.log.error(f"Missing {name} in fb_data_entities. Must be a construct, hopefully.")
         # Are all fb_data_entities in the test set
         for entity_id, entity in self.fb_data_entities.items():
             if entity.uniquename not in self.test_set:
