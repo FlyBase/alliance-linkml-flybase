@@ -93,6 +93,7 @@ class CassetteHandler(FeatureHandler):
     cassette_genomic_entity_associations = []
     cassette_cassette_rels = {}
 
+
     def get_general_data(self, session):
         """Extend the method for the CassetteHandler."""
         super().get_general_data(session)
@@ -310,6 +311,18 @@ class CassetteHandler(FeatureHandler):
                                 print(f"\tBOB:{cassette.uniquename} carry on as normal")
                             else:
                                 print(f"\tBOB:{cassette.uniquename} Add component_type_curies")
+                        for bob in cassette.props_by_type.keys():  # Lists of FBProp objects keyed by prop type name.
+                            print(f"BOBBY: props_by_type {bob} {cassette.props_by_type[bob]}")
+                        for bob in cassette.cvt_annos_by_id.keys():  # entity_cvterm_id-keyed dict of FBCVtermAnnotation objects.
+                            print(f"BOBBY: cvt_anno_ids_by_id {bob} {cassette.cvt_anno_ids_by_id}")
+                        for bob in cassette.cvt_anno_ids_by_cv.keys():  # Cv.name-keyed lists of entity_cvterm_ids.
+                            print(f"BOBBY: cvt_anno_ids_by_cv {bob} {cassette.cvt_anno_ids_by_cv[bob]}")
+                        for bob in cassette.cvt_anno_ids_by_term.keys():  # Cvterm.name-keyed lists of entity_cvterm_ids.
+                            print(f"BOBBY: cvt_anno_ids_by_term {bob} {cassette.cvt_anno_ids_by_term[bob]}")
+                        for bob in cassette.cvt_anno_ids_by_prop.keys():  # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
+                            print(f"BOBBY: cvt_anno_ids_by_prop {bob} {cassette.cvt_anno_ids_by_prop[bob]}")
+                        for bob in cassette.prop_data.keys():  # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
+                            print(f"BOBBY: prop_data {bob} {cassette.prop_data[bob]}")
 
                         for bob in cassette.regulating_features:
                             component = self.feature_lookup[bob]
