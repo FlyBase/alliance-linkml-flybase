@@ -93,7 +93,6 @@ class CassetteHandler(FeatureHandler):
     cassette_genomic_entity_associations = []
     cassette_cassette_rels = {}
 
-
     def get_general_data(self, session):
         """Extend the method for the CassetteHandler."""
         super().get_general_data(session)

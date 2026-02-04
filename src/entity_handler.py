@@ -587,7 +587,7 @@ class PrimaryEntityHandler(DataHandler):
             if entity_prop_type_name in self.fb_data_entities[entity_id].prop_data:  # only store those we are interested in
                 prop_data = {'name': cvtermprop_result.feature_cvterm.cvterm.name,
                              'type': cvtermprop_result.feature_cvterm.cvterm.cv.name,
-                             'accession':cvtermprop_result.feature_cvterm.cvterm.dbxref.accession}
+                             'accession': cvtermprop_result.feature_cvterm.cvterm.dbxref.accession}
                 self.fb_data_entities[entity_id].prop_data[entity_prop_type_name].append(prop_data)
                 if self.testing:
                     print(f"BOBBY: {self.fb_data_entities[entity_id].uniquename}: prop_data -> {prop_data}")
