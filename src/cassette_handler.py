@@ -311,38 +311,9 @@ class CassetteHandler(FeatureHandler):
                                 print(f"\tBOB:{cassette.uniquename} carry on as normal")
                             else:
                                 print(f"\tBOB:{cassette.uniquename} Add component_type_curies")
-                        #         self.props_by_type = {}           # Lists of FBProp objects keyed by prop type name.
-                        #         self.cvt_annos_by_id = {}         # entity_cvterm_id-keyed dict of FBCVtermAnnotation objects.
-                        #         self.cvt_anno_ids_by_cv = {}      # Cv.name-keyed lists of entity_cvterm_ids.
-                        #         self.cvt_anno_ids_by_term = {}    # Cvterm.name-keyed lists of entity_cvterm_ids.
-                        #         self.cvt_anno_ids_by_prop = {}    # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
-                        for bob in cassette.props_by_type.keys():  # Lists of FBProp objects keyed by prop type name.
-                            print(f"BOBBY: props_by_type {bob} {cassette.props_by_type[bob]}")
-                        for bob in cassette.cvt_annos_by_id.keys():  # entity_cvterm_id-keyed dict of FBCVtermAnnotation objects.
-                            print(f"BOBBY: cvt_annos_ids_by {bob} {cassette.cvt_annos_by_id[bob]}")
-
-                        for bob in cassette.cvt_anno_ids_by_cv.keys():  # Cv.name-keyed lists of entity_cvterm_ids.
-                            print(f"BOBBY: cvt_anno_ids_by_cv {bob} {cassette.cvt_anno_ids_by_cv[bob]}")
-                        for bob in cassette.cvt_anno_ids_by_term.keys():  # Cvterm.name-keyed lists of entity_cvterm_ids.
-                            print(f"BOBBY: cvt_anno_ids_by_term {bob} {cassette.cvt_anno_ids_by_term[bob]}")
-                        for bob in cassette.cvt_anno_ids_by_prop.keys():  # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
-                            print(f"BOBBY: cvt_anno_ids_by_prop {bob} {cassette.cvt_anno_ids_by_prop[bob]}")
-                        for bob in cassette.prop_data.keys():  # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
+                        # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
+                        for bob in cassette.prop_data.keys():
                             print(f"BOBBY: prop_data {bob} {cassette.prop_data[bob]}")
-
-                        for bob in cassette.regulating_features:
-                            component = self.feature_lookup[bob]
-                            print(f"\tBOB:\t regulating_features {bob} {component}")
-                        for bob in cassette.expressed_tool_genes:
-                            print(f"BOB:\t expressed_tool_genes {bob}")
-                        for bob in cassette.regulating_tool_genes:
-                            print(f"\tBOB:\t regulating_tool_genes {bob}")
-                        if cassette.cvt_anno_ids_by_prop:
-                            for bob in cassette.cvt_anno_ids_by_prop.keys():
-                                print(f"\tBOBBY:{cassette.uniquename}\t cvterm name {bob} {cassette.cvt_anno_ids_by_prop[bob]}")
-                        if cassette.cvt_anno_ids_by_term:
-                            for bob in cassette.cvt_anno_ids_by_term.keys():
-                                print(f"\tBOBBY:{cassette.uniquename}\t cvterm term: {bob} {cassette.cvt_anno_ids_by_term[bob]}")
                     continue
                 if rel_type_name not in bad_relationship_count:
                     bad_relationship_count[rel_type_name] = 0
