@@ -312,7 +312,6 @@ class CassetteHandler(FeatureHandler):
                 self.log.error(f"Unknown relationship type {rel_type_name}")
                 continue
             if rel_type_name == 'encodes_tool':
-                alliance_association = 'expresses'
                 if self.testing:
                     print(f"BOB: {cassette.uniquename} rel type 'encodes_tool' not implemented.")
                     # component_type_curies = []
