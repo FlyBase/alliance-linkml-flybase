@@ -314,7 +314,7 @@ class CassetteHandler(FeatureHandler):
             if rel_type_name == 'encodes_tool':
                 if self.testing:
                     print(f"BOB: {cassette.uniquename} rel type 'encodes_tool' not implemented.")
-                    # component_type_curies = []
+                    component_type_curies = []
                     for bob in cassette.expressed_features:
                         other = self.feature_lookup[bob]
                         print(f"\tBOB:{cassette.uniquename}\t expressed_features {bob} {other['uniquename']} {other}")
@@ -325,6 +325,7 @@ class CassetteHandler(FeatureHandler):
                     # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
                     for bob in cassette.prop_data.keys():
                         print(f"BOBBY: prop_data {cassette.uniquename} {bob} {cassette.prop_data[bob]}")
+
             if rel_type_name not in bad_relationship_count:
                 bad_relationship_count[rel_type_name] = 0
                 bad_relationship_count[rel_type_name] += 1
@@ -357,7 +358,7 @@ class CassetteHandler(FeatureHandler):
                 first_feat_rel.linkmldto = rel_dto
                 self.cassette_genomic_entity_associations.append(first_feat_rel)
             if self.testing:
-                self.log.debug(f"{cassette_curie} {component_curie} assoc type is {assoc_type}")
+                self.log.debug(f"BOB: {rel_type_name} {cassette_curie} {component_curie} assoc type is {assoc_type}")
             if cassette.is_obsolete is True or component['is_obsolete'] is True:
                 self.log.error(f"{cassette_curie} {component_curie} should never be obsolete??")
             counter += 1

@@ -545,8 +545,8 @@ class PrimaryEntityHandler(DataHandler):
         cvterm_annotation_dict = {}    # A temporary entity_cvterm_id-keyed dict of FBCVTermAnnotation objects.
         counter = 0
         for cvterm_result in cvterm_results:
-            if self.testing:
-                print(f"BOB cvterm results all: {cvterm_result}")
+            # if self.testing:
+            #     print(f"BOB cvterm results all: {cvterm_result}")
             cvt_anno_id = getattr(cvterm_result, f'{chado_type}_cvterm_id')
             cvterm_annotation_dict[cvt_anno_id] = fb_datatypes.FBCVTermAnnotation(cvterm_result, f'{chado_type}_cvterm')
             counter += 1
