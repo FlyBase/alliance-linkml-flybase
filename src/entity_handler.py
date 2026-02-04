@@ -581,6 +581,12 @@ class PrimaryEntityHandler(DataHandler):
             entity_prop_type_name = self.cvterm_lookup[cvtermprop_result.type_id]['name']
             print(f"BOBBY: id = {cvtermprop_result.feature_cvterm.feature.feature_id}")
             entity_id = cvtermprop_result.feature_cvterm.feature.feature_id
+            if entity_id in self.ignore_list:
+                continue
+            elif entity_id not in self.fb_data_entities:
+                self.log.error(f"BOBBY: entity_id:{entity_id} not in list of data_entities")
+                self.log.error(f"BOBBY: ignore_list is {self.ignore_list}")
+                continue
             print(f"BOBBY: dir {dir(self.fb_data_entities[entity_id])}")
             print(f"BOBBY: type {type(self.fb_data_entities[entity_id])}")
             if entity_prop_type_name in self.fb_data_entities[entity_id].prop_data:  # only store those we are interested in
