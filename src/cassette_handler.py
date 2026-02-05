@@ -288,6 +288,7 @@ class CassetteHandler(FeatureHandler):
             #    cassette_cassette_counter[cassette_cassette_key[CASSETTE]] = 1
 
         bad_relationship_count = {}
+        encoded = {}  # dict to store if cassette assoc mapped by encodes_tool
         # go through cassettes and make the cassette-component associations.
         for cassette_cassette_key, cassette_cassette_rels in self.cassette_cassette_rels.items():
             cassette_feature_id = cassette_cassette_key[CASSETTE]
@@ -312,6 +313,7 @@ class CassetteHandler(FeatureHandler):
                 self.log.error(f"Unknown relationship type {rel_type_name}")
                 continue
             if rel_type_name == 'encodes_tool':
+                encoded[cassette.uniquename] = 1
                 if self.testing:
                     print(f"BOB: {cassette.uniquename} rel type 'encodes_tool' not implemented.")
                     # component_type_curies = []
@@ -367,7 +369,17 @@ class CassetteHandler(FeatureHandler):
         self.log.info(f'Generated {counter} cassette-component unique associations.')
         first = True
         for entity in self.fb_data_entities.values():
-
+            if entity.uniquename in encoded:  # already dumped via encode_tool
+                if self.testing:
+                    rels = entity.recall_relationships(
+                        self.log,
+                        entity_role='subject',  # 'subject' or 'object'
+                        rel_types='alleleof',  # str or list of relationship type names
+                        rel_entity_types='gene'  # (features only) filter by related entity type
+                    )
+                    for rel in rels:
+                        self.log.debug(f"BOBBY: {entity.uniquename} has parent {rel.chado_obj.object.uniquename} BUT ignoring as already parsed via encodes_tool")
+                continue
             rels = entity.recall_relationships(
                 self.log,
                 entity_role='subject',  # 'subject' or 'object'
