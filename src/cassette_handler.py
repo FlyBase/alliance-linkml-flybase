@@ -373,7 +373,8 @@ class CassetteHandler(FeatureHandler):
                 rel_types='alleleof',  # str or list of relationship type names
                 rel_entity_types='gene'  # (features only) filter by related entity type
             )
-            self.log.debug(f"BOBBY: {entity} {rels}\n")
+            for rel in rels:
+                self.log.debug(f"BOBBY: {entity} {rel}\n")
         return
 
     def synthesize_cassette_associations(self):
