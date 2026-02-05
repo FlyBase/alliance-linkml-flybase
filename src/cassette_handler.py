@@ -95,7 +95,7 @@ class CassetteHandler(AlleleHandler):
 
     def get_general_data(self, session):
         """Extend the method for the CassetteHandler."""
-        super().get_general_data(session)
+        # super().get_general_data(session)
         self.build_bibliography(session)
         self.build_organism_lookup(session)
         self.build_cvterm_lookup(session)
@@ -183,7 +183,7 @@ class CassetteHandler(AlleleHandler):
 
     def map_fb_data_to_alliance(self):
         """Extend the method for the GeneHandler."""
-        super().map_fb_data_to_alliance()
+        # super().map_fb_data_to_alliance()
         self.map_cassette_basic()
         self.map_synonyms()
         self.map_data_provider_dto()
@@ -217,7 +217,7 @@ class CassetteHandler(AlleleHandler):
 
     def get_datatype_data(self, session):
         """Extend the method for the CassetteHandler."""
-        super().get_datatype_data(session)
+        # super().get_datatype_data(session)
         self.get_entities(session)
         self.get_entityprops(session)
         self.get_entity_cvterms(session)
@@ -256,7 +256,7 @@ class CassetteHandler(AlleleHandler):
     # Elaborate on query_chado_and_export() for the CassetteHandler.
     def query_chado_and_export(self, session):
         """Elaborate on query_chado_and_export method for the CassetteHandler."""
-        super().query_chado_and_export(session)
+        # super().query_chado_and_export(session)
         # self.generate_export_dict(self.cassette_component_free_text_associations,
         #                           'cassette_str_association_ingest_set')
         self.generate_export_dict(self.cassette_genomic_entity_associations,
@@ -398,7 +398,7 @@ class CassetteHandler(AlleleHandler):
     # Elaborate on synthesize_info() for the Handler.
     def synthesize_info(self):
         """Extend the method for the ConstructHandler."""
-        super().synthesize_info()
+        # super().synthesize_info()
         self.synthesize_synonyms()
         self.synthesize_secondary_ids()
         self.synthesize_encoded_tools()
