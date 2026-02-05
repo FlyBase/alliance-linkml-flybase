@@ -516,6 +516,10 @@ class FBRelationship(FBExportEntity):
         self.pubs = []             # Will be list of Pub.pub_ids supporting the relationship.
         self.props_by_type = {}    # Lists of FBProp objects keyed by prop type name.
 
+    def __str__(self):
+        """ Nice str rep for FBRelationship."""
+        return self.chado_obj
+
 
 class FBCVTermAnnotation(FBExportEntity):
     """FBCVTermAnnotation class."""
