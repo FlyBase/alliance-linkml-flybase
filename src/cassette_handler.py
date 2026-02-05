@@ -365,6 +365,7 @@ class CassetteHandler(FeatureHandler):
         for key in bad_relationship_count:
             self.log.error(f'Bad relationship count for {key}: {bad_relationship_count[key]}')
         self.log.info(f'Generated {counter} cassette-component unique associations.')
+        first = True
         for entity in self.fb_data_entities.values():
 
             rels = entity.recall_relationships(
@@ -378,7 +379,9 @@ class CassetteHandler(FeatureHandler):
                 try:
                     self.log.debug(f"BOBBY: {rel.chado_object.object.uniquename}")
                 except:
-                    self.log.debug(f"BOBBY: problem")
+                    if first:
+                        first = False
+                        self.log.debug(f"BOBBY: problem {dir(rel.chado_object)}")
         return
 
     def synthesize_cassette_associations(self):
