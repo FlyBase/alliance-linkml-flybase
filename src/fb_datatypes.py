@@ -518,7 +518,7 @@ class FBRelationship(FBExportEntity):
 
     def __str__(self):
         """ Nice str rep for FBRelationship."""
-        return self.chado_obj
+        return str(self.chado_obj)
 
 
 class FBCVTermAnnotation(FBExportEntity):
