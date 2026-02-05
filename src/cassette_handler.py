@@ -375,14 +375,7 @@ class CassetteHandler(FeatureHandler):
                 rel_entity_types='gene'  # (features only) filter by related entity type
             )
             for rel in rels:
-                self.log.debug(f"BOBBY: {entity} {rel}\n")
-                try:
-                    self.log.debug(f"BOBBY: {rel.chado_obj.object.uniquename}")
-                except:
-                    if first:
-                        first = False
-                        self.log.debug(f"BOBBY: problem {dir(rel.chado_obj)}")
-                        exit()
+                self.log.debug(f"BOBBY: {entity.uniquename} has parent {rel.chado_obj.object.uniquename}")
         return
 
     def synthesize_cassette_associations(self):
