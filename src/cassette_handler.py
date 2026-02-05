@@ -369,7 +369,7 @@ class CassetteHandler(FeatureHandler):
         self.log.info(f'Generated {counter} cassette-component unique associations.')
         first = True
         for entity in self.fb_data_entities.values():
-            if entity.uniquename in encoded:  # already dumped via encode_tool
+            if entity.uniquename in encoded.keys():  # already dumped via encode_tool
                 if self.testing:
                     rels = entity.recall_relationships(
                         self.log,
