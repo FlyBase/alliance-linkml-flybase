@@ -365,6 +365,15 @@ class CassetteHandler(FeatureHandler):
         for key in bad_relationship_count:
             self.log.error(f'Bad relationship count for {key}: {bad_relationship_count[key]}')
         self.log.info(f'Generated {counter} cassette-component unique associations.')
+        for entity in self.fb_data_entities.values():
+
+            rels = entity.recall_relationships(
+                self.log,
+                entity_role='subject',  # 'subject' or 'object'
+                rel_types='alleleof',  # str or list of relationship type names
+                rel_entity_types='gene'  # (features only) filter by related entity type
+            )
+            self.log.debug(f"BOBBY: {entity} {rels}\n")
         return
 
     def synthesize_cassette_associations(self):
