@@ -314,6 +314,7 @@ class CassetteHandler(FeatureHandler):
                 continue
             if rel_type_name == 'encodes_tool':
                 encoded[cassette.uniquename] = 1
+                self.log.debug(f"BOBBY: encoded {cassette.uniquename}")
                 if self.testing:
                     print(f"BOB: {cassette.uniquename} rel type 'encodes_tool' not implemented.")
                     # component_type_curies = []
@@ -359,6 +360,8 @@ class CassetteHandler(FeatureHandler):
                     pub_curies, False, rel_type_name)
                 first_feat_rel.linkmldto = rel_dto
                 self.cassette_genomic_entity_associations.append(first_feat_rel)
+            else:
+                self.log.error(f"Unknown association type {assoc_type}")
             if self.testing:
                 self.log.debug(f"BOB: {cassette_cassette_rels[0].chado_obj.type.name} -> {rel_type_name}: {cassette_curie} {component_curie} assoc type is {assoc_type}")
             if cassette.is_obsolete is True or component['is_obsolete'] is True:
@@ -367,7 +370,6 @@ class CassetteHandler(FeatureHandler):
         for key in bad_relationship_count:
             self.log.error(f'Bad relationship count for {key}: {bad_relationship_count[key]}')
         self.log.info(f'Generated {counter} cassette-component unique associations.')
-        first = True
         for entity in self.fb_data_entities.values():
             if entity.uniquename in encoded.keys():  # already dumped via encode_tool
                 if self.testing:
