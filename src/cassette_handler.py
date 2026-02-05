@@ -14,11 +14,11 @@ Author(s):
 from logging import Logger
 import agr_datatypes
 import fb_datatypes
-from feature_handler import FeatureHandler
-# from construct_handler import ConstructHandler
+# from feature_handler import FeatureHandler
+from allele_handlers import AlleleHandler
 
 
-class CassetteHandler(FeatureHandler):
+class CassetteHandler(AlleleHandler):
     """This object gets, synthesizes and filters cassette data for export."""
     def __init__(self, log: Logger, testing: bool):
         """Create the CassetteHandler object."""
