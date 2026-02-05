@@ -312,7 +312,7 @@ class CassetteHandler(FeatureHandler):
             else:
                 self.log.error(f"Unknown relationship type {rel_type_name}")
                 continue
-            if rel_type_name == 'encodes_tool':
+            if rel_type_name == 'expresses':
                 encoded[cassette.uniquename] = 1
                 self.log.debug(f"BOBBY: encoded {cassette.uniquename}")
                 if self.testing:
