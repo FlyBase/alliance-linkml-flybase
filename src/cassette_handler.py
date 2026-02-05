@@ -375,6 +375,10 @@ class CassetteHandler(FeatureHandler):
             )
             for rel in rels:
                 self.log.debug(f"BOBBY: {entity} {rel}\n")
+                try:
+                    self.log.debug(f"BOBBY: {rel.chado_object.object.uniquename}")
+                except:
+                    self.log.debug(f"BOBBY: problem")
         return
 
     def synthesize_cassette_associations(self):
