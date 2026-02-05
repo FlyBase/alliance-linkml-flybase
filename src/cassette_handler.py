@@ -377,11 +377,12 @@ class CassetteHandler(FeatureHandler):
             for rel in rels:
                 self.log.debug(f"BOBBY: {entity} {rel}\n")
                 try:
-                    self.log.debug(f"BOBBY: {rel.object.uniquename}")
+                    self.log.debug(f"BOBBY: {rel.chado_obj.object.uniquename}")
                 except:
                     if first:
                         first = False
-                        self.log.debug(f"BOBBY: problem {dir(rel)}")
+                        self.log.debug(f"BOBBY: problem {dir(rel.chado_obj)}")
+                        exit()
         return
 
     def synthesize_cassette_associations(self):
