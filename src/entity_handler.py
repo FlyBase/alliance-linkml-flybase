@@ -436,6 +436,7 @@ class PrimaryEntityHandler(DataHandler):
             # Then sort the relationship into the appropriate relationship type bucket.
             rel_type = rel.chado_obj.type.name
             entity_rel_dict = getattr(self.fb_data_entities[entity_id], role_rel_type_buckets[role])
+            print(f"BOBBY: {rel_type} {entity_rel_dict} {type(entity_rel_dict)}")
             try:
                 entity_rel_dict[rel_type].append(rel_id)
                 assignment_counter += 1
