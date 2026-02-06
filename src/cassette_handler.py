@@ -328,7 +328,7 @@ class CassetteHandler(FeatureHandler):
                 if data_key in cassette.prop_data.keys():
                     for bob in cassette.prop_data[data_key]:
                         # self.fb_data_entities[entity_id].prop_data[entity_prop_type_name].append(prop_data)
-                        component_type_curies.append(f"{data_key } {bob.name}: {bob.type}:{bob.accession}")
+                        component_type_curies.append(f"{data_key } {bob['name']}: {bob['type']}:{bob['accession']}")
             if rel_type_name not in bad_relationship_count:
                 bad_relationship_count[rel_type_name] = 0
                 bad_relationship_count[rel_type_name] += 1
