@@ -333,7 +333,7 @@ class CassetteHandler(FeatureHandler):
                         self.log.debug(f"BOBBY: prop_data {cassette.uniquename} {bob} {component_type_curies}")
                 component_type_curies = self.get_comp_type_curies(cassette)
             self.log.debug(f"BOBBY: comp cur {component_type_curies}")
-            self.log.debug(f"\tBOBBY:{cassette.uniquename} {component_type_curies}")
+            self.log.debug(f"\tBOBBY: assoc type->{assoc_type} cass name -> {cassette.uniquename} ctc -> {component_type_curies}")
             if rel_type_name not in bad_relationship_count:
                 bad_relationship_count[rel_type_name] = 0
                 bad_relationship_count[rel_type_name] += 1
