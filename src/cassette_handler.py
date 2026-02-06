@@ -330,7 +330,7 @@ class CassetteHandler(FeatureHandler):
                             self.log.debug(f"\tBOB:{cassette.uniquename} Add component_type_curies")
                     # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
                     for bob in cassette.prop_data.keys():
-                        self.log.debug(f"BOB: prop_data {cassette.uniquename} {bob} {component_type_curies}")
+                        self.log.debug(f"BOBBY: prop_data {cassette.uniquename} {bob} {component_type_curies}")
                 component_type_curies = self.get_comp_type_curies(cassette)
             self.log.debug(f"BOBBY: comp cur {component_type_curies}")
             self.log.debug(f"\tBOBBY:{cassette.uniquename} {component_type_curies}")
