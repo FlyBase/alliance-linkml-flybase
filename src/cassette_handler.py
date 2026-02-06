@@ -388,7 +388,7 @@ class CassetteHandler(FeatureHandler):
             )
             for rel in rels:
                 self.log.debug(f"BOBBY: {entity.uniquename} has parent {rel.chado_obj.object.uniquename}")
-                cassette = self.fb_data_entities[rel.chado_obj.object.feature_id]
+                cassette = self.feature_lookup[rel.chado_obj.object.feature_id]
                 assoc_type = self.cassette_dto_type(cassette)
                 # Always a gene currently BUT might in future have
                 # subset of foreign genes so check now anyway

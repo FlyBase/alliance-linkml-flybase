@@ -121,7 +121,7 @@ class CassetteTransgenicToolAssociationDTO(AuditedObjectDTO):
 class CassetteGenomicEntityAssociationDTO(AuditedObjectDTO):
     """CassetteGenomicEntityAssociationDTO class."""
     def __init__(self, cassette_association_subject, cassette_association_object,
-                 pub_curies, obsolete, relation):
+                 pub_curies, obsolete, relation, component_type_curies=None):
         """Create CassetteAssociationDTO for FlyBase object."""
         super().__init__()
         self.cassette_identifier = cassette_association_subject
@@ -129,6 +129,7 @@ class CassetteGenomicEntityAssociationDTO(AuditedObjectDTO):
         self.evidence_curies = pub_curies
         self.obsolete = obsolete
         self.relation_name = relation
+        self.component_type_name = component_type_curies or []
 
 
 class CassetteStrAssociationDTO(AuditedObjectDTO):
