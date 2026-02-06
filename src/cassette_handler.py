@@ -384,7 +384,7 @@ class CassetteHandler(FeatureHandler):
             )
             for rel in rels:
                 self.log.debug(f"BOBBY: {entity.uniquename} has parent {rel.chado_obj.object.uniquename}")
-                assoc_type = self.cassette_dto_type(rel.chado_obj.object.uniquename)
+                assoc_type = self.cassette_dto_type(str(rel.chado_obj.object.uniquename))
                 # Always a gene currently BUT might in future have
                 # subset of foreign genes so check now anyway
                 if assoc_type == 'component_free_text':
@@ -392,7 +392,7 @@ class CassetteHandler(FeatureHandler):
                 elif assoc_type == 'genomic_entity_association':
                     # CassetteGenomicEntityAssociationDTO
                     rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
-                        f"FB:{entity.uniquename}",
+                        f"FB:{entity}",
                         f"FB:{rel.chado_obj.object.uniquename}",
                         ["NEEDED"], False, 'expresses')  # NEED to add pub_curies still
                     self.cassette_genomic_entity_associations.append(rel_dto)
