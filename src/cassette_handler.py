@@ -281,11 +281,6 @@ class CassetteHandler(FeatureHandler):
         for cassette_cassette_key in self.cassette_cassette_rels.keys():
             if self.testing:
                 self.log.debug(f'Mapping {cassette_cassette_key} to Alliance object. {self.cassette_cassette_rels[cassette_cassette_key]}')
-            # don't think we need to worry about the count of cassettes to components
-            # try:
-            #    cassette_cassette_counter[cassette_cassette_key[CASSETTE]] += 1
-            # except KeyError:
-            #    cassette_cassette_counter[cassette_cassette_key[CASSETTE]] = 1
 
         bad_relationship_count = {}
         encoded = {}  # dict to store if cassette assoc mapped by encodes_tool
@@ -338,13 +333,11 @@ class CassetteHandler(FeatureHandler):
                     print(f"map_cassette_associations: cass:{cassette_curie} comp:{component_curie}")
                 symbol = component['symbol']
                 organism_id = component['organism_id']
-                # pubs = self.lookup_pub_curies(pub_ids)
                 taxon_text = self.organism_lookup[organism_id]['full_species_name']
                 taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
                 rel_dto = agr_datatypes.CassetteComponentSlotAnnotationDTO(
                     rel_type_name, symbol, taxon_curie,
                     taxon_text, pub_curies).dict_export()
-                # first_feat_rel.linkmldto = rel_dto
                 cassette.linkmldto.cassette_component_dtos.append(rel_dto)
             elif assoc_type == 'tool_association':
                 # CassetteTransgenicToolAssociationDTO
@@ -358,8 +351,7 @@ class CassetteHandler(FeatureHandler):
                 rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
                     cassette_curie, component_curie,
                     pub_curies, False, rel_type_name)
-                first_feat_rel.linkmldto = rel_dto
-                self.cassette_genomic_entity_associations.append(first_feat_rel)
+                self.cassette_genomic_entity_associations.append(rel_dto)
             else:
                 self.log.error(f"Unknown association type {assoc_type}")
             if self.testing:
@@ -370,9 +362,11 @@ class CassetteHandler(FeatureHandler):
         for key in bad_relationship_count:
             self.log.error(f'Bad relationship count for {key}: {bad_relationship_count[key]}')
         self.log.info(f'Generated {counter} cassette-component unique associations.')
+
         for entity in self.fb_data_entities.values():
-            if entity.uniquename in encoded.keys():  # already dumped via encode_tool
+            if entity.uniquename in encoded.keys():  # already dumped via encode_tool so skip
                 if self.testing:
+                    # getting rels just for debug info in testing here.
                     rels = entity.recall_relationships(
                         self.log,
                         entity_role='subject',  # 'subject' or 'object'
@@ -390,6 +384,18 @@ class CassetteHandler(FeatureHandler):
             )
             for rel in rels:
                 self.log.debug(f"BOBBY: {entity.uniquename} has parent {rel.chado_obj.object.uniquename}")
+                assoc_type = self.cassette_dto_type(rel.chado_obj.object.uniquename)
+                # Always a gene currently BUT might in future have
+                # subset of foreign genes so check now anyway
+                if assoc_type == 'component_free_text':
+                    self.log.error(f"cassette {entity.uniquename} has parent {rel.chado_obj.object.uniquename} BUT assoc_type is {assoc_type} So problem")
+                elif assoc_type == 'genomic_entity_association':
+                    # CassetteGenomicEntityAssociationDTO
+                    rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
+                        f"FB:{entity.uniquename}",
+                        f"FB:{rel.chado_obj.object.uniquename}",
+                        ["NEEDED"], False, 'expresses')  # NEED to add pub_curies still
+                    self.cassette_genomic_entity_associations.append(rel_dto)
         return
 
     def synthesize_cassette_associations(self):
@@ -418,7 +424,6 @@ class CassetteHandler(FeatureHandler):
                     self.cassette_cassette_rels[cassette_cassette_key] = [cassette_rel]
                     component_counter += 1
         self.log.info(f'Found {component_counter} components for {cassette_counter} cassettes.')
-        return
 
     # Elaborate on synthesize_info() for the Handler.
     def synthesize_info(self):
