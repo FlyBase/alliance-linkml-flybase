@@ -398,12 +398,13 @@ class CassetteHandler(FeatureHandler):
                     self.log.error(mess)
                 elif assoc_type == 'genomic_entity_association':
                     # CassetteGenomicEntityAssociationDTO
-                    pass
-                    rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
-                        f"FB:{entity}",
-                        f"FB:{rel.chado_obj.object.uniquename}",
-                        ["NEEDED"], False, 'expresses')  # NEED to add pub_curies still
-                    self.cassette_genomic_entity_associations.append(rel_dto)
+                    bob = False
+                    if bob:
+                        rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
+                            f"FB:{entity}",
+                            f"FB:{rel.chado_obj.object.uniquename}",
+                            ["NEEDED"], False, 'expresses')  # NEED to add pub_curies still
+                        self.cassette_genomic_entity_associations.append(rel_dto)
         return
 
     def synthesize_cassette_associations(self):
