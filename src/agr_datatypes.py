@@ -129,7 +129,7 @@ class CassetteGenomicEntityAssociationDTO(AuditedObjectDTO):
         self.evidence_curies = pub_curies
         self.obsolete = obsolete
         self.relation_name = relation
-        self.component_type_name = component_type_curies or []
+        self.component_type_curies = component_type_curies or []
 
 
 class CassetteStrAssociationDTO(AuditedObjectDTO):
