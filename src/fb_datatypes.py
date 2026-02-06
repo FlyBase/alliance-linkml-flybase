@@ -517,7 +517,7 @@ class FBRelationship(FBExportEntity):
         self.props_by_type = {}    # Lists of FBProp objects keyed by prop type name.
 
     def __str__(self):
-        """ Nice str rep for FBRelationship."""
+        """Nice str rep for FBRelationship."""
         return str(self.chado_obj)
 
 

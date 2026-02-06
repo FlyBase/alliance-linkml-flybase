@@ -355,7 +355,9 @@ class CassetteHandler(FeatureHandler):
             else:
                 self.log.error(f"Unknown association type {assoc_type}")
             if self.testing:
-                self.log.debug(f"BOB: {cassette_cassette_rels[0].chado_obj.type.name} -> {rel_type_name}: {cassette_curie} {component_curie} assoc type is {assoc_type}")
+                mess = f"BOB: {cassette_cassette_rels[0].chado_obj.type.name} -> {rel_type_name}: "
+                mess += f"{cassette_curie} {component_curie} assoc type is {assoc_type}"
+                self.log.debug(mess)
             if cassette.is_obsolete is True or component['is_obsolete'] is True:
                 self.log.error(f"{cassette_curie} {component_curie} should never be obsolete??")
             counter += 1
@@ -374,7 +376,9 @@ class CassetteHandler(FeatureHandler):
                         rel_entity_types='gene'  # (features only) filter by related entity type
                     )
                     for rel in rels:
-                        self.log.debug(f"BOBBY: {entity.uniquename} has parent {rel.chado_obj.object.uniquename} BUT ignoring as already parsed via encodes_tool")
+                        mess = f"BOBBY: {entity.uniquename} has parent {rel.chado_obj.object.uniquename} "
+                        mess += "BUT ignoring as already parsed via encodes_tool"
+                        self.log.debug(mess)
                 continue
             rels = entity.recall_relationships(
                 self.log,
@@ -384,11 +388,13 @@ class CassetteHandler(FeatureHandler):
             )
             for rel in rels:
                 self.log.debug(f"BOBBY: {entity.uniquename} has parent {rel.chado_obj.object.uniquename}")
-                assoc_type = self.cassette_dto_type(str(rel.chado_obj.object.uniquename))
+                assoc_type = self.cassette_dto_type(rel.chado_obj.object)
                 # Always a gene currently BUT might in future have
                 # subset of foreign genes so check now anyway
                 if assoc_type == 'component_free_text':
-                    self.log.error(f"cassette {entity.uniquename} has parent {rel.chado_obj.object.uniquename} BUT assoc_type is {assoc_type} So problem")
+                    mess = f"cassette {entity.uniquename} has parent {rel.chado_obj.object.uniquename} "
+                    mess += f"BUT assoc_type is {assoc_type} So problem"
+                    self.log.error(mess)
                 elif assoc_type == 'genomic_entity_association':
                     # CassetteGenomicEntityAssociationDTO
                     rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
