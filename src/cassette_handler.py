@@ -351,7 +351,8 @@ class CassetteHandler(FeatureHandler):
                 rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
                     cassette_curie, component_curie,
                     pub_curies, False, rel_type_name)
-                self.cassette_genomic_entity_associations.append(rel_dto)
+                first_feat_rel.linkmldto = rel_dto
+                self.cassette_genomic_entity_associations.append(first_feat_rel)
             else:
                 self.log.error(f"Unknown association type {assoc_type}")
             if self.testing:
@@ -404,7 +405,8 @@ class CassetteHandler(FeatureHandler):
                             f"FB:{entity}",
                             f"FB:{rel.chado_obj.object.uniquename}",
                             ["NEEDED"], False, 'expresses')  # NEED to add pub_curies still
-                        self.cassette_genomic_entity_associations.append(rel_dto)
+                        first_feat_rel.linkmldto = rel_dto
+                        self.cassette_genomic_entity_associations.append(first_feat_rel)
         return
 
     def synthesize_cassette_associations(self):
