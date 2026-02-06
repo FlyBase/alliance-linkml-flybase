@@ -398,6 +398,7 @@ class CassetteHandler(FeatureHandler):
                     self.log.error(mess)
                 elif assoc_type == 'genomic_entity_association':
                     # CassetteGenomicEntityAssociationDTO
+                    pass
                     rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
                         f"FB:{entity}",
                         f"FB:{rel.chado_obj.object.uniquename}",
