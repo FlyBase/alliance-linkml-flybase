@@ -149,7 +149,10 @@ def generate_association_tsv_file(export_dict, ingest_name, filename):
             obj = entity_dict[second_entity]
             rel_type = entity_dict['relation_name']
             pubs = "|".join(entity_dict['evidence_curies'])
-            comp = "|".join(entity_dict['component_type_curies'] or [])
+            if 'component_type_curies' in entity_dict:
+                comp = "|".join(entity_dict['component_type_curies'])
+            else:
+                comp = ""
             outfile.write(f"{sub}\t{rel_type}\t{obj}\t{pubs}\t{comp}\n")
 
 
