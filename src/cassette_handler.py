@@ -307,6 +307,7 @@ class CassetteHandler(FeatureHandler):
             else:
                 self.log.error(f"Unknown relationship type {rel_type_name}")
                 continue
+            component_type_curies = []
             if rel_type_name == 'expresses':
                 encoded[cassette.uniquename] = 1
                 self.log.debug(f"BOB: encoded {cassette.uniquename}")
@@ -322,8 +323,12 @@ class CassetteHandler(FeatureHandler):
                             self.log.debug(f"\tBOB:{cassette.uniquename} Add component_type_curies")
                     # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
                     for bob in cassette.prop_data.keys():
-                        self.log.debug(f"BOB: prop_data {cassette.uniquename} {bob} {cassette.prop_data[bob]}")
-
+                        self.log.debug(f"BOB: prop_data {cassette.uniquename} {bob} {component_type_curies}")
+                data_key = 'transgenic_product_class'
+                if data_key in cassette.prop_data.keys():
+                    for bob in cassette.prop_data[data_key]:
+                        # self.fb_data_entities[entity_id].prop_data[entity_prop_type_name].append(prop_data)
+                        component_type_curies.append(f"{data_key } {bob.name}: {bob.type}:{bob.accession}")
             if rel_type_name not in bad_relationship_count:
                 bad_relationship_count[rel_type_name] = 0
                 bad_relationship_count[rel_type_name] += 1
@@ -350,7 +355,8 @@ class CassetteHandler(FeatureHandler):
                 # CassetteGenomicEntityAssociationDTO
                 rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
                     cassette_curie, component_curie,
-                    pub_curies, False, rel_type_name)
+                    pub_curies, False, rel_type_name,
+                    component_type_curies)
                 first_feat_rel.linkmldto = rel_dto
                 self.cassette_genomic_entity_associations.append(first_feat_rel)
             else:
