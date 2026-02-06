@@ -253,6 +253,15 @@ class CassetteHandler(FeatureHandler):
             #            type = 'genomic_entity_association'
         return assoc_type
 
+    def get_comp_type_curies(self, cassette):
+        """Get component_type_curies."""
+        component_type_curies = []
+        data_key = 'transgenic_product_class'
+        if data_key in cassette.prop_data.keys():
+            for bob in cassette.prop_data[data_key]:
+                component_type_curies.append(f"{data_key} {bob['name']}: {bob['type']}:{bob['accession']}")
+        return component_type_curies
+
     # Elaborate on query_chado_and_export() for the CassetteHandler.
     def query_chado_and_export(self, session):
         """Elaborate on query_chado_and_export method for the CassetteHandler."""
@@ -312,8 +321,6 @@ class CassetteHandler(FeatureHandler):
                 encoded[cassette.uniquename] = 1
                 self.log.debug(f"BOB: encoded {cassette.uniquename}")
                 if self.testing:
-                    self.log.debug(f"BOB: {cassette.uniquename} rel type 'encodes_tool' not implemented.")
-                    # component_type_curies = []
                     for bob in cassette.expressed_features:
                         other = self.feature_lookup[bob]
                         self.log.debug(f"\tBOB:{cassette.uniquename}\t expressed_features {bob} {other['uniquename']} {other}")
@@ -324,11 +331,9 @@ class CassetteHandler(FeatureHandler):
                     # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
                     for bob in cassette.prop_data.keys():
                         self.log.debug(f"BOB: prop_data {cassette.uniquename} {bob} {component_type_curies}")
-                data_key = 'transgenic_product_class'
-                if data_key in cassette.prop_data.keys():
-                    for bob in cassette.prop_data[data_key]:
-                        # self.fb_data_entities[entity_id].prop_data[entity_prop_type_name].append(prop_data)
-                        component_type_curies.append(f"{data_key } {bob['name']}: {bob['type']}:{bob['accession']}")
+                component_type_curies = self.get_comp_type_curies(cassette)
+            self.log.debug(f"BOBBY: comp cur {component_type_curies}")
+            self.log.debug(f"\tBOBBY:{cassette.uniquename} {component_type_curies}")
             if rel_type_name not in bad_relationship_count:
                 bad_relationship_count[rel_type_name] = 0
                 bad_relationship_count[rel_type_name] += 1
