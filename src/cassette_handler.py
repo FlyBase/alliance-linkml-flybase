@@ -403,8 +403,6 @@ class CassetteHandler(FeatureHandler):
                         mess = f"BOB: {entity.uniquename} has parent {rel.chado_obj.object.uniquename} "
                         mess += "BUT ignoring as already parsed via encodes_tool"
                         self.log.debug(mess)
-                continue
-
 
             rels = entity.recall_relationships(
                 self.log,
