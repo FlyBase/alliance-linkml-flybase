@@ -435,7 +435,8 @@ class CassetteHandler(FeatureHandler):
                         self.log.debug(f"BOBBY: {bob_key} {entity.uniquename} {rel.chado_obj.object.uniquename} {bob}")
                 save_target = False
                 for trans in entity.prop_data['transgenic_product_class']:
-                    if trans.name in ('RNAi_reagent', 'sgRNA', 'antisense'):
+                    self.log.debug(f"BOBBY: {entity.uniquename} trans is {trans}")
+                    if trans['name'] in ('RNAi_reagent', 'sgRNA', 'antisense'):
                         save_target = True
                 if save_target:
                         # CassetteGenomicEntityAssociationDTO
