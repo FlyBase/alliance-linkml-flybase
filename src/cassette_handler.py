@@ -293,7 +293,6 @@ class CassetteHandler(FeatureHandler):
 
         bad_relationship_count = {}
         encoded = {}  # dict to store if cassette assoc mapped by encodes_tool
-        add_targets = {}  # dict of targets to add.
         # go through cassettes and make the cassette-component associations.
         for cassette_cassette_key, cassette_cassette_rels in self.cassette_cassette_rels.items():
             cassette_feature_id = cassette_cassette_key[CASSETTE]
@@ -310,7 +309,6 @@ class CassetteHandler(FeatureHandler):
             pub_curies = self.lookup_pub_curies(all_pub_ids)
 
             # Adjust cassette-component relation_type as needed.
-
             rel_type_name = cassette_cassette_rels[0].chado_obj.type.name
             if rel_type_name in map_relationship:
                 rel_type_name = map_relationship[rel_type_name]
@@ -321,24 +319,13 @@ class CassetteHandler(FeatureHandler):
             # add_target = False
             if rel_type_name == 'expresses':
                 encoded[cassette.uniquename] = 1
-                other = self.feature_lookup[cassette_cassette_key[COMPONENT]]
-                # if other['type'] in ('RNAi_reagent', 'sgRNA', 'antisense'):
-                #    add_target = True
-                self.log.debug(f"BOB: encoded {cassette.uniquename}")
                 if self.testing:
-                    for bob in cassette.expressed_features:
-
-                        self.log.debug(f"\tBOB:{cassette.uniquename}\t expressed_features {bob} {other['uniquename']} {other}")
-                        # if other['type'] not in ('RNAi_reagent', 'sgRNA', 'antisense'):
-                        #    self.log.debug(f"\tBOB:{cassette.uniquename} carry on as normal")
-                        # else:
-                        #    self.log.debug(f"\tBOB:{cassette.uniquename} Add component_type_curies")
                     # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
                     for bob in cassette.prop_data.keys():
                         self.log.debug(f"BOBBY: prop_data {cassette.uniquename} {bob} {component_type_curies}")
-
-            self.log.debug(f"BOBBY: comp cur {component_type_curies}")
-            self.log.debug(f"\tBOBBY: assoc type->{assoc_type} cass name -> {cassette.uniquename} ctc -> {component_type_curies}")
+            if self.testing:
+                self.log.debug(f"BOBBY: comp cur {component_type_curies}")
+                self.log.debug(f"\tBOBBY: assoc type->{assoc_type} cass name -> {cassette.uniquename} ctc -> {component_type_curies}")
             if rel_type_name not in bad_relationship_count:
                 bad_relationship_count[rel_type_name] = 0
                 bad_relationship_count[rel_type_name] += 1
@@ -369,13 +356,6 @@ class CassetteHandler(FeatureHandler):
                     component_type_curies)
                 first_feat_rel.linkmldto = rel_dto
                 self.cassette_genomic_entity_associations.append(first_feat_rel)
-                # if add_target:
-                #    rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
-                #        cassette_curie, component_curie,
-                #        pub_curies, False, 'targets',
-                #        component_type_curies)
-                #    first_feat_rel.linkmldto = rel_dto
-                #    self.cassette_genomic_entity_associations.append(first_feat_rel)
             else:
                 self.log.error(f"Unknown association type {assoc_type}")
             if self.testing:
@@ -390,20 +370,6 @@ class CassetteHandler(FeatureHandler):
         self.log.info(f'Generated {counter} cassette-component unique associations.')
 
         for entity in self.fb_data_entities.values():
-            if entity.uniquename in encoded.keys():  # already dumped via encode_tool so skip
-                if self.testing:
-                    # getting rels just for debug info in testing here.
-                    rels = entity.recall_relationships(
-                        self.log,
-                        entity_role='subject',  # 'subject' or 'object'
-                        rel_types='alleleof',  # str or list of relationship type names
-                        rel_entity_types='gene'  # (features only) filter by related entity type
-                    )
-                    for rel in rels:
-                        mess = f"BOB: {entity.uniquename} has parent {rel.chado_obj.object.uniquename} "
-                        mess += "BUT ignoring as already parsed via encodes_tool"
-                        self.log.debug(mess)
-
             rels = entity.recall_relationships(
                 self.log,
                 entity_role='subject',  # 'subject' or 'object'
@@ -429,13 +395,8 @@ class CassetteHandler(FeatureHandler):
                             ["NEEDED"], False, 'expresses')  # NEED to add pub_curies still
                         rel.linkmldto = rel_dto
                         self.cassette_genomic_entity_associations.append(rel)
-                # check prod_data, if any 'RNAi_reagent', 'sgRNA', 'antisense') Then add target assoc
-                for bob_key in entity.prop_data:
-                    for bob in entity.prop_data[bob_key]:
-                        self.log.debug(f"BOBBY: {bob_key} {entity.uniquename} {rel.chado_obj.object.uniquename} {bob}")
                 save_target = False
                 for trans in entity.prop_data['transgenic_product_class']:
-                    self.log.debug(f"BOBBY: {entity.uniquename} trans is {trans}")
                     if trans['name'] in ('RNAi_reagent', 'sgRNA', 'antisense'):
                         save_target = True
                 if save_target:
