@@ -317,21 +317,20 @@ class CassetteHandler(FeatureHandler):
                 self.log.error(f"Unknown relationship type {rel_type_name}")
                 continue
             component_type_curies = []
+            add_target = False
             if rel_type_name == 'expresses':
                 encoded[cassette.uniquename] = 1
+                other = self.feature_lookup[cassette_cassette_key[COMPONENT]]
+                if other['type'] in ('RNAi_reagent', 'sgRNA', 'antisense'):
+                    add_target = True
                 self.log.debug(f"BOB: encoded {cassette.uniquename}")
                 if self.testing:
                     for bob in cassette.expressed_features:
-                        other = self.feature_lookup[bob]
                         self.log.debug(f"\tBOB:{cassette.uniquename}\t expressed_features {bob} {other['uniquename']} {other}")
-                        if other['type'] not in ('RNAi_reagent', 'sgRNA', 'antisense'):
-                            self.log.debug(f"\tBOB:{cassette.uniquename} carry on as normal")
-                        else:
-                            self.log.debug(f"\tBOB:{cassette.uniquename} Add component_type_curies")
                     # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
                     for bob in cassette.prop_data.keys():
                         self.log.debug(f"BOBBY: prop_data {cassette.uniquename} {bob} {component_type_curies}")
-                component_type_curies = self.get_comp_type_curies(cassette)
+
             self.log.debug(f"BOBBY: comp cur {component_type_curies}")
             self.log.debug(f"\tBOBBY: assoc type->{assoc_type} cass name -> {cassette.uniquename} ctc -> {component_type_curies}")
             if rel_type_name not in bad_relationship_count:
@@ -364,6 +363,13 @@ class CassetteHandler(FeatureHandler):
                     component_type_curies)
                 first_feat_rel.linkmldto = rel_dto
                 self.cassette_genomic_entity_associations.append(first_feat_rel)
+                # add target too if flag set.
+                if add_target:
+                    rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
+                        cassette_curie, component_curie,
+                        pub_curies, False, 'targets')
+                    first_feat_rel.linkmldto = rel_dto
+                    self.cassette_genomic_entity_associations.append(first_feat_rel)
             else:
                 self.log.error(f"Unknown association type {assoc_type}")
             if self.testing:
@@ -416,6 +422,7 @@ class CassetteHandler(FeatureHandler):
                         ["NEEDED"], False, 'expresses')  # NEED to add pub_curies still
                     rel.linkmldto = rel_dto
                     self.cassette_genomic_entity_associations.append(rel)
+
         return
 
     def synthesize_cassette_associations(self):
