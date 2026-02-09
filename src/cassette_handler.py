@@ -432,8 +432,9 @@ class CassetteHandler(FeatureHandler):
                         rel.linkmldto = rel_dto
                         self.cassette_genomic_entity_associations.append(rel)
                 # check prod_data, if any 'RNAi_reagent', 'sgRNA', 'antisense') Then add target assoc
-                for bob in entity.prop_data['transgenic_product_class']:
-                    self.log.debug(f"BOBBY: {entity.uniquename} {rel.chado_obj.object.uniquename} {bob}")
+                for bob_key in entity.prop_data:
+                    for bob in entity.prop_data[bob_key]:
+                        self.log.debug(f"BOBBY: {bob_key} {entity.uniquename} {rel.chado_obj.object.uniquename} {bob}")
         return
 
     def synthesize_cassette_associations(self):
