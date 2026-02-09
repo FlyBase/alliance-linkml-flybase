@@ -433,6 +433,18 @@ class CassetteHandler(FeatureHandler):
                 for bob_key in entity.prop_data:
                     for bob in entity.prop_data[bob_key]:
                         self.log.debug(f"BOBBY: {bob_key} {entity.uniquename} {rel.chado_obj.object.uniquename} {bob}")
+                save_target = False
+                for trans in entity.prop_data['transgenic_product_class']:
+                    if trans.name in ('RNAi_reagent', 'sgRNA', 'antisense'):
+                        save_target = True
+                if save_target:
+                        # CassetteGenomicEntityAssociationDTO
+                        rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
+                            f"FB:{entity.uniquename}",
+                            f"FB:{rel.chado_obj.object.uniquename}",
+                            ["NEEDED"], False, 'targets')  # NEED to add pub_curies still
+                        rel.linkmldto = rel_dto
+                        self.cassette_genomic_entity_associations.append(rel)
         return
 
     def synthesize_cassette_associations(self):
