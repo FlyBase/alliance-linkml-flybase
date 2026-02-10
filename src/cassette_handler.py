@@ -320,7 +320,11 @@ class CassetteHandler(FeatureHandler):
                     # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
                     for bob in cassette.prop_data.keys():
                         self.log.debug(f"BOBBY: prop_data {cassette.uniquename} {bob} {component_type_curies}")
-                component_type_curies = self.get_comp_type_curies(cassette)
+                try:
+                    component_type_curies = self.get_comp_type_curies(cassette)
+                except Exception as e:
+                    self.log.error(f"Problem comp curie gen: {type(cassette)} {cassette} {e}")
+                    self.log.error(f"Problem comp curie gen: {dir(cassette)}")
             if self.testing:
                 self.log.debug(f"BOBBY: comp cur {component_type_curies}")
                 self.log.debug(f"\tBOBBY: assoc type->{assoc_type} cass name -> {cassette.uniquename} ctc -> {component_type_curies}")
