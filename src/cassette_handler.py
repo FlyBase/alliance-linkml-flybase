@@ -236,7 +236,7 @@ class CassetteHandler(FeatureHandler):
         elif feature["uniquename"].startswith('FBsf'):  # cassette component is a seqfeat (FBid is a FBsf):
             assoc_type = 'component_free_text'  # for now, will change to a CassetteGenomicEntityAssociationDTO
             # once we start to submit FBsf features, so keep this loop in place for then even though at the
-            # moment its not actually changing the type !
+            # moment it's not actually changing the type !
 
         elif feature["uniquename"].startswith('FBgn'):  # cassette component is a gene (FBid is a FBgn):
             assoc_type = 'genomic_entity_association'
@@ -365,8 +365,8 @@ class CassetteHandler(FeatureHandler):
             if cassette.is_obsolete is True or component['is_obsolete'] is True:
                 self.log.error(f"{cassette_curie} {component_curie} should never be obsolete??")
             counter += 1
-        for key in bad_relationship_count:
-            self.log.error(f'Bad relationship count for {key}: {bad_relationship_count[key]}')
+        for key, count in bad_relationship_count.items():
+            self.log.error(f'Bad relationship count for {key}: {count}')
         self.log.info(f'Generated {counter} cassette-component unique associations.')
 
         for entity in self.fb_data_entities.values():
@@ -400,13 +400,13 @@ class CassetteHandler(FeatureHandler):
                     if trans['name'] in ('RNAi_reagent', 'sgRNA', 'antisense'):
                         save_target = True
                 if save_target:
-                        # CassetteGenomicEntityAssociationDTO
-                        rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
-                            f"FB:{entity.uniquename}",
-                            f"FB:{rel.chado_obj.object.uniquename}",
-                            ["NEEDED"], False, 'targets')  # NEED to add pub_curies still
-                        rel.linkmldto = rel_dto
-                        self.cassette_genomic_entity_associations.append(rel)
+                    # CassetteGenomicEntityAssociationDTO
+                    rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
+                        f"FB:{entity.uniquename}",
+                        f"FB:{rel.chado_obj.object.uniquename}",
+                        ["NEEDED"], False, 'targets')  # NEED to add pub_curies still
+                    rel.linkmldto = rel_dto
+                    self.cassette_genomic_entity_associations.append(rel)
         return
 
     def synthesize_cassette_associations(self):
