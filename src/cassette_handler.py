@@ -401,7 +401,11 @@ class CassetteHandler(FeatureHandler):
                             mess = "map_cassette_associations: GenomicEntityAssociation cass:"
                             mess += f"{entity.uniquename} comp:{rel.chado_obj.object.uniquename} 'expresses'"
                             self.log.debug(mess)
-                        component_type_curies = self.get_comp_type_curies(cassette)
+                        try:
+                            component_type_curies = self.get_comp_type_curies(cassette)
+                        except Exception as e:
+                            self.log.error(f"Problem comp curie gen: {type(cassette)} {cassette} {e}")
+                            self.log.error(f"Problem comp curie gen: {dir(cassette)}")
                         rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
                             f"FB:{entity.uniquename}",
                             f"FB:{rel.chado_obj.object.uniquename}",
