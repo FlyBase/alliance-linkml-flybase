@@ -9,13 +9,10 @@ Author(s):
 
 """
 
-# import csv
-# import re
 from logging import Logger
 import agr_datatypes
 import fb_datatypes
 from feature_handler import FeatureHandler
-# from construct_handler import ConstructHandler
 
 
 class CassetteHandler(FeatureHandler):
@@ -113,19 +110,20 @@ class CassetteHandler(FeatureHandler):
         # Get in vitro set of cassettes
         self.add_in_vitro_allele_entries(session, reference_set)
 
-        # sanity check of making sure ALL test data is in the entries.
-        unique_names = {}
-        # generate dict of uniquename in fb_data_entities
-        for entity_id in self.fb_data_entities:
-            unique_names[self.fb_data_entities[entity_id].uniquename] = entity_id
-        # Are all test examples in the fb_data_entities
-        for name, _ in self.test_set.items():
-            if name not in unique_names:
-                self.log.error(f"Missing {name} in fb_data_entities. Must be a construct, hopefully.")
-        # Are all fb_data_entities in the test set
-        for entity_id, entity in self.fb_data_entities.items():
-            if entity.uniquename not in self.test_set:
-                self.log.error(f"Missing {entity.uniquename} in test set, could have extras?")
+        if self.testing:
+            # sanity check of making sure ALL test data is in the entries.
+            unique_names = {}
+            # generate dict of uniquename in fb_data_entities
+            for entity_id in self.fb_data_entities:
+                unique_names[self.fb_data_entities[entity_id].uniquename] = entity_id
+            # Are all test examples in the fb_data_entities
+            for name, _ in self.test_set.items():
+                if name not in unique_names:
+                    self.log.error(f"Missing {name} in fb_data_entities. Must be a construct, hopefully.")
+            # Are all fb_data_entities in the test set
+            for entity_id, entity in self.fb_data_entities.items():
+                if entity.uniquename not in self.test_set:
+                    self.log.error(f"Missing {entity.uniquename} in test set, could have extras?")
 
     def add_in_vitro_allele_entries(self, session, reference_set):
         """Extend list of entities."""
@@ -316,7 +314,6 @@ class CassetteHandler(FeatureHandler):
                 self.log.error(f"Unknown relationship type {rel_type_name}")
                 continue
             component_type_curies = []
-            # add_target = False
             if rel_type_name == 'expresses':
                 encoded[cassette.uniquename] = 1
                 if self.testing:
@@ -328,11 +325,13 @@ class CassetteHandler(FeatureHandler):
                 self.log.debug(f"\tBOBBY: assoc type->{assoc_type} cass name -> {cassette.uniquename} ctc -> {component_type_curies}")
             if rel_type_name not in bad_relationship_count:
                 bad_relationship_count[rel_type_name] = 0
-                bad_relationship_count[rel_type_name] += 1
+            bad_relationship_count[rel_type_name] += 1
             if assoc_type == 'component_free_text':
                 # CassetteComponentSlotAnnotationDTO
                 if self.testing:
-                    self.log.debug(f"map_cassette_associations: cass:{cassette_curie} comp:{component_curie}")
+                    mess = "map_cassette_associations: ComponentSlotAnnotation cass:"
+                    mess += f"{cassette_curie} comp:{component_curie} '{rel_type_name}'"
+                    self.log.debug(mess)
                 symbol = component['symbol']
                 organism_id = component['organism_id']
                 taxon_text = self.organism_lookup[organism_id]['full_species_name']
@@ -343,6 +342,10 @@ class CassetteHandler(FeatureHandler):
                 cassette.linkmldto.cassette_component_dtos.append(rel_dto)
             elif assoc_type == 'tool_association':
                 # CassetteTransgenicToolAssociationDTO
+                if self.testing:
+                    mess = "map_cassette_associations: TransgenicToolAssociation cass:"
+                    mess += f"{cassette_curie} comp:{component_curie} '{rel_type_name}'"
+                    self.log.debug(mess)
                 rel_dto = agr_datatypes.CassetteTransgenicToolAssociationDTO(
                     cassette_curie, component_curie,
                     pub_curies, False, rel_type_name)
@@ -350,6 +353,10 @@ class CassetteHandler(FeatureHandler):
                 self.cassette_tool_associations.append(first_feat_rel)
             elif assoc_type == 'genomic_entity_association':
                 # CassetteGenomicEntityAssociationDTO
+                if self.testing:
+                    mess = "map_cassette_associations: GenomicEntityAssociation cass:"
+                    mess += f"{cassette_curie} comp:{component_curie} '{rel_type_name}'"
+                    self.log.debug(mess)
                 rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
                     cassette_curie, component_curie,
                     pub_curies, False, rel_type_name,
@@ -358,10 +365,6 @@ class CassetteHandler(FeatureHandler):
                 self.cassette_genomic_entity_associations.append(first_feat_rel)
             else:
                 self.log.error(f"Unknown association type {assoc_type}")
-            if self.testing:
-                mess = f"BOB: {cassette_cassette_rels[0].chado_obj.type.name} -> {rel_type_name}: "
-                mess += f"{cassette_curie} {component_curie} assoc type is {assoc_type}"
-                self.log.debug(mess)
             if cassette.is_obsolete is True or component['is_obsolete'] is True:
                 self.log.error(f"{cassette_curie} {component_curie} should never be obsolete??")
             counter += 1
@@ -389,6 +392,10 @@ class CassetteHandler(FeatureHandler):
                         self.log.error(mess)
                     elif assoc_type == 'genomic_entity_association':
                         # CassetteGenomicEntityAssociationDTO
+                        if self.testing:
+                            mess = "map_cassette_associations: GenomicEntityAssociation "
+                            mess += f"cass:{entity.uniquename} comp:{rel.chado_obj.object.uniquename} 'expresses'"
+                            self.log.debug(mess)
                         rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
                             f"FB:{entity.uniquename}",
                             f"FB:{rel.chado_obj.object.uniquename}",
@@ -401,6 +408,10 @@ class CassetteHandler(FeatureHandler):
                         save_target = True
                 if save_target:
                     # CassetteGenomicEntityAssociationDTO
+                    if self.testing:
+                        mess = "map_cassette_associations: GenomicEntityAssociation "
+                        mess += f"cass:{entity.uniquename} comp:{rel.chado_obj.object.uniquename} 'targets'"
+                        self.log.debug(mess)
                     rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
                         f"FB:{entity.uniquename}",
                         f"FB:{rel.chado_obj.object.uniquename}",
