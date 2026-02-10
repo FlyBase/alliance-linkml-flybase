@@ -316,6 +316,7 @@ class CassetteHandler(FeatureHandler):
             component_type_curies = []
             if rel_type_name == 'expresses':
                 encoded[cassette.uniquename] = 1
+                component_type_curies = self.get_comp_type_curies(cassette)
                 if self.testing:
                     # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
                     for bob in cassette.prop_data.keys():
@@ -393,13 +394,15 @@ class CassetteHandler(FeatureHandler):
                     elif assoc_type == 'genomic_entity_association':
                         # CassetteGenomicEntityAssociationDTO
                         if self.testing:
-                            mess = "map_cassette_associations: GenomicEntityAssociation "
-                            mess += f"cass:{entity.uniquename} comp:{rel.chado_obj.object.uniquename} 'expresses'"
+                            mess = "map_cassette_associations: GenomicEntityAssociation cass:"
+                            mess += f"{entity.uniquename} comp:{rel.chado_obj.object.uniquename} 'expresses'"
                             self.log.debug(mess)
+                        component_type_curies = self.get_comp_type_curies(cassette)
                         rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
                             f"FB:{entity.uniquename}",
                             f"FB:{rel.chado_obj.object.uniquename}",
-                            ["NEEDED"], False, 'expresses')  # NEED to add pub_curies still
+                            ["NEEDED"], False, 'expresses',
+                            component_type_curies)  # NEED to add pub_curies still
                         rel.linkmldto = rel_dto
                         self.cassette_genomic_entity_associations.append(rel)
                 save_target = False
