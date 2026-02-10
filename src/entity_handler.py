@@ -545,8 +545,6 @@ class PrimaryEntityHandler(DataHandler):
         cvterm_annotation_dict = {}    # A temporary entity_cvterm_id-keyed dict of FBCVTermAnnotation objects.
         counter = 0
         for cvterm_result in cvterm_results:
-            # if self.testing:
-            #     print(f"BOB cvterm results all: {cvterm_result}")
             cvt_anno_id = getattr(cvterm_result, f'{chado_type}_cvterm_id')
             cvterm_annotation_dict[cvt_anno_id] = fb_datatypes.FBCVTermAnnotation(cvterm_result, f'{chado_type}_cvterm')
             counter += 1
@@ -581,9 +579,9 @@ class PrimaryEntityHandler(DataHandler):
             if entity_id in self.ignore_list:
                 continue
             elif entity_id not in self.fb_data_entities:
-                if not self.testing:  # test sets have some none fb_data
-                    self.log.error(f"BOBBY: entity_id:{entity_id} not in list of data_entities feature {cvtermprop_result.feature_cvterm.feature}")
-                    self.log.error(f"BOBBY: ignore_list is {self.ignore_list}")
+                if not self.testing:  # test sets have some none fb_data BIUT real data should not
+                    self.log.error(f"Entity_id:{entity_id} not in list of data_entities feature {cvtermprop_result.feature_cvterm.feature}")
+                    self.log.error(f"Ignore_list is {self.ignore_list}")
                 continue
             if entity_prop_type_name in self.fb_data_entities[entity_id].prop_data:  # only store those we are interested in
                 prop_data = {'name': cvtermprop_result.feature_cvterm.cvterm.name,
@@ -609,8 +607,8 @@ class PrimaryEntityHandler(DataHandler):
                 continue
             if entity_id not in self.fb_data_entities:  # (ie constructs/cassettes)
                 if not self.testing:  # test sets have some none fb_data
-                    self.log.error(f"entity_id:{entity_id} not in list of data_entities")
-                    self.log.error(f"ignore_list is {self.ignore_list}")
+                    self.log.error(f"Entity_id:{entity_id} not in list of data_entities")
+                    self.log.error(f"Ignore_list is {self.ignore_list}")
                 continue
             self.fb_data_entities[entity_id].cvt_annos_by_id[cvt_anno_id] = cvt_anno
             # Second, sort the CVTermAnnotations by CV name.
