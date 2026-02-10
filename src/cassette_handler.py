@@ -320,11 +320,7 @@ class CassetteHandler(FeatureHandler):
                     # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
                     for bob in cassette.prop_data.keys():
                         self.log.debug(f"BOBBY: prop_data {cassette.uniquename} {bob} {component_type_curies}")
-                try:
-                    component_type_curies = self.get_comp_type_curies(cassette)
-                except Exception as e:
-                    self.log.error(f"Problem comp curie gen: {type(cassette)} {cassette} {e}")
-                    self.log.error(f"Problem comp curie gen: {dir(cassette)}")
+                component_type_curies = self.get_comp_type_curies(cassette)
             if self.testing:
                 self.log.debug(f"BOBBY: comp cur {component_type_curies}")
                 self.log.debug(f"\tBOBBY: assoc type->{assoc_type} cass name -> {cassette.uniquename} ctc -> {component_type_curies}")
@@ -361,6 +357,7 @@ class CassetteHandler(FeatureHandler):
                 if self.testing:
                     mess = "map_cassette_associations: GenomicEntityAssociation cass:"
                     mess += f"{cassette_curie} comp:{component_curie} '{rel_type_name}'"
+                    mess += f"{'|'.join(component_type_curies)}"
                     self.log.debug(mess)
                 rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
                     cassette_curie, component_curie,
@@ -397,15 +394,12 @@ class CassetteHandler(FeatureHandler):
                         self.log.error(mess)
                     elif assoc_type == 'genomic_entity_association':
                         # CassetteGenomicEntityAssociationDTO
+                        component_type_curies = self.get_comp_type_curies(entity)
                         if self.testing:
                             mess = "map_cassette_associations: GenomicEntityAssociation cass:"
-                            mess += f"{entity.uniquename} comp:{rel.chado_obj.object.uniquename} 'expresses'"
+                            mess += (f"{entity.uniquename} comp:{rel.chado_obj.object.uniquename}"
+                                     f"'expresses' {component_type_curies} ")
                             self.log.debug(mess)
-                        try:
-                            component_type_curies = self.get_comp_type_curies(entity)
-                        except Exception as e:
-                            self.log.error(f"Problem comp curie gen: {type(cassette)} {cassette} {e}")
-                            self.log.error(f"Problem comp curie gen: {dir(cassette)}")
                         rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
                             f"FB:{entity.uniquename}",
                             f"FB:{rel.chado_obj.object.uniquename}",
