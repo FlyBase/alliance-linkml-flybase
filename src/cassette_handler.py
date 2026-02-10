@@ -251,12 +251,12 @@ class CassetteHandler(FeatureHandler):
             #            type = 'genomic_entity_association'
         return assoc_type
 
-    def get_comp_type_curies(self, cassette):
+    def get_comp_type_curies(self, fb_data_entity):
         """Get component_type_curies."""
         component_type_curies = []
         data_key = 'transgenic_product_class'
-        if data_key in cassette.prop_data.keys():
-            for bob in cassette.prop_data[data_key]:
+        if data_key in fb_data_entity.prop_data.keys():
+            for bob in fb_data_entity.prop_data[data_key]:
                 component_type_curies.append(f"{data_key} {bob['name']}: {bob['type']}:{bob['accession']}")
         return component_type_curies
 
