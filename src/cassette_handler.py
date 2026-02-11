@@ -412,8 +412,8 @@ class CassetteHandler(FeatureHandler):
                     if trans['name'] in ('RNAi_reagent', 'sgRNA', 'antisense'):
                         save_target = True
                 if save_target:
-                    new_rel = copy.copy(rels[0])  # Create independent copy
-                    rels.append(new_rel)
+                    new_rel = copy.copy(rel)  # Create independent copy
+                    # rels.append(new_rel)
                     # CassetteGenomicEntityAssociationDTO
                     if self.testing:
                         mess = "map_cassette_associations: GenomicEntityAssociation "
@@ -423,7 +423,6 @@ class CassetteHandler(FeatureHandler):
                         f"FB:{entity.uniquename}",
                         f"FB:{new_rel.chado_obj.object.uniquename}",
                         ["NEEDED"], False, 'targets')  # NEED to add pub_curies still
-                    self.log.debug(f"BOB: {entity.uniquename} Pre add {rels[0].linkmldto}")
                     new_rel.linkmldto = rel_dto
                     self.log.debug(f"BOB: {entity.uniquename} rel_dto:{rel_dto}")
                     self.cassette_genomic_entity_associations.append(new_rel)
