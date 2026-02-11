@@ -406,6 +406,8 @@ class CassetteHandler(FeatureHandler):
                             component_type_curies)  # NEED to add pub_curies still
                         rel.linkmldto = rel_dto
                         self.cassette_genomic_entity_associations.append(rel)
+            if rels:
+                rel = rels[0]
                 save_target = False
                 for trans in entity.prop_data['transgenic_product_class']:
                     if trans['name'] in ('RNAi_reagent', 'sgRNA', 'antisense'):
@@ -420,7 +422,7 @@ class CassetteHandler(FeatureHandler):
                         f"FB:{entity.uniquename}",
                         f"FB:{rel.chado_obj.object.uniquename}",
                         ["NEEDED"], False, 'targets')  # NEED to add pub_curies still
-                    rel.linkmldto = rel_dto
+                    rels[0].linkmldto = rel_dto
                     self.cassette_genomic_entity_associations.append(rel)
         return
 
