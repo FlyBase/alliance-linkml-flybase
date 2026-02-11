@@ -132,7 +132,10 @@ class CassetteGenomicEntityAssociationDTO(AuditedObjectDTO):
         self.component_type_curies = component_type_curies or []
 
     def __str__(self):
-        return f"{self.cassette_identifier} {self.genomic_entity_identifier} {self.relation_name} {self.component_type_curies}"
+        """Nice output."""
+        output = "CassetteGenomicEntityAssociation("
+        output += f"{self.cassette_identifier} {self.genomic_entity_identifier} {self.relation_name} {self.component_type_curies})"
+        return output
 
 
 class CassetteStrAssociationDTO(AuditedObjectDTO):
