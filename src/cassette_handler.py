@@ -384,12 +384,13 @@ class CassetteHandler(FeatureHandler):
                 if entity.uniquename not in encoded.keys():
                     if self.testing:
                         self.log.debug(f"{entity.uniquename} has parent {rel.chado_obj.object.uniquename}")
-                    cassette = self.feature_lookup[rel.chado_obj.object.feature_id]
-                    assoc_type = self.cassette_dto_type(cassette)
+                    gene = self.feature_lookup[rel.chado_obj.object.feature_id]
+                    assoc_type = self.cassette_dto_type(gene)
+                    self.log.debug(f"{entity.uniquename} {gene} has {assoc_type} association")
                     # Always a gene currently BUT might in future have
                     # subset of foreign genes so check now anyway
                     if assoc_type == 'component_free_text':
-                        mess = f"cassette {entity.uniquename} has parent {rel.chado_obj.object.uniquename} "
+                        mess = f"cassette {entity.uniquename} has parent {gene.uniquename} "
                         mess += f"BUT assoc_type is {assoc_type} So problem"
                         self.log.error(mess)
                     elif assoc_type == 'genomic_entity_association':
@@ -454,7 +455,6 @@ class CassetteHandler(FeatureHandler):
                     self.cassette_cassette_rels[cassette_cassette_key] = [cassette_rel]
                     component_counter += 1
         self.log.info(f'Found {component_counter} components for {cassette_counter} cassettes.')
-
 
     # Elaborate on synthesize_info() for the Handler.
     def synthesize_info(self):
