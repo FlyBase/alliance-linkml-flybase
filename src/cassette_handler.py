@@ -380,7 +380,6 @@ class CassetteHandler(FeatureHandler):
                 rel_types='alleleof',  # str or list of relationship type names
                 rel_entity_types='gene'  # (features only) filter by related entity type
             )
-            save_target = False
             for rel in rels:
                 if entity.uniquename not in encoded.keys():
                     if self.testing:
@@ -408,6 +407,7 @@ class CassetteHandler(FeatureHandler):
                             component_type_curies)  # NEED to add pub_curies still
                         rel.linkmldto = rel_dto
                         self.cassette_genomic_entity_associations.append(rel)
+                save_target = False
                 for trans in entity.prop_data['transgenic_product_class']:
                     if trans['name'] in ('RNAi_reagent', 'sgRNA', 'antisense'):
                         save_target = True
