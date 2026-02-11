@@ -396,7 +396,7 @@ class CassetteHandler(FeatureHandler):
                         # CassetteGenomicEntityAssociationDTO
                         component_type_curies = self.get_comp_type_curies(entity)
                         if self.testing:
-                            mess = "map_cassette_associations: GenomicEntityAssociation cass:"
+                            mess = f"map_cassette_associations: GenomicEntityAssociation rel:{rel} cass:"
                             mess += (f"{entity.uniquename} comp:{rel.chado_obj.object.uniquename}"
                                      f" 'expresses' {component_type_curies} ")
                             self.log.debug(mess)
@@ -416,10 +416,10 @@ class CassetteHandler(FeatureHandler):
                 # CassetteGenomicEntityAssociationDTO
                 if self.testing:
                     mess = "map_cassette_associations: GenomicEntityAssociation "
-                    mess += f"cass:{entity.uniquename} comp:{rel.chado_obj.object.uniquename} 'targets'"
+                    mess += f"rel:{rel} cass:{entity.uniquename} comp:{rel.chado_obj.object.uniquename} 'targets'"
                     self.log.debug(mess)
                 rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
-                     f"FB:{entity.uniquename}",
+                    f"FB:{entity.uniquename}",
                     f"FB:{rel.chado_obj.object.uniquename}",
                     ["NEEDED"], False, 'targets')  # NEED to add pub_curies still
                 rel.linkmldto = rel_dto
