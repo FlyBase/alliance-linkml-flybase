@@ -422,7 +422,8 @@ class CassetteHandler(FeatureHandler):
                         f"FB:{entity.uniquename}",
                         f"FB:{rel.chado_obj.object.uniquename}",
                         ["NEEDED"], False, 'targets')  # NEED to add pub_curies still
-                    rels[0].linkmldto = rel_dto
+                    rel.linkmldto = rel_dto
+                    self.log.debug(f"BOB: {entity.uniquename} rel_dto:{rel_dto} rel.linkmldto:{rel.linkmldto}")
                     self.cassette_genomic_entity_associations.append(rel)
         return
 
