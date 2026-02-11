@@ -379,6 +379,7 @@ class CassetteHandler(FeatureHandler):
                 rel_types='alleleof',  # str or list of relationship type names
                 rel_entity_types='gene'  # (features only) filter by related entity type
             )
+            save_target = False
             for rel in rels:
                 if entity.uniquename not in encoded.keys():
                     if self.testing:
@@ -397,7 +398,7 @@ class CassetteHandler(FeatureHandler):
                         if self.testing:
                             mess = "map_cassette_associations: GenomicEntityAssociation cass:"
                             mess += (f"{entity.uniquename} comp:{rel.chado_obj.object.uniquename}"
-                                     f"'expresses' {component_type_curies} ")
+                                     f" 'expresses' {component_type_curies} ")
                             self.log.debug(mess)
                         rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
                             f"FB:{entity.uniquename}",
@@ -406,25 +407,24 @@ class CassetteHandler(FeatureHandler):
                             component_type_curies)  # NEED to add pub_curies still
                         rel.linkmldto = rel_dto
                         self.cassette_genomic_entity_associations.append(rel)
-            if rels:
-                rel = rels[0]
-                save_target = False
                 for trans in entity.prop_data['transgenic_product_class']:
                     if trans['name'] in ('RNAi_reagent', 'sgRNA', 'antisense'):
                         save_target = True
-                if save_target:
-                    # CassetteGenomicEntityAssociationDTO
-                    if self.testing:
-                        mess = "map_cassette_associations: GenomicEntityAssociation "
-                        mess += f"cass:{entity.uniquename} comp:{rel.chado_obj.object.uniquename} 'targets'"
-                        self.log.debug(mess)
-                    rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
-                        f"FB:{entity.uniquename}",
-                        f"FB:{rel.chado_obj.object.uniquename}",
-                        ["NEEDED"], False, 'targets')  # NEED to add pub_curies still
-                    rel.linkmldto = rel_dto
-                    self.log.debug(f"BOB: {entity.uniquename} rel_dto:{rel_dto} rel.linkmldto:{rel.linkmldto}")
-                    self.cassette_genomic_entity_associations.append(rel)
+            if save_target:
+                rels.append(rels[0])
+                rel = rels[-1]
+                # CassetteGenomicEntityAssociationDTO
+                if self.testing:
+                    mess = "map_cassette_associations: GenomicEntityAssociation "
+                    mess += f"cass:{entity.uniquename} comp:{rel.chado_obj.object.uniquename} 'targets'"
+                    self.log.debug(mess)
+                rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
+                     f"FB:{entity.uniquename}",
+                    f"FB:{rel.chado_obj.object.uniquename}",
+                    ["NEEDED"], False, 'targets')  # NEED to add pub_curies still
+                rel.linkmldto = rel_dto
+                self.log.debug(f"BOB: {entity.uniquename} rel_dto:{rel_dto} rel.linkmldto:{rel.linkmldto}")
+                self.cassette_genomic_entity_associations.append(rel)
         return
 
     # Elaborate on synthesize_info() for the Handler.
