@@ -365,8 +365,6 @@ class CassetteHandler(FeatureHandler):
                     component_type_curies)
                 first_feat_rel.linkmldto = rel_dto
                 self.cassette_genomic_entity_associations.append(first_feat_rel)
-            else:
-                self.log.error(f"Unknown association type {assoc_type}")
             if cassette.is_obsolete is True or component['is_obsolete'] is True:
                 self.log.error(f"{cassette_curie} {component_curie} should never be obsolete??")
             counter += 1
@@ -383,7 +381,8 @@ class CassetteHandler(FeatureHandler):
             )
             for rel in rels:
                 if entity.uniquename not in encoded.keys():
-                    self.log.debug(f"BOB: {entity.uniquename} has parent {rel.chado_obj.object.uniquename}")
+                    if self.testing:
+                        self.log.debug(f"{entity.uniquename} has parent {rel.chado_obj.object.uniquename}")
                     cassette = self.feature_lookup[rel.chado_obj.object.feature_id]
                     assoc_type = self.cassette_dto_type(cassette)
                     # Always a gene currently BUT might in future have
@@ -425,114 +424,9 @@ class CassetteHandler(FeatureHandler):
                     self.cassette_genomic_entity_associations.append(rel)
         return
 
-    def synthesize_cassette_associations(self):
-        """Get cassette-to-component relationships."""
-        self.log.info('Synthesize cassette-to-component relationships.')
-        cassette_counter = 0
-        component_counter = 0
-        for cassette in self.fb_data_entities.values():
-            relevant_cassette_rels = cassette.recall_relationships(
-                self.log, entity_role='subject',
-                rel_types=['has_reg_region', 'tagged_with', 'carries_tool', 'encodes_tool'])
-            if relevant_cassette_rels:
-                cassette_counter += 1
-            # put the data into cassette_cassette_key with the cassette (FBal) first and the component second
-            # cassette_rel.chado_obj.subject_id is the feature_of the cassette (chado subject_id)
-            # cassette_rel.chado_obj.object_id is the feature_id of the component (chado object_id)
-            for cassette_rel in relevant_cassette_rels:
-                try:
-                    cassette_cassette_key = (cassette_rel.chado_obj.subject_id, cassette_rel.chado_obj.object_id)
-                except AttributeError:
-                    self.log.error(f"problem {cassette} {cassette_rel}")
-                    raise
-                try:
-                    self.cassette_cassette_rels[cassette_cassette_key].append(cassette_rel)
-                except KeyError:
-                    self.cassette_cassette_rels[cassette_cassette_key] = [cassette_rel]
-                    component_counter += 1
-        self.log.info(f'Found {component_counter} components for {cassette_counter} cassettes.')
-
     # Elaborate on synthesize_info() for the Handler.
     def synthesize_info(self):
         """Extend the method for the ConstructHandler."""
         super().synthesize_info()
         self.synthesize_synonyms()
         self.synthesize_secondary_ids()
-        self.synthesize_encoded_tools()
-        self.synthesize_component_genes()
-        self.synthesize_cassette_associations()
-
-    def synthesize_component_genes(self):
-        """Synthesize component genes."""
-        self.log.info('Synthesize component genes.')
-        all_expressed_gene_counter = 0
-        all_targeted_gene_counter = 0
-        for construct in self.fb_data_entities.values():
-            this_expressed_gene_counter = 0
-            this_targeted_gene_counter = 0
-            # Reference of related alleles.
-            cons_al_rels = construct.recall_relationships(self.log, entity_role='object', rel_types='associated_with', rel_entity_types='allele')
-            # self.log.debug(f'{construct} has {len(cons_al_rels)} direct allele relationships.')
-            for cons_al_rel in cons_al_rels:
-                allele_id = cons_al_rel.chado_obj.subject_id
-                # Skip obsolete alleles.
-                if allele_id not in self.allele_gene_lookup.keys():
-                    continue
-                gene_id = self.allele_gene_lookup[allele_id]
-                # Slot for gene_id depends on the allele class.
-                if allele_id in self.transgenic_allele_class_lookup.keys():
-                    if set(self.transgenic_allele_class_lookup[allele_id]).intersection({'RNAi_reagent', 'sgRNA', 'antisense'}):
-                        gene_slot = getattr(construct, 'targeted_features')
-                        this_targeted_gene_counter += 1
-                    else:
-                        gene_slot = getattr(construct, 'expressed_features')
-                        this_expressed_gene_counter += 1
-                else:
-                    gene_slot = getattr(construct, 'expressed_features')
-                    this_expressed_gene_counter += 1
-                try:
-                    gene_slot[gene_id].extend(cons_al_rel.pubs)
-                except KeyError:
-                    gene_slot[gene_id] = cons_al_rel.pubs
-            all_expressed_gene_counter += this_expressed_gene_counter
-            all_targeted_gene_counter += this_targeted_gene_counter
-        self.log.info(f'Found {all_expressed_gene_counter} expressed genes and {all_targeted_gene_counter} targeted genes for constructs.')
-        return
-
-    def synthesize_encoded_tools(self):
-        """Synthesize encoded components."""
-        self.log.info('Synthesize encoded components.')
-        counter = 0
-        for cassette in self.fb_data_entities.values():
-            self.log.debug(f'Assess encoded tools for {cassette}.')
-            # Reference of related alleles.
-            cass_al_rels = cassette.recall_relationships(self.log, entity_role='object', rel_types='associated_with', rel_entity_types='allele')
-            # self.log.debug(f'{construct} has {len(cons_al_rels)} direct allele relationships.')
-            # Direct encodes_tool relationships.
-            cass_tool_rels = cassette.recall_relationships(self.log, entity_role='subject', rel_types='encodes_tool')
-            # self.log.debug(f'{construct} has {len(cons_tool_rels)} direct tool relationships.')
-            cassette.expressed_features = {}
-            for cons_tool_rel in cass_tool_rels:
-                component_id = cons_tool_rel.chado_obj.object_id
-                try:
-                    cassette.expressed_features[component_id].extend(cons_tool_rel.pubs)
-                except KeyError:
-                    cassette.expressed_features[component_id] = cons_tool_rel.pubs
-            self.log.debug(f'For {cassette}, found {len(cassette.expressed_features.keys())} encoded tools via direct relationships.')
-            # Indirect encodes_tool relationships.
-            # self.log.debug(f'{construct} has {len(construct.al_encodes_tool_rels)} indirect tool relationships via alleles.')
-            for al_tool_rel in cassette.al_encodes_tool_rels:
-                allele_id = al_tool_rel.chado_obj.subject_id
-                component_id = al_tool_rel.chado_obj.object_id
-                try:
-                    cassette.expressed_features[component_id].extend(al_tool_rel.pubs)
-                except KeyError:
-                    cassette.expressed_features[component_id] = al_tool_rel.pubs
-                # Fold in pubs supporting the construct-allele relationship.
-                for cass_al_rel in cass_al_rels:
-                    if cass_al_rel.chado_obj.subject_id == allele_id:
-                        cassette.expressed_features[component_id].extend(cass_al_rel.pubs)
-                        # self.log.debug(f'{construct} has these pubs via allele-tool: {cons_al_rel.pubs}')
-            counter += len(cassette.expressed_features.keys())
-        self.log.info(f'Found {counter} encoded tools for constructs via direct and indirect (via allele) relationships.')
-        return
