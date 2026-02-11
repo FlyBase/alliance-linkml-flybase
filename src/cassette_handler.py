@@ -413,19 +413,20 @@ class CassetteHandler(FeatureHandler):
                         save_target = True
                 if save_target:
                     new_rel = copy.copy(rels[0])  # Create independent copy
+                    rels.append(new_rel)
                     # CassetteGenomicEntityAssociationDTO
                     if self.testing:
                         mess = "map_cassette_associations: GenomicEntityAssociation "
-                        mess += f"rel:{rel} cass:{entity.uniquename} comp:{rel.chado_obj.object.uniquename} 'targets'"
+                        mess += f"rel:{new_rel} cass:{entity.uniquename} comp:{new_rel.chado_obj.object.uniquename} 'targets'"
                         self.log.debug(mess)
                     rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
                         f"FB:{entity.uniquename}",
-                        f"FB:{rel.chado_obj.object.uniquename}",
+                        f"FB:{new_rel.chado_obj.object.uniquename}",
                         ["NEEDED"], False, 'targets')  # NEED to add pub_curies still
-                    self.log.debug(f"BOB: {entity.uniquename} Pre add {rel.linkmldto}")
+                    self.log.debug(f"BOB: {entity.uniquename} Pre add {rels[0].linkmldto}")
                     new_rel.linkmldto = rel_dto
-                    self.log.debug(f"BOB: {entity.uniquename} rel_dto:{new_rel_dto}")
-                    self.cassette_genomic_entity_associations.append(rel)
+                    self.log.debug(f"BOB: {entity.uniquename} rel_dto:{rel_dto}")
+                    self.cassette_genomic_entity_associations.append(new_rel)
         return
 
     # Elaborate on synthesize_info() for the Handler.
