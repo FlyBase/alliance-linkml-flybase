@@ -410,21 +410,19 @@ class CassetteHandler(FeatureHandler):
                 for trans in entity.prop_data['transgenic_product_class']:
                     if trans['name'] in ('RNAi_reagent', 'sgRNA', 'antisense'):
                         save_target = True
-            if save_target:
-                rels.append(rels[0])
-                rel = rels[-1]
-                # CassetteGenomicEntityAssociationDTO
-                if self.testing:
-                    mess = "map_cassette_associations: GenomicEntityAssociation "
-                    mess += f"rel:{rel} cass:{entity.uniquename} comp:{rel.chado_obj.object.uniquename} 'targets'"
-                    self.log.debug(mess)
-                rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
-                    f"FB:{entity.uniquename}",
-                    f"FB:{rel.chado_obj.object.uniquename}",
-                    ["NEEDED"], False, 'targets')  # NEED to add pub_curies still
-                rel.linkmldto = rel_dto
-                self.log.debug(f"BOB: {entity.uniquename} rel_dto:{rel_dto} rel.linkmldto:{rel.linkmldto}")
-                self.cassette_genomic_entity_associations.append(rel)
+                if save_target:
+                    # CassetteGenomicEntityAssociationDTO
+                    if self.testing:
+                        mess = "map_cassette_associations: GenomicEntityAssociation "
+                        mess += f"rel:{rel} cass:{entity.uniquename} comp:{rel.chado_obj.object.uniquename} 'targets'"
+                        self.log.debug(mess)
+                    rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
+                        f"FB:{entity.uniquename}",
+                        f"FB:{rel.chado_obj.object.uniquename}",
+                        ["NEEDED"], False, 'targets')  # NEED to add pub_curies still
+                    rel.linkmldto = rel_dto
+                    self.log.debug(f"BOB: {entity.uniquename} rel_dto:{rel_dto} rel.linkmldto:{rel.linkmldto}")
+                    self.cassette_genomic_entity_associations.append(rel)
         return
 
     # Elaborate on synthesize_info() for the Handler.
