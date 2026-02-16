@@ -336,6 +336,7 @@ class CassetteHandler(FeatureHandler):
             for bob in entity.prop_data[data_key]:
                 print(f"BOB:{entity.uniquename} {bob}")
                 pubs.add(bob['pub'])
+        print(f"BOBBY LEPC pubs:{pubs} len:{len(pubs)}")
         if len(pubs) == 1:  # 1
             pub_curies.append(pubs.pop())
         elif len(pubs) > 1:  # 1 a
