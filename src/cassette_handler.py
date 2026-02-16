@@ -336,11 +336,13 @@ class CassetteHandler(FeatureHandler):
             for bob in entity.prop_data[data_key]:
                 print(f"BOB:{entity.uniquename} {bob}")
                 pubs.add(bob['pub'])
-        print(f"BOBBY LEPC pubs:{pubs} len:{len(pubs)}")
-        if len(pubs) == 1:  # 1
-            pub_curies.append(pubs.pop())
-        elif len(pubs) > 1:  # 1 a
-            pass
+        print(f"BOBBY LEPC {entity.uniquename} pubs:{pubs} len:{len(pubs)}")
+        pub_curies = list(pubs)
+        if len(pub_curies) == 1:  # 1
+            pub_curies = list(pubs)
+        elif len(pub_curies) > 1:  # 1 a
+            self.log.warning(f"Multiple comp curie with dif refs {pub_curies}")
+            pub_curies = []
         # elif entity.has_molecular_info():  # 2
         #     pass
         else:  # 3
