@@ -272,7 +272,78 @@ class CassetteHandler(FeatureHandler):
         self.generate_export_dict(self.cassette_tool_associations,
                                   'cassette_transgenic_tool_association_ingest_set')
 
-        return
+    def lookup_expresses_pub_curies(self, entity):
+        """Lookup pub curies for those that uses expresses."""
+    #  A. 'expresses' association where is NO encodes_tool feature_relationship
+    #    (i.e. the bit that starts "if entity.uniquename not in encoded.keys()"
+    #     use this logic in this order.
+    #
+    #
+    # 1. if there are component_type_curies for the cassette FBal,
+    #    use the pubs associated with the component_type_curies
+    #
+    #  1a. in this loop, do an additional check
+    #
+    #     - if the number of component_type_curies > 1 AND
+    #       the total number of pubs associated with all of the component_type_curies > 1
+    #       leave the pub_curies blank and write a log message (**see note below)
+    #
+    #     - otherwise use all the pubs associated with the component_type_curies
+    #
+    #       **note: There are a handful cases (~5) that have multiple component_type_curies with multiple refs
+    #               (when you add up all the refs associated with each component_type_curie).
+    #
+    #     An example is FBal0051685, csw[CS.hs.2sev]
+    #
+    #     This has 2 component_type_curies, each with a different reference
+    #     (each reference only provides the info to add one of the component_type_curies,
+    #      so I can't fix the curation to make the reference the same for both !):
+    #
+    #     dominant_negative_variant [FBrf0190302]
+    #     missense_variant [FBrf0088202]
+    #
+    #     Since we're combining both component_type_curies into a single 'expresses' association in Alliance,
+    #     it would be incorrect to say that both references give evidence for the single 'FBal0051685 (csw[CS.hs.2sev])
+    #     expresses FBgn0000382 (csw), dominant_negative_variant, missense_variant' association.
+    #
+    #     I think its best we just leave the pub_curies blank for these in the linkml code and write a log message
+    #     to say which FBal cassette has this issue, rather than trying to do some complex algorithm for this tiny
+    #     number of cases (which would involve making two separate 'expresses' annotations
+    #      - one for each component_type_curie - to be able to partition the references correctly).
+    #        When we switch to using the Alliance as source of truth, curators can use the log message to know which
+    #        cassettes have this problem and can fix in the Alliance by making two expresses associations.
+    #
+    # 2. otherwise, lookup whether the cassette allele has 'molecular_info' featureprop(s) - if it does,
+    #    use all the pubs associated with all the 'molecular_info' featureprops to fill in the pub_curies
+    #
+    #
+    # 3. otherwise, if there is a *single reference* for the cassette allele-to-parent gene relationship,
+    #    use that as the pub_curies
+    #
+    # **Note: Its important to do this one as a last resort as its less accurate than using either 1. or 2. above,
+    #         because when an allele is merged we often use an FB analysis ref instead of the ref that originally
+    #         described the cassette allele, and this FB analysis ref ends up being the single reference in the
+    #         cassette allele-to-parent gene relationship.
+    #
+    # 4. otherwise, leave pub_curies empty (there are currently only ~30 cases that end up here,
+    #    because they have nothing in the 'molecular_info' free text note,
+    #    so I'll try and fix that by adding the relevant info into chado).
+        pubs = set()
+        pub_curies = []
+        data_key = 'transgenic_product_class'
+        if data_key in entity.prop_data.keys():
+            for bob in entity.prop_data[data_key]:
+                pubs.add(bob['publication_curie'])
+                print(f"BOB:{entity.uniquename} {bob}")
+        if len(pubs) == 1:  # 1
+            pub_curies.append(pubs.pop())
+        elif len(pubs) > 1:  # 1 a
+            pass
+        elif entity.has_molecular_info():  # 2
+            pass
+        else:  # 3
+            pass
+        return pub_curies
 
     def map_cassette_associations(self):
         """Map transgenic cassette-component associations to Alliance object."""
@@ -382,6 +453,8 @@ class CassetteHandler(FeatureHandler):
             )
             for rel in rels:
                 if entity.uniquename not in encoded.keys():
+                    component_type_curies = self.get_comp_type_curies(entity)
+                    pub_curies = self.lookup_expresses_pub_curies(entity)
                     if self.testing:
                         self.log.debug(f"{entity.uniquename} has parent {rel.chado_obj.object.uniquename}")
                     gene = self.feature_lookup[rel.chado_obj.object.feature_id]
@@ -395,7 +468,6 @@ class CassetteHandler(FeatureHandler):
                         self.log.error(mess)
                     elif assoc_type == 'genomic_entity_association':
                         # CassetteGenomicEntityAssociationDTO
-                        component_type_curies = self.get_comp_type_curies(entity)
                         if self.testing:
                             mess = f"map_cassette_associations: GenomicEntityAssociation rel:{rel} cass:"
                             mess += (f"{entity.uniquename} comp:{rel.chado_obj.object.uniquename}"
@@ -404,7 +476,7 @@ class CassetteHandler(FeatureHandler):
                         rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
                             f"FB:{entity.uniquename}",
                             f"FB:{rel.chado_obj.object.uniquename}",
-                            ["NEEDED"], False, 'expresses',
+                            pub_curies, False, 'expresses',
                             component_type_curies)  # NEED to add pub_curies still
                         rel.linkmldto = rel_dto
                         self.cassette_genomic_entity_associations.append(rel)
