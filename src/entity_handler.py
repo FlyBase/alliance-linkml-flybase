@@ -584,12 +584,12 @@ class PrimaryEntityHandler(DataHandler):
                     self.log.error(f"Ignore_list is {self.ignore_list}")
                 continue
             if entity_prop_type_name in self.fb_data_entities[entity_id].prop_data:  # only store those we are interested in
+                if self.testing:
+                    print(f"BOBBY: cvtermprop_result {cvtermprop_result}")
                 prop_data = {'name': cvtermprop_result.feature_cvterm.cvterm.name,
                              'type': cvtermprop_result.feature_cvterm.cvterm.cv.name,
                              'accession': cvtermprop_result.feature_cvterm.cvterm.dbxref.accession}
                 self.fb_data_entities[entity_id].prop_data[entity_prop_type_name].append(prop_data)
-                if self.testing:
-                    self.log.debug(f"TESTING SET: {self.fb_data_entities[entity_id].uniquename}: prop_data -> {prop_data}")
             if entity_prop_type_name in cvterm_annotation_dict[entity_cvterm_id].props_by_type.keys():
                 cvterm_annotation_dict[entity_cvterm_id].props_by_type[entity_prop_type_name].append(fb_datatypes.FBProp(cvtermprop_result))
                 cvterm_prop_counter += 1

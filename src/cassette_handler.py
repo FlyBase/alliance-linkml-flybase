@@ -333,8 +333,8 @@ class CassetteHandler(FeatureHandler):
         data_key = 'transgenic_product_class'
         if data_key in entity.prop_data.keys():
             for bob in entity.prop_data[data_key]:
-                pubs.add(bob['publication_curie'])
                 print(f"BOB:{entity.uniquename} {bob}")
+                # pubs.add(bob['publication_curie'])
         if len(pubs) == 1:  # 1
             pub_curies.append(pubs.pop())
         elif len(pubs) > 1:  # 1 a
