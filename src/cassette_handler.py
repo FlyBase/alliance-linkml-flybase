@@ -453,6 +453,9 @@ class CassetteHandler(FeatureHandler):
                 rel_entity_types='gene'  # (features only) filter by related entity type
             )
             for rel in rels:
+                if self.testing:  # just to see more examples look at method always.
+                    pub_curies = self.lookup_expresses_pub_curies(entity)
+                    print(f"BOBBY TEST: NAME: {entity.uniquename} pub:{pub_curies}")
                 if entity.uniquename not in encoded.keys():
                     component_type_curies = self.get_comp_type_curies(entity)
                     pub_curies = self.lookup_expresses_pub_curies(entity)
