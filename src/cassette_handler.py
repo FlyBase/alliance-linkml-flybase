@@ -341,12 +341,13 @@ class CassetteHandler(FeatureHandler):
         if len(pub_curies) == 1:  # 1
             pub_curies = list(pubs)
         elif len(pub_curies) > 1:  # 1 a
-            self.log.warning(f"Multiple comp curie with dif refs {pub_curies}")
+            self.log.warning(f"BOBBY: {entity.uniquename} Multiple comp curie with dif refs {pub_curies}")
             pub_curies = []
         # elif entity.has_molecular_info():  # 2
         #     pass
         else:  # 3
             pass
+        print(f"BOBBY: Returning {entity.uniquename} {pub_curies}")
         return pub_curies
 
     def map_cassette_associations(self):
