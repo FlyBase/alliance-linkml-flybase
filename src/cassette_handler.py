@@ -76,6 +76,7 @@ class CassetteHandler(FeatureHandler):
         'FBal0137561': r'Crei\I-CreI[hs.PR]',  #
         'FBal0404843': r'Hsap\CGA[UAS.cLa]',  #
         'FBal0401141': r'Zzzz\VHH[deGradFP.UAS]',  #
+        'FBal0051685': r'csw[CS.hs.2sev]',  # Has 2 props
     }
 
     cassette_prop_to_note_mapping = {
