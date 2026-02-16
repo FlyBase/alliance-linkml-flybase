@@ -334,13 +334,13 @@ class CassetteHandler(FeatureHandler):
         if data_key in entity.prop_data.keys():
             for bob in entity.prop_data[data_key]:
                 print(f"BOB:{entity.uniquename} {bob}")
-                # pubs.add(bob['publication_curie'])
+                pubs.add(bob['pub'])
         if len(pubs) == 1:  # 1
             pub_curies.append(pubs.pop())
         elif len(pubs) > 1:  # 1 a
             pass
-        elif entity.has_molecular_info():  # 2
-            pass
+        # elif entity.has_molecular_info():  # 2
+        #     pass
         else:  # 3
             pass
         return pub_curies
@@ -455,6 +455,7 @@ class CassetteHandler(FeatureHandler):
                 if entity.uniquename not in encoded.keys():
                     component_type_curies = self.get_comp_type_curies(entity)
                     pub_curies = self.lookup_expresses_pub_curies(entity)
+                    print(f"BOBBY: NAME: {entity.uniquename} pub:{pub_curies}")
                     if self.testing:
                         self.log.debug(f"{entity.uniquename} has parent {rel.chado_obj.object.uniquename}")
                     gene = self.feature_lookup[rel.chado_obj.object.feature_id]

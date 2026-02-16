@@ -586,9 +586,10 @@ class PrimaryEntityHandler(DataHandler):
             if entity_prop_type_name in self.fb_data_entities[entity_id].prop_data:  # only store those we are interested in
                 if self.testing:
                     print(f"BOBBY: cvtermprop_result {cvtermprop_result}")
-                    print(f"BOOBY pub?:{cvtermprop_result.feature_cvterm.pub}")
+                    print(f"BOBBY pub?:{cvtermprop_result.feature_cvterm.pub}")
                 prop_data = {'name': cvtermprop_result.feature_cvterm.cvterm.name,
                              'type': cvtermprop_result.feature_cvterm.cvterm.cv.name,
+                             'pub': cvtermprop_result.feature_cvterm.pub.uniquename,
                              'accession': cvtermprop_result.feature_cvterm.cvterm.dbxref.accession}
                 self.fb_data_entities[entity_id].prop_data[entity_prop_type_name].append(prop_data)
             if entity_prop_type_name in cvterm_annotation_dict[entity_cvterm_id].props_by_type.keys():
