@@ -350,13 +350,13 @@ class CassetteHandler(FeatureHandler):
                     all_pub_ids.add(pub_id)
             if all_pub_ids:
                 return self.lookup_pub_curies(list(all_pub_ids))
-        if not pub_curies:  # try # 3 Need example here to test
-            print(f"BOBBY4: {entity.uniquename} {rel}")
-            print(f"BOBBY4: {entity.uniquename} {type(rel)} {dir(rel)}")
-            print(f"BOBBY4: {entity.uniquename} {rel.pubs}")
-            curies = self.lookup_pub_curies(rel.pubs)
-            print(f"BOBBY4: {entity.uniquename} {curies}")
-        return pub_curies
+        if not pub_curies:  # try # 3
+            curies = self.lookup_pub_curies(rel.pubs)  # NOTE: removes unattributed
+            if len(curies) == 1:
+                return curies
+            elif len(curies) > 1:  # 4 give error message
+                self.log.warning(f"{entity.uniquename} {curies} needs fix that by adding the relevant info into chado.")
+        return []
 
     def express_target_process(self, encoded):
         """Add the expresses and Target  associations."""
@@ -396,10 +396,14 @@ class CassetteHandler(FeatureHandler):
                             component_type_curies)  # NEED to add pub_curies still
                         rel.linkmldto = rel_dto
                         self.cassette_genomic_entity_associations.append(rel)
+
                 save_target = False
+                pubs = []
                 for trans in entity.prop_data['transgenic_product_class']:
                     if trans['name'] in ('RNAi_reagent', 'sgRNA', 'antisense'):
                         save_target = True
+                        print(f"BOBBY5: targets {entity.uniquename} {trans}")
+                        pubs.append(entity.uniquename)
                 if save_target:
                     # Because the relationship is used for both expresses and targets
                     # we want to copy that and not overwrite it.
@@ -427,11 +431,6 @@ class CassetteHandler(FeatureHandler):
                             'tagged_with': 'tagged_with',
                             'carries_tool': 'contains',
                             'encodes_tool': 'expresses'}
-        # cassette_cassette_counter = {}
-        for cassette_cassette_key in self.cassette_cassette_rels.keys():
-            if self.testing:
-                self.log.debug(f'Mapping {cassette_cassette_key} to Alliance object. {self.cassette_cassette_rels[cassette_cassette_key]}')
-
         bad_relationship_count = {}
         encoded = {}  # dict to store if cassette assoc mapped by encodes_tool
         # go through cassettes and make the cassette-component associations.
@@ -459,14 +458,7 @@ class CassetteHandler(FeatureHandler):
             component_type_curies = []
             if rel_type_name == 'expresses':
                 encoded[cassette.uniquename] = 1
-                if self.testing:
-                    # Cvtermprop type (name) keyed lists of entity_cvterm_ids.
-                    for bob in cassette.prop_data.keys():
-                        self.log.debug(f"BOBBY: prop_data {cassette.uniquename} {bob} {component_type_curies}")
                 component_type_curies = self.get_comp_type_curies(cassette)
-            if self.testing:
-                self.log.debug(f"BOBBY: comp cur {component_type_curies}")
-                self.log.debug(f"\tBOBBY: assoc type->{assoc_type} cass name -> {cassette.uniquename} ctc -> {component_type_curies}")
             if rel_type_name not in bad_relationship_count:
                 bad_relationship_count[rel_type_name] = 0
             bad_relationship_count[rel_type_name] += 1
