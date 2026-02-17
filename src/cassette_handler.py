@@ -352,6 +352,8 @@ class CassetteHandler(FeatureHandler):
                 return self.lookup_pub_curies(list(all_pub_ids))
         if not pub_curies:  # try # 3 Need example here to test
             print(f"BOBBY4: {entity.uniquename} {rel}")
+            print(f"BOBBY4: {entity.uniquename} {type(rel)} {dir(rel)}")
+
         return pub_curies
 
     def express_target_process(self, encoded):
