@@ -273,7 +273,7 @@ class CassetteHandler(FeatureHandler):
         self.generate_export_dict(self.cassette_tool_associations,
                                   'cassette_transgenic_tool_association_ingest_set')
 
-    def lookup_expresses_pub_curies(self, entity):
+    def lookup_expresses_pub_curies(self, entity, rel):
         """Lookup pub curies for those that uses expresses."""
     #  A. 'expresses' association where is NO encodes_tool feature_relationship
     #    (i.e. the bit that starts "if entity.uniquename not in encoded.keys()"
@@ -343,22 +343,17 @@ class CassetteHandler(FeatureHandler):
             print(f"BOBBY: {entity.uniquename} Multiple comp curie with dif refs {pub_curies}")
             self.log.warning(f"{entity.uniquename} has multiple comp curie with diff refs {pub_curies}")
             pub_curies = []
-        elif 'molecular_info' in entity.props_by_type.keys():
-            for bob in entity.props_by_type['molecular_info']:
-                print(f"BOBBY1: {entity.uniquename} {type(bob)} {dir(bob)}")
-                try:
-                    print(f"BOBBY1-1: {entity.uniquename} {bob.pubs}")
-                except:
-                    pass
-            for prop_type, prop_list in entity.props_by_type.items():
-                print(f"BOBBY2:  {entity.uniquename} {prop_type}: {len(prop_list)} props")
-                for prop in prop_list:
-                    print(f"BOBBY3   {entity.uniquename}  - {prop.chado_obj.value[:50] if prop.chado_obj.value else 'None'}...")
-        # elif entity.has_molecular_info():  # 2
-        #     pass
-        # else:  # 3
-        #    print(f"BOBBY: {entity.uniquename} 0 refs")
-        print(f"BOBBY: Returning {entity.uniquename} {pub_curies}")
+        else:
+            if 'molecular_info' in entity.props_by_type.keys(): # 2
+                all_pub_ids = set()
+                for prop in entity.props_by_type['molecular_info']:
+                    print(f"BOBBY1: {entity.uniquename} {prop.pubs}")
+                    for pub_id in prop.pubs:
+                        all_pub_ids.add(pub_id)
+                pub_curies = self.lookup_pub_curies(list(all_pub_ids))
+            if not pub_curies:  # try # 3
+                print(f"BOBBY4: {entity.uniquename} {rel}")
+        print(f"BOBBY5: Returning {entity.uniquename} {pub_curies}")
         return pub_curies
 
     def map_cassette_associations(self):
@@ -469,11 +464,11 @@ class CassetteHandler(FeatureHandler):
             )
             for rel in rels:
                 if self.testing:  # just to see more examples look at method always.
-                    pub_curies = self.lookup_expresses_pub_curies(entity)
+                    pub_curies = self.lookup_expresses_pub_curies(entity, rel)
                     print(f"BOBBY TEST: NAME: {entity.uniquename} pub:{pub_curies}")
                 if entity.uniquename not in encoded.keys():
                     component_type_curies = self.get_comp_type_curies(entity)
-                    pub_curies = self.lookup_expresses_pub_curies(entity)
+                    pub_curies = self.lookup_expresses_pub_curies(entity, rel)
                     print(f"BOBBY: NAME: {entity.uniquename} pub:{pub_curies}")
                     if self.testing:
                         self.log.debug(f"{entity.uniquename} has parent {rel.chado_obj.object.uniquename}")
