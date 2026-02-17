@@ -77,6 +77,8 @@ class CassetteHandler(FeatureHandler):
         'FBal0404843': r'Hsap\CGA[UAS.cLa]',  #
         'FBal0401141': r'Zzzz\VHH[deGradFP.UAS]',  #
         'FBal0051685': r'csw[CS.hs.2sev]',  # Has 2 props
+        'FBal0028848': 'BOB',  # examples of using alleleof to get FBrf
+        'FBal0033313': 'BOB',  # fill in properly when you know.
     }
 
     cassette_prop_to_note_mapping = {
