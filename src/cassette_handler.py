@@ -406,6 +406,8 @@ class CassetteHandler(FeatureHandler):
                     # Because the relationship is used for both expresses and targets
                     # we want to copy that and not overwrite it.
                     new_rel = copy.copy(rel)  # Create independent copy
+                    if self.testing:
+                        self.log.debug(f"BOBBY: new_rel.for_export = {new_rel.for_export}")
                     # CassetteGenomicEntityAssociationDTO
                     if self.testing:
                         mess = "map_cassette_associations: GenomicEntityAssociation "
