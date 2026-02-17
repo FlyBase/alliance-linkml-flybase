@@ -336,7 +336,7 @@ class CassetteHandler(FeatureHandler):
                 print(f"BOB:{entity.uniquename} {bob}")
                 pubs.add(bob['pub'])
         print(f"BOBBY LEPC {entity.uniquename} pubs:{pubs} len:{len(pubs)}")
-        pub_curies = list(pubs)
+        pub_curies = ['FB:' + item for item in list(pubs)]
         if len(pub_curies) == 1:  # 1
             print(f"BOBBY: {entity.uniquename} 1 ref")
         elif len(pub_curies) > 1:  # 1 a
