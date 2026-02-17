@@ -340,14 +340,14 @@ class CassetteHandler(FeatureHandler):
         pub_curies = list(pubs)
         if len(pub_curies) == 1:  # 1
             pub_curies = list(pubs)
-            self.log.warning(f"BOBBY: {entity.uniquename} 1 ref")
+            print(f"BOBBY: {entity.uniquename} 1 ref")
         elif len(pub_curies) > 1:  # 1 a
-            self.log.warning(f"BOBBY: {entity.uniquename} Multiple comp curie with dif refs {pub_curies}")
+            print(f"BOBBY: {entity.uniquename} Multiple comp curie with dif refs {pub_curies}")
             pub_curies = []
         # elif entity.has_molecular_info():  # 2
         #     pass
         else:  # 3
-            self.log.warning(f"BOBBY: {entity.uniquename} 0 refs")
+            print(f"BOBBY: {entity.uniquename} 0 refs")
         print(f"BOBBY: Returning {entity.uniquename} {pub_curies}")
         return pub_curies
 
