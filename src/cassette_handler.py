@@ -330,7 +330,6 @@ class CassetteHandler(FeatureHandler):
     #    because they have nothing in the 'molecular_info' free text note,
     #    so I'll try and fix that by adding the relevant info into chado).
         pubs = set()
-        pub_curies = []
         data_key = 'transgenic_product_class'
         if data_key in entity.prop_data.keys():
             for bob in entity.prop_data[data_key]:
@@ -339,15 +338,22 @@ class CassetteHandler(FeatureHandler):
         print(f"BOBBY LEPC {entity.uniquename} pubs:{pubs} len:{len(pubs)}")
         pub_curies = list(pubs)
         if len(pub_curies) == 1:  # 1
-            pub_curies = list(pubs)
             print(f"BOBBY: {entity.uniquename} 1 ref")
         elif len(pub_curies) > 1:  # 1 a
             print(f"BOBBY: {entity.uniquename} Multiple comp curie with dif refs {pub_curies}")
+            self.log.warning(f"{entity.uniquename} has multiple comp curie with diff refs {pub_curies}")
             pub_curies = []
+        elif 'molecular_info' in entity.props_by_type.keys():
+            for bob in entity.props_by_type['molecular_info']:
+                print(f"BOBBY1: {entity.uniquename} {bob}")
+            for prop_type, prop_list in entity.props_by_type.items():
+                print(f"BOBBY2:  {entity.uniquename} {prop_type}: {len(prop_list)} props")
+                for prop in prop_list:
+                    print(f"BOBBY3   {entity.uniquename}  - {prop.chado_obj.value[:50] if prop.chado_obj.value else 'None'}...")
         # elif entity.has_molecular_info():  # 2
         #     pass
-        else:  # 3
-            print(f"BOBBY: {entity.uniquename} 0 refs")
+        # else:  # 3
+        #    print(f"BOBBY: {entity.uniquename} 0 refs")
         print(f"BOBBY: Returning {entity.uniquename} {pub_curies}")
         return pub_curies
 
