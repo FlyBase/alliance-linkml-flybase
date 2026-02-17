@@ -584,9 +584,6 @@ class PrimaryEntityHandler(DataHandler):
                     self.log.error(f"Ignore_list is {self.ignore_list}")
                 continue
             if entity_prop_type_name in self.fb_data_entities[entity_id].prop_data:  # only store those we are interested in
-                if self.testing:
-                    print(f"BOBBY: cvtermprop_result {cvtermprop_result}")
-                    print(f"BOBBY pub?:{cvtermprop_result.feature_cvterm.pub}")
                 prop_data = {'name': cvtermprop_result.feature_cvterm.cvterm.name,
                              'type': cvtermprop_result.feature_cvterm.cvterm.cv.name,
                              'pub': cvtermprop_result.feature_cvterm.pub.uniquename,

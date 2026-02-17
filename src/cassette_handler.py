@@ -341,7 +341,7 @@ class CassetteHandler(FeatureHandler):
         if len(pub_curies) > 1:  # 1 a
             self.log.warning(f"{entity.uniquename} has multiple comp curie with diff refs {pub_curies}")
             return []
-        if 'molecular_info' in entity.props_by_type.keys(): # 2
+        if 'molecular_info' in entity.props_by_type.keys():  # 2
             all_pub_ids = set()
             for prop in entity.props_by_type['molecular_info']:
                 print(f"BOBBY1: {entity.uniquename} {prop.pubs}")
@@ -352,6 +352,64 @@ class CassetteHandler(FeatureHandler):
         if not pub_curies:  # try # 3
             print(f"BOBBY4: {entity.uniquename} {rel}")
         return pub_curies
+
+    def express_target_process(self, encoded):
+        """Add the expresses and Target  associations."""
+        for entity in self.fb_data_entities.values():
+            rels = entity.recall_relationships(
+                self.log,
+                entity_role='subject',  # 'subject' or 'object'
+                rel_types='alleleof',  # str or list of relationship type names
+                rel_entity_types='gene'  # (features only) filter by related entity type
+            )
+            for rel in rels:
+                if entity.uniquename not in encoded.keys():
+                    component_type_curies = self.get_comp_type_curies(entity)
+                    pub_curies = self.lookup_expresses_pub_curies(entity, rel)
+                    if self.testing:
+                        self.log.debug(f"{entity.uniquename} has parent {rel.chado_obj.object.uniquename}")
+                    gene = self.feature_lookup[rel.chado_obj.object.feature_id]
+                    assoc_type = self.cassette_dto_type(gene)
+                    self.log.debug(f"{entity.uniquename} {gene} has {assoc_type} association")
+                    # Always a gene currently BUT might in future have
+                    # subset of foreign genes so check now anyway
+                    if assoc_type == 'component_free_text':
+                        mess = f"cassette {entity.uniquename} has parent {gene.uniquename} "
+                        mess += f"BUT assoc_type is {assoc_type} So problem"
+                        self.log.error(mess)
+                    elif assoc_type == 'genomic_entity_association':
+                        # CassetteGenomicEntityAssociationDTO
+                        if self.testing:
+                            mess = f"map_cassette_associations: GenomicEntityAssociation rel:{rel} cass:"
+                            mess += (f"{entity.uniquename} comp:{rel.chado_obj.object.uniquename}"
+                                     f" 'expresses' {component_type_curies} ")
+                            self.log.debug(mess)
+                        rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
+                            f"FB:{entity.uniquename}",
+                            f"FB:{rel.chado_obj.object.uniquename}",
+                            pub_curies, False, 'expresses',
+                            component_type_curies)  # NEED to add pub_curies still
+                        rel.linkmldto = rel_dto
+                        self.cassette_genomic_entity_associations.append(rel)
+                save_target = False
+                for trans in entity.prop_data['transgenic_product_class']:
+                    if trans['name'] in ('RNAi_reagent', 'sgRNA', 'antisense'):
+                        save_target = True
+                if save_target:
+                    # Because the relationship is used for both expresses and targets
+                    # we want to copy that and not overwrite it.
+                    new_rel = copy.copy(rel)  # Create independent copy
+                    # CassetteGenomicEntityAssociationDTO
+                    if self.testing:
+                        mess = "map_cassette_associations: GenomicEntityAssociation "
+                        mess += f"rel:{new_rel} cass:{entity.uniquename} comp:{new_rel.chado_obj.object.uniquename} 'targets'"
+                        self.log.debug(mess)
+                    rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
+                        f"FB:{entity.uniquename}",
+                        f"FB:{new_rel.chado_obj.object.uniquename}",
+                        ["NEEDED"], False, 'targets')  # NEED to add pub_curies still
+                    new_rel.linkmldto = rel_dto
+                    self.cassette_genomic_entity_associations.append(new_rel)
 
     def map_cassette_associations(self):
         """Map transgenic cassette-component associations to Alliance object."""
@@ -452,65 +510,8 @@ class CassetteHandler(FeatureHandler):
             self.log.error(f'Bad relationship count for {key}: {count}')
         self.log.info(f'Generated {counter} cassette-component unique associations.')
 
-        for entity in self.fb_data_entities.values():
-            rels = entity.recall_relationships(
-                self.log,
-                entity_role='subject',  # 'subject' or 'object'
-                rel_types='alleleof',  # str or list of relationship type names
-                rel_entity_types='gene'  # (features only) filter by related entity type
-            )
-            for rel in rels:
-                if self.testing:  # just to see more examples look at method always.
-                    pub_curies = self.lookup_expresses_pub_curies(entity, rel)
-                    print(f"BOBBY TEST: NAME: {entity.uniquename} pub:{pub_curies}")
-                if entity.uniquename not in encoded.keys():
-                    component_type_curies = self.get_comp_type_curies(entity)
-                    pub_curies = self.lookup_expresses_pub_curies(entity, rel)
-                    print(f"BOBBY: NAME: {entity.uniquename} pub:{pub_curies}")
-                    if self.testing:
-                        self.log.debug(f"{entity.uniquename} has parent {rel.chado_obj.object.uniquename}")
-                    gene = self.feature_lookup[rel.chado_obj.object.feature_id]
-                    assoc_type = self.cassette_dto_type(gene)
-                    self.log.debug(f"{entity.uniquename} {gene} has {assoc_type} association")
-                    # Always a gene currently BUT might in future have
-                    # subset of foreign genes so check now anyway
-                    if assoc_type == 'component_free_text':
-                        mess = f"cassette {entity.uniquename} has parent {gene.uniquename} "
-                        mess += f"BUT assoc_type is {assoc_type} So problem"
-                        self.log.error(mess)
-                    elif assoc_type == 'genomic_entity_association':
-                        # CassetteGenomicEntityAssociationDTO
-                        if self.testing:
-                            mess = f"map_cassette_associations: GenomicEntityAssociation rel:{rel} cass:"
-                            mess += (f"{entity.uniquename} comp:{rel.chado_obj.object.uniquename}"
-                                     f" 'expresses' {component_type_curies} ")
-                            self.log.debug(mess)
-                        rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
-                            f"FB:{entity.uniquename}",
-                            f"FB:{rel.chado_obj.object.uniquename}",
-                            pub_curies, False, 'expresses',
-                            component_type_curies)  # NEED to add pub_curies still
-                        rel.linkmldto = rel_dto
-                        self.cassette_genomic_entity_associations.append(rel)
-                save_target = False
-                for trans in entity.prop_data['transgenic_product_class']:
-                    if trans['name'] in ('RNAi_reagent', 'sgRNA', 'antisense'):
-                        save_target = True
-                if save_target:
-                    # Because the relationship is used for both expresses and targets
-                    # we want to copy that and not overwrite it.
-                    new_rel = copy.copy(rel)  # Create independent copy
-                    # CassetteGenomicEntityAssociationDTO
-                    if self.testing:
-                        mess = "map_cassette_associations: GenomicEntityAssociation "
-                        mess += f"rel:{new_rel} cass:{entity.uniquename} comp:{new_rel.chado_obj.object.uniquename} 'targets'"
-                        self.log.debug(mess)
-                    rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
-                        f"FB:{entity.uniquename}",
-                        f"FB:{new_rel.chado_obj.object.uniquename}",
-                        ["NEEDED"], False, 'targets')  # NEED to add pub_curies still
-                    new_rel.linkmldto = rel_dto
-                    self.cassette_genomic_entity_associations.append(new_rel)
+        self.express_target_process(encoded)
+
         return
 
     def synthesize_cassette_associations(self):
