@@ -407,13 +407,13 @@ class CassetteHandler(FeatureHandler):
                     # we want to copy that and not overwrite it.
                     new_rel = copy.copy(rel)  # Create independent copy
                     if self.testing:
-                        self.log.debug(f"BOBBY: new_rel.for_export = {new_rel.for_export}")
+                        self.log.debug(f"BOBBY: new_rel.for_export = {new_rel}")
                     # CassetteGenomicEntityAssociationDTO
                     if self.testing:
                         mess = "map_cassette_associations: GenomicEntityAssociation "
                         mess += f"rel:{new_rel} cass:{entity.uniquename} comp:{new_rel.chado_obj.object.uniquename} 'targets'"
                         self.log.debug(mess)
-                        mess = f"BOB: {entity.uniquename} {new_rel.chado_obj.object.uniquename} targets"
+                        mess = f"BOBBY: {entity.uniquename} {new_rel.chado_obj.object.uniquename} targets"
                         self.log.debug(mess)
                     rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
                         f"FB:{entity.uniquename}",
@@ -421,7 +421,7 @@ class CassetteHandler(FeatureHandler):
                         pub_curies, False, 'targets')
                     new_rel.linkmldto = rel_dto
                     if self.testing:
-                        self.log.debug(f"BOB: {entity.uniquename} {new_rel.linkmldto} - targets")
+                        self.log.debug(f"BOBBY: {entity.uniquename} {new_rel.linkmldto} - targets")
                     self.cassette_genomic_entity_associations.append(new_rel)
 
     def map_cassette_associations(self):
