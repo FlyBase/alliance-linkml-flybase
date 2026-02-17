@@ -335,26 +335,22 @@ class CassetteHandler(FeatureHandler):
             for bob in entity.prop_data[data_key]:
                 print(f"BOB:{entity.uniquename} {bob}")
                 pubs.add(bob['pub'])
-        print(f"BOBBY LEPC {entity.uniquename} pubs:{pubs} len:{len(pubs)}")
         pub_curies = ['FB:' + item for item in list(pubs)]
         if len(pub_curies) == 1:  # 1
-            print(f"BOBBY: {entity.uniquename} 1 ref")
-        elif len(pub_curies) > 1:  # 1 a
-            print(f"BOBBY: {entity.uniquename} Multiple comp curie with dif refs {pub_curies}")
+            return pub_curies
+        if len(pub_curies) > 1:  # 1 a
             self.log.warning(f"{entity.uniquename} has multiple comp curie with diff refs {pub_curies}")
-            pub_curies = []
-        else:
-            if 'molecular_info' in entity.props_by_type.keys(): # 2
-                all_pub_ids = set()
-                for prop in entity.props_by_type['molecular_info']:
-                    print(f"BOBBY1: {entity.uniquename} {prop.pubs}")
-                    for pub_id in prop.pubs:
-                        all_pub_ids.add(pub_id)
-                pub_curies = self.lookup_pub_curies(list(all_pub_ids))
+            return []
+        if 'molecular_info' in entity.props_by_type.keys(): # 2
+            all_pub_ids = set()
+            for prop in entity.props_by_type['molecular_info']:
+                print(f"BOBBY1: {entity.uniquename} {prop.pubs}")
+                for pub_id in prop.pubs:
+                    all_pub_ids.add(pub_id)
+            if not len(all_pub_ids):
+                return self.lookup_pub_curies(list(all_pub_ids))
+        if not pub_curies:  # try # 3
             print(f"BOBBY4: {entity.uniquename} {rel}")
-            if not pub_curies:  # try # 3
-                print(f"BOBBY4: {entity.uniquename} {rel}")
-        print(f"BOBBY5: Returning {entity.uniquename} {pub_curies}")
         return pub_curies
 
     def map_cassette_associations(self):
