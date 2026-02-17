@@ -413,11 +413,15 @@ class CassetteHandler(FeatureHandler):
                         mess = "map_cassette_associations: GenomicEntityAssociation "
                         mess += f"rel:{new_rel} cass:{entity.uniquename} comp:{new_rel.chado_obj.object.uniquename} 'targets'"
                         self.log.debug(mess)
+                        mess = f"BOB: {entity.uniquename} {new_rel.chado_obj.object.uniquename} targets"
+                        self.log.debug(mess)
                     rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
                         f"FB:{entity.uniquename}",
                         f"FB:{new_rel.chado_obj.object.uniquename}",
                         pub_curies, False, 'targets')
                     new_rel.linkmldto = rel_dto
+                    if self.testing:
+                        self.log.debug(f"BOB: {entity.uniquename} {new_rel.linkmldto} - targets")
                     self.cassette_genomic_entity_associations.append(new_rel)
 
     def map_cassette_associations(self):
