@@ -345,7 +345,7 @@ class CassetteHandler(FeatureHandler):
             pub_curies = []
         elif 'molecular_info' in entity.props_by_type.keys():
             for bob in entity.props_by_type['molecular_info']:
-                print(f"BOBBY1: {entity.uniquename} {bob}")
+                print(f"BOBBY1: {entity.uniquename} {type(bob)} {dir(bob)}")
             for prop_type, prop_list in entity.props_by_type.items():
                 print(f"BOBBY2:  {entity.uniquename} {prop_type}: {len(prop_list)} props")
                 for prop in prop_list:
