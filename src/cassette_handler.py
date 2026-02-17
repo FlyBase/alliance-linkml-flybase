@@ -354,6 +354,8 @@ class CassetteHandler(FeatureHandler):
             print(f"BOBBY4: {entity.uniquename} {rel}")
             print(f"BOBBY4: {entity.uniquename} {type(rel)} {dir(rel)}")
             print(f"BOBBY4: {entity.uniquename} {rel.pubs}")
+            curies = self.lookup_pub_curies(rel.pubs)
+            print(f"BOBBY4: {entity.uniquename} {curies}")
         return pub_curies
 
     def express_target_process(self, encoded):
