@@ -77,8 +77,8 @@ class CassetteHandler(FeatureHandler):
         'FBal0404843': r'Hsap\CGA[UAS.cLa]',  #
         'FBal0401141': r'Zzzz\VHH[deGradFP.UAS]',  #
         'FBal0051685': r'csw[CS.hs.2sev]',  # Has 2 props
-        'FBal0028848': 'BOB',  # examples of using alleleof to get FBrf
-        'FBal0033313': 'BOB',  # fill in properly when you know.
+        'FBal0028848': 'Adh[LsBbbf2]',  # examples of using alleleof to get FBrf
+        'FBal0033313': 'Abd-B[Fab7.tHa',
     }
 
     cassette_prop_to_note_mapping = {
@@ -334,9 +334,8 @@ class CassetteHandler(FeatureHandler):
         pubs = set()
         data_key = 'transgenic_product_class'
         if data_key in entity.prop_data.keys():
-            for bob in entity.prop_data[data_key]:
-                print(f"BOB:{entity.uniquename} {bob}")
-                pubs.add(bob['pub'])
+            for item in entity.prop_data[data_key]:
+                pubs.add(item['pub'])
         pub_curies = ['FB:' + item for item in list(pubs)]
         if len(pub_curies) == 1:  # 1
             return pub_curies
@@ -398,12 +397,11 @@ class CassetteHandler(FeatureHandler):
                         self.cassette_genomic_entity_associations.append(rel)
 
                 save_target = False
-                pubs = []
+                pub_curies = []
                 for trans in entity.prop_data['transgenic_product_class']:
                     if trans['name'] in ('RNAi_reagent', 'sgRNA', 'antisense'):
                         save_target = True
-                        print(f"BOBBY5: targets {entity.uniquename} {trans}")
-                        pubs.append(entity.uniquename)
+                        pub_curies.append(f"FB:{trans['pub']}")
                 if save_target:
                     # Because the relationship is used for both expresses and targets
                     # we want to copy that and not overwrite it.
@@ -416,7 +414,7 @@ class CassetteHandler(FeatureHandler):
                     rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
                         f"FB:{entity.uniquename}",
                         f"FB:{new_rel.chado_obj.object.uniquename}",
-                        ["NEEDED"], False, 'targets')  # NEED to add pub_curies still
+                        pub_curies, False, 'targets')  # NEED to add pub_curies still
                     new_rel.linkmldto = rel_dto
                     self.cassette_genomic_entity_associations.append(new_rel)
 
