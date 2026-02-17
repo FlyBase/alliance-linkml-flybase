@@ -344,12 +344,11 @@ class CassetteHandler(FeatureHandler):
         if 'molecular_info' in entity.props_by_type.keys():  # 2
             all_pub_ids = set()
             for prop in entity.props_by_type['molecular_info']:
-                print(f"BOBBY1: {entity.uniquename} {prop.pubs}")
                 for pub_id in prop.pubs:
                     all_pub_ids.add(pub_id)
             if all_pub_ids:
                 return self.lookup_pub_curies(list(all_pub_ids))
-        if not pub_curies:  # try # 3
+        if not pub_curies:  # try # 3 Need example here to test
             print(f"BOBBY4: {entity.uniquename} {rel}")
         return pub_curies
 
