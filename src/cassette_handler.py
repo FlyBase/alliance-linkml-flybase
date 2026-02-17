@@ -414,7 +414,7 @@ class CassetteHandler(FeatureHandler):
                     rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
                         f"FB:{entity.uniquename}",
                         f"FB:{new_rel.chado_obj.object.uniquename}",
-                        pub_curies, False, 'targets')  # NEED to add pub_curies still
+                        pub_curies, False, 'targets')
                     new_rel.linkmldto = rel_dto
                     self.cassette_genomic_entity_associations.append(new_rel)
 
