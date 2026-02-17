@@ -351,6 +351,7 @@ class CassetteHandler(FeatureHandler):
                     for pub_id in prop.pubs:
                         all_pub_ids.add(pub_id)
                 pub_curies = self.lookup_pub_curies(list(all_pub_ids))
+            print(f"BOBBY4: {entity.uniquename} {rel}")
             if not pub_curies:  # try # 3
                 print(f"BOBBY4: {entity.uniquename} {rel}")
         print(f"BOBBY5: Returning {entity.uniquename} {pub_curies}")
