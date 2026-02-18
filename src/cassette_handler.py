@@ -270,8 +270,6 @@ class CassetteHandler(FeatureHandler):
         super().query_chado_and_export(session)
         # self.generate_export_dict(self.cassette_component_free_text_associations,
         #                           'cassette_str_association_ingest_set')
-        if self.testing:
-            print(f"BOB: query_chado_and_export : number of GEA : {len(self.cassette_genomic_entity_associations)}.")
         self.generate_export_dict(self.cassette_genomic_entity_associations,
                                   'cassette_genomic_entity_association_ingest_set')
         self.generate_export_dict(self.cassette_tool_associations,
@@ -361,8 +359,6 @@ class CassetteHandler(FeatureHandler):
 
     def express_target_process(self, encoded):
         """Add the expresses and Target  associations."""
-        if self.testing:
-            print(f"BOB: START : number of GEA : {len(self.cassette_genomic_entity_associations)}.")
         for entity in self.fb_data_entities.values():
             rels = entity.recall_relationships(
                 self.log,
@@ -399,8 +395,6 @@ class CassetteHandler(FeatureHandler):
                             component_type_curies)
                         rel.linkmldto = rel_dto
                         self.cassette_genomic_entity_associations.append(rel)
-                if self.testing:
-                    print(f"BOB: MIDDLE : number of GEA : {len(self.cassette_genomic_entity_associations)}.")
                 save_target = False
                 pub_curies = []
                 for trans in entity.prop_data['transgenic_product_class']:
@@ -411,25 +405,17 @@ class CassetteHandler(FeatureHandler):
                     # Because the relationship is used for both expresses and targets
                     # we want to copy that and not overwrite it.
                     new_rel = copy.copy(rel)  # Create independent copy
-                    if self.testing:
-                        self.log.debug(f"BOBBY: new_rel = {new_rel}")
                     # CassetteGenomicEntityAssociationDTO
                     if self.testing:
                         mess = "map_cassette_associations: GenomicEntityAssociation "
                         mess += f"rel:{new_rel} cass:{entity.uniquename} comp:{new_rel.chado_obj.object.uniquename} 'targets'"
-                        self.log.debug(mess)
-                        mess = f"BOBBY: {entity.uniquename} {new_rel.chado_obj.object.uniquename} targets"
                         self.log.debug(mess)
                     rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
                         f"FB:{entity.uniquename}",
                         f"FB:{new_rel.chado_obj.object.uniquename}",
                         pub_curies, False, 'targets')
                     new_rel.linkmldto = rel_dto
-                    if self.testing:
-                        self.log.debug(f"BOBBY: {entity.uniquename} {new_rel.linkmldto} - targets")
                     self.cassette_genomic_entity_associations.append(new_rel)
-        if self.testing:
-            print(f"BOB: END : number of GEA : {len(self.cassette_genomic_entity_associations)}.")
 
     def map_cassette_associations(self):
         """Map transgenic cassette-component associations to Alliance object."""
