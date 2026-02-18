@@ -353,12 +353,14 @@ class CassetteHandler(FeatureHandler):
             curies = self.lookup_pub_curies(rel.pubs)  # NOTE: removes unattributed
             if len(curies) == 1:
                 return curies
-            elif len(curies) > 1:  # 4 give error message
+            if len(curies) > 1:  # 4 give error message
                 self.log.warning(f"{entity.uniquename} {curies} needs fix that by adding the relevant info into chado.")
         return []
 
     def express_target_process(self, encoded):
         """Add the expresses and Target  associations."""
+        if self.testing:
+            print(f"BOB: START : number of GEA : {len(self.cassette_genomic_entity_associations)}.")
         for entity in self.fb_data_entities.values():
             rels = entity.recall_relationships(
                 self.log,
@@ -395,7 +397,8 @@ class CassetteHandler(FeatureHandler):
                             component_type_curies)  # NEED to add pub_curies still
                         rel.linkmldto = rel_dto
                         self.cassette_genomic_entity_associations.append(rel)
-
+                if self.testing:
+                    print(f"BOB: MIDDLE : number of GEA : {len(self.cassette_genomic_entity_associations)}.")
                 save_target = False
                 pub_curies = []
                 for trans in entity.prop_data['transgenic_product_class']:
@@ -407,7 +410,7 @@ class CassetteHandler(FeatureHandler):
                     # we want to copy that and not overwrite it.
                     new_rel = copy.copy(rel)  # Create independent copy
                     if self.testing:
-                        self.log.debug(f"BOBBY: new_rel.for_export = {new_rel}")
+                        self.log.debug(f"BOBBY: new_rel = {new_rel}")
                     # CassetteGenomicEntityAssociationDTO
                     if self.testing:
                         mess = "map_cassette_associations: GenomicEntityAssociation "
@@ -423,6 +426,8 @@ class CassetteHandler(FeatureHandler):
                     if self.testing:
                         self.log.debug(f"BOBBY: {entity.uniquename} {new_rel.linkmldto} - targets")
                     self.cassette_genomic_entity_associations.append(new_rel)
+        if self.testing:
+            print(f"BOB: END : number of GEA : {len(self.cassette_genomic_entity_associations)}.")
 
     def map_cassette_associations(self):
         """Map transgenic cassette-component associations to Alliance object."""
