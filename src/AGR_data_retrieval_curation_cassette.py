@@ -145,6 +145,7 @@ def generate_association_tsv_file(export_dict, ingest_name, filename):
     with open(filename, 'w') as outfile:
         outfile.write(f"#{first_entity}\tRelationship\t{second_entity}\tEvidence\tComp type curie\n")
         for entity_dict in export_dict[ingest_name]:
+            print(f"Dumping {entity_dict}.")
             sub = entity_dict[first_entity]
             obj = entity_dict[second_entity]
             rel_type = entity_dict['relation_name']
@@ -211,8 +212,9 @@ def main():
             tsv_filename = association_output_filename.replace('.json', '.tsv')
             try:
                 generate_association_tsv_file(association_export_dict, ingest_name, tsv_filename)
-            except KeyError:
-                log.error(f'The "{sub_type} blew up on tsv generation.')
+            except KeyError as e:
+                log.error(f'The "{sub_type} blew up on tsv generation. keyError {e}')
+                exit(-1)
 
         # output all association in one file.
         association_output_filename = output_filename.replace('cassette', 'cassette_association')
