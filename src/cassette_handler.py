@@ -270,6 +270,8 @@ class CassetteHandler(FeatureHandler):
         super().query_chado_and_export(session)
         # self.generate_export_dict(self.cassette_component_free_text_associations,
         #                           'cassette_str_association_ingest_set')
+        if self.testing:
+            print(f"BOB: query_chado_and_export : number of GEA : {len(self.cassette_genomic_entity_associations)}.")
         self.generate_export_dict(self.cassette_genomic_entity_associations,
                                   'cassette_genomic_entity_association_ingest_set')
         self.generate_export_dict(self.cassette_tool_associations,
