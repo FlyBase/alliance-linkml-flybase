@@ -126,7 +126,10 @@ def generate_tsv_file(export_dict, filename):
                     symbol = comp["component_symbol"]
                     relation = comp['relation_name']
                     taxon = comp['taxon_curie']
-                    evidence = '|'.join(comp['evidence_curies'])
+                    if 'evidence_curies' in comp:
+                        evidence = '|'.join(comp['evidence_curies'])
+                    else:
+                        evidence = ""
                     outfile.write(f"{primary}\t{symbol}\t{relation}\t{taxon}\t{evidence}\n")
 
 
