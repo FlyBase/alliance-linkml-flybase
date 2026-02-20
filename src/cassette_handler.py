@@ -450,15 +450,15 @@ class CassetteHandler(FeatureHandler):
             if rel_type_name in map_relationship:
                 rel_type_name = map_relationship[rel_type_name]
             else:
-                self.log.error(f"Unknown relationship type {rel_type_name}")
+                if rel_type_name not in bad_relationship_count:
+                    bad_relationship_count[rel_type_name] = 0
+                else:
+                    bad_relationship_count[rel_type_name] += 1
                 continue
             component_type_curies = []
             if rel_type_name == 'expresses':
                 encoded[cassette.uniquename] = 1
                 component_type_curies = self.get_comp_type_curies(cassette)
-            if rel_type_name not in bad_relationship_count:
-                bad_relationship_count[rel_type_name] = 0
-            bad_relationship_count[rel_type_name] += 1
             if assoc_type == 'component_free_text':
                 # CassetteComponentSlotAnnotationDTO
                 if self.testing:
