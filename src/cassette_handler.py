@@ -533,23 +533,10 @@ class CassetteHandler(FeatureHandler):
                 except AttributeError:
                     self.log.error(f"problem {cassette} {cassette_rel}")
                     raise
-                if self.testing:
-                    cassette = self.fb_data_entities[cassette_rel.chado_obj.subject_id]
-                    component = self.feature_lookup[cassette_rel.chado_obj.object_id]
-                    self.log.debug(f"BOB {cassette.uniquename} {component['uniquename']} {cassette_rel.chado_obj.type.name}")
                 try:
                     self.cassette_cassette_rels[cassette_cassette_key].append(cassette_rel)
-                    if self.testing:
-                        cassette = self.fb_data_entities[cassette_rel.chado_obj.subject_id]
-                        component = self.feature_lookup[cassette_rel.chado_obj.object_id]
-                        self.log.debug(f"BOB {cassette.uniquename} {component['uniquename']} {cassette_rel.chado_obj.type.name} APPENDED")
                 except KeyError:
                     self.cassette_cassette_rels[cassette_cassette_key] = [cassette_rel]
-                    if self.testing:
-                        cassette = self.fb_data_entities[cassette_rel.chado_obj.subject_id]
-                        component = self.feature_lookup[cassette_rel.chado_obj.object_id]
-                        self.log.debug(f"BOB {cassette.uniquename} {component['uniquename']} {cassette_rel.chado_obj.type.name} NEW")
-
                     component_counter += 1
         self.log.info(f'Found {component_counter} components for {cassette_counter} cassettes.')
 
