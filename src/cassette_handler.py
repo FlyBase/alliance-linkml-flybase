@@ -439,67 +439,68 @@ class CassetteHandler(FeatureHandler):
             component = self.feature_lookup[cassette_cassette_key[COMPONENT]]
             component_curie = f'FB:{component["uniquename"]}'
             assoc_type = self.cassette_dto_type(component)
-            first_feat_rel = cassette_cassette_rels[0]
+            # first_feat_rel = cassette_cassette_rels[0]
             all_pub_ids = []
             for cassette_cassette_rel in cassette_cassette_rels:
                 all_pub_ids.extend(cassette_cassette_rel.pubs)
-            first_feat_rel.pubs = all_pub_ids
+            # first_feat_rel.pubs = all_pub_ids
             pub_curies = self.lookup_pub_curies(all_pub_ids)
 
             for cassette_rel in cassette_cassette_rels:
-                self.log.debug(f'BOB!: {cassette_curie} {component_curie} {cassette_rel.chado_obj.type.name}')
-            # Adjust cassette-component relation_type as needed.
-            rel_type_name = cassette_cassette_rels[0].chado_obj.type.name
-            if rel_type_name in map_relationship:
-                rel_type_name = map_relationship[rel_type_name]
-            else:
-                if rel_type_name not in bad_relationship_count:
-                    bad_relationship_count[rel_type_name] = 0
+                self.log.debug(f'BOB: {cassette_curie} {component_curie} {cassette_rel.chado_obj.type.name}')
+                rel_type_name = cassette_cassette_rels[0].chado_obj.type.name
+                if rel_type_name in map_relationship:
+                    rel_type_name = map_relationship[rel_type_name]
                 else:
-                    bad_relationship_count[rel_type_name] += 1
-                continue
-            component_type_curies = []
-            if rel_type_name == 'expresses':
-                encoded[cassette.uniquename] = 1
-                component_type_curies = self.get_comp_type_curies(cassette)
-            if assoc_type == 'component_free_text':
-                # CassetteComponentSlotAnnotationDTO
-                if self.testing:
-                    mess = "map_cassette_associations: ComponentSlotAnnotation cass:"
-                    mess += f"{cassette_curie} comp:{component_curie} '{rel_type_name}'"
-                    self.log.debug(mess)
-                symbol = component['symbol']
-                organism_id = component['organism_id']
-                taxon_text = self.organism_lookup[organism_id]['full_species_name']
-                taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
-                rel_dto = agr_datatypes.CassetteComponentSlotAnnotationDTO(
-                    rel_type_name, symbol, taxon_curie,
-                    taxon_text, pub_curies).dict_export()
-                cassette.linkmldto.cassette_component_dtos.append(rel_dto)
-            elif assoc_type == 'tool_association':
-                # CassetteTransgenicToolAssociationDTO
-                if self.testing:
-                    mess = "map_cassette_associations: TransgenicToolAssociation cass:"
-                    mess += f"{cassette_curie} comp:{component_curie} '{rel_type_name}'"
-                    self.log.debug(mess)
-                rel_dto = agr_datatypes.CassetteTransgenicToolAssociationDTO(
-                    cassette_curie, component_curie,
-                    pub_curies, False, rel_type_name)
-                first_feat_rel.linkmldto = rel_dto
-                self.cassette_tool_associations.append(first_feat_rel)
-            elif assoc_type == 'genomic_entity_association':
-                # CassetteGenomicEntityAssociationDTO
-                if self.testing:
-                    mess = "map_cassette_associations: GenomicEntityAssociation cass:"
-                    mess += f"{cassette_curie} comp:{component_curie} '{rel_type_name}'"
-                    mess += f"{'|'.join(component_type_curies)}"
-                    self.log.debug(mess)
-                rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
-                    cassette_curie, component_curie,
-                    pub_curies, False, rel_type_name,
-                    component_type_curies)
-                first_feat_rel.linkmldto = rel_dto
-                self.cassette_genomic_entity_associations.append(first_feat_rel)
+                    if rel_type_name not in bad_relationship_count:
+                        bad_relationship_count[rel_type_name] = 0
+                    else:
+                        bad_relationship_count[rel_type_name] += 1
+                    continue
+                component_type_curies = []
+                if rel_type_name == 'expresses':
+                    encoded[cassette.uniquename] = 1
+                    component_type_curies = self.get_comp_type_curies(cassette)
+                if assoc_type == 'component_free_text':
+                    # CassetteComponentSlotAnnotationDTO
+                    if self.testing:
+                        mess = "map_cassette_associations: ComponentSlotAnnotation cass:"
+                        mess += f"{cassette_curie} comp:{component_curie} '{rel_type_name}'"
+                        self.log.debug(mess)
+                    symbol = component['symbol']
+                    organism_id = component['organism_id']
+                    taxon_text = self.organism_lookup[organism_id]['full_species_name']
+                    taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
+                    rel_dto = agr_datatypes.CassetteComponentSlotAnnotationDTO(
+                        rel_type_name, symbol, taxon_curie,
+                        taxon_text, pub_curies).dict_export()
+                    cassette.linkmldto.cassette_component_dtos.append(rel_dto)
+                elif assoc_type == 'tool_association':
+                    # CassetteTransgenicToolAssociationDTO
+                    if self.testing:
+                        mess = "map_cassette_associations: TransgenicToolAssociation cass:"
+                        mess += f"{cassette_curie} comp:{component_curie} '{rel_type_name}'"
+                        self.log.debug(mess)
+                    rel_dto = agr_datatypes.CassetteTransgenicToolAssociationDTO(
+                        cassette_curie, component_curie,
+                        pub_curies, False, rel_type_name)
+                    # first_feat_rel.linkmldto = rel_dto
+                    cassette_rel.linkmldto = rel_dto
+                    self.cassette_tool_associations.append(cassette_rel)
+                elif assoc_type == 'genomic_entity_association':
+                    # CassetteGenomicEntityAssociationDTO
+                    if self.testing:
+                        mess = "map_cassette_associations: GenomicEntityAssociation cass:"
+                        mess += f"{cassette_curie} comp:{component_curie} '{rel_type_name}'"
+                        mess += f"{'|'.join(component_type_curies)}"
+                        self.log.debug(mess)
+                    rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
+                        cassette_curie, component_curie,
+                        pub_curies, False, rel_type_name,
+                        component_type_curies)
+                    # first_feat_rel.linkmldto = rel_dto
+                    cassette_rel.linkmldto = rel_dto
+                    self.cassette_genomic_entity_associations.append(cassette_rel)
             if cassette.is_obsolete is True or component['is_obsolete'] is True:
                 self.log.error(f"{cassette_curie} {component_curie} should never be obsolete??")
             counter += 1
