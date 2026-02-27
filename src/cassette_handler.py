@@ -529,6 +529,10 @@ class CassetteHandler(FeatureHandler):
                 except AttributeError:
                     self.log.error(f"problem {cassette} {cassette_rel}")
                     raise
+                if self.testing:
+                    cassette = self.fb_data_entities[cassette_rel.chado_obj.subject_id]
+                    component = self.feature_lookup[cassette_rel.chado_obj.object_id]
+                    self.log.debug(f"BOB {cassette} {component} {cassette_rel.chado_obj.type.name}")
                 try:
                     self.cassette_cassette_rels[cassette_cassette_key].append(cassette_rel)
                 except KeyError:
