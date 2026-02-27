@@ -66,7 +66,7 @@ reference_db = args.reference_db
 port = environ.get('SQL_PORT', '5432')
 
 # Create SQL Alchemy engines from environmental variables.
-engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server +  ':' + port + '/' + database
+engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server + ':' + port + '/' + database
 
 print(f"Connecting to server:{server} port:{port} database:{database} username:{username}")
 
