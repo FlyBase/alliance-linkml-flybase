@@ -448,7 +448,8 @@ class CassetteHandler(FeatureHandler):
 
             for cassette_rel in cassette_cassette_rels:
                 self.log.debug(f'BOB: {cassette_curie} {component_curie} {cassette_rel.chado_obj.type.name}')
-                rel_type_name = cassette_cassette_rels[0].chado_obj.type.name
+                # rel_type_name = cassette_cassette_rels[0].chado_obj.type.name
+                rel_type_name = cassette_rel.chado_obj.type.name
                 if rel_type_name in map_relationship:
                     rel_type_name = map_relationship[rel_type_name]
                 else:
