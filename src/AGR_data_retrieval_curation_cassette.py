@@ -21,6 +21,8 @@ Notes:
 """
 
 import argparse
+from os import environ
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
@@ -43,6 +45,8 @@ output_filename = set_up_dict['output_filename'].replace('tsv', 'json')
 log = set_up_dict['log']
 testing = set_up_dict['testing']
 
+output_filename = environ.get('ALT_OUTPUT', output_filename)
+
 # Process additional input parameters not handled by the set_up_db_reading() function above.
 parser = argparse.ArgumentParser(description='inputs')
 parser.add_argument('-l', '--linkml_release',
@@ -59,8 +63,13 @@ log.info(f'Parsing args specific to this script; ignoring these: {extra_args}')
 linkml_release = args.linkml_release
 reference_db = args.reference_db
 
+port = environ.get('SQL_PORT', '5432')
+
 # Create SQL Alchemy engines from environmental variables.
-engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server + '/' + database
+engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server +  ':' + port + '/' + database
+
+print(f"Connecting to server:{server} port:{port} database:{database} username:{username}")
+
 engine = create_engine(engine_var_rep)
 Session = sessionmaker(bind=engine)
 session = Session()
