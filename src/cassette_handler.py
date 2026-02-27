@@ -446,6 +446,8 @@ class CassetteHandler(FeatureHandler):
             first_feat_rel.pubs = all_pub_ids
             pub_curies = self.lookup_pub_curies(all_pub_ids)
 
+            for cassette_rel in cassette_cassette_rels:
+                self.log.debug(f'BOB!: {cassette_curie} {component_curie} {cassette_rel.chado_obj.type.name}')
             # Adjust cassette-component relation_type as needed.
             rel_type_name = cassette_cassette_rels[0].chado_obj.type.name
             if rel_type_name in map_relationship:
