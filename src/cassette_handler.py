@@ -260,8 +260,8 @@ class CassetteHandler(FeatureHandler):
         component_type_curies = []
         data_key = 'transgenic_product_class'
         if data_key in fb_data_entity.prop_data.keys():
-            for bob in fb_data_entity.prop_data[data_key]:
-                component_type_curies.append(f"{data_key} {bob['name']}: {bob['type']}:{bob['accession']}")
+            for prop in fb_data_entity.prop_data[data_key]:
+                component_type_curies.append(f"{prop['type']}:{prop['accession']}")
         return component_type_curies
 
     # Elaborate on query_chado_and_export() for the CassetteHandler.
