@@ -1026,6 +1026,8 @@ class DataHandler(object):
         for i in input_list:
             self.input_count += 1
             if i.for_export is False:
+                if self.testing:
+                    self.log.debug(f'DO NOT EXPORT {i}: {i.export_warnings}')
                 continue
             self.export_count += 1
             if i.linkmldto.internal is True:

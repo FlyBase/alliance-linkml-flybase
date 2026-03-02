@@ -575,6 +575,20 @@ class PrimaryEntityHandler(DataHandler):
         for cvtermprop_result in cvtermprop_results:
             entity_cvterm_id = getattr(cvtermprop_result, f'{chado_type}_cvterm_id')
             entity_prop_type_name = self.cvterm_lookup[cvtermprop_result.type_id]['name']
+            entity_id = cvtermprop_result.feature_cvterm.feature.feature_id
+            if entity_id in self.ignore_list:
+                continue
+            elif entity_id not in self.fb_data_entities:
+                if not self.testing:  # test sets have some none fb_data BIUT real data should not
+                    self.log.error(f"Entity_id:{entity_id} not in list of data_entities feature {cvtermprop_result.feature_cvterm.feature}")
+                    self.log.error(f"Ignore_list is {self.ignore_list}")
+                continue
+            if entity_prop_type_name in self.fb_data_entities[entity_id].prop_data:  # only store those we are interested in
+                prop_data = {'name': cvtermprop_result.feature_cvterm.cvterm.name,
+                             'type': cvtermprop_result.feature_cvterm.cvterm.cv.name,
+                             'pub': cvtermprop_result.feature_cvterm.pub.uniquename,
+                             'accession': cvtermprop_result.feature_cvterm.cvterm.dbxref.accession}
+                self.fb_data_entities[entity_id].prop_data[entity_prop_type_name].append(prop_data)
             if entity_prop_type_name in cvterm_annotation_dict[entity_cvterm_id].props_by_type.keys():
                 cvterm_annotation_dict[entity_cvterm_id].props_by_type[entity_prop_type_name].append(fb_datatypes.FBProp(cvtermprop_result))
                 cvterm_prop_counter += 1
@@ -590,9 +604,10 @@ class PrimaryEntityHandler(DataHandler):
             entity_id = getattr(cvt_anno.chado_obj, f'{chado_type}_id')
             if entity_id in self.ignore_list:
                 continue
-            elif entity_id not in self.fb_data_entities:
-                self.log.error(f"entity_id:{entity_id} not in list of data_entities")
-                self.log.error(f"ignore_list is {self.ignore_list}")
+            if entity_id not in self.fb_data_entities:  # (ie constructs/cassettes)
+                if not self.testing:  # test sets have some none fb_data
+                    self.log.error(f"Entity_id:{entity_id} not in list of data_entities")
+                    self.log.error(f"Ignore_list is {self.ignore_list}")
                 continue
             self.fb_data_entities[entity_id].cvt_annos_by_id[cvt_anno_id] = cvt_anno
             # Second, sort the CVTermAnnotations by CV name.

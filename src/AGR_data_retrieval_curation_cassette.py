@@ -21,6 +21,8 @@ Notes:
 """
 
 import argparse
+from os import environ
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
@@ -43,6 +45,8 @@ output_filename = set_up_dict['output_filename'].replace('tsv', 'json')
 log = set_up_dict['log']
 testing = set_up_dict['testing']
 
+output_filename = environ.get('ALT_OUTPUT', output_filename)
+
 # Process additional input parameters not handled by the set_up_db_reading() function above.
 parser = argparse.ArgumentParser(description='inputs')
 parser.add_argument('-l', '--linkml_release',
@@ -54,12 +58,18 @@ parser.add_argument('-r', '--reference_db',
 # Use parse_known_args(), not parse_args(),
 # to handle args specific to this script (outside of set_up_db_reading()).
 args, extra_args = parser.parse_known_args()
+
 log.info(f'Parsing args specific to this script; ignoring these: {extra_args}')
 linkml_release = args.linkml_release
 reference_db = args.reference_db
 
+port = environ.get('SQL_PORT', '5432')
+
 # Create SQL Alchemy engines from environmental variables.
-engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server + '/' + database
+engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server + ':' + port + '/' + database
+
+print(f"Connecting to server:{server} port:{port} database:{database} username:{username}")
+
 engine = create_engine(engine_var_rep)
 Session = sessionmaker(bind=engine)
 session = Session()
@@ -125,7 +135,10 @@ def generate_tsv_file(export_dict, filename):
                     symbol = comp["component_symbol"]
                     relation = comp['relation_name']
                     taxon = comp['taxon_curie']
-                    evidence = '|'.join(comp['evidence_curies'])
+                    if 'evidence_curies' in comp:
+                        evidence = '|'.join(comp['evidence_curies'])
+                    else:
+                        evidence = ""
                     outfile.write(f"{primary}\t{symbol}\t{relation}\t{taxon}\t{evidence}\n")
 
 
@@ -142,13 +155,21 @@ def generate_association_tsv_file(export_dict, ingest_name, filename):
     else:
         second_entity = 'sequence_targeting_reagent_identifier'
     with open(filename, 'w') as outfile:
-        outfile.write(f"#{first_entity}\tRelationship\t{second_entity}\tEvidence\n")
+        outfile.write(f"#{first_entity}\tRelationship\t{second_entity}\tEvidence\tComp type curie\n")
         for entity_dict in export_dict[ingest_name]:
+            print(f"Dumping {entity_dict}.")
             sub = entity_dict[first_entity]
             obj = entity_dict[second_entity]
             rel_type = entity_dict['relation_name']
-            pubs = "|".join(entity_dict['evidence_curies'])
-            outfile.write(f"{sub}\t{rel_type}\t{obj}\t{pubs}\n")
+            if 'evidence_curies' in entity_dict:
+                pubs = "|".join(entity_dict['evidence_curies'])
+            else:
+                pubs = ""
+            if 'component_type_curies' in entity_dict:
+                comp = "|".join(entity_dict['component_type_curies'])
+            else:
+                comp = ""
+            outfile.write(f"{sub}\t{rel_type}\t{obj}\t{pubs}\t{comp}\n")
 
 
 # The main process.
@@ -206,8 +227,9 @@ def main():
             tsv_filename = association_output_filename.replace('.json', '.tsv')
             try:
                 generate_association_tsv_file(association_export_dict, ingest_name, tsv_filename)
-            except KeyError:
-                log.error(f'The "{sub_type} blew up on tsv generation.')
+            except KeyError as e:
+                log.error(f'The "{sub_type} blew up on tsv generation. keyError {e}')
+                exit(-1)
 
         # output all association in one file.
         association_output_filename = output_filename.replace('cassette', 'cassette_association')

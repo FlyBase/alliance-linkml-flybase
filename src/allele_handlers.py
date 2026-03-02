@@ -155,7 +155,7 @@ class AlleleHandler(MetaAlleleHandler):
         'FBal0011649': 'Dsim_Lhr[1]',           # Non-Dmel classical allele.
         'FBal0043132': 'Hsap_MAPT[UAS.cAa]',    # Transgenic, superceded by FBti0000969, FBti0249419 (superseded_by_transgnc_insertions).
         'FBal0062057': 'Scer_CDC42[V12.hs]',    # Transgenic, superceded by FBti0012506, FBti0249909 (superseded_by_transgnc_insertions).
-        'FBal0198528': 'CG33269[HMJ22303]',     # Transegnic, superceded by four FBti (superseded_by_transgnc_insertions).
+        'FBal0198528': 'Pi4KIIalpha[GD9857]',    # Transegnic, superceded by four FBti (superseded_by_transgnc_insertions).
         'FBal0322755': 'Mcm3[+tBa]',            # Cassettes from here
         'FBal0322754': 'flfl[DeltaRanBD.UAS.Venus]',
         'FBal0296109': 'sSemp1[R41G.UAS]',
@@ -175,7 +175,9 @@ class AlleleHandler(MetaAlleleHandler):
         'FBal0137284': 'cic[Tag:HA]',                  # Another Cassette so should not appear
         'FBal0144698': 'PGRP-LE[UAS.Tag:FLAG]',        # Another Cassette so should not appear
         'FBal0151333': 'wg[PE4.UAS.cCa.Tag:HA]',       # Another Cassette so should not appear
-
+        'FBal0137561': r'Crei\I-CreI[hs.PR]',  #
+        'FBal0404843': r'Hsap\CGA[UAS.cLa]',  #
+        'FBal0401141': r'Zzzz\VHH[deGradFP.UAS]',  #
     }
 
     # Additional export sets.

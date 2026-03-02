@@ -9,9 +9,8 @@ Author(s):
 
 """
 
-# import csv
-# import re
 from logging import Logger
+import copy
 import agr_datatypes
 import fb_datatypes
 from feature_handler import FeatureHandler
@@ -27,8 +26,7 @@ class CassetteHandler(FeatureHandler):
         self.agr_export_type = agr_datatypes.CassetteDTO
         self.primary_export_set = 'cassette_ingest_set'
         self.incremental_update = False
-
-    # NOTE: We have general alleles in here too so we can check we only get the casssettes here.
+        # NOTE: We have general alleles in here too so we can check we only get the casssettes here.
     #       Also Cassettes are in the Allele code to check we only get these once.
     test_set = {
         'FBal0386858': 'SppL[CR70402-TG4.1]',   # Insertion allele superceded by FBti0226866 (superseded_by_at_locus_insertion).
@@ -51,8 +49,8 @@ class CassetteHandler(FeatureHandler):
         'FBal0011649': 'Dsim_Lhr[1]',           # Non-Dmel classical allele.
         'FBal0043132': 'Hsap_MAPT[UAS.cAa]',    # Transgenic, superceded by FBti0000969, FBti0249419 (superseded_by_transgnc_insertions).
         'FBal0062057': 'Scer_CDC42[V12.hs]',    # Transgenic, superceded by FBti0012506, FBti0249909 (superseded_by_transgnc_insertions).
-        'FBal0198528': 'CG33269[HMJ22303]',     # Transegnic, superceded by four FBti (superseded_by_transgnc_insertions).
-        'FBal0322755': 'Mcm3[+tBa]',                 # cassette main type
+        'FBal0198528': 'Pi4KIIalpha[GD9857]',   # Transegnic, superceded by four FBti (superseded_by_transgnc_insertions).
+        'FBal0322755': 'Mcm3[+tBa]',                   # cassette main type
         'FBal0322754': 'flfl[DeltaRanBD.UAS.Venus]',
         'FBal0296109': 'sSemp1[R41G.UAS]',
         'FBal0193766': 'Gr63a[UAS.cJa]',
@@ -75,6 +73,13 @@ class CassetteHandler(FeatureHandler):
                                                   # two has_reg_region (tool) (UAS = FBrf0212747, UASt = FBrf0152317)
         'FBal0151333': 'wg[PE4.UAS.cCa.Tag:HA]',  # single also_carries (FBrf0173223), single tagged_with (FBrf0167661, FBrf0173223),
                                                   # two has_reg_region (tool) (UAS = FBrf0173223, UASt = FBrf0167661)
+        'FBal0137561': r'Crei\I-CreI[hs.PR]',  #
+        'FBal0404843': r'Hsap\CGA[UAS.cLa]',  #
+        'FBal0401141': r'Zzzz\VHH[deGradFP.UAS]',  #
+        'FBal0051685': r'csw[CS.hs.2sev]',  # Has 2 props
+        'FBal0028848': 'Adh[LsBbbf2]',  # examples of using alleleof to get FBrf
+        'FBal0033313': 'Abd-B[Fab7.tHa',
+        'FBal0104158': r'Ecol\lacZ[ftz.GFP]',  # Multiple encodes (for now)
     }
 
     cassette_prop_to_note_mapping = {
@@ -95,6 +100,7 @@ class CassetteHandler(FeatureHandler):
         super().get_general_data(session)
         self.build_bibliography(session)
         self.build_organism_lookup(session)
+        self.build_cvterm_lookup(session)
         self.build_feature_lookup(session, feature_types=['cassette', 'construct', 'allele', 'tool', 'gene', 'seqfeat'])
 
     def get_entities(self, session, **kwargs):
@@ -108,6 +114,21 @@ class CassetteHandler(FeatureHandler):
         self.get_main_entities(session, reference_set)
         # Get in vitro set of cassettes
         self.add_in_vitro_allele_entries(session, reference_set)
+
+        if self.testing:
+            # sanity check of making sure ALL test data is in the entries.
+            unique_names = {}
+            # generate dict of uniquename in fb_data_entities
+            for entity_id in self.fb_data_entities:
+                unique_names[self.fb_data_entities[entity_id].uniquename] = entity_id
+            # Are all test examples in the fb_data_entities
+            for name, _ in self.test_set.items():
+                if name not in unique_names:
+                    self.log.error(f"Missing {name} in fb_data_entities. Must be a construct, hopefully.")
+            # Are all fb_data_entities in the test set
+            for entity_id, entity in self.fb_data_entities.items():
+                if entity.uniquename not in self.test_set:
+                    self.log.error(f"Missing {entity.uniquename} in test set, could have extras?")
 
     def add_in_vitro_allele_entries(self, session, reference_set):
         """Extend list of entities."""
@@ -202,6 +223,7 @@ class CassetteHandler(FeatureHandler):
         super().get_datatype_data(session)
         self.get_entities(session)
         self.get_entityprops(session)
+        self.get_entity_cvterms(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
         self.get_entity_fb_xrefs(session)
@@ -217,7 +239,7 @@ class CassetteHandler(FeatureHandler):
         elif feature["uniquename"].startswith('FBsf'):  # cassette component is a seqfeat (FBid is a FBsf):
             assoc_type = 'component_free_text'  # for now, will change to a CassetteGenomicEntityAssociationDTO
             # once we start to submit FBsf features, so keep this loop in place for then even though at the
-            # moment its not actually changing the type !
+            # moment it's not actually changing the type !
 
         elif feature["uniquename"].startswith('FBgn'):  # cassette component is a gene (FBid is a FBgn):
             assoc_type = 'genomic_entity_association'
@@ -234,6 +256,15 @@ class CassetteHandler(FeatureHandler):
             #            type = 'genomic_entity_association'
         return assoc_type
 
+    def get_comp_type_curies(self, fb_data_entity):
+        """Get component_type_curies."""
+        component_type_curies = []
+        data_key = 'transgenic_product_class'
+        if data_key in fb_data_entity.prop_data.keys():
+            for prop in fb_data_entity.prop_data[data_key]:
+                component_type_curies.append(f"{prop['type']}:{prop['accession']}")
+        return component_type_curies
+
     # Elaborate on query_chado_and_export() for the CassetteHandler.
     def query_chado_and_export(self, session):
         """Elaborate on query_chado_and_export method for the CassetteHandler."""
@@ -245,7 +276,147 @@ class CassetteHandler(FeatureHandler):
         self.generate_export_dict(self.cassette_tool_associations,
                                   'cassette_transgenic_tool_association_ingest_set')
 
-        return
+    def lookup_expresses_pub_curies(self, entity, rel):
+        """Lookup pub curies for those that uses expresses."""
+    #  A. 'expresses' association where is NO encodes_tool feature_relationship
+    #    (i.e. the bit that starts "if entity.uniquename not in encoded.keys()"
+    #     use this logic in this order.
+    #
+    #
+    # 1. if there are component_type_curies for the cassette FBal,
+    #    use the pubs associated with the component_type_curies
+    #
+    #  1a. in this loop, do an additional check
+    #
+    #     - if the number of component_type_curies > 1 AND
+    #       the total number of pubs associated with all of the component_type_curies > 1
+    #       leave the pub_curies blank and write a log message (**see note below)
+    #
+    #     - otherwise use all the pubs associated with the component_type_curies
+    #
+    #       **note: There are a handful cases (~5) that have multiple component_type_curies with multiple refs
+    #               (when you add up all the refs associated with each component_type_curie).
+    #
+    #     An example is FBal0051685, csw[CS.hs.2sev]
+    #
+    #     This has 2 component_type_curies, each with a different reference
+    #     (each reference only provides the info to add one of the component_type_curies,
+    #      so I can't fix the curation to make the reference the same for both !):
+    #
+    #     dominant_negative_variant [FBrf0190302]
+    #     missense_variant [FBrf0088202]
+    #
+    #     Since we're combining both component_type_curies into a single 'expresses' association in Alliance,
+    #     it would be incorrect to say that both references give evidence for the single 'FBal0051685 (csw[CS.hs.2sev])
+    #     expresses FBgn0000382 (csw), dominant_negative_variant, missense_variant' association.
+    #
+    #     I think its best we just leave the pub_curies blank for these in the linkml code and write a log message
+    #     to say which FBal cassette has this issue, rather than trying to do some complex algorithm for this tiny
+    #     number of cases (which would involve making two separate 'expresses' annotations
+    #      - one for each component_type_curie - to be able to partition the references correctly).
+    #        When we switch to using the Alliance as source of truth, curators can use the log message to know which
+    #        cassettes have this problem and can fix in the Alliance by making two expresses associations.
+    #
+    # 2. otherwise, lookup whether the cassette allele has 'molecular_info' featureprop(s) - if it does,
+    #    use all the pubs associated with all the 'molecular_info' featureprops to fill in the pub_curies
+    #
+    #
+    # 3. otherwise, if there is a *single reference* for the cassette allele-to-parent gene relationship,
+    #    use that as the pub_curies
+    #
+    # **Note: Its important to do this one as a last resort as its less accurate than using either 1. or 2. above,
+    #         because when an allele is merged we often use an FB analysis ref instead of the ref that originally
+    #         described the cassette allele, and this FB analysis ref ends up being the single reference in the
+    #         cassette allele-to-parent gene relationship.
+    #
+    # 4. otherwise, leave pub_curies empty (there are currently only ~30 cases that end up here,
+    #    because they have nothing in the 'molecular_info' free text note,
+    #    so I'll try and fix that by adding the relevant info into chado).
+        pubs = set()
+        data_key = 'transgenic_product_class'
+        if data_key in entity.prop_data.keys():
+            for item in entity.prop_data[data_key]:
+                pubs.add(item['pub'])
+        pub_curies = ['FB:' + item for item in list(pubs)]
+        if len(pub_curies) == 1:  # 1
+            return pub_curies
+        if len(pub_curies) > 1:  # 1 a
+            self.log.warning(f"{entity.uniquename} has multiple comp curie with diff refs {pub_curies}")
+            return []
+        if 'molecular_info' in entity.props_by_type.keys():  # 2
+            all_pub_ids = set()
+            for prop in entity.props_by_type['molecular_info']:
+                for pub_id in prop.pubs:
+                    all_pub_ids.add(pub_id)
+            if all_pub_ids:
+                return self.lookup_pub_curies(list(all_pub_ids))
+        if not pub_curies:  # try # 3
+            curies = self.lookup_pub_curies(rel.pubs)  # NOTE: removes unattributed
+            if len(curies) == 1:
+                return curies
+            if len(curies) > 1:  # 4 give error message
+                self.log.warning(f"{entity.uniquename} {curies} needs fix that by adding the relevant info into chado.")
+        return []
+
+    def express_target_process(self, encoded):
+        """Add the expresses and Target  associations."""
+        for entity in self.fb_data_entities.values():
+            rels = entity.recall_relationships(
+                self.log,
+                entity_role='subject',  # 'subject' or 'object'
+                rel_types='alleleof',  # str or list of relationship type names
+                rel_entity_types='gene'  # (features only) filter by related entity type
+            )
+            for rel in rels:
+                if entity.uniquename not in encoded.keys():
+                    component_type_curies = self.get_comp_type_curies(entity)
+                    pub_curies = self.lookup_expresses_pub_curies(entity, rel)
+                    if self.testing:
+                        self.log.debug(f"{entity.uniquename} has parent {rel.chado_obj.object.uniquename}")
+                    gene = self.feature_lookup[rel.chado_obj.object.feature_id]
+                    assoc_type = self.cassette_dto_type(gene)
+                    self.log.debug(f"{entity.uniquename} {gene} has {assoc_type} association")
+                    # Always a gene currently BUT might in future have
+                    # subset of foreign genes so check now anyway
+                    if assoc_type == 'component_free_text':
+                        mess = f"cassette {entity.uniquename} has parent {gene.uniquename} "
+                        mess += f"BUT assoc_type is {assoc_type} So problem"
+                        self.log.error(mess)
+                    elif assoc_type == 'genomic_entity_association':
+                        # CassetteGenomicEntityAssociationDTO
+                        if self.testing:
+                            mess = f"map_cassette_associations: GenomicEntityAssociation rel:{rel} cass:"
+                            mess += (f"{entity.uniquename} comp:{rel.chado_obj.object.uniquename}"
+                                     f" 'expresses' {component_type_curies} ")
+                            self.log.debug(mess)
+                        rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
+                            f"FB:{entity.uniquename}",
+                            f"FB:{rel.chado_obj.object.uniquename}",
+                            pub_curies, False, 'expresses',
+                            component_type_curies)
+                        rel.linkmldto = rel_dto
+                        self.cassette_genomic_entity_associations.append(rel)
+                save_target = False
+                pub_curies = []
+                for trans in entity.prop_data['transgenic_product_class']:
+                    if trans['name'] in ('RNAi_reagent', 'sgRNA', 'antisense'):
+                        save_target = True
+                        pub_curies.append(f"FB:{trans['pub']}")
+                if save_target:
+                    # Because the relationship is used for both expresses and targets
+                    # we want to copy that and not overwrite it.
+                    new_rel = copy.copy(rel)  # Create independent copy
+                    # CassetteGenomicEntityAssociationDTO
+                    if self.testing:
+                        mess = "map_cassette_associations: GenomicEntityAssociation "
+                        mess += f"rel:{new_rel} cass:{entity.uniquename} comp:{new_rel.chado_obj.object.uniquename} 'targets'"
+                        self.log.debug(mess)
+                    rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
+                        f"FB:{entity.uniquename}",
+                        f"FB:{new_rel.chado_obj.object.uniquename}",
+                        pub_curies, False, 'targets')
+                    new_rel.linkmldto = rel_dto
+                    self.cassette_genomic_entity_associations.append(new_rel)
 
     def map_cassette_associations(self):
         """Map transgenic cassette-component associations to Alliance object."""
@@ -256,18 +427,10 @@ class CassetteHandler(FeatureHandler):
 
         map_relationship = {'has_reg_region': 'is_regulated_by',
                             'tagged_with': 'tagged_with',
-                            'carries_tool': 'contains'}
-        # cassette_cassette_counter = {}
-        for cassette_cassette_key in self.cassette_cassette_rels.keys():
-            if self.testing:
-                self.log.debug(f'Mapping {cassette_cassette_key} to Alliance object. {self.cassette_cassette_rels[cassette_cassette_key]}')
-            # don't think we need to worry about the count of cassettes to components
-            # try:
-            #    cassette_cassette_counter[cassette_cassette_key[CASSETTE]] += 1
-            # except KeyError:
-            #    cassette_cassette_counter[cassette_cassette_key[CASSETTE]] = 1
-
+                            'carries_tool': 'contains',
+                            'encodes_tool': 'expresses'}
         bad_relationship_count = {}
+        encoded = {}  # dict to store if cassette assoc mapped by encodes_tool
         # go through cassettes and make the cassette-component associations.
         for cassette_cassette_key, cassette_cassette_rels in self.cassette_cassette_rels.items():
             cassette_feature_id = cassette_cassette_key[CASSETTE]
@@ -275,61 +438,79 @@ class CassetteHandler(FeatureHandler):
             cassette_curie = f'FB:{cassette.uniquename}'
             component = self.feature_lookup[cassette_cassette_key[COMPONENT]]
             component_curie = f'FB:{component["uniquename"]}'
-
-            first_feat_rel = cassette_cassette_rels[0]
+            assoc_type = self.cassette_dto_type(component)
+            # first_feat_rel = cassette_cassette_rels[0]
             all_pub_ids = []
             for cassette_cassette_rel in cassette_cassette_rels:
                 all_pub_ids.extend(cassette_cassette_rel.pubs)
-            first_feat_rel.pubs = all_pub_ids
+            # first_feat_rel.pubs = all_pub_ids
             pub_curies = self.lookup_pub_curies(all_pub_ids)
 
-            # Adjust cassette-component relation_type as needed.
-
-            rel_type_name = cassette_cassette_rels[0].chado_obj.type.name
-            if rel_type_name in map_relationship:
-                rel_type_name = map_relationship[rel_type_name]
-            else:
-                if rel_type_name not in bad_relationship_count:
-                    bad_relationship_count[rel_type_name] = 0
-                bad_relationship_count[rel_type_name] += 1
-                continue
-            assoc_type = self.cassette_dto_type(component)
-            if assoc_type == 'component_free_text':
-                # CassetteComponentSlotAnnotationDTO
-                if self.testing:
-                    print(f"map_cassette_associations: cass:{cassette_curie} comp:{component_curie}")
-                symbol = component['symbol']
-                organism_id = component['organism_id']
-                # pubs = self.lookup_pub_curies(pub_ids)
-                taxon_text = self.organism_lookup[organism_id]['full_species_name']
-                taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
-                rel_dto = agr_datatypes.CassetteComponentSlotAnnotationDTO(
-                    rel_type_name, symbol, taxon_curie,
-                    taxon_text, pub_curies).dict_export()
-                # first_feat_rel.linkmldto = rel_dto
-                cassette.linkmldto.cassette_component_dtos.append(rel_dto)
-            elif assoc_type == 'tool_association':
-                # CassetteTransgenicToolAssociationDTO
-                rel_dto = agr_datatypes.CassetteTransgenicToolAssociationDTO(
-                    cassette_curie, component_curie,
-                    pub_curies, False, rel_type_name)
-                first_feat_rel.linkmldto = rel_dto
-                self.cassette_tool_associations.append(first_feat_rel)
-            elif assoc_type == 'genomic_entity_association':
-                # CassetteGenomicEntityAssociationDTO
-                rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
-                    cassette_curie, component_curie,
-                    pub_curies, False, rel_type_name)
-                first_feat_rel.linkmldto = rel_dto
-                self.cassette_genomic_entity_associations.append(first_feat_rel)
-            if self.testing:
-                self.log.debug(f"{cassette_curie} {component_curie} assoc type is {assoc_type}")
+            for cassette_rel in cassette_cassette_rels:
+                self.log.debug(f'BOB: {cassette_curie} {component_curie} {cassette_rel.chado_obj.type.name}')
+                # rel_type_name = cassette_cassette_rels[0].chado_obj.type.name
+                rel_type_name = cassette_rel.chado_obj.type.name
+                if rel_type_name in map_relationship:
+                    rel_type_name = map_relationship[rel_type_name]
+                else:
+                    if rel_type_name not in bad_relationship_count:
+                        bad_relationship_count[rel_type_name] = 0
+                    else:
+                        bad_relationship_count[rel_type_name] += 1
+                    continue
+                component_type_curies = []
+                if rel_type_name == 'expresses':
+                    encoded[cassette.uniquename] = 1
+                    component_type_curies = self.get_comp_type_curies(cassette)
+                if assoc_type == 'component_free_text':
+                    # CassetteComponentSlotAnnotationDTO
+                    if self.testing:
+                        mess = "map_cassette_associations: ComponentSlotAnnotation cass:"
+                        mess += f"{cassette_curie} comp:{component_curie} '{rel_type_name}'"
+                        self.log.debug(mess)
+                    symbol = component['symbol']
+                    organism_id = component['organism_id']
+                    taxon_text = self.organism_lookup[organism_id]['full_species_name']
+                    taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
+                    rel_dto = agr_datatypes.CassetteComponentSlotAnnotationDTO(
+                        rel_type_name, symbol, taxon_curie,
+                        taxon_text, pub_curies).dict_export()
+                    cassette.linkmldto.cassette_component_dtos.append(rel_dto)
+                elif assoc_type == 'tool_association':
+                    # CassetteTransgenicToolAssociationDTO
+                    if self.testing:
+                        mess = "map_cassette_associations: TransgenicToolAssociation cass:"
+                        mess += f"{cassette_curie} comp:{component_curie} '{rel_type_name}'"
+                        self.log.debug(mess)
+                    rel_dto = agr_datatypes.CassetteTransgenicToolAssociationDTO(
+                        cassette_curie, component_curie,
+                        pub_curies, False, rel_type_name)
+                    # first_feat_rel.linkmldto = rel_dto
+                    cassette_rel.linkmldto = rel_dto
+                    self.cassette_tool_associations.append(cassette_rel)
+                elif assoc_type == 'genomic_entity_association':
+                    # CassetteGenomicEntityAssociationDTO
+                    if self.testing:
+                        mess = "map_cassette_associations: GenomicEntityAssociation cass:"
+                        mess += f"{cassette_curie} comp:{component_curie} '{rel_type_name}'"
+                        mess += f"{'|'.join(component_type_curies)}"
+                        self.log.debug(mess)
+                    rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
+                        cassette_curie, component_curie,
+                        pub_curies, False, rel_type_name,
+                        component_type_curies)
+                    # first_feat_rel.linkmldto = rel_dto
+                    cassette_rel.linkmldto = rel_dto
+                    self.cassette_genomic_entity_associations.append(cassette_rel)
             if cassette.is_obsolete is True or component['is_obsolete'] is True:
                 self.log.error(f"{cassette_curie} {component_curie} should never be obsolete??")
             counter += 1
-        for key in bad_relationship_count:
-            self.log.error(f'Bad relationship count for {key}: {bad_relationship_count[key]}')
+        for key, count in bad_relationship_count.items():
+            self.log.error(f'Bad relationship count for {key}: {count}')
         self.log.info(f'Generated {counter} cassette-component unique associations.')
+
+        self.express_target_process(encoded)
+
         return
 
     def synthesize_cassette_associations(self):
@@ -340,7 +521,7 @@ class CassetteHandler(FeatureHandler):
         for cassette in self.fb_data_entities.values():
             relevant_cassette_rels = cassette.recall_relationships(
                 self.log, entity_role='subject',
-                rel_types=['has_reg_region', 'tagged_with', 'carries_tool'])
+                rel_types=['has_reg_region', 'tagged_with', 'carries_tool', 'encodes_tool'])
             if relevant_cassette_rels:
                 cassette_counter += 1
             # put the data into cassette_cassette_key with the cassette (FBal) first and the component second
@@ -358,7 +539,6 @@ class CassetteHandler(FeatureHandler):
                     self.cassette_cassette_rels[cassette_cassette_key] = [cassette_rel]
                     component_counter += 1
         self.log.info(f'Found {component_counter} components for {cassette_counter} cassettes.')
-        return
 
     # Elaborate on synthesize_info() for the Handler.
     def synthesize_info(self):

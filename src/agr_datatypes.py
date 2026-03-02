@@ -121,7 +121,7 @@ class CassetteTransgenicToolAssociationDTO(AuditedObjectDTO):
 class CassetteGenomicEntityAssociationDTO(AuditedObjectDTO):
     """CassetteGenomicEntityAssociationDTO class."""
     def __init__(self, cassette_association_subject, cassette_association_object,
-                 pub_curies, obsolete, relation):
+                 pub_curies, obsolete, relation, component_type_curies=None):
         """Create CassetteAssociationDTO for FlyBase object."""
         super().__init__()
         self.cassette_identifier = cassette_association_subject
@@ -129,6 +129,13 @@ class CassetteGenomicEntityAssociationDTO(AuditedObjectDTO):
         self.evidence_curies = pub_curies
         self.obsolete = obsolete
         self.relation_name = relation
+        self.component_type_curies = component_type_curies or []
+
+    def __str__(self):
+        """Nice output."""
+        output = "CassetteGenomicEntityAssociation("
+        output += f"{self.cassette_identifier} {self.genomic_entity_identifier} {self.relation_name} {self.component_type_curies})"
+        return output
 
 
 class CassetteStrAssociationDTO(AuditedObjectDTO):
@@ -348,11 +355,11 @@ class ConstructGenomicEntityAssociationDTO(EvidenceAssociationDTO):
         """
         super().__init__(evidence_curies)
         self.construct_identifier = construct_id
-        self.genomic_entity_relation_name = rel_type
+        self.relation_name = rel_type
         self.genomic_entity_identifier = genomic_id
         # self.evidence_curies = evidence_curies
         self.note_dtos = []
-        self.required_fields.extend(['construct_identifier', 'genomic_entity_relation_name', 'genomic_entity_identifier'])
+        self.required_fields.extend(['construct_identifier', 'relation_name', 'genomic_entity_identifier'])
 
 
 class AnnotationDTO(SingleReferenceAssociationDTO):

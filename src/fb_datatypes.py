@@ -323,6 +323,10 @@ class FBCassette(FBFeature):
         self.has_reg_region = []
         self.tagged_with = []
         self.carries_tool = []
+        self.al_encodes_tool_rels = []  # Indirect "encodes" relationships: a list of allele-to-FBto/FBsf FeatureRelationship objects.
+        self.al_reg_region_rels = []  # Indirect "has_reg_region" relationships: a list of allele-to-FBto/FBsf/FBgn FeatureRelationship objects.
+        self.al_genes = []  # Indirect gene relationships: a list of allele-to-FBgn FeatureRelationship objects.
+        self.prop_data = {'transgenic_product_class': []}  # only store data here for the transgenic_product_class until we need all
 
 
 class FBConstruct(FBFeature):
@@ -506,6 +510,10 @@ class FBRelationship(FBExportEntity):
         self.pubs = []             # Will be list of Pub.pub_ids supporting the relationship.
         self.props_by_type = {}    # Lists of FBProp objects keyed by prop type name.
 
+    def __str__(self):
+        """Nice str rep for FBRelationship."""
+        return str(self.chado_obj)
+
 
 class FBCVTermAnnotation(FBExportEntity):
     """FBCVTermAnnotation class."""
@@ -637,3 +645,7 @@ class FBProp(object):
         """
         self.chado_obj = chado_obj    # The prop object: e.g., Featureprop, Strainprop, FeatureRelationshipprop, etc.
         self.pubs = []                # Will be a list of pub_ids.
+
+    def __str__(self):
+        """Print nicely."""
+        return self.chado_obj
