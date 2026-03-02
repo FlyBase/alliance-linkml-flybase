@@ -355,11 +355,11 @@ class ConstructGenomicEntityAssociationDTO(EvidenceAssociationDTO):
         """
         super().__init__(evidence_curies)
         self.construct_identifier = construct_id
-        self.genomic_entity_relation_name = rel_type
+        self.relation_name = rel_type
         self.genomic_entity_identifier = genomic_id
         # self.evidence_curies = evidence_curies
         self.note_dtos = []
-        self.required_fields.extend(['construct_identifier', 'genomic_entity_relation_name', 'genomic_entity_identifier'])
+        self.required_fields.extend(['construct_identifier', 'relation_name', 'genomic_entity_identifier'])
 
 
 class AnnotationDTO(SingleReferenceAssociationDTO):
