@@ -381,6 +381,7 @@ class FBStrain(FBDataEntity):
         # Primary FB chado data.
         self.db_primary_id = chado_obj.strain_id
         # Processed FB data.
+        self.prop_data = {}          # set to no props to keep for general features.
 
 
 class FBGenotype(FBDataEntity):
