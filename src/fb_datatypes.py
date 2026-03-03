@@ -276,6 +276,7 @@ class FBFeature(FBDataEntity):
         # Processed FB data.
         self.curr_anno_id = None     # Will be current annotation ID for the gene, transcript or protein (str).
         self.alt_anno_ids = []       # Will be list of non-current annotation IDs for the gene, transcript or protein (str).
+        self.prop_data = {}          # set to no props to keep for general features.
 
 
 class FBAberration(FBFeature):
@@ -380,6 +381,7 @@ class FBStrain(FBDataEntity):
         # Primary FB chado data.
         self.db_primary_id = chado_obj.strain_id
         # Processed FB data.
+        self.prop_data = {}          # set to no props to keep for general features.
 
 
 class FBGenotype(FBDataEntity):

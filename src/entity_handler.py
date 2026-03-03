@@ -572,22 +572,25 @@ class PrimaryEntityHandler(DataHandler):
                 filter(*filters).\
                 distinct()
         cvterm_prop_counter = 0
+        cvterm_rel_name = f'{chado_type}_cvterm'
         for cvtermprop_result in cvtermprop_results:
             entity_cvterm_id = getattr(cvtermprop_result, f'{chado_type}_cvterm_id')
             entity_prop_type_name = self.cvterm_lookup[cvtermprop_result.type_id]['name']
-            entity_id = cvtermprop_result.feature_cvterm.feature.feature_id
+            cvterm_obj = getattr(cvtermprop_result, cvterm_rel_name)
+            entity_obj = getattr(cvterm_obj, chado_type)
+            entity_id = getattr(entity_obj, f'{chado_type}_id')
             if entity_id in self.ignore_list:
                 continue
             elif entity_id not in self.fb_data_entities:
                 if not self.testing:  # test sets have some none fb_data BIUT real data should not
-                    self.log.error(f"Entity_id:{entity_id} not in list of data_entities feature {cvtermprop_result.feature_cvterm.feature}")
+                    self.log.error(f"Entity_id:{entity_id} not in list of data_entities {chado_type} {entity_obj}")
                     self.log.error(f"Ignore_list is {self.ignore_list}")
                 continue
             if entity_prop_type_name in self.fb_data_entities[entity_id].prop_data:  # only store those we are interested in
-                prop_data = {'name': cvtermprop_result.feature_cvterm.cvterm.name,
-                             'type': cvtermprop_result.feature_cvterm.cvterm.cv.name,
-                             'pub': cvtermprop_result.feature_cvterm.pub.uniquename,
-                             'accession': cvtermprop_result.feature_cvterm.cvterm.dbxref.accession}
+                prop_data = {'name': cvterm_obj.cvterm.name,
+                             'type': cvterm_obj.cvterm.cv.name,
+                             'pub': cvterm_obj.pub.uniquename,
+                             'accession': cvterm_obj.cvterm.dbxref.accession}
                 self.fb_data_entities[entity_id].prop_data[entity_prop_type_name].append(prop_data)
             if entity_prop_type_name in cvterm_annotation_dict[entity_cvterm_id].props_by_type.keys():
                 cvterm_annotation_dict[entity_cvterm_id].props_by_type[entity_prop_type_name].append(fb_datatypes.FBProp(cvtermprop_result))
