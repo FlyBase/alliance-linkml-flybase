@@ -276,6 +276,7 @@ class FBFeature(FBDataEntity):
         # Processed FB data.
         self.curr_anno_id = None     # Will be current annotation ID for the gene, transcript or protein (str).
         self.alt_anno_ids = []       # Will be list of non-current annotation IDs for the gene, transcript or protein (str).
+        self.prop_data = {}          # set to no props to keep for general features.
 
 
 class FBAberration(FBFeature):
@@ -306,7 +307,6 @@ class FBAllele(FBFeature):
         self.allele_of_internal_gene = False    # Change to True if the allele is related to an internal-type gene (e.g., origin of replication).
         self.ignore_atypical_name = False       # Change to True if curator has specified that an unconventional name is intentional (and ok).
         self.maps_to_feature_id = None          # The feature_id for the single FBti insertion or FBab aberration to be reported in place of the allele.
-        self.prop_data = {}                     # None needed for Alleles, so no initial settings.
 
 
 class FBBalancer(FBFeature):
