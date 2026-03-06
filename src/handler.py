@@ -113,6 +113,7 @@ class DataHandler(object):
         'NCBI_Gene': 'default',
         'RNAcentral': 'default',
         'UniProtKB': 'default',
+        'UniProtKB/GCRP': 'default',
     }
 
     # Useful regexes.
