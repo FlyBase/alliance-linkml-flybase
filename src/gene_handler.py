@@ -168,7 +168,7 @@ class GeneHandler(FeatureHandler):
                 free_text = gene_snapshots[0].chado_obj.value.replace('@', '')
                 pub_curies = ['FB:FBrf0232436']
                 snapshot_note_dto = agr_datatypes.NoteDTO(note_type_name, free_text, pub_curies).dict_export()
-                gene.linkmldto.related_notes.append(snapshot_note_dto)
+                gene.linkmldto.note_dtos.append(snapshot_note_dto)
             elif len(gene_snapshots) > 1:
                 self.log.warning(f'{gene} has many gene snapshots.')
         return
@@ -246,7 +246,7 @@ class GeneHandler(FeatureHandler):
         # self.map_pubs()    # Suppress until LinkML Gene gets reference_curies slot.
         self.map_timestamps()
         self.map_secondary_ids('gene_secondary_id_dtos')
-        # self.map_gene_snapshot()
+        self.map_gene_snapshot()
         self.map_gene_type()
         self.map_gene_panther_xrefs()
         self.map_anno_ids_to_secondary_ids('gene_secondary_id_dtos')
