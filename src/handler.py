@@ -95,7 +95,7 @@ class DataHandler(object):
         'RNAcentral': 'RNAcentral',
         'UniProt/Swiss-Prot': 'UniProtKB',
         'UniProt/TrEMBL': 'UniProtKB',
-        'UniProt/GCRP': 'UniProt/GCRP',
+        'UniProt/GCRP': 'UniProtKB',
         'UniProtKB': 'UniProtKB',
         'SGD': 'SGD',
         'WormBase': 'WB',
@@ -113,7 +113,6 @@ class DataHandler(object):
         'NCBI_Gene': 'default',
         'RNAcentral': 'default',
         'UniProtKB': 'default',
-        'UniProt/GCRP': 'default',
     }
 
     # Useful regexes.
