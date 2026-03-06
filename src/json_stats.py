@@ -27,5 +27,5 @@ for key, value in data.items():
         print(f"Key: '{key}', Type: {type(value).__name__}, Item Count: {count}")
     else:
         # For primitive types (string, number, boolean, null)
-        count = 1 # Or some other appropriate value if you want to count individual items differently
+        count = 1  # Or some other appropriate value if you want to count individual items differently
         print(f"Key: '{key}', Type: {type(value).__name__}, Item Count: {count} (primitive value)")
