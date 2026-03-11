@@ -188,6 +188,19 @@ class GeneHandler(FeatureHandler):
             gene.linkmldto.cross_reference_dtos.append(xref_dto)
         return
 
+    def add_direct_fb_links(self):
+        """Add the direct links to FB subpages."""
+        page_areas = ["gene/expression",
+                      "gene/expression_images",
+                      "gene/references",
+                      "gene/phenotypes"]
+        prefix = 'FB'
+        for gene in self.fb_data_entities.values():
+            curie = f'{prefix}:{gene.uniquename}'
+            for page_area in (page_areas):
+                xref_dto = agr_datatypes.CrossReferenceDTO(prefix, curie, page_area, curie).dict_export()
+                gene.linkmldto.cross_reference_dtos.append(xref_dto)
+
     def flag_unexportable_genes(self):
         """Flag unexportable genes."""
         self.log.info('Flag unexportable genes.')
@@ -248,6 +261,7 @@ class GeneHandler(FeatureHandler):
         self.map_secondary_ids('gene_secondary_id_dtos')
         self.map_gene_snapshot()
         self.map_gene_type()
+        self.add_direct_fb_links()
         self.map_gene_panther_xrefs()
         self.map_anno_ids_to_secondary_ids('gene_secondary_id_dtos')
         self.flag_internal_genes()
