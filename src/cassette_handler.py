@@ -80,6 +80,8 @@ class CassetteHandler(FeatureHandler):
         'FBal0028848': 'Adh[LsBbbf2]',  # examples of using alleleof to get FBrf
         'FBal0033313': 'Abd-B[Fab7.tHa',
         'FBal0104158': r'Ecol\lacZ[ftz.GFP]',  # Multiple encodes (for now)
+        'FBal0191435': r'Avic\GFP[SCAT3.UAS]',  # uses_tool (multiple?)
+        'FBal0241325': r'SREBP[GAL4::VP16',     # uses tool
     }
 
     cassette_prop_to_note_mapping = {
