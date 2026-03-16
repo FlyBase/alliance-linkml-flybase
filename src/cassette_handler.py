@@ -263,6 +263,10 @@ class CassetteHandler(FeatureHandler):
         if data_key in fb_data_entity.prop_data.keys():
             for prop in fb_data_entity.prop_data[data_key]:
                 component_type_curies.append(f"{prop['type']}:{prop['accession']}")
+        data_key = 'tool_uses'
+        if data_key in fb_data_entity.prop_data.keys():
+            for prop in fb_data_entity.prop_data[data_key]:
+                print(f"BOB: {prop}")
         return component_type_curies
 
     # Elaborate on query_chado_and_export() for the CassetteHandler.
