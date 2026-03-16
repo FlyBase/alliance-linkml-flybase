@@ -586,6 +586,7 @@ class PrimaryEntityHandler(DataHandler):
                     self.log.error(f"Entity_id:{entity_id} not in list of data_entities {chado_type} {entity_obj}")
                     self.log.error(f"Ignore_list is {self.ignore_list}")
                 continue
+
             if entity_prop_type_name in self.fb_data_entities[entity_id].prop_data:  # only store those we are interested in
                 prop_data = {'name': cvterm_obj.cvterm.name,
                              'type': cvterm_obj.cvterm.cv.name,

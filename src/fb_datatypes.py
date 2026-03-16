@@ -327,7 +327,8 @@ class FBCassette(FBFeature):
         self.al_encodes_tool_rels = []  # Indirect "encodes" relationships: a list of allele-to-FBto/FBsf FeatureRelationship objects.
         self.al_reg_region_rels = []  # Indirect "has_reg_region" relationships: a list of allele-to-FBto/FBsf/FBgn FeatureRelationship objects.
         self.al_genes = []  # Indirect gene relationships: a list of allele-to-FBgn FeatureRelationship objects.
-        self.prop_data = {'transgenic_product_class': []}  # only store data here for the transgenic_product_class until we need all
+        self.prop_data = {'transgenic_product_class': [],
+                          'tool_uses': []}  # only store data here for the transgenic_product_class until we need all
 
 
 class FBConstruct(FBFeature):
