@@ -178,6 +178,12 @@ class AlleleHandler(MetaAlleleHandler):
         'FBal0137561': r'Crei\I-CreI[hs.PR]',  #
         'FBal0404843': r'Hsap\CGA[UAS.cLa]',  #
         'FBal0401141': r'Zzzz\VHH[deGradFP.UAS]',  #
+        'FBal0051685': r'csw[CS.hs.2sev]',  # CASSETTES Has 2 props
+        'FBal0028848': 'Adh[LsBbbf2]',  # examples of using alleleof to get FBrf
+        'FBal0033313': 'Abd-B[Fab7.tHa',
+        'FBal0104158': r'Ecol\lacZ[ftz.GFP]',  # Multiple encodes (for now)
+        'FBal0191435': r'Avic\GFP[SCAT3.UAS]',  # uses_tool (multiple?)
+        'FBal0241325': r'SREBP[GAL4::VP16',  # uses tool
     }
 
     # Additional export sets.
