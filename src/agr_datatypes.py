@@ -150,12 +150,15 @@ class CassetteStrAssociationDTO(AuditedObjectDTO):
         self.obsolete = obsolete
         self.relation_name = relation
 
+
 class CassetteUseSlotAnnotationDTO(AuditedObjectDTO):
     """CassetteUseSlotAnnotationDTO class."""
     def __init__(self, pub_curies, cvterm):
+        """Create CassetteUseSlotAnnotationDTO for FlyBase object."""
         super().__init__()
         self.use_curies = cvterm
         self.evidence = pub_curies
+
 
 class GeneDTO(GenomicEntityDTO):
     """GeneDTO class."""
