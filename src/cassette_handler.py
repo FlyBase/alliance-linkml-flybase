@@ -258,23 +258,17 @@ class CassetteHandler(FeatureHandler):
             #            type = 'genomic_entity_association'
         return assoc_type
 
-
-
-
     def add_tool_uses(self):
         data_key = 'tool_uses'
         for cassette in self.fb_data_entities.values():
             if data_key in cassette.prop_data.keys():
                 for prop in cassette.prop_data[data_key]:
+                    print(f"BOB: {prop}")
                     cvterm = prop['name']
                     pub_curies = ['pub']
                     slot_dto = agr_datatypes.CassetteUseSlotAnnotationDTO(
                         pub_curies, cvterm).dict_export()
                     cassette.linkmldto.cassette_uses_dtos.append(slot_dto)
-                    print(f"BOB: {prop}")
-
-
-
 
     def get_comp_type_curies(self, fb_data_entity):
         """Get component_type_curies."""
