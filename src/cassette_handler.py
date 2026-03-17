@@ -263,12 +263,16 @@ class CassetteHandler(FeatureHandler):
         data_key = 'tool_uses'
         for cassette in self.fb_data_entities.values():
             if data_key in cassette.prop_data.keys():
+                pub_list = []
+                curie_list = []
                 for prop in cassette.prop_data[data_key]:
+                    pub_list.append(prop['pub'])
+                    curie_list.append(f'FBcv:{prop["accession"]}')
                     print(f"BOB: {prop}")
-                    cvterm = prop['name']
-                    pub_curies = self.lookup_pub_curies(prop['pub'])
+                if pub_list:
+                    pub_curies = self.lookup_pub_curies(pub_list)
                     slot_dto = agr_datatypes.CassetteUseSlotAnnotationDTO(
-                        pub_curies, cvterm).dict_export()
+                        pub_curies, curie_list).dict_export()
                     cassette.linkmldto.cassette_use_dtos.append(slot_dto)
 
     def get_comp_type_curies(self, fb_data_entity):
