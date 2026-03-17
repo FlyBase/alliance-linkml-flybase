@@ -152,10 +152,11 @@ class CassetteStrAssociationDTO(AuditedObjectDTO):
 
 class CassetteUseSlotAnnotationDTO(AuditedObjectDTO):
     """CassetteUseSlotAnnotationDTO class."""
-    def __init__(self, pub_curies, term)
+    def __init__(self, pub_curies, cvterm):
         super().__init__()
-        self.cassette_identifier = cassette_association_subject
+        self.use_curies = cvterm
         self.evidence = pub_curies
+
 class GeneDTO(GenomicEntityDTO):
     """GeneDTO class."""
     def __init__(self):
