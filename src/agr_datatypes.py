@@ -157,7 +157,7 @@ class CassetteUseSlotAnnotationDTO(AuditedObjectDTO):
         """Create CassetteUseSlotAnnotationDTO for FlyBase object."""
         super().__init__()
         self.use_curies = cvterm
-        self.evidence = pub_curies
+        self.evidence_curies = pub_curies
 
 
 class GeneDTO(GenomicEntityDTO):

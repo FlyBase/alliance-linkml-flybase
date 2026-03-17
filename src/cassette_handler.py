@@ -266,7 +266,7 @@ class CassetteHandler(FeatureHandler):
                 for prop in cassette.prop_data[data_key]:
                     print(f"BOB: {prop}")
                     cvterm = prop['name']
-                    pub_curies = ['pub']
+                    pub_curies = self.lookup_pub_curies(prop['pub'])
                     slot_dto = agr_datatypes.CassetteUseSlotAnnotationDTO(
                         pub_curies, cvterm).dict_export()
                     cassette.linkmldto.cassette_use_dtos.append(slot_dto)
