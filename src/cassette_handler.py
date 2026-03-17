@@ -191,7 +191,7 @@ class CassetteHandler(FeatureHandler):
         super().map_fb_data_to_alliance()
         self.map_cassette_basic()
         self.map_synonyms()
-        self.add_tool_uses()
+        self.map_tool_uses()
         self.map_data_provider_dto()
         self.map_entity_props_to_notes('cassette_prop_to_note_mapping')
         # self.map_xrefs()
@@ -259,20 +259,20 @@ class CassetteHandler(FeatureHandler):
             #            type = 'genomic_entity_association'
         return assoc_type
 
-    def add_tool_uses(self):
+    def map_tool_uses(self):
+        """Map tools_uses."""
         data_key = 'tool_uses'
         for cassette in self.fb_data_entities.values():
             if data_key in cassette.prop_data.keys():
                 pub_list = []
                 curie_list = []
                 for prop in cassette.prop_data[data_key]:
-                    pub_list.append(prop['pub'])
+                    pub_list.append(f"FB:{prop['pub']}")
                     curie_list.append(f'FBcv:{prop["accession"]}')
-                    print(f"BOB: {prop}")
                 if pub_list:
-                    pub_curies = self.lookup_pub_curies(pub_list)
+                    # pub_curies = self.lookup_pub_curies(pub_list)
                     slot_dto = agr_datatypes.CassetteUseSlotAnnotationDTO(
-                        pub_curies, curie_list).dict_export()
+                        pub_list, curie_list).dict_export()
                     cassette.linkmldto.cassette_use_dtos.append(slot_dto)
 
     def get_comp_type_curies(self, fb_data_entity):
