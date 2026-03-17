@@ -269,7 +269,7 @@ class CassetteHandler(FeatureHandler):
                     pub_curies = ['pub']
                     slot_dto = agr_datatypes.CassetteUseSlotAnnotationDTO(
                         pub_curies, cvterm).dict_export()
-                    cassette.linkmldto.cassette_uses_dtos.append(slot_dto)
+                    cassette.linkmldto.cassette_use_dtos.append(slot_dto)
 
     def get_comp_type_curies(self, fb_data_entity):
         """Get component_type_curies."""
