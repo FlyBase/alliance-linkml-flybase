@@ -191,6 +191,7 @@ class CassetteHandler(FeatureHandler):
         super().map_fb_data_to_alliance()
         self.map_cassette_basic()
         self.map_synonyms()
+        self.add_tool_uses()
         self.map_data_provider_dto()
         self.map_entity_props_to_notes('cassette_prop_to_note_mapping')
         # self.map_xrefs()
