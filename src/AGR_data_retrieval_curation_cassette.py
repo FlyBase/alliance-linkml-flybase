@@ -141,6 +141,17 @@ def generate_tsv_file(export_dict, filename):
                         evidence = ""
                     outfile.write(f"{primary}\t{symbol}\t{relation}\t{taxon}\t{evidence}\n")
 
+    filename = filename.replace('_tool_uses.tsv', '_component_slots.tsv')
+    with open(filename, 'w') as outfile:
+        outfile.write("# Primary FBid\tevidence\ttool_uses\n")
+        for entity_dict in export_dict["cassette_ingest_set"]:
+            primary = entity_dict["primary_external_id"]
+            if "cassette_use_dtos" in entity_dict:
+                for comp in entity_dict["cassette_use_dtos"]:
+                    evidence = '|'.join(comp["evidence_curies"])
+                    tools = '|'.join(comp["use_curies"])
+                    outfile.write(f"{primary}\t{tools}\t{evidence}\n")
+
 
 def generate_association_tsv_file(export_dict, ingest_name, filename):
     filename = filename.replace('.tsv', '_associations.tsv')
