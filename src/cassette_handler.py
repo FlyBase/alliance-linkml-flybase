@@ -258,6 +258,24 @@ class CassetteHandler(FeatureHandler):
             #            type = 'genomic_entity_association'
         return assoc_type
 
+
+
+
+    def add_tool_uses(self):
+        data_key = 'tool_uses'
+        for cassette in self.fb_data_entities.values():
+            if data_key in cassette.prop_data.keys():
+                for prop in cassette.prop_data[data_key]:
+                    cvterm = prop['name']
+                    pub_curies = ['pub']
+                    slot_dto = agr_datatypes.CassetteUseSlotAnnotationDTO(
+                        pub_curies, cvterm).dict_export()
+                    cassette.linkmldto.cassette_uses_dtos.append(slot_dto)
+                    print(f"BOB: {prop}")
+
+
+
+
     def get_comp_type_curies(self, fb_data_entity):
         """Get component_type_curies."""
         component_type_curies = []
@@ -265,10 +283,6 @@ class CassetteHandler(FeatureHandler):
         if data_key in fb_data_entity.prop_data.keys():
             for prop in fb_data_entity.prop_data[data_key]:
                 component_type_curies.append(f"{prop['type']}:{prop['accession']}")
-        data_key = 'tool_uses'
-        if data_key in fb_data_entity.prop_data.keys():
-            for prop in fb_data_entity.prop_data[data_key]:
-                print(f"BOB: {prop}")
         return component_type_curies
 
     # Elaborate on query_chado_and_export() for the CassetteHandler.
@@ -453,7 +467,6 @@ class CassetteHandler(FeatureHandler):
             pub_curies = self.lookup_pub_curies(all_pub_ids)
 
             for cassette_rel in cassette_cassette_rels:
-                self.log.debug(f'BOB: {cassette_curie} {component_curie} {cassette_rel.chado_obj.type.name}')
                 # rel_type_name = cassette_cassette_rels[0].chado_obj.type.name
                 rel_type_name = cassette_rel.chado_obj.type.name
                 if rel_type_name in map_relationship:

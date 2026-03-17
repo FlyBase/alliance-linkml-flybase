@@ -150,7 +150,12 @@ class CassetteStrAssociationDTO(AuditedObjectDTO):
         self.obsolete = obsolete
         self.relation_name = relation
 
-
+class CassetteUseSlotAnnotationDTO(AuditedObjectDTO):
+    """CassetteUseSlotAnnotationDTO class."""
+    def __init__(self, pub_curies, term)
+        super().__init__()
+        self.cassette_identifier = cassette_association_subject
+        self.evidence = pub_curies
 class GeneDTO(GenomicEntityDTO):
     """GeneDTO class."""
     def __init__(self):
@@ -215,6 +220,7 @@ class CassetteDTO(ReagentDTO):
         self.cassette_synonym_dtos = []      # Many NameSlotAnnotationDTO objects.
         self.note_dtos = []                         # Will be NoteDTO objects.
         self.cassette_component_dtos = []    # CassetteComponentSlotAnnotationDTOs.
+        self.cassette_uses_dtos = []
         self.required_fields.extend(['cassette_symbol_dto'])
         self.cassette_use_dtos = []
         self.reference_curies = []
