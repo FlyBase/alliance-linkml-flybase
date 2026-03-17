@@ -141,7 +141,7 @@ def generate_tsv_file(export_dict, filename):
                         evidence = ""
                     outfile.write(f"{primary}\t{symbol}\t{relation}\t{taxon}\t{evidence}\n")
 
-    filename = filename.replace('_tool_uses.tsv', '_component_slots.tsv')
+    filename = filename.replace('_component_slots.tsv', '_tool_uses.tsv')
     with open(filename, 'w') as outfile:
         outfile.write("# Primary FBid\tevidence\ttool_uses\n")
         for entity_dict in export_dict["cassette_ingest_set"]:
