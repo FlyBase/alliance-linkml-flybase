@@ -151,6 +151,15 @@ class CassetteStrAssociationDTO(AuditedObjectDTO):
         self.relation_name = relation
 
 
+class CassetteUseSlotAnnotationDTO(AuditedObjectDTO):
+    """CassetteUseSlotAnnotationDTO class."""
+    def __init__(self, pub_curies, cvterm):
+        """Create CassetteUseSlotAnnotationDTO for FlyBase object."""
+        super().__init__()
+        self.use_curies = cvterm
+        self.evidence_curies = pub_curies
+
+
 class GeneDTO(GenomicEntityDTO):
     """GeneDTO class."""
     def __init__(self):
@@ -215,6 +224,7 @@ class CassetteDTO(ReagentDTO):
         self.cassette_synonym_dtos = []      # Many NameSlotAnnotationDTO objects.
         self.note_dtos = []                         # Will be NoteDTO objects.
         self.cassette_component_dtos = []    # CassetteComponentSlotAnnotationDTOs.
+        self.cassette_use_dtos = []
         self.required_fields.extend(['cassette_symbol_dto'])
         self.cassette_use_dtos = []
         self.reference_curies = []

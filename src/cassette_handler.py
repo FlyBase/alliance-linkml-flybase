@@ -80,6 +80,8 @@ class CassetteHandler(FeatureHandler):
         'FBal0028848': 'Adh[LsBbbf2]',  # examples of using alleleof to get FBrf
         'FBal0033313': 'Abd-B[Fab7.tHa',
         'FBal0104158': r'Ecol\lacZ[ftz.GFP]',  # Multiple encodes (for now)
+        'FBal0191435': r'Avic\GFP[SCAT3.UAS]',  # uses_tool (multiple?)
+        'FBal0241325': r'SREBP[GAL4::VP16',     # uses tool
     }
 
     cassette_prop_to_note_mapping = {
@@ -189,6 +191,7 @@ class CassetteHandler(FeatureHandler):
         super().map_fb_data_to_alliance()
         self.map_cassette_basic()
         self.map_synonyms()
+        self.map_tool_uses()
         self.map_data_provider_dto()
         self.map_entity_props_to_notes('cassette_prop_to_note_mapping')
         # self.map_xrefs()
@@ -255,6 +258,21 @@ class CassetteHandler(FeatureHandler):
             #        unless the gene is being submitted as 'internal':
             #            type = 'genomic_entity_association'
         return assoc_type
+
+    def map_tool_uses(self):
+        """Map tools_uses."""
+        data_key = 'tool_uses'
+        for cassette in self.fb_data_entities.values():
+            if data_key in cassette.prop_data.keys():
+                pub_list = set()
+                curie_list = []
+                for prop in cassette.prop_data[data_key]:
+                    pub_list.add(f"FB:{prop['pub']}")
+                    curie_list.append(f'FBcv:{prop["accession"]}')
+                if pub_list:
+                    slot_dto = agr_datatypes.CassetteUseSlotAnnotationDTO(
+                        list(pub_list), curie_list).dict_export()
+                    cassette.linkmldto.cassette_use_dtos.append(slot_dto)
 
     def get_comp_type_curies(self, fb_data_entity):
         """Get component_type_curies."""
@@ -447,7 +465,6 @@ class CassetteHandler(FeatureHandler):
             pub_curies = self.lookup_pub_curies(all_pub_ids)
 
             for cassette_rel in cassette_cassette_rels:
-                self.log.debug(f'BOB: {cassette_curie} {component_curie} {cassette_rel.chado_obj.type.name}')
                 # rel_type_name = cassette_cassette_rels[0].chado_obj.type.name
                 rel_type_name = cassette_rel.chado_obj.type.name
                 if rel_type_name in map_relationship:
