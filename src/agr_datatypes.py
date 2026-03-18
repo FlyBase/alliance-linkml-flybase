@@ -372,6 +372,25 @@ class ConstructGenomicEntityAssociationDTO(EvidenceAssociationDTO):
         self.required_fields.extend(['construct_identifier', 'relation_name', 'genomic_entity_identifier'])
 
 
+class ConstructCassetteAssociationDTO(EvidenceAssociationDTO):
+    """ConstructCassetteAssociationDTO class."""
+    def __init__(self, construct_id: str, rel_type: str, cassette_id: str, evidence_curies: list):
+        """Create ConstructCassetteAssociationDTO for FlyBase object.
+
+        Args:
+            construct_id (str): The FB:FBtp curie for the construct.
+            rel_type (str): A relation name: has_selectable_marker or has_transcriptional_unit.
+            cassette_id (str): The FB:FBal curie for the cassette.
+            evidence_curies (list): A list of FB:FBrf or PMID:### curies.
+
+        """
+        super().__init__(evidence_curies)
+        self.construct_identifier = construct_id
+        self.relation_name = rel_type
+        self.cassette_identifier = cassette_id
+        self.required_fields.extend(['construct_identifier', 'relation_name', 'cassette_identifier'])
+
+
 class AnnotationDTO(SingleReferenceAssociationDTO):
     """AnnotationDTO class."""
     def __init__(self, evidence_curie):

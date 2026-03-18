@@ -60,6 +60,7 @@ class ConstructHandler(FeatureHandler):
 
     # Additional set for export added to the handler.
     construct_associations = []    # Will be a list of FBExportEntity objects (relationships), map to ConstructGenomicEntityAssociationDTO.
+    construct_cassette_associations = []    # Will be a list of FBExportEntity objects, map to ConstructCassetteAssociationDTO.
 
     # Elaborate on get_general_data() for the ConstructHandler.
     def get_general_data(self, session):
@@ -213,6 +214,7 @@ class ConstructHandler(FeatureHandler):
         self.get_entity_xrefs(session)
         self.get_entity_timestamps(session)
         self.get_allele_encoded_tools(session)
+        # marked_with rels already captured by get_entity_relationships(session, 'subject') above.
         self.get_allele_reg_regions(session)
         return
 
@@ -488,6 +490,36 @@ class ConstructHandler(FeatureHandler):
         self.log.info(f'Mapped construct_relationships to {counter} ConstructGenomicEntityAssociationDTOs.')
         return
 
+    def map_construct_cassette_associations(self):
+        """Map construct marked_with cassette relations to ConstructCassetteAssociationDTO."""
+        self.log.info('Map construct marked_with cassette associations.')
+        counter = 0
+        for construct in self.fb_data_entities.values():
+            marked_with_rels = construct.recall_relationships(
+                self.log, entity_role='subject', rel_types='marked_with', rel_entity_types='allele')
+            for rel in marked_with_rels:
+                cassette_feature_id = rel.chado_obj.object_id
+                cassette_uniquename = self.feature_lookup[cassette_feature_id]['uniquename']
+                cons_curie = f'FB:{construct.uniquename}'
+                cassette_curie = f'FB:{cassette_uniquename}'
+                pub_curies = self.lookup_pub_curies(rel.pubs)
+                # FBal0345196 is a special case per FTA-139.
+                if cassette_uniquename == 'FBal0345196':
+                    relation_name = 'has_transcriptional_unit'
+                else:
+                    relation_name = 'has_selectable_marker'
+                fb_rel = fb_datatypes.FBExportEntity()
+                rel_dto = agr_datatypes.ConstructCassetteAssociationDTO(
+                    cons_curie, relation_name, cassette_curie, pub_curies)
+                if construct.is_obsolete is True or self.feature_lookup[cassette_feature_id]['is_obsolete'] is True:
+                    rel_dto.obsolete = True
+                    rel_dto.internal = True
+                fb_rel.linkmldto = rel_dto
+                self.construct_cassette_associations.append(fb_rel)
+                counter += 1
+        self.log.info(f'Mapped {counter} ConstructCassetteAssociationDTOs.')
+        return
+
     # Elaborate on map_fb_data_to_alliance() for the ConstructHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the ConstructHandler."""
@@ -506,6 +538,8 @@ class ConstructHandler(FeatureHandler):
         self.flag_internal_fb_entities('fb_data_entities')
         self.map_construct_genomic_associations()
         self.flag_internal_fb_entities('construct_associations')
+        self.map_construct_cassette_associations()
+        self.flag_internal_fb_entities('construct_cassette_associations')
         return
 
     # Elaborate on query_chado_and_export() for the ConstructHandler.
@@ -514,4 +548,6 @@ class ConstructHandler(FeatureHandler):
         super().query_chado_and_export(session)
         self.flag_unexportable_entities(self.construct_associations, 'construct_genomic_entity_association_ingest_set')
         self.generate_export_dict(self.construct_associations, 'construct_genomic_entity_association_ingest_set')
+        self.flag_unexportable_entities(self.construct_cassette_associations, 'construct_cassette_association_ingest_set')
+        self.generate_export_dict(self.construct_cassette_associations, 'construct_cassette_association_ingest_set')
         return
