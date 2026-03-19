@@ -113,21 +113,9 @@ def main():
         if len(association_export_dict['construct_genomic_entity_association_ingest_set']) == 0:
             log.error('The "construct_genomic_entity_association_ingest_set" is unexpectedly empty.')
             raise ValueError('The "construct_genomic_entity_association_ingest_set" is unexpectedly empty.')
-        generate_export_file(association_export_dict, log, association_output_filename)
-
-        # Export the construct-cassette associations to a separate file.
-        cassette_assoc_output_filename = output_filename.replace('construct', 'construct_cassette_association')
-        cassette_assoc_export_dict = {
-            'linkml_version': linkml_release,
-            'alliance_member_release_version': database_release,
-        }
-        cassette_assoc_export_dict['construct_cassette_association_ingest_set'] = \
+        association_export_dict['construct_cassette_association_ingest_set'] = \
             cons_handler.export_data['construct_cassette_association_ingest_set']
-        if len(cassette_assoc_export_dict['construct_cassette_association_ingest_set']) == 0:
-            # Warning, not error: test set may lack marked_with relationships.
-            log.warning('The "construct_cassette_association_ingest_set" is empty.')
-        else:
-            generate_export_file(cassette_assoc_export_dict, log, cassette_assoc_output_filename)
+        generate_export_file(association_export_dict, log, association_output_filename)
 
     log.info('Ended main function.\n')
 
