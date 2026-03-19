@@ -18,7 +18,7 @@ from harvdev_utils.reporting import (
     Cvterm, Feature, FeatureRelationship, FeatureRelationshipPub,
     Featureprop, FeaturepropPub
 )
-
+from os import getenv
 
 class ConstructHandler(FeatureHandler):
     """This object gets, synthesizes and filters construct data for export."""
@@ -58,6 +58,9 @@ class ConstructHandler(FeatureHandler):
         'FBtp0000463': 'P{UAS-MAPT.A}',                           # Expresses Human MAPT (HGNC:6893).
         'FBtp0150381': 'PBac{UAS-SARS-CoV-2-nsp13.B}',            # Expresses SARS-CoV-2 nsp13 (REFSEQ:YP_009725308).
         'FBtp0132292': 'P{U6:2-scw.flySAM2.0}',                   # Exception with `has_transcriptional_unit` as maps to 'FBal0345196'
+        'FBtp0001493': 'P{ry1-Delta547}',                         # has_transcriptional_unit
+        'FBtp0001458': 'P{SP[c.Yp1.hs]}',
+        'FBtp0000904': 'P{SxlcF1}',
     }
 
     # Additional set for export added to the handler.
@@ -244,7 +247,12 @@ class ConstructHandler(FeatureHandler):
         self.get_allele_encoded_tools(session)
         # marked_with rels already captured by get_entity_relationships(session, 'subject') above.
         self.get_allele_reg_regions(session)
-        self.get_allele_molecular_info_pubs(session)
+
+        # Because the Alliance is not yet abe to handle cassettes we do not want to add these
+        # associations. For testing set the env ADD_CASS_TO_CONSTRUCT which will then do this
+        dump_cass_assoc = getenv('ADD_CASS_TO_CONSTRUCT', None)
+        if dump_cass_assoc and dump_cass_assoc == 'YES':
+            self.get_allele_molecular_info_pubs(session)
         return
 
     # Add methods to be run by synthesize_info() below.
