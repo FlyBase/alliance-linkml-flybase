@@ -22,12 +22,14 @@ Notes:
 """
 
 import argparse
+import os
+from os import getenv
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
 from construct_handler import ConstructHandler
 from utils import export_chado_data, generate_export_file
-import os
 
 # Data types handled by this script.
 REPORT_LABEL = 'construct_curation'
@@ -134,8 +136,14 @@ def main():
         if len(association_export_dict['construct_genomic_entity_association_ingest_set']) == 0:
             log.error('The "construct_genomic_entity_association_ingest_set" is unexpectedly empty.')
             raise ValueError('The "construct_genomic_entity_association_ingest_set" is unexpectedly empty.')
-        association_export_dict['construct_cassette_association_ingest_set'] = \
-            cons_handler.export_data['construct_cassette_association_ingest_set']
+
+        # Because the Alliance is not yet abe to handle cassettes we do not want to add these
+        # associations. For testing set the env ADD_CASS_TO_CONSTRUCT which will then do this
+        dump_cass_assoc = getenv('ADD_CASS_TO_CONSTRUCT', None)
+        if dump_cass_assoc and dump_cass_assoc == 'YES':
+            association_export_dict['construct_cassette_association_ingest_set'] = \
+                cons_handler.export_data['construct_cassette_association_ingest_set']
+
         generate_export_file(association_export_dict, log, association_output_filename)
 
         # Generate TSV files for each association type.
