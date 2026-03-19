@@ -27,6 +27,7 @@ from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
 from construct_handler import ConstructHandler
 from utils import export_chado_data, generate_export_file
+import os
 
 # Data types handled by this script.
 REPORT_LABEL = 'construct_curation'
@@ -70,6 +71,26 @@ if reference_db:
     reference_session = RefSession()
 else:
     reference_session = None
+
+
+def generate_association_tsv_file(export_dict, ingest_name, filename):
+    """Generate a TSV file for an association ingest set."""
+    first_entity = 'construct_identifier'
+    if ingest_name == 'construct_cassette_association_ingest_set':
+        second_entity = 'cassette_identifier'
+    else:
+        second_entity = 'genomic_entity_identifier'
+    with open(filename, 'w') as outfile:
+        outfile.write(f"#{first_entity}\tRelationship\t{second_entity}\tEvidence\n")
+        for entity_dict in export_dict[ingest_name]:
+            sub = entity_dict[first_entity]
+            obj = entity_dict[second_entity]
+            rel_type = entity_dict['relation_name']
+            if 'evidence_curies' in entity_dict:
+                pubs = "|".join(entity_dict['evidence_curies'])
+            else:
+                pubs = ""
+            outfile.write(f"{sub}\t{rel_type}\t{obj}\t{pubs}\n")
 
 
 # The main process.
@@ -116,6 +137,20 @@ def main():
         association_export_dict['construct_cassette_association_ingest_set'] = \
             cons_handler.export_data['construct_cassette_association_ingest_set']
         generate_export_file(association_export_dict, log, association_output_filename)
+
+        # Generate TSV files for each association type.
+        tsv_dir = os.path.dirname(set_up_dict['output_filename'])
+        for ingest_name in association_export_dict:
+            if not ingest_name.endswith('_ingest_set'):
+                continue
+            if len(association_export_dict[ingest_name]) == 0:
+                continue
+            tsv_filename = os.path.join(tsv_dir, f"{ingest_name.replace('_ingest_set', '')}.tsv")
+            try:
+                generate_association_tsv_file(association_export_dict, ingest_name, tsv_filename)
+                log.info(f'Generated TSV: {tsv_filename}')
+            except KeyError as e:
+                log.error(f'TSV generation for "{ingest_name}" failed: KeyError {e}')
 
     log.info('Ended main function.\n')
 
