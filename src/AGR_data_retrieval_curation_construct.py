@@ -143,6 +143,9 @@ def main():
         if dump_cass_assoc and dump_cass_assoc == 'YES':
             association_export_dict['construct_cassette_association_ingest_set'] = \
                 cons_handler.export_data['construct_cassette_association_ingest_set']
+        else:
+            log.warning('The ADD_CASS_TO_CONSTRUCT environment variable is not set to "YES". '
+                        'So no assoc to cassettes added.')
 
         generate_export_file(association_export_dict, log, association_output_filename)
 
