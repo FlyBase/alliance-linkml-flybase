@@ -20,6 +20,7 @@ from harvdev_utils.reporting import (
 )
 from os import getenv
 
+
 class ConstructHandler(FeatureHandler):
     """This object gets, synthesizes and filters construct data for export."""
     def __init__(self, log: Logger, testing: bool):
