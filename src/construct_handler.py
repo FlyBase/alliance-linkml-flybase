@@ -495,6 +495,8 @@ class ConstructHandler(FeatureHandler):
         """Map construct marked_with cassette relations to ConstructCassetteAssociationDTO."""
         self.log.info('Map construct marked_with cassette associations.')
         counter = 0
+        has_transcriptional_unit_list = ['FBal0345196', 'FBal0345198', 'FBal0407180',
+                                         'FBal0407181', 'FBal0407182', 'FBal0368073']
         for construct in self.fb_data_entities.values():
             marked_with_rels = construct.recall_relationships(
                 self.log, entity_role='subject', rel_types='marked_with', rel_entity_types='allele')
@@ -504,8 +506,8 @@ class ConstructHandler(FeatureHandler):
                 cons_curie = f'FB:{construct.uniquename}'
                 cassette_curie = f'FB:{cassette_uniquename}'
                 pub_curies = self.lookup_pub_curies(rel.pubs)
-                # FBal0345196 is a special case per FTA-139.
-                if cassette_uniquename == 'FBal0345196':
+                # has_transcriptional_unit_list are special cases per FTA-139.
+                if cassette_uniquename in has_transcriptional_unit_list:
                     relation_name = 'has_transcriptional_unit'
                 else:
                     relation_name = 'has_selectable_marker'
