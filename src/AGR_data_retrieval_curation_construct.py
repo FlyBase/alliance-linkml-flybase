@@ -22,6 +22,9 @@ Notes:
 """
 
 import argparse
+import os
+from os import getenv
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
@@ -72,6 +75,26 @@ else:
     reference_session = None
 
 
+def generate_association_tsv_file(export_dict, ingest_name, filename):
+    """Generate a TSV file for an association ingest set."""
+    first_entity = 'construct_identifier'
+    if ingest_name == 'construct_cassette_association_ingest_set':
+        second_entity = 'cassette_identifier'
+    else:
+        second_entity = 'genomic_entity_identifier'
+    with open(filename, 'w') as outfile:
+        outfile.write(f"#{first_entity}\tRelationship\t{second_entity}\tEvidence\n")
+        for entity_dict in export_dict[ingest_name]:
+            sub = entity_dict[first_entity]
+            obj = entity_dict[second_entity]
+            rel_type = entity_dict['relation_name']
+            if 'evidence_curies' in entity_dict:
+                pubs = "|".join(entity_dict['evidence_curies'])
+            else:
+                pubs = ""
+            outfile.write(f"{sub}\t{rel_type}\t{obj}\t{pubs}\n")
+
+
 # The main process.
 def main():
     """Run the steps for exporting LinkML-compliant FlyBase AGM."""
@@ -113,7 +136,32 @@ def main():
         if len(association_export_dict['construct_genomic_entity_association_ingest_set']) == 0:
             log.error('The "construct_genomic_entity_association_ingest_set" is unexpectedly empty.')
             raise ValueError('The "construct_genomic_entity_association_ingest_set" is unexpectedly empty.')
+
+        # Because the Alliance is not yet abe to handle cassettes we do not want to add these
+        # associations. For testing set the env ADD_CASS_TO_CONSTRUCT which will then do this
+        dump_cass_assoc = getenv('ADD_CASS_TO_CONSTRUCT', None)
+        if dump_cass_assoc and dump_cass_assoc == 'YES':
+            association_export_dict['construct_cassette_association_ingest_set'] = \
+                cons_handler.export_data['construct_cassette_association_ingest_set']
+        else:
+            log.warning('The ADD_CASS_TO_CONSTRUCT environment variable is not set to "YES". '
+                        'So no assoc to cassettes added.')
+
         generate_export_file(association_export_dict, log, association_output_filename)
+
+        # Generate TSV files for each association type.
+        tsv_dir = os.path.dirname(set_up_dict['output_filename'])
+        for ingest_name in association_export_dict:
+            if not ingest_name.endswith('_ingest_set'):
+                continue
+            if len(association_export_dict[ingest_name]) == 0:
+                continue
+            tsv_filename = os.path.join(tsv_dir, f"{ingest_name.replace('_ingest_set', '')}.tsv")
+            try:
+                generate_association_tsv_file(association_export_dict, ingest_name, tsv_filename)
+                log.info(f'Generated TSV: {tsv_filename}')
+            except KeyError as e:
+                log.error(f'TSV generation for "{ingest_name}" failed: KeyError {e}')
 
     log.info('Ended main function.\n')
 
