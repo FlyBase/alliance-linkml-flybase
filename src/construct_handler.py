@@ -56,6 +56,7 @@ class ConstructHandler(FeatureHandler):
         'FBtp0001429': 'P{UAS-MAP2.A}',                           # Expresses Rnor Map2 (RGD:3044).
         'FBtp0000463': 'P{UAS-MAPT.A}',                           # Expresses Human MAPT (HGNC:6893).
         'FBtp0150381': 'PBac{UAS-SARS-CoV-2-nsp13.B}',            # Expresses SARS-CoV-2 nsp13 (REFSEQ:YP_009725308).
+        'FBtp0132292': 'P{U6:2-scw.flySAM2.0}',                   # Exception with `has_transcriptional_unit` as maps to 'FBal0345196'
     }
 
     # Additional set for export added to the handler.
