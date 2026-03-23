@@ -219,6 +219,7 @@ class CassetteDTO(ReagentDTO):
     def __init__(self):
         """Create CassetteDTO for FlyBase object."""
         super().__init__()
+        self.placeholder = None
         self.cassette_symbol_dto = None      # One NameSlotAnnotationDTO.
         self.cassette_full_name_dto = None   # One NameSlotAnnotationDTO.
         self.cassette_synonym_dtos = []      # Many NameSlotAnnotationDTO objects.
@@ -388,6 +389,7 @@ class ConstructCassetteAssociationDTO(EvidenceAssociationDTO):
         self.construct_identifier = construct_id
         self.relation_name = rel_type
         self.cassette_identifier = cassette_id
+        self.note_dtos = []
         self.required_fields.extend(['construct_identifier', 'relation_name', 'cassette_identifier'])
 
 

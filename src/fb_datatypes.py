@@ -354,6 +354,10 @@ class FBConstruct(FBFeature):
         self.regulating_features = {}     # Will be list of feature_id-keyed pub_id list for things that regulate the construct: FBgn, FBto and FBsf.
         self.expressed_tool_genes = []    # Will be list of feature_ids for genes for which related tools are also associated in construct.expressed_features.
         self.regulating_tool_genes = []   # Will be list of feature_ids for genes for which related tools are also associated in construct.targeted_features.
+        # Anonymous cassette data.
+        self.needs_anon_cassette = False
+        self.tool_uses_data = []    # Will be list of dicts: {'cvterm_name', 'accession', 'pub_id'}
+        self.anon_cassette_dto = None    # Will hold the CassetteDTO for the anonymous cassette.
 
 
 class FBGene(FBFeature):
