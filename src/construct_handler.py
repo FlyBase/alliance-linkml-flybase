@@ -16,8 +16,10 @@ import fb_datatypes
 from feature_handler import FeatureHandler
 from harvdev_utils.reporting import (
     Cvterm, Feature, FeatureCvterm, FeatureCvtermprop,
-    FeatureRelationship, FeatureRelationshipPub
+    FeatureRelationship, FeatureRelationshipPub,
+    Featureprop, FeaturepropPub
 )
+from os import getenv
 
 
 class ConstructHandler(FeatureHandler):
@@ -58,6 +60,9 @@ class ConstructHandler(FeatureHandler):
         'FBtp0000463': 'P{UAS-MAPT.A}',                           # Expresses Human MAPT (HGNC:6893).
         'FBtp0150381': 'PBac{UAS-SARS-CoV-2-nsp13.B}',            # Expresses SARS-CoV-2 nsp13 (REFSEQ:YP_009725308).
         'FBtp0132292': 'P{U6:2-scw.flySAM2.0}',                   # Exception with `has_transcriptional_unit` as maps to 'FBal0345196'
+        'FBtp0001493': 'P{ry1-Delta547}',                         # has_transcriptional_unit
+        'FBtp0001458': 'P{SP[c.Yp1.hs]}',
+        'FBtp0000904': 'P{SxlcF1}',
     }
 
     # Additional set for export added to the handler.
@@ -242,6 +247,32 @@ class ConstructHandler(FeatureHandler):
         self.log.info(f'Found {counter} tool_uses annotations for constructs.')
         return
 
+    def get_allele_molecular_info_pubs(self, session):
+        """Get molecular_info featureprop pubs for alleles, keyed by allele feature_id."""
+        self.log.info('Get molecular_info featureprop pubs for alleles.')
+        allele = aliased(Feature, name='allele')
+        filters = (
+            allele.is_obsolete.is_(False),
+            allele.uniquename.op('~')(self.regex['allele']),
+            Cvterm.name == 'molecular_info',
+        )
+        results = session.query(allele.feature_id, FeaturepropPub.pub_id).\
+            join(Featureprop, (Featureprop.feature_id == allele.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == Featureprop.type_id)).\
+            join(FeaturepropPub, (FeaturepropPub.featureprop_id == Featureprop.featureprop_id)).\
+            filter(*filters).\
+            distinct()
+        self.allele_molecular_info_pubs = {}
+        counter = 0
+        for row in results:
+            try:
+                self.allele_molecular_info_pubs[row.feature_id].add(row.pub_id)
+            except KeyError:
+                self.allele_molecular_info_pubs[row.feature_id] = {row.pub_id}
+            counter += 1
+        self.log.info(f'Found {counter} molecular_info featureprop pub links for alleles.')
+        return
+
     def get_datatype_data(self, session):
         """Extend the method for the ConstructHandler."""
         super().get_datatype_data(session)
@@ -258,6 +289,12 @@ class ConstructHandler(FeatureHandler):
         # marked_with rels already captured by get_entity_relationships(session, 'subject') above.
         self.get_allele_reg_regions(session)
         self.get_construct_tool_uses(session)
+
+        # Because the Alliance is not yet abe to handle cassettes we do not want to add these
+        # associations. For testing set the env ADD_CASS_TO_CONSTRUCT which will then do this
+        dump_cass_assoc = getenv('ADD_CASS_TO_CONSTRUCT', None)
+        if dump_cass_assoc and dump_cass_assoc == 'YES':
+            self.get_allele_molecular_info_pubs(session)
         return
 
     # Add methods to be run by synthesize_info() below.
@@ -563,18 +600,19 @@ class ConstructHandler(FeatureHandler):
         return
 
     def map_construct_cassette_associations(self):
-        """Map construct marked_with cassette relations to ConstructCassetteAssociationDTO."""
-        self.log.info('Map construct marked_with cassette associations.')
+        """Map construct cassette relations to ConstructCassetteAssociationDTO."""
+        self.log.info('Map construct cassette associations.')
         counter = 0
         has_transcriptional_unit_list = ['FBal0345196', 'FBal0345198', 'FBal0407180',
                                          'FBal0407181', 'FBal0407182', 'FBal0368073']
         for construct in self.fb_data_entities.values():
+            cons_curie = f'FB:{construct.uniquename}'
+            # Handle marked_with relationships (FTA-139).
             marked_with_rels = construct.recall_relationships(
                 self.log, entity_role='subject', rel_types='marked_with', rel_entity_types='allele')
             for rel in marked_with_rels:
                 cassette_feature_id = rel.chado_obj.object_id
                 cassette_uniquename = self.feature_lookup[cassette_feature_id]['uniquename']
-                cons_curie = f'FB:{construct.uniquename}'
                 cassette_curie = f'FB:{cassette_uniquename}'
                 pub_curies = self.lookup_pub_curies(rel.pubs)
                 # has_transcriptional_unit_list are special cases per FTA-139.
@@ -586,6 +624,39 @@ class ConstructHandler(FeatureHandler):
                 rel_dto = agr_datatypes.ConstructCassetteAssociationDTO(
                     cons_curie, relation_name, cassette_curie, pub_curies)
                 if construct.is_obsolete is True or self.feature_lookup[cassette_feature_id]['is_obsolete'] is True:
+                    rel_dto.obsolete = True
+                    rel_dto.internal = True
+                fb_rel.linkmldto = rel_dto
+                self.construct_cassette_associations.append(fb_rel)
+                counter += 1
+            # Handle associated_with relationships (FTA-140).
+            assoc_with_rels = construct.recall_relationships(
+                self.log, entity_role='object', rel_types='associated_with', rel_entity_types='allele')
+            for rel in assoc_with_rels:
+                allele_id = rel.chado_obj.subject_id
+                allele_uniquename = self.feature_lookup[allele_id]['uniquename']
+                cassette_curie = f'FB:{allele_uniquename}'
+                # Pub filtering logic.
+                if len(rel.pubs) == 1:
+                    filtered_pub_ids = rel.pubs
+                elif len(rel.pubs) > 1:
+                    mol_info_pubs = self.allele_molecular_info_pubs.get(allele_id, set())
+                    intersection = set(rel.pubs) & mol_info_pubs
+                    if intersection:
+                        filtered_pub_ids = list(intersection)
+                    else:
+                        filtered_pub_ids = []
+                else:
+                    filtered_pub_ids = []
+                if not filtered_pub_ids:
+                    self.log.warning(f'No cassette association was made for construct {construct.uniquename} '
+                                     f'(cassette {allele_uniquename}): no pubs found after filtering.')
+                    continue
+                pub_curies = self.lookup_pub_curies(filtered_pub_ids)
+                fb_rel = fb_datatypes.FBExportEntity()
+                rel_dto = agr_datatypes.ConstructCassetteAssociationDTO(
+                    cons_curie, 'has_transcriptional_unit', cassette_curie, pub_curies)
+                if construct.is_obsolete is True or self.feature_lookup[allele_id]['is_obsolete'] is True:
                     rel_dto.obsolete = True
                     rel_dto.internal = True
                 fb_rel.linkmldto = rel_dto
