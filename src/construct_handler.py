@@ -63,6 +63,15 @@ class ConstructHandler(FeatureHandler):
         'FBtp0001493': 'P{ry1-Delta547}',                         # has_transcriptional_unit
         'FBtp0001458': 'P{SP[c.Yp1.hs]}',
         'FBtp0000904': 'P{SxlcF1}',
+        # FTA-141 anon cassettes
+        'FBtp0000910': 'H{Lw2}',
+        'FBtp0023088': 'M{3xP3-RFP.attP}',
+        # FTA-145  more with links to cassettes
+        'FBtp0000154': 'P{A92}',
+        'FBtp0000157': 'P{lwB}',
+        # FTA-144 tool_uses		enhancer trap
+        'FBtp0000019': 'P{lacZ.ry[+]}',
+        'FBtp0000022': 'P{lacZ.w[+]}',
     }
 
     # Additional set for export added to the handler.
