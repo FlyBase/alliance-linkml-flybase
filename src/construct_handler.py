@@ -296,8 +296,9 @@ class ConstructHandler(FeatureHandler):
         self.get_allele_reg_regions(session)
         self.get_construct_tool_uses(session)
 
-        # Because the Alliance is not yet abe to handle cassettes we do not want to add these
+        # Because the Alliance is not yet able to handle cassettes we do not want to add these
         # associations. For testing set the env ADD_CASS_TO_CONSTRUCT which will then do this
+        self.allele_molecular_info_pubs = {}
         dump_cass_assoc = getenv('ADD_CASS_TO_CONSTRUCT', None)
         if dump_cass_assoc and dump_cass_assoc == 'YES':
             self.get_allele_molecular_info_pubs(session)
