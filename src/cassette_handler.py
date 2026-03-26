@@ -607,7 +607,7 @@ class CassetteHandler(FeatureHandler):
         }
         counter = 0
         for data in self.anon_cassette_data:
-            cassette_id = f'{data["construct_uniquename"]}_cas'
+            cassette_id = f'FB:{data["construct_uniquename"]}_cas'
             for rel in data['direct_rels']:
                 if rel['rel_type'] not in rel_type_mapping:
                     continue
@@ -644,7 +644,7 @@ class CassetteHandler(FeatureHandler):
         self.log.info('Map anonymous cassette encodes_tool relationships.')
         counter = 0
         for data in self.anon_cassette_data:
-            cassette_id = f'{data["construct_uniquename"]}_cas'
+            cassette_id = f'FB:{data["construct_uniquename"]}_cas'
             for rel in data['direct_rels']:
                 if rel['rel_type'] != 'encodes_tool':
                     continue
