@@ -579,7 +579,7 @@ class CassetteHandler(FeatureHandler):
         counter = 0
         for data in self.anon_cassette_data:
             construct_uniquename = data['construct_uniquename']
-            cassette_id = f'{construct_uniquename}_cas'
+            cassette_id = f'FB:{construct_uniquename}_cas'
             agr_cassette = agr_datatypes.CassetteDTO()
             agr_cassette.placeholder = True
             agr_cassette.primary_external_id = cassette_id

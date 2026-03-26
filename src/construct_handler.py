@@ -712,7 +712,7 @@ class ConstructHandler(FeatureHandler):
         for construct in self.fb_data_entities.values():
             if not construct.needs_anon_cassette:
                 continue
-            cassette_id = f'{construct.uniquename}_cas'
+            cassette_id = f'FB:{construct.uniquename}_cas'
             cons_curie = f'FB:{construct.uniquename}'
             # Determine relation_name.
             if construct.tool_uses_data:
