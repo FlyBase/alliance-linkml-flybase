@@ -15,7 +15,8 @@ import agr_datatypes
 import fb_datatypes
 from feature_handler import FeatureHandler
 from harvdev_utils.reporting import (
-    Cvterm, Feature, FeatureRelationship, FeatureRelationshipPub,
+    Cvterm, Feature, FeatureCvterm, FeatureCvtermprop,
+    FeatureRelationship, FeatureRelationshipPub,
     Featureprop, FeaturepropPub
 )
 from os import getenv
@@ -62,11 +63,21 @@ class ConstructHandler(FeatureHandler):
         'FBtp0001493': 'P{ry1-Delta547}',                         # has_transcriptional_unit
         'FBtp0001458': 'P{SP[c.Yp1.hs]}',
         'FBtp0000904': 'P{SxlcF1}',
+        # FTA-141 anon cassettes
+        'FBtp0000910': 'H{Lw2}',
+        'FBtp0023088': 'M{3xP3-RFP.attP}',
+        # FTA-145  more with links to cassettes
+        'FBtp0000154': 'P{A92}',
+        'FBtp0000157': 'P{lwB}',
+        # FTA-144 tool_uses		enhancer trap
+        'FBtp0000019': 'P{lacZ.ry[+]}',
+        'FBtp0000022': 'P{lacZ.w[+]}',
     }
 
     # Additional set for export added to the handler.
     construct_associations = []    # Will be a list of FBExportEntity objects (relationships), map to ConstructGenomicEntityAssociationDTO.
     construct_cassette_associations = []    # Will be a list of FBExportEntity objects, map to ConstructCassetteAssociationDTO.
+    # Anonymous cassette data.
 
     # Elaborate on get_general_data() for the ConstructHandler.
     def get_general_data(self, session):
@@ -207,6 +218,41 @@ class ConstructHandler(FeatureHandler):
         self.log.info(f'Propagated {cons_counter} allele-to-component "has_reg_region" relationships to related constructs.')
         return
 
+    def get_construct_tool_uses(self, session):
+        """Get tool_uses FeatureCvterm data for FBtp constructs."""
+        self.log.info('Get tool_uses FeatureCvterm data for FBtp constructs.')
+        prop_type = aliased(Cvterm, name='prop_type')
+        anno_cvterm = aliased(Cvterm, name='anno_cvterm')
+        filters = (
+            Feature.uniquename.op('~')(self.regex['construct']),
+            prop_type.name == 'tool_uses',
+        )
+        if self.testing:
+            filters += (Feature.uniquename.in_((self.test_set.keys())), )
+        results = session.query(FeatureCvterm, FeatureCvtermprop).\
+            select_from(Feature).\
+            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
+            join(FeatureCvtermprop, (FeatureCvtermprop.feature_cvterm_id == FeatureCvterm.feature_cvterm_id)).\
+            join(prop_type, (prop_type.cvterm_id == FeatureCvtermprop.type_id)).\
+            join(anno_cvterm, (anno_cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for fc, fcp in results:
+            feature_id = fc.feature_id
+            if feature_id not in self.fb_data_entities:
+                continue
+            construct = self.fb_data_entities[feature_id]
+            tool_use_entry = {
+                'cvterm_name': fc.cvterm.name,
+                'accession': fc.cvterm.dbxref.accession,
+                'pub_id': fc.pub_id,
+            }
+            construct.tool_uses_data.append(tool_use_entry)
+            counter += 1
+        self.log.info(f'Found {counter} tool_uses annotations for constructs.')
+        return
+
     def get_allele_molecular_info_pubs(self, session):
         """Get molecular_info featureprop pubs for alleles, keyed by allele feature_id."""
         self.log.info('Get molecular_info featureprop pubs for alleles.')
@@ -248,9 +294,11 @@ class ConstructHandler(FeatureHandler):
         self.get_allele_encoded_tools(session)
         # marked_with rels already captured by get_entity_relationships(session, 'subject') above.
         self.get_allele_reg_regions(session)
+        self.get_construct_tool_uses(session)
 
-        # Because the Alliance is not yet abe to handle cassettes we do not want to add these
+        # Because the Alliance is not yet able to handle cassettes we do not want to add these
         # associations. For testing set the env ADD_CASS_TO_CONSTRUCT which will then do this
+        self.allele_molecular_info_pubs = {}
         dump_cass_assoc = getenv('ADD_CASS_TO_CONSTRUCT', None)
         if dump_cass_assoc and dump_cass_assoc == 'YES':
             self.get_allele_molecular_info_pubs(session)
@@ -422,6 +470,68 @@ class ConstructHandler(FeatureHandler):
             self.log.info(f'Will suppress {counter} genes from construct {slot_name} that are better represented as tools.')
         return
 
+    def identify_constructs_needing_anon_cassettes(self):
+        """Identify constructs that need anonymous cassettes for direct tool data."""
+        self.log.info('Identify constructs needing anonymous cassettes.')
+        counter = 0
+        excluded_counter = 0
+        for construct in self.fb_data_entities.values():
+            # Exclude constructs with 'FTA: generic TI construct' internal_notes.
+            internal_notes = construct.props_by_type.get('internal_notes', [])
+            is_generic_ti = False
+            for note in internal_notes:
+                if note.chado_obj.value == 'FTA: generic TI construct':
+                    is_generic_ti = True
+                    break
+            if is_generic_ti:
+                excluded_counter += 1
+                continue
+            # Check for direct tool relationships.
+            direct_tool_rels = construct.recall_relationships(
+                self.log, entity_role='subject',
+                rel_types=['encodes_tool', 'has_reg_region', 'tagged_with', 'carries_tool'])
+            has_direct_rels = len(direct_tool_rels) > 0
+            has_tool_uses = len(construct.tool_uses_data) > 0
+            if has_direct_rels or has_tool_uses:
+                construct.needs_anon_cassette = True
+                counter += 1
+        self.log.info(f'Identified {counter} constructs needing anonymous cassettes '
+                      f'({excluded_counter} excluded as generic TI constructs).')
+        return
+
+    def get_anon_cassette_data(self):
+        """Return extracted data for anonymous cassette creation by CassetteHandler.
+
+        Returns a list of dicts, one per construct needing an anonymous cassette:
+        {
+            'construct_uniquename': str,
+            'direct_rels': [{'rel_type': str, 'object_feature_id': int, 'pub_ids': list}],
+            'tool_uses_data': list[dict],
+        }
+        """
+        self.log.info('Extract anonymous cassette data for CassetteHandler.')
+        anon_data = []
+        for construct in self.fb_data_entities.values():
+            if not construct.needs_anon_cassette:
+                continue
+            direct_rels = construct.recall_relationships(
+                self.log, entity_role='subject',
+                rel_types=['encodes_tool', 'has_reg_region', 'tagged_with', 'carries_tool'])
+            rel_data = []
+            for rel in direct_rels:
+                rel_data.append({
+                    'rel_type': rel.chado_obj.type.name,
+                    'object_feature_id': rel.chado_obj.object_id,
+                    'pub_ids': list(rel.pubs),
+                })
+            anon_data.append({
+                'construct_uniquename': construct.uniquename,
+                'direct_rels': rel_data,
+                'tool_uses_data': construct.tool_uses_data,
+            })
+        self.log.info(f'Extracted anonymous cassette data for {len(anon_data)} constructs.')
+        return anon_data
+
     # Elaborate on synthesize_info() for the ConstructHandler.
     def synthesize_info(self):
         """Extend the method for the ConstructHandler."""
@@ -435,6 +545,7 @@ class ConstructHandler(FeatureHandler):
         self.synthesize_component_genes()
         self.synthesize_reg_regions()
         self.synthesize_redundant_tool_genes()
+        self.identify_constructs_needing_anon_cassettes()
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
@@ -594,6 +705,53 @@ class ConstructHandler(FeatureHandler):
         self.log.info(f'Mapped {counter} ConstructCassetteAssociationDTOs.')
         return
 
+    def map_anon_cassette_to_construct_association(self):
+        """Create ConstructCassetteAssociationDTOs linking anonymous cassettes to constructs."""
+        self.log.info('Map anonymous cassette to construct associations.')
+        counter = 0
+        for construct in self.fb_data_entities.values():
+            if not construct.needs_anon_cassette:
+                continue
+            cassette_id = f'FB:{construct.uniquename}_cas'
+            cons_curie = f'FB:{construct.uniquename}'
+            # Determine relation_name.
+            if construct.tool_uses_data:
+                relation_name = 'has_functional_unit'
+            else:
+                relation_name = 'has_component'
+            # Collect ALL pub_ids from all direct MS14 data sources.
+            all_pub_ids = []
+            direct_rels = construct.recall_relationships(
+                self.log, entity_role='subject',
+                rel_types=['encodes_tool', 'has_reg_region', 'tagged_with', 'carries_tool'])
+            for rel in direct_rels:
+                all_pub_ids.extend(rel.pubs)
+            for entry in construct.tool_uses_data:
+                all_pub_ids.append(entry['pub_id'])
+            pub_curies = self.lookup_pub_curies(all_pub_ids)
+            unique_pub_curies = list(set(pub_curies))
+            # Build the association DTO.
+            note_dtos = []
+            if len(unique_pub_curies) == 1:
+                evidence_curies = unique_pub_curies
+            else:
+                evidence_curies = []
+                if len(unique_pub_curies) > 1:
+                    note_dto = agr_datatypes.NoteDTO(
+                        'internal_note',
+                        'FTA: unable to automatically determine reference for cassette to construct association',
+                        []).dict_export()
+                    note_dtos.append(note_dto)
+            fb_rel = fb_datatypes.FBExportEntity()
+            rel_dto = agr_datatypes.ConstructCassetteAssociationDTO(
+                cons_curie, relation_name, cassette_id, evidence_curies)
+            rel_dto.note_dtos = note_dtos
+            fb_rel.linkmldto = rel_dto
+            self.construct_cassette_associations.append(fb_rel)
+            counter += 1
+        self.log.info(f'Created {counter} ConstructCassetteAssociationDTOs for anonymous cassettes.')
+        return
+
     # Elaborate on map_fb_data_to_alliance() for the ConstructHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the ConstructHandler."""
@@ -614,6 +772,8 @@ class ConstructHandler(FeatureHandler):
         self.flag_internal_fb_entities('construct_associations')
         self.map_construct_cassette_associations()
         self.flag_internal_fb_entities('construct_cassette_associations')
+        # Anonymous cassette-to-construct associations (cassette DTOs now created by CassetteHandler).
+        self.map_anon_cassette_to_construct_association()
         return
 
     # Elaborate on query_chado_and_export() for the ConstructHandler.
