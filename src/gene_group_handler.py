@@ -31,6 +31,7 @@ class GeneGroupHandler(PrimaryEntityHandler):
         self.primary_export_set = 'functional_gene_set_ingest_set'
         self.gene_member_associations = []
         self.gene_member_data = {}
+        self.export_data_for_tsv = []
 
     test_set = {
         'FBgg0000113': 'ARP',
@@ -147,6 +148,52 @@ class GeneGroupHandler(PrimaryEntityHandler):
         # table has no organism_id. Taxon is hardcoded in map_gene_group_basic().
         self.synthesize_synonyms()
         self.synthesize_pubs()
+        return
+
+    def process_for_tsv_export(self):
+        """Process gene group data for export to TSV."""
+        self.log.info('Process gene groups for TSV export.')
+        counter = 0
+        for gene_group in self.fb_data_entities.values():
+            if gene_group.linkmldto is None:
+                continue
+            dto = gene_group.linkmldto
+            # Collect synonyms.
+            synonyms = []
+            for syno in dto.set_synonym_dtos:
+                synonyms.append(syno.get('format_text', ''))
+            # Collect GO terms.
+            go_mf = ' | '.join(dto.set_go_mf_term_curies) if dto.set_go_mf_term_curies else ''
+            go_bp = ' | '.join(dto.set_go_bp_term_curies) if dto.set_go_bp_term_curies else ''
+            go_cc = ' | '.join(dto.set_go_cc_term_curies) if dto.set_go_cc_term_curies else ''
+            # Collect parent/related groups.
+            parents = ' | '.join(dto.parent_set_identifiers) if dto.parent_set_identifiers else ''
+            related = ' | '.join(dto.related_set_identifiers) if dto.related_set_identifiers else ''
+            # Collect gene members.
+            gene_members = []
+            for (gene_uname, grp_uname) in self.gene_member_data.keys():
+                if grp_uname == gene_group.uniquename:
+                    gene_members.append(f'FB:{gene_uname}')
+            # Collect notes.
+            notes = []
+            for note in dto.note_dtos:
+                notes.append(note.get('free_text', ''))
+            tsv_row = {
+                'gene_group_id': f'FB:{gene_group.uniquename}',
+                'symbol': dto.symbol or '',
+                'full_name': dto.full_name or '',
+                'synonyms': ' | '.join(synonyms),
+                'description': ' | '.join(notes),
+                'go_molecular_function': go_mf,
+                'go_biological_process': go_bp,
+                'go_cellular_component': go_cc,
+                'parent_groups': parents,
+                'related_groups': related,
+                'gene_members': ' | '.join(gene_members),
+            }
+            self.export_data_for_tsv.append(tsv_row)
+            counter += 1
+        self.log.info(f'Generated {counter} gene group TSV rows.')
         return
 
     # Mapping methods.

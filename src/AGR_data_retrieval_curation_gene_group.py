@@ -27,11 +27,28 @@ from os import environ
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
+from harvdev_utils.general_functions import (
+    generic_FB_tsv_dict, tsv_report_dump
+)
 from gene_group_handler import GeneGroupHandler
 from utils import export_chado_data, generate_export_file
 
 # Data types handled by this script.
 REPORT_LABEL = 'gene_group_curation'
+REPORT_TITLE = 'FlyBase Gene Group Report'
+TSV_HEADERS = [
+    'gene_group_id',
+    'symbol',
+    'full_name',
+    'synonyms',
+    'description',
+    'go_molecular_function',
+    'go_biological_process',
+    'go_cellular_component',
+    'parent_groups',
+    'related_groups',
+    'gene_members',
+]
 
 # Now proceed with generic setup.
 set_up_dict = set_up_db_reading(REPORT_LABEL)
@@ -131,6 +148,18 @@ def main():
                 generate_export_file(association_export_dict, log, association_output_filename)
             else:
                 log.warning(f'The "{assoc_set_name}" is empty.')
+
+    # Export the gene group TSV report.
+    if not reference_session:
+        gg_handler.process_for_tsv_export()
+        tsv_data = generic_FB_tsv_dict(REPORT_TITLE, database)
+        tsv_data['data'] = gg_handler.export_data_for_tsv
+        tsv_output_filename = output_filename.replace('.json', '.tsv')
+        if tsv_data['data']:
+            tsv_report_dump(tsv_data, tsv_output_filename, headers=TSV_HEADERS)
+            log.info(f'Wrote TSV to {tsv_output_filename}')
+        else:
+            log.warning('No gene group data for TSV export.')
 
     log.info('Ended main function.\n')
 
