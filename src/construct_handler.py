@@ -485,6 +485,9 @@ class ConstructHandler(FeatureHandler):
         counter = 0
         excluded_counter = 0
         for construct in self.fb_data_entities.values():
+            # Skip obsolete constructs.
+            if construct.chado_obj.is_obsolete:
+                continue
             # Exclude constructs with 'FTA: generic TI construct' internal_notes.
             internal_notes = construct.props_by_type.get('internalnotes', [])
             is_generic_ti = False
