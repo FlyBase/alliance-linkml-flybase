@@ -57,6 +57,7 @@ class PrimaryEntityHandler(DataHandler):
         'balancer': 'allele',
         'insertion': 'allele',
         'genotype': 'homepage',
+        'grp': 'functional_gene_set',
     }
 
     # Mappings of main data types to chado tables with associated data
@@ -187,6 +188,8 @@ class PrimaryEntityHandler(DataHandler):
         if self.ignore_list:
             if self.datatype == 'genotype':
                 filters += (chado_table.genotype_id.not_in(self.ignore_list), )
+            elif chado_type == 'grp':
+                filters += (chado_table.grp_id.not_in(self.ignore_list), )
             else:
                 filters += (chado_table.feature_id.not_in(self.ignore_list),)
         if self.datatype in self.regex.keys() and self.datatype != 'genotype':
@@ -663,7 +666,8 @@ class PrimaryEntityHandler(DataHandler):
             else:
                 filters += (chado_table.uniquename.in_((self.test_set.keys())), )
                 # Only get for those we are interested in i.e. in self.fb_data_entities
-                filters += (chado_table.feature_id.in_((self.fb_data_entities.keys())), )
+                fkey_col = getattr(chado_table, subject_key_name)
+                filters += (fkey_col.in_((self.fb_data_entities.keys())), )
         if filters == () and self.datatype != 'genotype':
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
