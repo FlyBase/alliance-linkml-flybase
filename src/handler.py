@@ -186,7 +186,7 @@ class DataHandler(object):
         'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion',
                       'point_mutation', 'sequence_alteration', 'sequence_variant'],
         'bogus symbol': ['bogus symbol'],
-        'grp': ['functional group', 'gene complex group'],
+        'grp': ['gene_group'],
     }
 
     # Methods

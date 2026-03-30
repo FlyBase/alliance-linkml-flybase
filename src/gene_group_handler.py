@@ -39,21 +39,23 @@ class GeneGroupHandler(PrimaryEntityHandler):
     }
 
     gene_group_prop_to_note_mapping = {
-        'description': ('summary', 'note_dtos'),
+        'gg_description': ('summary', 'note_dtos'),
     }
 
     # Relationship type mappings: grp_relationship type → output field.
     parent_rel_types = ['parent_grp']
-    related_rel_types = ['related_grp']
+    related_rel_types = ['undefined_grp']
 
     # Gene-group-specific xref db mappings (FTA-171).
     gene_group_db_dict = {
-        'HGNC_group': 'HGNC_Group',
-        'WormBase gene class': 'WBGeneClass',
+        'HGNC-GG1': 'HGNC_Group',
+        'WB-GG': 'WBGeneClass',
+        'ComplexPortal': 'ComplexPortal',
     }
     gene_group_page_area = {
         'HGNC_Group': 'gene_group',
         'WBGeneClass': 'gene_class',
+        'ComplexPortal': 'default',
     }
 
     # Elaborate on get_general_data() for the GeneGroupHandler.
@@ -285,6 +287,9 @@ class GeneGroupHandler(PrimaryEntityHandler):
                 prefix = self.gene_group_db_dict[db_name]
                 xref_page_area = self.gene_group_page_area.get(prefix, page_area)
                 accession = xref.dbxref.accession
+                # Strip version/suffix after '#' (e.g., WB-GG "arp#01--10" → "arp").
+                if '#' in accession:
+                    accession = accession.split('#')[0]
                 xref_curie = f'{prefix}:{accession}'
                 display_name = xref.dbxref.description if xref.dbxref.description else xref_curie
                 xref_dto = agr_datatypes.CrossReferenceDTO(
