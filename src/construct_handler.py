@@ -477,7 +477,7 @@ class ConstructHandler(FeatureHandler):
         excluded_counter = 0
         for construct in self.fb_data_entities.values():
             # Exclude constructs with 'FTA: generic TI construct' internal_notes.
-            internal_notes = construct.props_by_type.get('internal_notes', [])
+            internal_notes = construct.props_by_type.get('internalnotes', [])
             is_generic_ti = False
             for note in internal_notes:
                 if note.chado_obj.value == 'FTA: generic TI construct':
