@@ -10,6 +10,7 @@ Author(s):
 """
 
 from logging import Logger
+from os import environ
 from sqlalchemy.orm import aliased
 from harvdev_utils.reporting import (
     Cvterm, Feature, Grp, Grpmember, GrpmemberPub, FeatureGrpmember
@@ -45,6 +46,16 @@ class GeneGroupHandler(PrimaryEntityHandler):
     parent_rel_types = ['parent_grp']
     related_rel_types = ['related_grp']
 
+    # Gene-group-specific xref db mappings (FTA-171).
+    gene_group_db_dict = {
+        'HGNC_group': 'HGNC_Group',
+        'WormBase gene class': 'WBGeneClass',
+    }
+    gene_group_page_area = {
+        'HGNC_Group': 'gene_group',
+        'WBGeneClass': 'gene_class',
+    }
+
     # Elaborate on get_general_data() for the GeneGroupHandler.
     def get_general_data(self, session):
         """Extend the method for the GeneGroupHandler."""
@@ -66,6 +77,10 @@ class GeneGroupHandler(PrimaryEntityHandler):
         self.get_entity_relationships(session, 'subject')
         self.get_entity_relationships(session, 'object')
         self.get_entity_timestamps(session)
+        if environ.get('EXPORT_GG_XREFS') == 'YES':
+            self.get_entity_xrefs(session)
+        else:
+            self.log.info('Skipping gene group xrefs (EXPORT_GG_XREFS not set to "YES").')
         self.get_gene_members(session)
         return
 
@@ -245,6 +260,40 @@ class GeneGroupHandler(PrimaryEntityHandler):
             gene_group.linkmldto.related_set_identifiers = related_ids
         return
 
+    def map_gene_group_xrefs(self):
+        """Map gene group cross-references to cross_reference_dtos (FTA-171)."""
+        self.log.info('Map gene group cross-references.')
+        for gene_group in self.fb_data_entities.values():
+            if gene_group.linkmldto is None:
+                continue
+            cross_reference_dtos = []
+            # Add the FB self-xref.
+            curie = f'FB:{gene_group.uniquename}'
+            page_area = self.page_area_conversion.get(self.datatype, self.datatype)
+            fb_xref = agr_datatypes.CrossReferenceDTO(
+                'FB', curie, page_area, curie
+            ).dict_export()
+            cross_reference_dtos.append(fb_xref)
+            # Add external xrefs from gene-group-specific databases.
+            for xref in gene_group.dbxrefs:
+                db_name = xref.dbxref.db.name
+                if db_name not in self.gene_group_db_dict:
+                    self.log.debug(
+                        f'Skipping unrecognized xref db "{db_name}" '
+                        f'for {gene_group}.')
+                    continue
+                prefix = self.gene_group_db_dict[db_name]
+                xref_page_area = self.gene_group_page_area.get(prefix, page_area)
+                accession = xref.dbxref.accession
+                xref_curie = f'{prefix}:{accession}'
+                display_name = xref.dbxref.description if xref.dbxref.description else xref_curie
+                xref_dto = agr_datatypes.CrossReferenceDTO(
+                    prefix, xref_curie, xref_page_area, display_name
+                ).dict_export()
+                cross_reference_dtos.append(xref_dto)
+            gene_group.linkmldto.cross_reference_dtos = cross_reference_dtos
+        return
+
     def map_gene_member_associations(self):
         """Map gene-to-gene-group memberships to GeneFunctionalGeneSetAssociationDTOs."""
         self.log.info('Map gene member associations.')
@@ -276,6 +325,10 @@ class GeneGroupHandler(PrimaryEntityHandler):
         self.map_gene_group_notes()
         self.map_gene_group_go_terms()
         self.map_gene_group_relationships()
+        if environ.get('EXPORT_GG_XREFS') == 'YES':
+            self.map_gene_group_xrefs()
+        else:
+            self.log.info('Skipping gene group xref mapping (EXPORT_GG_XREFS not set to "YES").')
         self.map_gene_member_associations()
         self.flag_internal_fb_entities('fb_data_entities')
         return
