@@ -57,6 +57,7 @@ class PrimaryEntityHandler(DataHandler):
         'balancer': 'allele',
         'insertion': 'allele',
         'genotype': 'homepage',
+        'grp': 'functional_gene_set',
     }
 
     # Mappings of main data types to chado tables with associated data
@@ -187,6 +188,8 @@ class PrimaryEntityHandler(DataHandler):
         if self.ignore_list:
             if self.datatype == 'genotype':
                 filters += (chado_table.genotype_id.not_in(self.ignore_list), )
+            elif chado_type == 'grp':
+                filters += (chado_table.grp_id.not_in(self.ignore_list), )
             else:
                 filters += (chado_table.feature_id.not_in(self.ignore_list),)
         if self.datatype in self.regex.keys() and self.datatype != 'genotype':

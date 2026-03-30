@@ -402,6 +402,14 @@ class FBGenotype(FBDataEntity):
         self.ncbi_taxon_id = 'NCBITaxon:7227'    # Default Dmel, adjusted later if needed.
 
 
+class FBGeneGroup(FBDataEntity):
+    """A FlyBase gene group entity with all its related data."""
+    def __init__(self, chado_obj):
+        """Create the FBGeneGroup object."""
+        super().__init__(chado_obj)
+        self.db_primary_id = chado_obj.grp_id
+
+
 # First class associations and annotations.
 class FBAlleleDiseaseAnnotation(FBExportEntity):
     """FBAlleleDiseaseAnnotation class."""
