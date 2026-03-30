@@ -72,6 +72,15 @@ class ConstructHandler(FeatureHandler):
         # FTA-144 tool_uses		enhancer trap
         'FBtp0000019': 'P{lacZ.ry[+]}',
         'FBtp0000022': 'P{lacZ.w[+]}',
+        # FTA-141 has 'FTA: generic TI construct' int note so should be excluded
+        'FBtp0117267': 'TI{UAS}',
+        'FBtp0141328': 'TI{dTomato}',
+        # FTA-141 obsolete FBtp
+        'FBtp0125282': 'Mi{FlipFlop}',
+        'FBtp0099367': 'TI{T-GEM}',
+
+
+
     }
 
     # Additional set for export added to the handler.
