@@ -35,8 +35,8 @@ class ConstructHandler(FeatureHandler):
     test_set = {
         # FBtp corresponding to 'cassette FBal that are associated_with at least one FBtp' in cassette_handler.py
         'FBtp0006749': 'P{UAS-wg.flu}',                           # associated_with FBal0055793
-        'FBtp0000463': 'P{UAS-MAPT.A}',                           # Expresses Human MAPT (HGNC:6893). associated_with FBal0043132
-        'FBtp0001701': 'P{hs-yCDC42.V12}',                        # Expresses Scer CDC42 (SGD:S000004219). associated_with FBal0062057
+        'FBtp0000463': 'P{UAS-MAPT.A}',  # Expresses Human MAPT (HGNC:6893). associated_with FBal0043132
+        'FBtp0001701': 'P{hs-yCDC42.V12}',  # Expresses Scer CDC42 (SGD:S000004219). associated_with FBal0062057
         'FBtp0036482': 'P{GD9857}',  # associated_with FBal0198528
         'FBtp0114504': 'PBac{Mcm3.B}',  # associated_with FBal0322755
         'FBtp0114502': 'P{UAS-Venus-flfl.DeltaRanBD}',  # associated_with FBal0322754
@@ -65,17 +65,17 @@ class ConstructHandler(FeatureHandler):
         'FBtp0021422': 'P{UAS-SCAT3}',  # associated_with FBal0191435
         'FBtp0051857': 'P{GAL4-dSREBPg.K}',  # associated_with FBal0241325
         'FBtp0008631': 'P{UAS-wg.H.T:HA1}',                       # Expresses FBgn wg, regulated by FBto UASt.
-        'FBtp0010648': 'P{wg.FRT.B}',                             # Expresses FBgn wg, regulated by FBgn sev, has FBto FRT.
-        'FBtp0145675': 'PBac{UAS-hHTT.ex1.Q97.S13D.mCherry}',     # Expresses FBgn Hsap\HTT, regulated by FBto UAS, tagged with FBto mCherry.
+        'FBtp0010648': 'P{wg.FRT.B}',  # Expresses FBgn wg, regulated by FBgn sev, has FBto FRT.
+        'FBtp0145675': 'PBac{UAS-hHTT.ex1.Q97.S13D.mCherry}',  # Expr Hsap\HTT, reg UAS, tagged mCherry.
         'FBtp0000074': 'P{ftzG}',                                 # Expresses FBgn ftz, regulated by FBgn ftz.
         'FBtp0000326': 'P{SEV5}',                                 # Expresses FBgn sev, tagged with FBto MYC.
         'FBtp0161516': 'P{lush-GAL4.3}',                          # Expresses FBto GAL4, regulated by FBgn lush.
-        'FBtp0057873': 'P{GMR16C10-GAL4}',                        # Expresses FBto GAL4, regulated by GMR16C10 (related to two genes, Brf and lute).
+        'FBtp0057873': 'P{GMR16C10-GAL4}',  # Expresses GAL4, regulated by GMR16C10 (related to Brf and lute).
         'FBtp0032215': 'P{GD5007}',                               # Targets FBgn wg, regulated by FBto UASt.
         'FBtp0031452': 'P{GD4157}',                               # Targets FBgn lbe, regulated by FBto UASt.
         'FBtp0145396': 'P{TOE.GS00055}',                          # Targets FBgn wg, regulated by FBto UASt.
         'FBtp0145394': 'P{TKO.GS00469}',                          # Targets FBgn Alp9, Alp10, regulated by FBto UASt.
-        'FBtp0161256': 'PBac{UAS-G-CEPIA1::TM-2A-TagRFP::TM}',    # 2 FBal; expresses FBto G-CEPIA1, RFP; expresses FBgn Equa\eqFP578, GFP; regulated by UAS.
+        'FBtp0161256': 'PBac{UAS-G-CEPIA1::TM-2A-TagRFP::TM}',  # 2 FBal; expr G-CEPIA1, RFP, eqFP578, GFP; reg UAS
         'FBtp0131348': 'P{UAS-Scer_RCR1.MYC}',                    # Expresses Scer RCR1 (SGD:S000000209).
         'FBtp0001650': 'P{UAS-Cele_ced-3.S}',                     # Expresses Cele ced-3 (WB:WBGene00000417).
         'FBtp0010091': 'P{hs-Drer_nkx2.7.P}',                     # Expresses Drer nkx2.7 (ZFIN:ZDB-GENE-990415-179).
@@ -83,14 +83,14 @@ class ConstructHandler(FeatureHandler):
         'FBtp0002652': 'P{UAS-mCD8::GFP.L}',                      # Expresses Mmus Cd8a (MGI:88346).
         'FBtp0001429': 'P{UAS-MAP2.A}',                           # Expresses Rnor Map2 (RGD:3044).
         'FBtp0150381': 'PBac{UAS-SARS-CoV-2-nsp13.B}',            # Expresses SARS-CoV-2 nsp13 (REFSEQ:YP_009725308).
-        'FBtp0132292': 'P{U6:2-scw.flySAM2.0}',                   # Exception with `has_transcriptional_unit` as maps to 'FBal0345196'
+        'FBtp0132292': 'P{U6:2-scw.flySAM2.0}',  # Exception: `has_transcriptional_unit` maps to 'FBal0345196'
         'FBtp0001493': 'P{ry1-Delta547}',                         # has_transcriptional_unit
         'FBtp0001458': 'P{SP[c.Yp1.hs]}',
         'FBtp0000904': 'P{SxlcF1}',
         'FBtp0000352': 'P{GawB}',                                 # Expresses FBto GAL4, FBgn Scer\GAL4. Report both?
-        'FBtp0017594': 'P{UAS(-FRT)ptc.Deltaloop2}',              # Obsolete, has only a non-current symbol synonym - for testing feature lookup.
+        'FBtp0017594': 'P{UAS(-FRT)ptc.Deltaloop2}',  # Obsolete, non-current symbol only - tests feature lookup.
         # FBtp that have no associated_with FBal
-        'FBtp0080088': 'P{UAS-Brainbow}',                         # Expresses EBFP2, EGFP, mKO2, has_reg_region UAS; tagged_with HA, MYC, V5; carries lox.
+        'FBtp0080088': 'P{UAS-Brainbow}',  # Expr EBFP2, EGFP, mKO2; reg UAS; tagged HA, MYC, V5; carries lox.
         'FBtp0051705': 'M{MtnBcDNA-MtnDcDNA.EGFP}',               # has_reg_region MtnB.
         'FBtp0083738': 'P{GR}',                                   # Is regulated_by FBgn Act5C.
         # FTA-141 anon cassettes
@@ -116,8 +116,10 @@ class ConstructHandler(FeatureHandler):
     }
 
     # Additional set for export added to the handler.
-    construct_associations = []    # Will be a list of FBExportEntity objects (relationships), map to ConstructGenomicEntityAssociationDTO.
-    construct_cassette_associations = []    # Will be a list of FBExportEntity objects, map to ConstructCassetteAssociationDTO.
+    # Will be a list of FBExportEntity objects (rels), map to ConstructGenomicEntityAssociationDTO.
+    construct_associations = []
+    # Will be a list of FBExportEntity objects, map to ConstructCassetteAssociationDTO.
+    construct_cassette_associations = []
     # Anonymous cassette data.
 
     # Elaborate on get_general_data() for the ConstructHandler.
@@ -186,7 +188,9 @@ class ConstructHandler(FeatureHandler):
         self.log.info('Now propagate these "encodes_tool" relationships to constructs.')
         cons_counter = 0
         for construct in self.fb_data_entities.values():
-            al_cons_rels = construct.recall_relationships(self.log, entity_role='object', rel_types='associated_with', rel_entity_types='allele')
+            al_cons_rels = construct.recall_relationships(
+                self.log, entity_role='object', rel_types='associated_with',
+                rel_entity_types='allele')
             for al_cons_rel in al_cons_rels:
                 allele_id = al_cons_rel.chado_obj.subject_id
                 try:
@@ -194,7 +198,8 @@ class ConstructHandler(FeatureHandler):
                     cons_counter += len(al_tool_dict[allele_id])
                 except KeyError:
                     pass
-        self.log.info(f'Propagated {cons_counter} allele-to-component "encodes_tool" relationships to related constructs.')
+        self.log.info(f'Propagated {cons_counter} allele-to-component "encodes_tool" '
+                      'relationships to related constructs.')
         return
 
     def get_allele_reg_regions(self, session):
@@ -248,7 +253,9 @@ class ConstructHandler(FeatureHandler):
         self.log.info('Now propagate "has_reg_region" relationships to constructs.')
         cons_counter = 0
         for construct in self.fb_data_entities.values():
-            al_cons_rels = construct.recall_relationships(self.log, entity_role='object', rel_types='associated_with', rel_entity_types='allele')
+            al_cons_rels = construct.recall_relationships(
+                self.log, entity_role='object', rel_types='associated_with',
+                rel_entity_types='allele')
             for al_cons_rel in al_cons_rels:
                 allele_id = al_cons_rel.chado_obj.subject_id
                 try:
@@ -256,7 +263,8 @@ class ConstructHandler(FeatureHandler):
                     counter += len(al_reg_region_dict[allele_id])
                 except KeyError:
                     pass
-        self.log.info(f'Propagated {cons_counter} allele-to-component "has_reg_region" relationships to related constructs.')
+        self.log.info(f'Propagated {cons_counter} allele-to-component "has_reg_region" '
+                      'relationships to related constructs.')
         return
 
     def get_construct_tool_uses(self, session):
@@ -353,7 +361,9 @@ class ConstructHandler(FeatureHandler):
         for construct in self.fb_data_entities.values():
             self.log.debug(f'Assess encoded tools for {construct}.')
             # Reference of related alleles.
-            cons_al_rels = construct.recall_relationships(self.log, entity_role='object', rel_types='associated_with', rel_entity_types='allele')
+            cons_al_rels = construct.recall_relationships(
+                self.log, entity_role='object', rel_types='associated_with',
+                rel_entity_types='allele')
             # self.log.debug(f'{construct} has {len(cons_al_rels)} direct allele relationships.')
             # Direct encodes_tool relationships.
             cons_tool_rels = construct.recall_relationships(self.log, entity_role='subject', rel_types='encodes_tool')
@@ -365,9 +375,11 @@ class ConstructHandler(FeatureHandler):
                     construct.expressed_features[component_id].extend(cons_tool_rel.pubs)
                 except KeyError:
                     construct.expressed_features[component_id] = cons_tool_rel.pubs
-            self.log.debug(f'For {construct}, found {len(construct.expressed_features.keys())} encoded tools via direct relationships.')
+            self.log.debug(f'For {construct}, found {len(construct.expressed_features.keys())} '
+                           'encoded tools via direct relationships.')
             # Indirect encodes_tool relationships.
-            # self.log.debug(f'{construct} has {len(construct.al_encodes_tool_rels)} indirect tool relationships via alleles.')
+            # self.log.debug(f'{construct} has {len(construct.al_encodes_tool_rels)} '
+            #                'indirect tool relationships via alleles.')
             for al_tool_rel in construct.al_encodes_tool_rels:
                 allele_id = al_tool_rel.chado_obj.subject_id
                 component_id = al_tool_rel.chado_obj.object_id
@@ -381,7 +393,8 @@ class ConstructHandler(FeatureHandler):
                         construct.expressed_features[component_id].extend(cons_al_rel.pubs)
                         # self.log.debug(f'{construct} has these pubs via allele-tool: {cons_al_rel.pubs}')
             counter += len(construct.expressed_features.keys())
-        self.log.info(f'Found {counter} encoded tools for constructs via direct and indirect (via allele) relationships.')
+        self.log.info(f'Found {counter} encoded tools for constructs via direct and '
+                      'indirect (via allele) relationships.')
         return
 
     def synthesize_component_genes(self):
@@ -393,7 +406,9 @@ class ConstructHandler(FeatureHandler):
             this_expressed_gene_counter = 0
             this_targeted_gene_counter = 0
             # Reference of related alleles.
-            cons_al_rels = construct.recall_relationships(self.log, entity_role='object', rel_types='associated_with', rel_entity_types='allele')
+            cons_al_rels = construct.recall_relationships(
+                self.log, entity_role='object', rel_types='associated_with',
+                rel_entity_types='allele')
             # self.log.debug(f'{construct} has {len(cons_al_rels)} direct allele relationships.')
             for cons_al_rel in cons_al_rels:
                 allele_id = cons_al_rel.chado_obj.subject_id
@@ -403,7 +418,8 @@ class ConstructHandler(FeatureHandler):
                 gene_id = self.allele_gene_lookup[allele_id]
                 # Slot for gene_id depends on the allele class.
                 if allele_id in self.transgenic_allele_class_lookup.keys():
-                    if set(self.transgenic_allele_class_lookup[allele_id]).intersection({'RNAi_reagent', 'sgRNA', 'antisense'}):
+                    if set(self.transgenic_allele_class_lookup[allele_id]).intersection(
+                            {'RNAi_reagent', 'sgRNA', 'antisense'}):
                         gene_slot = getattr(construct, 'targeted_features')
                         this_targeted_gene_counter += 1
                     else:
@@ -418,7 +434,8 @@ class ConstructHandler(FeatureHandler):
                     gene_slot[gene_id] = cons_al_rel.pubs
             all_expressed_gene_counter += this_expressed_gene_counter
             all_targeted_gene_counter += this_targeted_gene_counter
-        self.log.info(f'Found {all_expressed_gene_counter} expressed genes and {all_targeted_gene_counter} targeted genes for constructs.')
+        self.log.info(f'Found {all_expressed_gene_counter} expressed genes and '
+                      f'{all_targeted_gene_counter} targeted genes for constructs.')
         return
 
     def synthesize_reg_regions(self):
@@ -427,10 +444,13 @@ class ConstructHandler(FeatureHandler):
         counter = 0
         for construct in self.fb_data_entities.values():
             # Reference of related alleles.
-            cons_al_rels = construct.recall_relationships(self.log, entity_role='object', rel_types='associated_with', rel_entity_types='allele')
+            cons_al_rels = construct.recall_relationships(
+                self.log, entity_role='object', rel_types='associated_with',
+                rel_entity_types='allele')
             # self.log.debug(f'{construct} has {len(cons_al_rels)} direct allele relationships.')
             # Direct has_reg_region relationships (new implementation).
-            cons_reg_region_rels = construct.recall_relationships(self.log, entity_role='subject', rel_types='has_reg_region')
+            cons_reg_region_rels = construct.recall_relationships(
+                self.log, entity_role='subject', rel_types='has_reg_region')
             # self.log.debug(f'{construct} has {len(cons_reg_region_rels)} direct reg_region relationships.')
             for cons_reg_region_rel in cons_reg_region_rels:
                 reg_region_id = cons_reg_region_rel.chado_obj.object_id
@@ -438,10 +458,14 @@ class ConstructHandler(FeatureHandler):
                     construct.regulating_features[reg_region_id].extend(cons_reg_region_rel.pubs)
                 except KeyError:
                     construct.regulating_features[reg_region_id] = cons_reg_region_rel.pubs
-            self.log.debug(f'For {construct}, found {len(construct.regulating_features.keys())} encoded reg_regions via direct relationships.')
+            self.log.debug(f'For {construct}, found {len(construct.regulating_features.keys())} '
+                           'encoded reg_regions via direct relationships.')
             # Direct relationships to regulatory_regions (old implementation).
-            old_cons_reg_region_rels = construct.recall_relationships(self.log, entity_role='object', rel_entity_types=['region', 'regulatory_region'])
-            # self.log.debug(f'{construct} has {len(old_cons_reg_region_rels)} old style direct regulatory_region relationships.')
+            old_cons_reg_region_rels = construct.recall_relationships(
+                self.log, entity_role='object',
+                rel_entity_types=['region', 'regulatory_region'])
+            # self.log.debug(f'{construct} has {len(old_cons_reg_region_rels)} '
+            #                'old style direct regulatory_region relationships.')
             for old_cons_reg_region_rel in old_cons_reg_region_rels:
                 reg_region_id = old_cons_reg_region_rel.chado_obj.subject_id
                 try:
@@ -499,16 +523,23 @@ class ConstructHandler(FeatureHandler):
                         tool_overlap = all_gene_related_tool_ids.intersection(set(slot_bin.keys()))
                         if tool_overlap:
                             pruning_list.append(feature_id)
-                            pruned_gene = f'{self.feature_lookup[feature_id]["name"]} ({self.feature_lookup[feature_id]["uniquename"]})'
-                            tool_overlap_str = '|'.join([f'{self.feature_lookup[i]["name"]} ({self.feature_lookup[i]["uniquename"]})' for i in tool_overlap])
-                            self.log.debug(f'For {construct}, suppress {pruned_gene} since related tools are more informative: {tool_overlap_str}')
+                            pruned_gene = (
+                                f'{self.feature_lookup[feature_id]["name"]}'
+                                f' ({self.feature_lookup[feature_id]["uniquename"]})')
+                            tool_overlap_str = '|'.join([
+                                f'{self.feature_lookup[i]["name"]} ({self.feature_lookup[i]["uniquename"]})'
+                                for i in tool_overlap])
+                            self.log.debug(
+                                f'For {construct}, suppress {pruned_gene} since related '
+                                f'tools are more informative: {tool_overlap_str}')
                     except KeyError:
                         pass
                 for gene_id in pruning_list:
                     tool_gene_bin = getattr(construct, tool_gene_slot_name)
                     tool_gene_bin.append(gene_id)
                     counter += 1
-            self.log.info(f'Will suppress {counter} genes from construct {slot_name} that are better represented as tools.')
+            self.log.info(f'Will suppress {counter} genes from construct {slot_name} '
+                          'that are better represented as tools.')
         return
 
     def identify_constructs_needing_anon_cassettes(self):
@@ -586,9 +617,15 @@ class ConstructHandler(FeatureHandler):
         self.synthesize_synonyms()
         self.synthesize_pubs()
         self.synthesize_encoded_tools()
-        self.synthesize_component_genes()
+        dump_cass_assoc = getenv('ADD_CASS_TO_CONSTRUCT', None)
+        if not (dump_cass_assoc and dump_cass_assoc == 'YES'):
+            self.synthesize_component_genes()
         self.synthesize_reg_regions()
-        self.synthesize_redundant_tool_genes()
+        if not (dump_cass_assoc and dump_cass_assoc == 'YES'):
+            self.synthesize_redundant_tool_genes()
+        else:
+            self.log.info('ADD_CASS_TO_CONSTRUCT=YES: skipping synthesize_component_genes and '
+                          'synthesize_redundant_tool_genes (cassettes handle this data).')
         self.identify_constructs_needing_anon_cassettes()
         return
 
@@ -604,8 +641,10 @@ class ConstructHandler(FeatureHandler):
             construct.linkmldto = agr_construct
         return
 
-    # Note: There are two distinct mapping types: ConstructComponentSlotAnnotationDTO and ConstructGenomicEntityAssociationDTO.
-    #       ConstructComponentSlotAnnotationDTO can list anything (whether or not the component is known to the Alliance).
+    # Note: There are two distinct mapping types:
+    #   ConstructComponentSlotAnnotationDTO and ConstructGenomicEntityAssociationDTO.
+    #   ConstructComponentSlotAnnotationDTO can list anything
+    #   (whether or not the component is known to the Alliance).
     #       ConstructGenomicEntityAssociationDTO is restricted to Alliance-submitted objects (currently genes only).
     def map_construct_components(self):
         """Map current construct components to the Alliance LinkML object."""
@@ -628,8 +667,9 @@ class ConstructHandler(FeatureHandler):
                     elif slot_name == 'regulating_features' and feature_id in construct.regulating_tool_genes:
                         continue
                     # These are dumped out in the associations
+                    org_id = self.feature_lookup[feature_id]['organism_id']
                     if self.feature_lookup[feature_id]['curie'].startswith('FB:FBgn') & \
-                            self.organism_lookup[self.feature_lookup[feature_id]['organism_id']]['is_drosophilid'] is True:
+                            self.organism_lookup[org_id]['is_drosophilid'] is True:
                         continue
                     feature = self.feature_lookup[feature_id]
                     symbol = feature['symbol']
@@ -637,7 +677,8 @@ class ConstructHandler(FeatureHandler):
                     pubs = self.lookup_pub_curies(pub_ids)
                     taxon_text = self.organism_lookup[organism_id]['full_species_name']
                     taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
-                    component_dto = agr_datatypes.ConstructComponentSlotAnnotationDTO(rel_type, symbol, taxon_curie, taxon_text, pubs).dict_export()
+                    component_dto = agr_datatypes.ConstructComponentSlotAnnotationDTO(
+                        rel_type, symbol, taxon_curie, taxon_text, pubs).dict_export()
                     construct.linkmldto.construct_component_dtos.append(component_dto)
                     counter += 1
         self.log.info(f'Mapped construct components to {counter} ConstructcomponentDTOs.')
@@ -653,7 +694,8 @@ class ConstructHandler(FeatureHandler):
         }
         counter = 0
         for feature_slot_name, rel_type in slot_rel_types.items():
-            self.log.info(f'Sort out Alliance genomic entities from "{feature_slot_name}" to "{rel_type}" associations.')
+            self.log.info(f'Sort out Alliance genomic entities from "{feature_slot_name}" '
+                          f'to "{rel_type}" associations.')
             for construct in self.fb_data_entities.values():
                 component_slot = getattr(construct, feature_slot_name)
                 for feature_id, pub_ids in component_slot.items():
@@ -673,7 +715,8 @@ class ConstructHandler(FeatureHandler):
                     obj_curie = self.feature_lookup[feature_id]['curie']
                     pub_curies = self.lookup_pub_curies(pub_ids)
                     fb_rel = fb_datatypes.FBExportEntity()
-                    rel_dto = agr_datatypes.ConstructGenomicEntityAssociationDTO(cons_curie, rel_type, obj_curie, pub_curies)
+                    rel_dto = agr_datatypes.ConstructGenomicEntityAssociationDTO(
+                        cons_curie, rel_type, obj_curie, pub_curies)
                     if construct.is_obsolete is True or self.feature_lookup[feature_id]['is_obsolete'] is True:
                         rel_dto.obsolete = True
                         rel_dto.internal = True
@@ -810,10 +853,16 @@ class ConstructHandler(FeatureHandler):
         #        This is because for reagents, we report only strings, not SecondaryIdSlotAnnotationDTOs.
         for construct in self.fb_data_entities.values():
             construct.linkmldto.secondary_identifiers = construct.alt_fb_ids
-        self.map_construct_components()
-        self.flag_internal_fb_entities('fb_data_entities')
-        self.map_construct_genomic_associations()
-        self.flag_internal_fb_entities('construct_associations')
+        dump_cass_assoc = getenv('ADD_CASS_TO_CONSTRUCT', None)
+        if not (dump_cass_assoc and dump_cass_assoc == 'YES'):
+            self.map_construct_components()
+            self.flag_internal_fb_entities('fb_data_entities')
+            self.map_construct_genomic_associations()
+            self.flag_internal_fb_entities('construct_associations')
+        else:
+            self.log.info('ADD_CASS_TO_CONSTRUCT=YES: skipping map_construct_components and '
+                          'map_construct_genomic_associations (cassettes handle this data).')
+            self.flag_internal_fb_entities('fb_data_entities')
         self.map_construct_cassette_associations()
         self.flag_internal_fb_entities('construct_cassette_associations')
         # Anonymous cassette-to-construct associations (cassette DTOs now created by CassetteHandler).
@@ -826,6 +875,7 @@ class ConstructHandler(FeatureHandler):
         super().query_chado_and_export(session)
         self.flag_unexportable_entities(self.construct_associations, 'construct_genomic_entity_association_ingest_set')
         self.generate_export_dict(self.construct_associations, 'construct_genomic_entity_association_ingest_set')
-        self.flag_unexportable_entities(self.construct_cassette_associations, 'construct_cassette_association_ingest_set')
+        self.flag_unexportable_entities(
+            self.construct_cassette_associations, 'construct_cassette_association_ingest_set')
         self.generate_export_dict(self.construct_cassette_associations, 'construct_cassette_association_ingest_set')
         return

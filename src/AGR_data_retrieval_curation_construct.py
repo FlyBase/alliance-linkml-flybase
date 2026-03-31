@@ -50,7 +50,9 @@ testing = set_up_dict['testing']
 # Process additional input parameters not handled by the set_up_db_reading() function above.
 parser = argparse.ArgumentParser(description='inputs')
 parser.add_argument('-l', '--linkml_release', help='The "agr_curation_schema" LinkML release number.', required=True)
-parser.add_argument('-r', '--reference_db', help='The name of a previous reference db for incremental exports.', required=False)
+parser.add_argument('-r', '--reference_db',
+                    help='The name of a previous reference db for incremental exports.',
+                    required=False)
 
 # Use parse_known_args(), not parse_args(), to handle args specific to this script (outside of set_up_db_reading()).
 args, extra_args = parser.parse_known_args()
@@ -132,20 +134,23 @@ def main():
             'linkml_version': linkml_release,
             'alliance_member_release_version': database_release,
         }
-        association_export_dict['construct_genomic_entity_association_ingest_set'] = cons_handler.export_data['construct_genomic_entity_association_ingest_set']
-        if len(association_export_dict['construct_genomic_entity_association_ingest_set']) == 0:
-            log.error('The "construct_genomic_entity_association_ingest_set" is unexpectedly empty.')
-            raise ValueError('The "construct_genomic_entity_association_ingest_set" is unexpectedly empty.')
-
-        # Because the Alliance is not yet abe to handle cassettes we do not want to add these
-        # associations. For testing set the env ADD_CASS_TO_CONSTRUCT which will then do this
+        association_export_dict['construct_genomic_entity_association_ingest_set'] = \
+            cons_handler.export_data['construct_genomic_entity_association_ingest_set']
         dump_cass_assoc = getenv('ADD_CASS_TO_CONSTRUCT', None)
-        if dump_cass_assoc and dump_cass_assoc == 'YES':
+        cassettes_enabled = dump_cass_assoc and dump_cass_assoc == 'YES'
+        if len(association_export_dict['construct_genomic_entity_association_ingest_set']) == 0:
+            if cassettes_enabled:
+                log.info('construct_genomic_entity_association_ingest_set is empty as expected '
+                         '(cassettes handle this data).')
+            else:
+                log.error('The "construct_genomic_entity_association_ingest_set" is unexpectedly empty.')
+                raise ValueError('The "construct_genomic_entity_association_ingest_set" is unexpectedly empty.')
+
+        if cassettes_enabled:
             association_export_dict['construct_cassette_association_ingest_set'] = \
                 cons_handler.export_data['construct_cassette_association_ingest_set']
         else:
-            log.warning('The ADD_CASS_TO_CONSTRUCT environment variable is not set to "YES". '
-                        'So no assoc to cassettes added.')
+            log.warning('ADD_CASS_TO_CONSTRUCT not set to "YES". No cassette assocs added.')
 
         generate_export_file(association_export_dict, log, association_output_filename)
 
