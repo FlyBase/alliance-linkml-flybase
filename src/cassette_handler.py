@@ -706,21 +706,32 @@ class CassetteHandler(FeatureHandler):
         self.log.info(f'Mapped {counter} encodes_tool associations for anonymous cassettes.')
 
     def map_anon_cassette_tool_uses(self):
-        """Map tool_uses data to anonymous cassette use DTOs."""
+        """Map tool_uses data to anonymous cassette use DTOs.
+
+        Create one CassetteUseSlotAnnotationDTO per FBcv term, with only
+        the pubs that give evidence for that specific term.
+        """
         self.log.info('Map anonymous cassette tool_uses.')
         counter = 0
         for data in self.anon_cassette_data:
             if not data['tool_uses_data']:
                 continue
-            pub_ids = [entry['pub_id'] for entry in data['tool_uses_data']]
-            pub_curies = self.lookup_pub_curies(pub_ids)
-            use_curies = list(set(
-                f'FBcv:{entry["accession"]}' for entry in data['tool_uses_data']))
-            slot_dto = agr_datatypes.CassetteUseSlotAnnotationDTO(
-                pub_curies, use_curies).dict_export()
-            data['anon_cassette_dto'].cassette_use_dtos.append(slot_dto)
-            counter += 1
-        self.log.info(f'Mapped tool_uses for {counter} anonymous cassettes.')
+            # Group pub_ids by FBcv accession.
+            accession_to_pub_ids = {}
+            for entry in data['tool_uses_data']:
+                accession = entry['accession']
+                if accession not in accession_to_pub_ids:
+                    accession_to_pub_ids[accession] = []
+                accession_to_pub_ids[accession].append(entry['pub_id'])
+            # Create one DTO per FBcv term.
+            for accession, pub_ids in accession_to_pub_ids.items():
+                pub_curies = self.lookup_pub_curies(pub_ids)
+                use_curies = [f'FBcv:{accession}']
+                slot_dto = agr_datatypes.CassetteUseSlotAnnotationDTO(
+                    pub_curies, use_curies).dict_export()
+                data['anon_cassette_dto'].cassette_use_dtos.append(slot_dto)
+                counter += 1
+        self.log.info(f'Mapped {counter} tool_uses DTOs for anonymous cassettes.')
 
     def map_anon_cassettes(self):
         """Orchestrate anonymous cassette mapping from ConstructHandler data."""

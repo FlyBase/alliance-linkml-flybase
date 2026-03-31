@@ -102,6 +102,8 @@ class ConstructHandler(FeatureHandler):
         # FTA-144 tool_uses		enhancer trap
         'FBtp0000019': 'P{lacZ.ry[+]}',
         'FBtp0000022': 'P{lacZ.w[+]}',
+        # Multiple tool_uses terms test case
+        'FBtp0017513': 'P{GreenEye.GAL4}',
         # FTA-141 has 'FTA: generic TI construct' int note so should be excluded
         'FBtp0117267': 'TI{UAS}',
         'FBtp0141328': 'TI{dTomato}',
