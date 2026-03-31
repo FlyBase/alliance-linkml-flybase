@@ -33,6 +33,37 @@ class ConstructHandler(FeatureHandler):
         self.primary_export_set = 'construct_ingest_set'
 
     test_set = {
+        # FBtp corresponding to 'cassette FBal that are associated_with at least one FBtp' in cassette_handler.py
+        'FBtp0006749': 'P{UAS-wg.flu}',                           # associated_with FBal0055793
+        'FBtp0000463': 'P{UAS-MAPT.A}',                           # Expresses Human MAPT (HGNC:6893). associated_with FBal0043132
+        'FBtp0001701': 'P{hs-yCDC42.V12}',                        # Expresses Scer CDC42 (SGD:S000004219). associated_with FBal0062057
+        'FBtp0036482': 'P{GD9857}',  # associated_with FBal0198528
+        'FBtp0114504': 'PBac{Mcm3.B}',  # associated_with FBal0322755
+        'FBtp0114502': 'P{UAS-Venus-flfl.DeltaRanBD}',  # associated_with FBal0322754
+        'FBtp0093705': 'P{UAS-Semp1.R41G}',  # associated_with FBal0296109
+        'FBtp0021843': 'P{UAS-Gr63a.J}',  # associated_with FBal0193766
+        'FBtp0051099': 'P{UAS-sd.RNAi.N}',  # associated_with FBal0239883
+        'FBtp0002892': 'P{Amy-p[IX]}',  # associated_with FBal0000531
+        'FBtp0002794': 'P{Act88F-E334K}',  # associated_with FBal0028742
+        'FBtp0005118': 'P{SDL1}',  # associated_with FBal0045138
+        'FBtp0021911': 'P{rho-GFP.nls}',  # associated_with FBal0193109
+        'FBtp0058611': 'P{GMR24E03-GAL4}',  # associated_with FBal0250846
+        'FBtp0004177': 'P{1.55-eve-lacZ}',  # associated_with FBal0041313
+        'FBtp0082288': 'P{loxP.1.55-eve-lacZ.loxM2}',  # associated_with FBal0041313
+        'FBtp0008956': 'P{UAS-dlg1[DeltaSH3]-FLAG}',  # associated_with FBal0083005
+        'FBtp0015846': 'P{cic:flu}',  # associated_with FBal0137284
+        'FBtp0016822': 'P{UAS-PGRP-LE.FLAG}',  # associated_with FBal0144698
+        'FBtp0017785': 'P{UAS(-FRT)wg.PE4.HA}',  # associated_with FBal0151333
+        'FBtp0015926': 'P{hs-I-CreI.R}',  # associated_with FBal0137561
+        'FBtp0170617': 'P{UAS-hCGA.L}',  # associated_with FBal0404843
+        'FBtp0071288': 'P{UAS-deGradFP}',  # associated_with FBal0401141
+        'FBtp0071289': 'M{UAS-deGradFP}',  # associated_with FBal0401141
+        'FBtp0006292': 'P{sevhs-csw[CS]}',  # associated_with FBal0051685
+        'FBtp0002847': 'P{Adh[LsBbbf2]}',  # associated_with FBal0028848
+        'FBtp0002778': 'P{Abd.B[Fab7.tHa]}',  # associated_with FBal0033313
+        'FBtp0012260': 'P{ftz-GFP-lacZ}',  # associated_with FBal0104158
+        'FBtp0021422': 'P{UAS-SCAT3}',  # associated_with FBal0191435
+        'FBtp0051857': 'P{GAL4-dSREBPg.K}',  # associated_with FBal0241325
         'FBtp0008631': 'P{UAS-wg.H.T:HA1}',                       # Expresses FBgn wg, regulated by FBto UASt.
         'FBtp0010648': 'P{wg.FRT.B}',                             # Expresses FBgn wg, regulated by FBgn sev, has FBto FRT.
         'FBtp0145675': 'PBac{UAS-hHTT.ex1.Q97.S13D.mCherry}',     # Expresses FBgn Hsap\HTT, regulated by FBto UAS, tagged with FBto mCherry.
@@ -44,31 +75,30 @@ class ConstructHandler(FeatureHandler):
         'FBtp0031452': 'P{GD4157}',                               # Targets FBgn lbe, regulated by FBto UASt.
         'FBtp0145396': 'P{TOE.GS00055}',                          # Targets FBgn wg, regulated by FBto UASt.
         'FBtp0145394': 'P{TKO.GS00469}',                          # Targets FBgn Alp9, Alp10, regulated by FBto UASt.
-        'FBtp0000352': 'P{GawB}',                                 # Expresses FBto GAL4, FBgn Scer\GAL4. Report both?
         'FBtp0161256': 'PBac{UAS-G-CEPIA1::TM-2A-TagRFP::TM}',    # 2 FBal; expresses FBto G-CEPIA1, RFP; expresses FBgn Equa\eqFP578, GFP; regulated by UAS.
-        'FBtp0051705': 'M{MtnBcDNA-MtnDcDNA.EGFP}',               # has_reg_region MtnB.
-        'FBtp0080088': 'P{UAS-Brainbow}',                         # Expresses EBFP2, EGFP, mKO2, has_reg_region UAS; tagged_with HA, MYC, V5; carries lox.
-        'FBtp0083738': 'P{GR}',                                   # Is regulated_by FBgn Act5C.
-        'FBtp0017594': 'P{UAS(-FRT)ptc.Deltaloop2}',              # Obsolete, has only a non-current symbol synonym - for testing feature lookup.
-        'FBtp0001701': 'P{hs-yCDC42.V12}',                        # Expresses Scer CDC42 (SGD:S000004219).
         'FBtp0131348': 'P{UAS-Scer_RCR1.MYC}',                    # Expresses Scer RCR1 (SGD:S000000209).
         'FBtp0001650': 'P{UAS-Cele_ced-3.S}',                     # Expresses Cele ced-3 (WB:WBGene00000417).
         'FBtp0010091': 'P{hs-Drer_nkx2.7.P}',                     # Expresses Drer nkx2.7 (ZFIN:ZDB-GENE-990415-179).
         'FBtp0007421': 'P{hb-Xlh1}',                              # Expresses Xlae h (no XB ID in FB).
         'FBtp0002652': 'P{UAS-mCD8::GFP.L}',                      # Expresses Mmus Cd8a (MGI:88346).
         'FBtp0001429': 'P{UAS-MAP2.A}',                           # Expresses Rnor Map2 (RGD:3044).
-        'FBtp0000463': 'P{UAS-MAPT.A}',                           # Expresses Human MAPT (HGNC:6893).
         'FBtp0150381': 'PBac{UAS-SARS-CoV-2-nsp13.B}',            # Expresses SARS-CoV-2 nsp13 (REFSEQ:YP_009725308).
         'FBtp0132292': 'P{U6:2-scw.flySAM2.0}',                   # Exception with `has_transcriptional_unit` as maps to 'FBal0345196'
         'FBtp0001493': 'P{ry1-Delta547}',                         # has_transcriptional_unit
         'FBtp0001458': 'P{SP[c.Yp1.hs]}',
         'FBtp0000904': 'P{SxlcF1}',
+        'FBtp0000352': 'P{GawB}',                                 # Expresses FBto GAL4, FBgn Scer\GAL4. Report both?
+        'FBtp0017594': 'P{UAS(-FRT)ptc.Deltaloop2}',              # Obsolete, has only a non-current symbol synonym - for testing feature lookup.
+        # FBtp that have no associated_with FBal
+        'FBtp0080088': 'P{UAS-Brainbow}',                         # Expresses EBFP2, EGFP, mKO2, has_reg_region UAS; tagged_with HA, MYC, V5; carries lox.
+        'FBtp0051705': 'M{MtnBcDNA-MtnDcDNA.EGFP}',               # has_reg_region MtnB.
+        'FBtp0083738': 'P{GR}',                                   # Is regulated_by FBgn Act5C.
         # FTA-141 anon cassettes
         'FBtp0000910': 'H{Lw2}',
         'FBtp0023088': 'M{3xP3-RFP.attP}',
         # FTA-145  more with links to cassettes
-        'FBtp0000154': 'P{A92}',
-        'FBtp0000157': 'P{lwB}',
+        'FBtp0000154': 'P{A92}',  # also associated_with FBal0041861
+        'FBtp0000157': 'P{lwB}',  # also associated_with FBal0041862
         # FTA-144 tool_uses		enhancer trap
         'FBtp0000019': 'P{lacZ.ry[+]}',
         'FBtp0000022': 'P{lacZ.w[+]}',
@@ -78,6 +108,8 @@ class ConstructHandler(FeatureHandler):
         # FTA-141 obsolete FBtp
         'FBtp0125282': 'Mi{FlipFlop}',
         'FBtp0099367': 'TI{T-GEM}',
+        # FTA-144 multiple tool_uses with multiple refs
+        'FBtp0017513': 'P{PTT-GB}',
 
 
 

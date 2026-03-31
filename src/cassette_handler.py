@@ -44,9 +44,12 @@ class CassetteHandler(FeatureHandler):
         'FBal0007942': '18w[00053]',            # Has recessive annotation from single locus unspecified zygosity genotype.
         'FBal0015410': 'sei[2]',                # Has codominant annotation from single locus unspecified zygosity genotype.
         'FBal0198096': 'tal[1]',                # Allele of internal type gene tal (gene_with_polycistronic_transcript).
-        'FBal0055793': 'wg[UAS.Tag:HA]',        # Allele is directly related to a construct, superceded by FBti0256568 (superseded_by_transgnc_insertions).
         'FBal0048226': 'Dmau_w[a23]',           # Non-Dmel allele related to non-Dmel insertion, superceded by FBti0014970 (superseded_by_at_locus_insertion).
         'FBal0011649': 'Dsim_Lhr[1]',           # Non-Dmel classical allele.
+        'FBal0290956': 'Csas[21]',              # curator error: in vitro only in fb_2025_05, fixed for fb_2026_01
+                                                # (now is classical allele reported_as_itself)
+        # cassette FBal that are associated_with at least one FBtp (corresponding FBtp are in construct_handler test set
+        'FBal0055793': 'wg[UAS.Tag:HA]',        # Allele is directly related to a construct, superceded by FBti0256568 (superseded_by_transgnc_insertions).
         'FBal0043132': 'Hsap_MAPT[UAS.cAa]',    # Transgenic, superceded by FBti0000969, FBti0249419 (superseded_by_transgnc_insertions).
         'FBal0062057': 'Scer_CDC42[V12.hs]',    # Transgenic, superceded by FBti0012506, FBti0249909 (superseded_by_transgnc_insertions).
         'FBal0198528': 'Pi4KIIalpha[GD9857]',   # Transegnic, superceded by four FBti (superseded_by_transgnc_insertions).
@@ -57,11 +60,6 @@ class CassetteHandler(FeatureHandler):
         'FBal0239883': 'sd[RNAi.N.UAS]',
         'FBal0000531': 'Amy-p[IX]',
         'FBal0028742': 'Act88F[E334K]',
-        'FBal0212171': r'Avic\GFP[UAS.FRT1]',       # in vitro only
-        'FBal0290956': 'Csas[21]',                  # curator error: in vitro only in fb_2025_05, fixed for fb_2026_01
-                                                    # (now is classical allele reported_as_itself)
-        'FBal0392043': r'Avic\GFP[EYFP.3xP3.cUa]',  # in vitro only
-        'FBal0028610': 'w[+mC]',                    # Has a secondary identifier to test
         'FBal0045138': 'Sry-delta[SDL1.lacZ]',                 # linked to an FBsf so a str association.
         'FBal0193109': r'Avic\GFP[EGFP.rho.PE.Tag:NLS(tra)]',  # linked to an FBsf so a str association.
         'FBal0250846': r'Scer\GAL4[GMR24E03]',                 # linked to an FBsf so a str association.
@@ -78,10 +76,42 @@ class CassetteHandler(FeatureHandler):
         'FBal0401141': r'Zzzz\VHH[deGradFP.UAS]',  #
         'FBal0051685': r'csw[CS.hs.2sev]',  # Has 2 props
         'FBal0028848': 'Adh[LsBbbf2]',  # examples of using alleleof to get FBrf
-        'FBal0033313': 'Abd-B[Fab7.tHa',
+        'FBal0033313': 'Abd-B[Fab7.tHa]',
         'FBal0104158': r'Ecol\lacZ[ftz.GFP]',  # Multiple encodes (for now)
         'FBal0191435': r'Avic\GFP[SCAT3.UAS]',  # uses_tool (multiple?)
-        'FBal0241325': r'SREBP[GAL4::VP16',     # uses tool
+        'FBal0241325': r'SREBP[GAL4::VP16]',     # uses tool
+        'FBal0065588': 'wg[UAS.cHa.Tag:HA]',     # associated_with FBtp0008631
+        'FBal0096631': 'wg[FRT.hs.2sev]',     # associated_with FBtp0010648
+        'FBal0365508': r'Hsap\HTT[Q97.S13D.ex1.UAS.mCherry]',     # associated_with FBtp0145675
+        'FBal0034670': 'ftz[+t10.8]',     # associated_with FBtp0000074
+        'FBal0032692': 'sev[S11.Tag:MYC]',     # associated_with FBtp0000326
+        'FBal0392814': r'Scer\GAL4[lush.3]',     # associated_with FBtp0161516
+        'FBal0250108': r'Scer\GAL4[GMR16C10]',     # associated_with FBtp0057873
+        'FBal0210886': 'wg[GD5007]',     # associated_with FBtp0032215
+        'FBal0209903': 'lbe[GD4157]',     # associated_with FBtp0031452
+        'FBal0365146': 'wg[TOE.GS00055]',     # associated_with FBtp0145396
+        'FBal0365030': 'Alp9[TKO.GS00469]',     # associated_with FBtp0145394
+        'FBal0365029': 'Alp10[TKO.GS00469]',     # associated_with FBtp0145394
+        'FBal0392014': r'Equa\eqFP578[TagRFP.UAS.Tag:TM(hPDGFRB)]',     # associated_with FBtp0161256
+        'FBal0392013': r'Avic\GFP[G-CEPIA1.UAS.Tag:TM(hPDGFRB)]',     # associated_with FBtp0161256
+        'FBal0343941': r'Scer\RCR1[UAS.Tag:MYC]',     # associated_with FBtp0131348
+        'FBal0089771': r'Cele\ced-3[UAS.cSa]',     # associated_with FBtp0001650
+        'FBal0093510': r'Drer\nkx2.7[hs.PP]',     # associated_with FBtp0010091
+        'FBal0058013': r'Xlae\hes1.L[hb.PD]',     # associated_with FBtp0007421
+        'FBal0097215': r'Mmus\Cd8a[UAS.cLa.EGFP]',     # associated_with FBtp0002652
+        'FBal0042665': r'Rnor\Map2[UAS.cAa]',     # associated_with FBtp0001429
+        'FBal0373959': r'SARS-CoV-2\nsp13[UAS.cBa]',     # associated_with FBtp0150381
+        'FBal0345201': 'scw[sgRNA.flySAM2.0]',     # associated_with FBtp0132292
+        'FBal0015104': 'ry[2216-547]',     # associated_with FBtp0001493
+        'FBal0028726': 'SP[c.Yp1.hs]',     # associated_with FBtp0001458
+        'FBal0030319': 'Sxl[F1.hs]',     # associated_with FBtp0000904
+        'FBal0040493': r'Scer\GAL4[wB]',     # associated_with FBtp0000352
+        'FBal0041861': r'Ecol\lacZ[P\T.A92]',     # associated_with FBtp0000154
+        'FBal0041862': r'Ecol\lacZ[P\T.A92a]',     # associated_with FBtp0000157
+        # cassette FBal that are not associated_with and FBtp (typicaly act as selectable marker
+        'FBal0212171': r'Avic\GFP[UAS.FRT1]',       # in vitro only
+        'FBal0392043': r'Avic\GFP[EYFP.3xP3.cUa]',  # in vitro only
+        'FBal0028610': 'w[+mC]',                    # Has a secondary identifier to test
     }
 
     cassette_prop_to_note_mapping = {
