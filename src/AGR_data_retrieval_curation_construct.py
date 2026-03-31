@@ -77,6 +77,40 @@ else:
     reference_session = None
 
 
+def generate_tsv_file(export_dict, filename):
+    """Generate tsv files for curators to read more easily."""
+    with open(filename, 'w') as outfile:
+        outfile.write("# Primary FBid\tValid symbol\tValid full name\t"
+                      "secondary FBid(s)\tsynonyms\n")
+        for entity_dict in export_dict["construct_ingest_set"]:
+            primary = entity_dict["primary_external_id"]
+            symbol = ''
+            name = ''
+            secondary = []
+            syns = []
+            if "construct_full_name_dto" in entity_dict:
+                name = entity_dict["construct_full_name_dto"]["format_text"]
+            if "construct_symbol_dto" in entity_dict:
+                symbol = entity_dict["construct_symbol_dto"]["format_text"]
+            if "construct_synonym_dtos" in entity_dict:
+                for synonym in entity_dict["construct_synonym_dtos"]:
+                    syns.append(synonym["format_text"])
+            if "secondary_identifiers" in entity_dict:
+                secondary = entity_dict["secondary_identifiers"]
+            try:
+                outfile.write(
+                    f"{primary}\t{symbol}\t{name}\t"
+                    f"{'|'.join(secondary)}\t{'|'.join(syns)}\n")
+            except TypeError:
+                log.error(f"entity_dict: {entity_dict}")
+                log.error(f"primary: {primary}")
+                log.error(f"secondary {secondary}")
+                log.error(f"symbol: {symbol}")
+                log.error(f"name: {name}")
+                log.error(f"syns: {syns}")
+                raise
+
+
 def generate_association_tsv_file(export_dict, ingest_name, filename):
     """Generate a TSV file for an association ingest set."""
     first_entity = 'construct_identifier'
@@ -126,6 +160,9 @@ def main():
             raise ValueError('The "construct_ingest_set" is unexpectedly empty.')
     else:
         generate_export_file(export_dict, log, output_filename)
+        tsv_filename = output_filename.replace('.json', '.tsv')
+        generate_tsv_file(export_dict, tsv_filename)
+        log.info(f'Generated TSV: {tsv_filename}')
 
     if not reference_session:
         # Export the construct associations to a separate file.
