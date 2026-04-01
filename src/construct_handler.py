@@ -110,6 +110,8 @@ class ConstructHandler(FeatureHandler):
         'FBtp0099367': 'TI{T-GEM}',
         # FTA-144 multiple tool_uses with multiple refs
         'FBtp0017513': 'P{PTT-GB}',
+        # test example for change to map_construct_cassette_associations when pub > 1
+        'FBtp0040555': 'P{NIG.4696R}',  # associated_with FBal0220378, not appearing in file pre-change
 
 
 
@@ -775,14 +777,21 @@ class ConstructHandler(FeatureHandler):
                         filtered_pub_ids = []
                 else:
                     filtered_pub_ids = []
-                if not filtered_pub_ids:
-                    self.log.warning(f'No cassette association was made for construct {construct.uniquename} '
-                                     f'(cassette {allele_uniquename}): no pubs found after filtering.')
-                    continue
-                pub_curies = self.lookup_pub_curies(filtered_pub_ids)
+                # Build the association DTO.
+                note_dtos = []
+                if filtered_pub_ids:
+                    pub_curies = self.lookup_pub_curies(filtered_pub_ids)
+                else:
+                    pub_curies = []
+                    note_dto = agr_datatypes.NoteDTO(
+                        'internal_note',
+                        'FTA: unable to automatically determine reference for cassette to construct association',
+                        []).dict_export()
+                    note_dtos.append(note_dto)
                 fb_rel = fb_datatypes.FBExportEntity()
                 rel_dto = agr_datatypes.ConstructCassetteAssociationDTO(
                     cons_curie, 'has_transcriptional_unit', cassette_curie, pub_curies)
+                rel_dto.note_dtos = note_dtos
                 if construct.is_obsolete is True or self.feature_lookup[allele_id]['is_obsolete'] is True:
                     rel_dto.obsolete = True
                     rel_dto.internal = True
