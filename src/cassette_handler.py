@@ -295,19 +295,31 @@ class CassetteHandler(FeatureHandler):
         return assoc_type
 
     def map_tool_uses(self):
-        """Map tools_uses."""
+        """Map tool_uses.
+
+        Create one CassetteUseSlotAnnotationDTO per FBcv term, with only
+        the pubs that give evidence for that specific term.
+        """
         data_key = 'tool_uses'
         for cassette in self.fb_data_entities.values():
-            if data_key in cassette.prop_data.keys():
-                pub_list = set()
-                curie_list = []
-                for prop in cassette.prop_data[data_key]:
-                    pub_list.add(f"FB:{prop['pub']}")
-                    curie_list.append(f'FBcv:{prop["accession"]}')
-                if pub_list:
-                    slot_dto = agr_datatypes.CassetteUseSlotAnnotationDTO(
-                        list(pub_list), curie_list).dict_export()
-                    cassette.linkmldto.cassette_use_dtos.append(slot_dto)
+            if data_key not in cassette.prop_data.keys():
+                continue
+            if not cassette.prop_data[data_key]:
+                continue
+            # Group pubs by FBcv accession.
+            accession_to_pubs = {}
+            for prop in cassette.prop_data[data_key]:
+                accession = prop['accession']
+                pub_curie = f"FB:{prop['pub']}"
+                if accession not in accession_to_pubs:
+                    accession_to_pubs[accession] = set()
+                accession_to_pubs[accession].add(pub_curie)
+            # Create one DTO per FBcv term.
+            for accession, pub_curies in accession_to_pubs.items():
+                use_curies = [f'FBcv:{accession}']
+                slot_dto = agr_datatypes.CassetteUseSlotAnnotationDTO(
+                    list(pub_curies), use_curies).dict_export()
+                cassette.linkmldto.cassette_use_dtos.append(slot_dto)
 
     def get_comp_type_curies(self, fb_data_entity):
         """Get component_type_curies."""
