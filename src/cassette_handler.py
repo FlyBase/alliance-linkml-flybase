@@ -44,9 +44,12 @@ class CassetteHandler(FeatureHandler):
         'FBal0007942': '18w[00053]',            # Has recessive annotation from single locus unspecified zygosity genotype.
         'FBal0015410': 'sei[2]',                # Has codominant annotation from single locus unspecified zygosity genotype.
         'FBal0198096': 'tal[1]',                # Allele of internal type gene tal (gene_with_polycistronic_transcript).
-        'FBal0055793': 'wg[UAS.Tag:HA]',        # Allele is directly related to a construct, superceded by FBti0256568 (superseded_by_transgnc_insertions).
         'FBal0048226': 'Dmau_w[a23]',           # Non-Dmel allele related to non-Dmel insertion, superceded by FBti0014970 (superseded_by_at_locus_insertion).
         'FBal0011649': 'Dsim_Lhr[1]',           # Non-Dmel classical allele.
+        'FBal0290956': 'Csas[21]',              # curator error: in vitro only in fb_2025_05, fixed for fb_2026_01
+                                                # (now is classical allele reported_as_itself)
+        # cassette FBal that are associated_with at least one FBtp (corresponding FBtp are in construct_handler test set
+        'FBal0055793': 'wg[UAS.Tag:HA]',        # Allele is directly related to a construct, superceded by FBti0256568 (superseded_by_transgnc_insertions).
         'FBal0043132': 'Hsap_MAPT[UAS.cAa]',    # Transgenic, superceded by FBti0000969, FBti0249419 (superseded_by_transgnc_insertions).
         'FBal0062057': 'Scer_CDC42[V12.hs]',    # Transgenic, superceded by FBti0012506, FBti0249909 (superseded_by_transgnc_insertions).
         'FBal0198528': 'Pi4KIIalpha[GD9857]',   # Transegnic, superceded by four FBti (superseded_by_transgnc_insertions).
@@ -57,11 +60,6 @@ class CassetteHandler(FeatureHandler):
         'FBal0239883': 'sd[RNAi.N.UAS]',
         'FBal0000531': 'Amy-p[IX]',
         'FBal0028742': 'Act88F[E334K]',
-        'FBal0212171': r'Avic\GFP[UAS.FRT1]',       # in vitro only
-        'FBal0290956': 'Csas[21]',                  # curator error: in vitro only in fb_2025_05, fixed for fb_2026_01
-                                                    # (now is classical allele reported_as_itself)
-        'FBal0392043': r'Avic\GFP[EYFP.3xP3.cUa]',  # in vitro only
-        'FBal0028610': 'w[+mC]',                    # Has a secondary identifier to test
         'FBal0045138': 'Sry-delta[SDL1.lacZ]',                 # linked to an FBsf so a str association.
         'FBal0193109': r'Avic\GFP[EGFP.rho.PE.Tag:NLS(tra)]',  # linked to an FBsf so a str association.
         'FBal0250846': r'Scer\GAL4[GMR24E03]',                 # linked to an FBsf so a str association.
@@ -78,10 +76,42 @@ class CassetteHandler(FeatureHandler):
         'FBal0401141': r'Zzzz\VHH[deGradFP.UAS]',  #
         'FBal0051685': r'csw[CS.hs.2sev]',  # Has 2 props
         'FBal0028848': 'Adh[LsBbbf2]',  # examples of using alleleof to get FBrf
-        'FBal0033313': 'Abd-B[Fab7.tHa',
+        'FBal0033313': 'Abd-B[Fab7.tHa]',
         'FBal0104158': r'Ecol\lacZ[ftz.GFP]',  # Multiple encodes (for now)
         'FBal0191435': r'Avic\GFP[SCAT3.UAS]',  # uses_tool (multiple?)
-        'FBal0241325': r'SREBP[GAL4::VP16',     # uses tool
+        'FBal0241325': r'SREBP[GAL4::VP16]',     # uses tool
+        'FBal0065588': 'wg[UAS.cHa.Tag:HA]',     # associated_with FBtp0008631
+        'FBal0096631': 'wg[FRT.hs.2sev]',     # associated_with FBtp0010648
+        'FBal0365508': r'Hsap\HTT[Q97.S13D.ex1.UAS.mCherry]',     # associated_with FBtp0145675
+        'FBal0034670': 'ftz[+t10.8]',     # associated_with FBtp0000074
+        'FBal0032692': 'sev[S11.Tag:MYC]',     # associated_with FBtp0000326
+        'FBal0392814': r'Scer\GAL4[lush.3]',     # associated_with FBtp0161516
+        'FBal0250108': r'Scer\GAL4[GMR16C10]',     # associated_with FBtp0057873
+        'FBal0210886': 'wg[GD5007]',     # associated_with FBtp0032215
+        'FBal0209903': 'lbe[GD4157]',     # associated_with FBtp0031452
+        'FBal0365146': 'wg[TOE.GS00055]',     # associated_with FBtp0145396
+        'FBal0365030': 'Alp9[TKO.GS00469]',     # associated_with FBtp0145394
+        'FBal0365029': 'Alp10[TKO.GS00469]',     # associated_with FBtp0145394
+        'FBal0392014': r'Equa\eqFP578[TagRFP.UAS.Tag:TM(hPDGFRB)]',     # associated_with FBtp0161256
+        'FBal0392013': r'Avic\GFP[G-CEPIA1.UAS.Tag:TM(hPDGFRB)]',     # associated_with FBtp0161256
+        'FBal0343941': r'Scer\RCR1[UAS.Tag:MYC]',     # associated_with FBtp0131348
+        'FBal0089771': r'Cele\ced-3[UAS.cSa]',     # associated_with FBtp0001650
+        'FBal0093510': r'Drer\nkx2.7[hs.PP]',     # associated_with FBtp0010091
+        'FBal0058013': r'Xlae\hes1.L[hb.PD]',     # associated_with FBtp0007421
+        'FBal0097215': r'Mmus\Cd8a[UAS.cLa.EGFP]',     # associated_with FBtp0002652
+        'FBal0042665': r'Rnor\Map2[UAS.cAa]',     # associated_with FBtp0001429
+        'FBal0373959': r'SARS-CoV-2\nsp13[UAS.cBa]',     # associated_with FBtp0150381
+        'FBal0345201': 'scw[sgRNA.flySAM2.0]',     # associated_with FBtp0132292
+        'FBal0015104': 'ry[2216-547]',     # associated_with FBtp0001493
+        'FBal0028726': 'SP[c.Yp1.hs]',     # associated_with FBtp0001458
+        'FBal0030319': 'Sxl[F1.hs]',     # associated_with FBtp0000904
+        'FBal0040493': r'Scer\GAL4[wB]',     # associated_with FBtp0000352
+        'FBal0041861': r'Ecol\lacZ[P\T.A92]',     # associated_with FBtp0000154
+        'FBal0041862': r'Ecol\lacZ[P\T.A92a]',     # associated_with FBtp0000157
+        # cassette FBal that are not associated_with and FBtp (typicaly act as selectable marker
+        'FBal0212171': r'Avic\GFP[UAS.FRT1]',       # in vitro only
+        'FBal0392043': r'Avic\GFP[EYFP.3xP3.cUa]',  # in vitro only
+        'FBal0028610': 'w[+mC]',                    # Has a secondary identifier to test
     }
 
     cassette_prop_to_note_mapping = {
@@ -96,6 +126,11 @@ class CassetteHandler(FeatureHandler):
     cassette_tool_associations = []
     cassette_genomic_entity_associations = []
     cassette_cassette_rels = {}
+    # Anonymous cassette data (populated via receive_anon_cassette_data).
+    anon_cassette_data = []
+    anon_cassettes = []
+    anon_cassette_tool_associations = []
+    anon_cassette_genomic_entity_associations = []
 
     def get_general_data(self, session):
         """Extend the method for the CassetteHandler."""
@@ -260,19 +295,31 @@ class CassetteHandler(FeatureHandler):
         return assoc_type
 
     def map_tool_uses(self):
-        """Map tools_uses."""
+        """Map tool_uses.
+
+        Create one CassetteUseSlotAnnotationDTO per FBcv term, with only
+        the pubs that give evidence for that specific term.
+        """
         data_key = 'tool_uses'
         for cassette in self.fb_data_entities.values():
-            if data_key in cassette.prop_data.keys():
-                pub_list = set()
-                curie_list = []
-                for prop in cassette.prop_data[data_key]:
-                    pub_list.add(f"FB:{prop['pub']}")
-                    curie_list.append(f'FBcv:{prop["accession"]}')
-                if pub_list:
-                    slot_dto = agr_datatypes.CassetteUseSlotAnnotationDTO(
-                        list(pub_list), curie_list).dict_export()
-                    cassette.linkmldto.cassette_use_dtos.append(slot_dto)
+            if data_key not in cassette.prop_data.keys():
+                continue
+            if not cassette.prop_data[data_key]:
+                continue
+            # Group pubs by FBcv accession.
+            accession_to_pubs = {}
+            for prop in cassette.prop_data[data_key]:
+                accession = prop['accession']
+                pub_curie = f"FB:{prop['pub']}"
+                if accession not in accession_to_pubs:
+                    accession_to_pubs[accession] = set()
+                accession_to_pubs[accession].add(pub_curie)
+            # Create one DTO per FBcv term.
+            for accession, pub_curies in accession_to_pubs.items():
+                use_curies = [f'FBcv:{accession}']
+                slot_dto = agr_datatypes.CassetteUseSlotAnnotationDTO(
+                    list(pub_curies), use_curies).dict_export()
+                cassette.linkmldto.cassette_use_dtos.append(slot_dto)
 
     def get_comp_type_curies(self, fb_data_entity):
         """Get component_type_curies."""
@@ -557,9 +604,193 @@ class CassetteHandler(FeatureHandler):
                     component_counter += 1
         self.log.info(f'Found {component_counter} components for {cassette_counter} cassettes.')
 
+    # Anonymous cassette methods (data passed in from ConstructHandler).
+    def receive_anon_cassette_data(self, anon_data):
+        """Receive extracted anonymous cassette data from ConstructHandler.
+
+        Args:
+            anon_data: list of dicts, each with keys:
+                'construct_uniquename', 'direct_rels', 'tool_uses_data'
+        """
+        self.log.info(f'Received anonymous cassette data for {len(anon_data)} constructs.')
+        self.anon_cassette_data = anon_data
+
+    def map_anon_cassette_basic(self):
+        """Create basic anonymous CassetteDTOs for constructs with direct tool data."""
+        self.log.info('Map anonymous cassette basic info.')
+        counter = 0
+        for data in self.anon_cassette_data:
+            construct_uniquename = data['construct_uniquename']
+            cassette_id = f'FB:{construct_uniquename}_cas'
+            agr_cassette = agr_datatypes.CassetteDTO()
+            agr_cassette.placeholder = True
+            agr_cassette.primary_external_id = cassette_id
+            agr_cassette.obsolete = False
+            agr_cassette.cassette_symbol_dto = agr_datatypes.NameSlotAnnotationDTO(
+                'nomenclature_symbol', cassette_id, cassette_id, []).dict_export()
+            dp_xref = agr_datatypes.CrossReferenceDTO(
+                'FB', f'FB:{construct_uniquename}', 'construct', cassette_id).dict_export()
+            agr_cassette.data_provider_dto = agr_datatypes.DataProviderDTO(
+                dp_xref).dict_export()
+            fb_entity = fb_datatypes.FBExportEntity()
+            fb_entity.linkmldto = agr_cassette
+            self.anon_cassettes.append(fb_entity)
+            data['anon_cassette_dto'] = agr_cassette
+            counter += 1
+        self.log.info(f'Created {counter} anonymous CassetteDTOs.')
+
+    def map_anon_cassette_simple_components(self):
+        """Map simple component relationships to anonymous cassette associations."""
+        self.log.info('Map anonymous cassette simple components.')
+        rel_type_mapping = {
+            'has_reg_region': 'is_regulated_by',
+            'tagged_with': 'tagged_with',
+            'carries_tool': 'contains',
+        }
+        counter = 0
+        for data in self.anon_cassette_data:
+            cassette_id = f'FB:{data["construct_uniquename"]}_cas'
+            for rel in data['direct_rels']:
+                if rel['rel_type'] not in rel_type_mapping:
+                    continue
+                alliance_rel = rel_type_mapping[rel['rel_type']]
+                component = self.feature_lookup[rel['object_feature_id']]
+                component_curie = component['curie']
+                pub_curies = self.lookup_pub_curies(rel['pub_ids'])
+                if component['uniquename'].startswith('FBto'):
+                    fb_rel = fb_datatypes.FBExportEntity()
+                    rel_dto = agr_datatypes.CassetteTransgenicToolAssociationDTO(
+                        cassette_id, component_curie, pub_curies, False, alliance_rel)
+                    fb_rel.linkmldto = rel_dto
+                    self.anon_cassette_tool_associations.append(fb_rel)
+                elif component['uniquename'].startswith('FBgn'):
+                    fb_rel = fb_datatypes.FBExportEntity()
+                    rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
+                        cassette_id, component_curie, pub_curies, False, alliance_rel)
+                    fb_rel.linkmldto = rel_dto
+                    self.anon_cassette_genomic_entity_associations.append(fb_rel)
+                elif component['uniquename'].startswith('FBsf'):
+                    symbol = component['symbol']
+                    organism_id = component['organism_id']
+                    taxon_text = self.organism_lookup[organism_id]['full_species_name']
+                    taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
+                    comp_dto = agr_datatypes.CassetteComponentSlotAnnotationDTO(
+                        alliance_rel, symbol, taxon_curie, taxon_text,
+                        pub_curies).dict_export()
+                    data['anon_cassette_dto'].cassette_component_dtos.append(comp_dto)
+                counter += 1
+        self.log.info(f'Mapped {counter} simple component associations for anonymous cassettes.')
+
+    def map_anon_cassette_encodes_tool(self):
+        """Map encodes_tool relationships to anonymous cassette associations."""
+        self.log.info('Map anonymous cassette encodes_tool relationships.')
+        counter = 0
+        for data in self.anon_cassette_data:
+            cassette_id = f'FB:{data["construct_uniquename"]}_cas'
+            for rel in data['direct_rels']:
+                if rel['rel_type'] != 'encodes_tool':
+                    continue
+                component = self.feature_lookup[rel['object_feature_id']]
+                component_curie = component['curie']
+                pub_curies = self.lookup_pub_curies(rel['pub_ids'])
+                if component['uniquename'].startswith('FBto'):
+                    fb_rel = fb_datatypes.FBExportEntity()
+                    rel_dto = agr_datatypes.CassetteTransgenicToolAssociationDTO(
+                        cassette_id, component_curie, pub_curies, False, 'expresses')
+                    fb_rel.linkmldto = rel_dto
+                    self.anon_cassette_tool_associations.append(fb_rel)
+                elif component['uniquename'].startswith('FBgn'):
+                    fb_rel = fb_datatypes.FBExportEntity()
+                    rel_dto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
+                        cassette_id, component_curie, pub_curies, False, 'expresses')
+                    fb_rel.linkmldto = rel_dto
+                    self.anon_cassette_genomic_entity_associations.append(fb_rel)
+                elif component['uniquename'].startswith('FBsf'):
+                    symbol = component['symbol']
+                    organism_id = component['organism_id']
+                    taxon_text = self.organism_lookup[organism_id]['full_species_name']
+                    taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
+                    comp_dto = agr_datatypes.CassetteComponentSlotAnnotationDTO(
+                        'expresses', symbol, taxon_curie, taxon_text,
+                        pub_curies).dict_export()
+                    data['anon_cassette_dto'].cassette_component_dtos.append(comp_dto)
+                counter += 1
+        self.log.info(f'Mapped {counter} encodes_tool associations for anonymous cassettes.')
+
+    def map_anon_cassette_tool_uses(self):
+        """Map tool_uses data to anonymous cassette use DTOs.
+
+        Create one CassetteUseSlotAnnotationDTO per FBcv term, with only
+        the pubs that give evidence for that specific term.
+        """
+        self.log.info('Map anonymous cassette tool_uses.')
+        counter = 0
+        for data in self.anon_cassette_data:
+            if not data['tool_uses_data']:
+                continue
+            # Group pub_ids by FBcv accession.
+            accession_to_pub_ids = {}
+            for entry in data['tool_uses_data']:
+                accession = entry['accession']
+                if accession not in accession_to_pub_ids:
+                    accession_to_pub_ids[accession] = []
+                accession_to_pub_ids[accession].append(entry['pub_id'])
+            # Create one DTO per FBcv term.
+            for accession, pub_ids in accession_to_pub_ids.items():
+                pub_curies = self.lookup_pub_curies(pub_ids)
+                use_curies = [f'FBcv:{accession}']
+                slot_dto = agr_datatypes.CassetteUseSlotAnnotationDTO(
+                    pub_curies, use_curies).dict_export()
+                data['anon_cassette_dto'].cassette_use_dtos.append(slot_dto)
+                counter += 1
+        self.log.info(f'Mapped {counter} tool_uses DTOs for anonymous cassettes.')
+
+    def map_anon_cassettes(self):
+        """Orchestrate anonymous cassette mapping from ConstructHandler data."""
+        self.log.info('Map anonymous cassettes from construct data.')
+        if not self.anon_cassette_data:
+            self.log.info('No anonymous cassette data to map.')
+            return
+        self.map_anon_cassette_basic()
+        self.map_anon_cassette_simple_components()
+        self.map_anon_cassette_encodes_tool()
+        self.map_anon_cassette_tool_uses()
+
+    def export_anon_cassettes(self):
+        """Flag and export anonymous cassette data, appending to existing export dicts."""
+        self.log.info('Export anonymous cassette data.')
+        if not self.anon_cassette_data:
+            self.log.info('No anonymous cassette data to export.')
+            return
+        self.flag_internal_fb_entities('anon_cassettes')
+        self.flag_internal_fb_entities('anon_cassette_tool_associations')
+        self.flag_internal_fb_entities('anon_cassette_genomic_entity_associations')
+        # Append exportable anon cassettes to the existing export dicts.
+        anon_count = 0
+        for entity in self.anon_cassettes:
+            if entity.for_export is True:
+                self.export_data['cassette_ingest_set'].append(
+                    entity.linkmldto.dict_export())
+                anon_count += 1
+        self.log.info(f'Appended {anon_count} anonymous cassettes to cassette_ingest_set.')
+        tool_count = 0
+        for entity in self.anon_cassette_tool_associations:
+            if entity.for_export is True:
+                self.export_data['cassette_transgenic_tool_association_ingest_set'].append(
+                    entity.linkmldto.dict_export())
+                tool_count += 1
+        self.log.info(f'Appended {tool_count} anon cassette tool associations.')
+        ge_count = 0
+        for entity in self.anon_cassette_genomic_entity_associations:
+            if entity.for_export is True:
+                self.export_data['cassette_genomic_entity_association_ingest_set'].append(
+                    entity.linkmldto.dict_export())
+                ge_count += 1
+        self.log.info(f'Appended {ge_count} anon cassette genomic entity associations.')
+
     # Elaborate on synthesize_info() for the Handler.
     def synthesize_info(self):
-        """Extend the method for the ConstructHandler."""
+        """Extend the method for the CassetteHandler."""
         super().synthesize_info()
         self.synthesize_synonyms()
         self.synthesize_secondary_ids()

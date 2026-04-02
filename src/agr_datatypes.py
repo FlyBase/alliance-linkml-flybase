@@ -151,13 +151,25 @@ class CassetteStrAssociationDTO(AuditedObjectDTO):
         self.relation_name = relation
 
 
-class CassetteUseSlotAnnotationDTO(AuditedObjectDTO):
+class SlotAnnotationDTO(AuditedObjectDTO):
+    """SlotAnnotationDTO class."""
+    def __init__(self, evidence_curies: list):
+        """Create a SlotAnnotationDTO for FlyBase object.
+
+        Args:
+            evidence_curies (list): A list of FB:FBrf or PMID curies.
+
+        """
+        super().__init__()
+        self.evidence_curies = evidence_curies
+
+
+class CassetteUseSlotAnnotationDTO(SlotAnnotationDTO):
     """CassetteUseSlotAnnotationDTO class."""
     def __init__(self, pub_curies, cvterm):
         """Create CassetteUseSlotAnnotationDTO for FlyBase object."""
-        super().__init__()
+        super().__init__(pub_curies)
         self.use_curies = cvterm
-        self.evidence_curies = pub_curies
 
 
 class GeneDTO(GenomicEntityDTO):
@@ -219,6 +231,7 @@ class CassetteDTO(ReagentDTO):
     def __init__(self):
         """Create CassetteDTO for FlyBase object."""
         super().__init__()
+        self.placeholder = None
         self.cassette_symbol_dto = None      # One NameSlotAnnotationDTO.
         self.cassette_full_name_dto = None   # One NameSlotAnnotationDTO.
         self.cassette_synonym_dtos = []      # Many NameSlotAnnotationDTO objects.
@@ -388,6 +401,7 @@ class ConstructCassetteAssociationDTO(EvidenceAssociationDTO):
         self.construct_identifier = construct_id
         self.relation_name = rel_type
         self.cassette_identifier = cassette_id
+        self.note_dtos = []
         self.required_fields.extend(['construct_identifier', 'relation_name', 'cassette_identifier'])
 
 
@@ -519,19 +533,6 @@ class NoteDTO(AuditedObjectDTO):
         self.free_text = free_text
         self.evidence_curies = evidence_curies
         self.required_fields.extend(['note_type_name', 'free_text'])
-
-
-class SlotAnnotationDTO(AuditedObjectDTO):
-    """SlotAnnotationDTO class."""
-    def __init__(self, evidence_curies: list):
-        """Create a SlotAnnotationDTO for FlyBase object.
-
-        Args:
-            evidence_curies (list): A list of FB:FBrf or PMID curies.
-
-        """
-        super().__init__()
-        self.evidence_curies = evidence_curies
 
 
 class AlleleDatabaseStatusSlotAnnotationDTO(SlotAnnotationDTO):
