@@ -21,12 +21,13 @@ Notes:
 """
 
 import argparse
-from os import environ
+from os import environ, getenv
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
 from cassette_handler import CassetteHandler
+from construct_handler import ConstructHandler
 from utils import export_chado_data, generate_export_file
 
 # Data types handled by this script.
@@ -197,6 +198,21 @@ def main():
         export_chado_data(session, log, cassette_handler, reference_session=reference_session)
     else:
         export_chado_data(session, log, cassette_handler)
+
+    # Optionally run ConstructHandler to get anonymous cassette data.
+    # This must happen before export so anon cassettes are included in the output.
+    dump_cass_assoc = getenv('ADD_CASS_TO_CONSTRUCT', None)
+    if dump_cass_assoc and dump_cass_assoc == 'YES':
+        log.info('Running ConstructHandler to get anonymous cassette data.')
+        cons_handler = ConstructHandler(log, testing)
+        export_chado_data(session, log, cons_handler)
+        anon_data = cons_handler.get_anon_cassette_data()
+        cassette_handler.receive_anon_cassette_data(anon_data)
+        cassette_handler.map_anon_cassettes()
+        cassette_handler.export_anon_cassettes()
+    else:
+        log.warning('ADD_CASS_TO_CONSTRUCT not set to "YES". '
+                    'Skipping anonymous cassette creation.')
 
     # Export the data.
     export_dict = {
