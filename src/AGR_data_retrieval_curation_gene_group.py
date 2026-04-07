@@ -36,15 +36,23 @@ from utils import export_chado_data, generate_export_file
 # Data types handled by this script.
 REPORT_LABEL = 'gene_group_curation'
 REPORT_TITLE = 'FlyBase Gene Group Report'
-TSV_HEADERS = [
+TSV_HEADERS_BASIC = [
     'gene_group_id',
     'symbol',
     'full_name',
     'synonyms',
     'description',
+]
+
+TSV_HEADERS_GO = [
+    'gene_group_id',
     'go_molecular_function',
     'go_biological_process',
     'go_cellular_component',
+]
+
+TSV_HEADERS_RELATIONSHIPS = [
+    'gene_group_id',
     'parent_groups',
     'related_groups',
     'gene_members',
@@ -149,15 +157,30 @@ def main():
             else:
                 log.warning(f'The "{assoc_set_name}" is empty.')
 
-    # Export the gene group TSV report.
+    # Export the gene group TSV reports.
     if not reference_session:
         gg_handler.process_for_tsv_export()
-        tsv_data = generic_FB_tsv_dict(REPORT_TITLE, database)
-        tsv_data['data'] = gg_handler.export_data_for_tsv
-        tsv_output_filename = output_filename.replace('.json', '.tsv')
-        if tsv_data['data']:
-            tsv_report_dump(tsv_data, tsv_output_filename, headers=TSV_HEADERS)
-            log.info(f'Wrote TSV to {tsv_output_filename}')
+        if gg_handler.export_data_for_tsv:
+            # Basic info TSV: gene_group_id, symbol, full_name, synonyms, description.
+            tsv_data_basic = generic_FB_tsv_dict(REPORT_TITLE, database)
+            tsv_data_basic['data'] = gg_handler.export_data_for_tsv
+            tsv_basic_filename = output_filename.replace('.json', '_basic.tsv')
+            tsv_report_dump(tsv_data_basic, tsv_basic_filename, headers=TSV_HEADERS_BASIC)
+            log.info(f'Wrote basic TSV to {tsv_basic_filename}')
+
+            # GO terms TSV: gene_group_id, GO molecular function/biological process/cellular component.
+            tsv_data_go = generic_FB_tsv_dict(REPORT_TITLE, database)
+            tsv_data_go['data'] = gg_handler.export_data_for_tsv
+            tsv_go_filename = output_filename.replace('.json', '_go.tsv')
+            tsv_report_dump(tsv_data_go, tsv_go_filename, headers=TSV_HEADERS_GO)
+            log.info(f'Wrote GO TSV to {tsv_go_filename}')
+
+            # Relationships TSV: gene_group_id, parent/related groups, gene members.
+            tsv_data_rels = generic_FB_tsv_dict(REPORT_TITLE, database)
+            tsv_data_rels['data'] = gg_handler.export_data_for_tsv
+            tsv_rels_filename = output_filename.replace('.json', '_relationships.tsv')
+            tsv_report_dump(tsv_data_rels, tsv_rels_filename, headers=TSV_HEADERS_RELATIONSHIPS)
+            log.info(f'Wrote relationships TSV to {tsv_rels_filename}')
         else:
             log.warning('No gene group data for TSV export.')
 
