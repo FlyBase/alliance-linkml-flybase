@@ -43,6 +43,8 @@ TSV_HEADERS_BASIC = [
     'full_name',
     'synonyms',
     'description',
+    'comments',
+    'internal_notes',
 ]
 
 TSV_HEADERS_GO = [

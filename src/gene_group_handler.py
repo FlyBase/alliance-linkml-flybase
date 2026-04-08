@@ -184,17 +184,28 @@ class GeneGroupHandler(PrimaryEntityHandler):
             for (gene_uname, grp_uname) in self.gene_member_data.keys():
                 if grp_uname == gene_group.uniquename:
                     gene_members.append(f'FB:{gene_uname}')
-            # Collect notes.
-            notes = []
+            # Collect notes by type.
+            descriptions = []
+            comments = []
+            internal_notes = []
             for note in dto.note_dtos:
-                notes.append(note.get('free_text', ''))
+                text = note.get('free_text', '')
+                note_type = note.get('note_type_name', '')
+                if note_type == 'summary':
+                    descriptions.append(text)
+                elif note_type == 'comment':
+                    comments.append(text)
+                elif note_type == 'internal_note':
+                    internal_notes.append(text)
             tsv_row = {
                 'gene_group_id': f'FB:{gene_group.uniquename}',
                 'is_obsolete': gene_group.chado_obj.is_obsolete,
                 'symbol': dto.symbol or '',
                 'full_name': dto.full_name or '',
                 'synonyms': ' | '.join(synonyms),
-                'description': ' | '.join(notes),
+                'description': ' | '.join(descriptions),
+                'comments': ' | '.join(comments),
+                'internal_notes': ' | '.join(internal_notes),
                 'go_molecular_function': go_mf,
                 'go_biological_process': go_bp,
                 'go_cellular_component': go_cc,
