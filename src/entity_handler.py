@@ -688,6 +688,7 @@ class PrimaryEntityHandler(DataHandler):
                 join(chado_prop_table).\
                 filter(*filters).\
                 distinct()
+        self.log.info(f'DEBUG SQL: {prop_results}')
         prop_dict = {}    # A temporary prop_id-keyed dict of prop objects.
         prop_counter = 0
         for prop_result in prop_results:
