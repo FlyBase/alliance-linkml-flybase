@@ -75,7 +75,19 @@ testing = set_up_dict['testing']
 output_filename = environ.get('ALT_OUTPUT', output_filename)
 
 # Process additional input parameters not handled by the set_up_db_reading() function above.
-parser = argparse.ArgumentParser(description='inputs')
+parser = argparse.ArgumentParser(
+    description='Export FlyBase gene group (FBgg) data to Alliance LinkML JSON.',
+    epilog="""
+Environment variables:
+  SERVER              Database server (e.g. flysql25)
+  DATABASE            Database name (e.g. production_chado)
+  SQL_PORT            Database port (default: 5432)
+  ALT_OUTPUT          Override default output file path
+  ADD_OBSOLETE        Set to 'NO' to exclude obsolete gene groups from JSON and TSV output
+  EXPORT_GG_XREFS    Set to 'YES' to include gene group cross-references
+""",
+    formatter_class=argparse.RawDescriptionHelpFormatter
+)
 parser.add_argument('-l', '--linkml_release',
                     help='The "agr_curation_schema" LinkML release number.', required=True)
 parser.add_argument('-r', '--reference_db',
