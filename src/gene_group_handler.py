@@ -168,6 +168,9 @@ class GeneGroupHandler(PrimaryEntityHandler):
             if skip_obsolete and gene_group.chado_obj.is_obsolete:
                 continue
             dto = gene_group.linkmldto
+            if gene_group.uniquename == 'FBgg0000044':
+                print(f'DEBUG FBgg0000044 note_dtos: {dto.note_dtos}')
+                print(f'DEBUG FBgg0000044 props_by_type keys: {list(gene_group.props_by_type.keys())}')
             # Collect synonyms.
             synonyms = []
             for syno in dto.set_synonym_dtos:
