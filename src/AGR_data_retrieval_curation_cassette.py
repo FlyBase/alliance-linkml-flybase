@@ -1,6 +1,6 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Data retrieval of FlyBase cassettefor Alliance curation database.
+"""Data retrieval of FlyBase cassette for Alliance curation database.
 
 Author(s):
     Ian Longden ilongden@morgan.harvard.edu

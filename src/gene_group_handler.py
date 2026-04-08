@@ -41,6 +41,8 @@ class GeneGroupHandler(PrimaryEntityHandler):
 
     gene_group_prop_to_note_mapping = {
         'gg_description': ('summary', 'note_dtos'),
+        'gg_comment': ('comment', 'note_dtos'),
+        'gg_internal_notes': ('internal_note', 'note_dtos'),
     }
 
     # Only export these grp_cvterm types (basic gene groups).
