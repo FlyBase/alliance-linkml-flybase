@@ -652,13 +652,16 @@ class PrimaryEntityHandler(DataHandler):
         chado_prop_table = self.chado_tables['props'][chado_type]
         chado_prop_pub_table = self.chado_tables['prop_pubs'][chado_type]
         # Phase 1: Get all props.
+        # Use aliased Cvterm to avoid join ambiguity when the prop table
+        # also has a type_id foreign key to cvterm (e.g., Grpprop).
+        entity_type = aliased(Cvterm, name='entity_type')
         filters = ()
         if self.datatype in self.regex.keys():
             self.log.info(f'Use this regex: {self.regex[self.datatype]}')
             filters += (chado_table.uniquename.op('~')(self.regex[self.datatype]), )
         if self.datatype in self.feature_subtypes.keys():
             self.log.info(f'Filter main table by these feature_subtypes: {self.feature_subtypes[self.datatype]}')
-            filters += (Cvterm.name.in_((self.feature_subtypes[self.datatype])), )
+            filters += (entity_type.name.in_((self.feature_subtypes[self.datatype])), )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             if self.datatype == 'genotype':
@@ -676,7 +679,7 @@ class PrimaryEntityHandler(DataHandler):
             prop_results = session.query(chado_prop_table).\
                 select_from(chado_table).\
                 join(chado_prop_table).\
-                join(Cvterm, (Cvterm.cvterm_id == chado_table.type_id)).\
+                join(entity_type, (entity_type.cvterm_id == chado_table.type_id)).\
                 filter(*filters).\
                 distinct()
         else:
@@ -697,7 +700,7 @@ class PrimaryEntityHandler(DataHandler):
             prop_pub_results = session.query(chado_prop_pub_table).\
                 select_from(chado_table).\
                 join(chado_prop_table).\
-                join(Cvterm, (Cvterm.cvterm_id == chado_table.type_id)).\
+                join(entity_type, (entity_type.cvterm_id == chado_table.type_id)).\
                 join(chado_prop_pub_table).\
                 filter(*filters).\
                 distinct()
