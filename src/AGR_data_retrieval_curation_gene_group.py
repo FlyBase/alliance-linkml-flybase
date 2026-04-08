@@ -38,6 +38,7 @@ REPORT_LABEL = 'gene_group_curation'
 REPORT_TITLE = 'FlyBase Gene Group Report'
 TSV_HEADERS_BASIC = [
     'gene_group_id',
+    'is_obsolete',
     'symbol',
     'full_name',
     'synonyms',

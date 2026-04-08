@@ -43,6 +43,9 @@ class GeneGroupHandler(PrimaryEntityHandler):
         'gg_description': ('summary', 'note_dtos'),
     }
 
+    # Only export these grp_cvterm types (basic gene groups).
+    allowed_grp_cvterm_types = {'functional group', 'gene complex group'}
+
     # Relationship type mappings: grp_relationship type → output field.
     parent_rel_types = ['parent_grp']
     related_rel_types = ['undefined_grp']
@@ -180,6 +183,7 @@ class GeneGroupHandler(PrimaryEntityHandler):
                 notes.append(note.get('free_text', ''))
             tsv_row = {
                 'gene_group_id': f'FB:{gene_group.uniquename}',
+                'is_obsolete': gene_group.chado_obj.is_obsolete,
                 'symbol': dto.symbol or '',
                 'full_name': dto.full_name or '',
                 'synonyms': ' | '.join(synonyms),
@@ -194,6 +198,26 @@ class GeneGroupHandler(PrimaryEntityHandler):
             self.export_data_for_tsv.append(tsv_row)
             counter += 1
         self.log.info(f'Generated {counter} gene group TSV rows.')
+        return
+
+    def filter_by_grp_cvterm_type(self):
+        """Exclude gene groups not typed as 'functional group' or 'gene complex group'."""
+        self.log.info('Filter gene groups by grp_cvterm type.')
+        excluded = 0
+        for gene_group in self.fb_data_entities.values():
+            if gene_group.linkmldto is None:
+                continue
+            entity_cvterm_names = set(gene_group.cvt_anno_ids_by_term.keys())
+            if not self.allowed_grp_cvterm_types.intersection(entity_cvterm_names):
+                self.log.debug(
+                    f'Excluding {gene_group.uniquename}: '
+                    f'cvterm types {entity_cvterm_names} not in '
+                    f'{self.allowed_grp_cvterm_types}.')
+                gene_group.linkmldto = None
+                excluded += 1
+        self.log.info(
+            f'Excluded {excluded} gene groups lacking '
+            f'allowed grp_cvterm types.')
         return
 
     # Mapping methods.
@@ -371,6 +395,7 @@ class GeneGroupHandler(PrimaryEntityHandler):
         """Extend the method for the GeneGroupHandler."""
         super().map_fb_data_to_alliance()
         self.map_gene_group_basic()
+        self.filter_by_grp_cvterm_type()
         self.map_gene_group_synonyms()
         self.map_data_provider_dto()
         self.map_timestamps()
