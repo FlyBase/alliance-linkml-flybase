@@ -695,16 +695,6 @@ class PrimaryEntityHandler(DataHandler):
             prop_dict[prop_id] = fb_datatypes.FBProp(prop_result)
             prop_counter += 1
         self.log.info(f'Found {prop_counter} {chado_type}props for {self.datatype}s.')
-        # DEBUG: check for gg_internal_notes specifically.
-        if chado_type == 'grp':
-            internal_notes_count = sum(
-                1 for p in prop_dict.values()
-                if p.chado_obj.type_id == 128593
-            )
-            self.log.info(
-                f'DEBUG: gg_internal_notes (type_id=128593) in '
-                f'prop_dict: {internal_notes_count} of {prop_counter}'
-            )
         # Phase 2. Get pubs supporting props.
         if self.datatype in self.feature_subtypes.keys():
             prop_pub_results = session.query(chado_prop_pub_table).\
@@ -753,7 +743,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Found these types of {chado_type}props:')
         ordered_prop_types = sorted(list(prop_type_tally.keys()))
         for prop_type in ordered_prop_types:
-            self.log.info(f'table={chado_type}, prop_type={prop_type}, count={prop_type_tally[prop_type]}.')
+            self.log.debug(f'table={chado_type}, prop_type={prop_type}, count={prop_type_tally[prop_type]}.')
         return
 
     def get_entity_pubs(self, session):
