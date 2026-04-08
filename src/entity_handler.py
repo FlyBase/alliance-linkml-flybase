@@ -740,7 +740,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Found these types of {chado_type}props:')
         ordered_prop_types = sorted(list(prop_type_tally.keys()))
         for prop_type in ordered_prop_types:
-            self.log.debug(f'table={chado_type}, prop_type={prop_type}, count={prop_type_tally[prop_type]}.')
+            self.log.info(f'table={chado_type}, prop_type={prop_type}, count={prop_type_tally[prop_type]}.')
         return
 
     def get_entity_pubs(self, session):
