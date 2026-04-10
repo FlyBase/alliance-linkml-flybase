@@ -138,6 +138,7 @@ class DataHandler(object):
         'tool': r'^FBto[0-9]{7}$',
         'genotype': r'^FBgo[0-9]{7}$',
         'strain': r'^FBsn[0-9]{7}$',
+        'grp': r'^FBgg[0-9]{7}$',
         'library': r'^FBlc[0-9]{7}$',
         'cell_line': r'^FBtc[0-9]{7}$',
         'clone': r'^FBcl[0-9]{7}$',
@@ -185,6 +186,7 @@ class DataHandler(object):
         'variation': ['MNV', 'complex_substitution', 'deletion', 'delins', 'insertion',
                       'point_mutation', 'sequence_alteration', 'sequence_variant'],
         'bogus symbol': ['bogus symbol'],
+        'grp': ['gene_group'],
     }
 
     # Methods
