@@ -45,6 +45,9 @@ TSV_HEADERS_BASIC = [
     'description',
     'comments',
     'internal_notes',
+    'xref_hgnc_group',
+    'xref_wormbase',
+    'xref_complex_portal',
 ]
 
 TSV_HEADERS_GO = [

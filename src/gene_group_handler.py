@@ -197,6 +197,19 @@ class GeneGroupHandler(PrimaryEntityHandler):
                     comments.append(text)
                 elif note_type == 'internal_note':
                     internal_notes.append(text)
+            # Collect xrefs by type (skip FB self-reference).
+            hgnc_xrefs = []
+            wb_xrefs = []
+            complex_portal_xrefs = []
+            for xref in dto.cross_reference_dtos:
+                prefix = xref.get('prefix', '')
+                curie = xref.get('referenced_curie', '')
+                if prefix == 'HGNC_Group':
+                    hgnc_xrefs.append(curie)
+                elif prefix == 'WBGeneClass':
+                    wb_xrefs.append(curie)
+                elif prefix == 'ComplexPortal':
+                    complex_portal_xrefs.append(curie)
             tsv_row = {
                 'gene_group_id': f'FB:{gene_group.uniquename}',
                 'is_obsolete': gene_group.chado_obj.is_obsolete,
@@ -206,6 +219,9 @@ class GeneGroupHandler(PrimaryEntityHandler):
                 'description': ' | '.join(descriptions),
                 'comments': ' | '.join(comments),
                 'internal_notes': ' | '.join(internal_notes),
+                'xref_hgnc_group': ' | '.join(hgnc_xrefs),
+                'xref_wormbase': ' | '.join(wb_xrefs),
+                'xref_complex_portal': ' | '.join(complex_portal_xrefs),
                 'go_molecular_function': go_mf,
                 'go_biological_process': go_bp,
                 'go_cellular_component': go_cc,
