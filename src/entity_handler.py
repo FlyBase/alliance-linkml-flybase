@@ -1144,6 +1144,13 @@ class PrimaryEntityHandler(DataHandler):
                     # self.log.debug(f'Removed "{redundant_prefix}" from "{xref.dbxref.accession}" to give "{cleaned_accession}"')
                 else:
                     cleaned_accession = xref.dbxref.accession
+                redundant_postfix = '/tissue=All'
+                # Cleanup case where url accession needs trimming specifically here '/tissue=All'
+                if xref.dbxref.accession.endswith(redundant_postfix):
+                    cleaned_accession = xref.dbxref.accession.replace(redundant_postfix, '')
+                    # self.log.debug(f'Removed "{redundant_prefix}" from "{xref.dbxref.accession}" to give "{cleaned_accession}"')
+                else:
+                    cleaned_accession = xref.dbxref.accession
                 curie = f'{prefix}:{cleaned_accession}'
                 display_name = curie
                 xref_dto = agr_datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
