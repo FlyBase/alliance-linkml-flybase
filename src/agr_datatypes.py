@@ -53,6 +53,24 @@ class BiologicalEntityDTO(SubmittedObjectDTO):
         self.required_fields.extend(['taxon_curie'])
 
 
+class FunctionalGeneSetDTO(BiologicalEntityDTO):
+    """FunctionalGeneSetDTO class for Alliance FunctionalGeneSet objects."""
+    def __init__(self):
+        """Create FunctionalGeneSetDTO for FlyBase gene group objects."""
+        super().__init__()
+        self.full_name = None
+        self.symbol = None
+        self.note_dtos = []
+        self.set_synonym_dtos = []
+        self.set_go_mf_term_curies = []
+        self.set_go_bp_term_curies = []
+        self.set_go_cc_term_curies = []
+        self.parent_set_identifiers = []
+        self.related_set_identifiers = []
+        self.cross_reference_dtos = []
+        self.related_resources = []
+
+
 class GenomicEntityDTO(BiologicalEntityDTO):
     """GenomicEntityDTO class."""
     def __init__(self):
@@ -403,6 +421,20 @@ class ConstructCassetteAssociationDTO(EvidenceAssociationDTO):
         self.cassette_identifier = cassette_id
         self.note_dtos = []
         self.required_fields.extend(['construct_identifier', 'relation_name', 'cassette_identifier'])
+
+
+class GeneFunctionalGeneSetAssociationDTO(AuditedObjectDTO):
+    """GeneFunctionalGeneSetAssociationDTO class for gene-to-gene-group membership."""
+    def __init__(self):
+        """Create GeneFunctionalGeneSetAssociationDTO for FlyBase objects."""
+        super().__init__()
+        self.gene_identifier = None
+        self.functional_gene_set_identifier = None
+        self.relation_name = 'is_member_of'
+        self.evidence_curies = []
+        self.required_fields.extend([
+            'gene_identifier', 'functional_gene_set_identifier', 'relation_name'
+        ])
 
 
 class AnnotationDTO(SingleReferenceAssociationDTO):

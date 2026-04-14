@@ -47,7 +47,15 @@ log = set_up_dict['log']
 testing = set_up_dict['testing']
 
 # Process additional input parameters not handled by the set_up_db_reading() function above.
-parser = argparse.ArgumentParser(description='inputs')
+parser = argparse.ArgumentParser(
+    description='Export FlyBase AGM (strain/genotype) data to Alliance LinkML JSON.',
+    epilog="""
+Environment variables:
+  SERVER              Database server (e.g. flysql25)
+  DATABASE            Database name (e.g. production_chado)
+""",
+    formatter_class=argparse.RawDescriptionHelpFormatter
+)
 parser.add_argument('-l', '--linkml_release', help='The "agr_curation_schema" LinkML release number.', required=True)
 parser.add_argument('-r', '--reference_db', help='The name of a previous reference db for incremental exports.', required=False)
 
