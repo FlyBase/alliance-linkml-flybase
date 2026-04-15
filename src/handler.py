@@ -172,6 +172,7 @@ class DataHandler(object):
         "VectorBase": "vectorbase",
         "VectorBase_Anopheles_gambiae": "vectorbase",
         "VectorBase_Glossina_morsitans": "vectorbase",
+        "WormBase": 'WB',
         "Xenbase": "Xenbase",
         "ZFIN": "ZFIN",
         "genbank": "GenBank-EMBL-DDBJ",
