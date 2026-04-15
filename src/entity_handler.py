@@ -575,6 +575,7 @@ class PrimaryEntityHandler(DataHandler):
                 filter(*filters).\
                 distinct()
         cvterm_prop_counter = 0
+        bad_counter = 0
         cvterm_rel_name = f'{chado_type}_cvterm'
         for cvtermprop_result in cvtermprop_results:
             entity_cvterm_id = getattr(cvtermprop_result, f'{chado_type}_cvterm_id')
@@ -586,8 +587,10 @@ class PrimaryEntityHandler(DataHandler):
                 continue
             elif entity_id not in self.fb_data_entities:
                 if not self.testing:  # test sets have some none fb_data BIUT real data should not
-                    self.log.error(f"Entity_id:{entity_id} not in list of data_entities {chado_type} {entity_obj}")
-                    self.log.error(f"Ignore_list is {self.ignore_list}")
+                    bad_counter += 1
+                    if bad_counter < 10:
+                        self.log.error(f"Entity_id:{entity_id} not in list of data_entities {chado_type} {entity_obj}")
+                        self.log.error(f"Ignore_list is {self.ignore_list}")
                 continue
 
             if entity_prop_type_name in self.fb_data_entities[entity_id].prop_data:  # only store those we are interested in
@@ -602,6 +605,8 @@ class PrimaryEntityHandler(DataHandler):
             else:
                 cvterm_annotation_dict[entity_cvterm_id].props_by_type[entity_prop_type_name] = [fb_datatypes.FBProp(cvtermprop_result)]
                 cvterm_prop_counter += 1
+        if bad_counter:
+            self.log.error(f"Bad counter is {bad_counter}")
         self.log.info(f'Found {cvterm_prop_counter} {chado_type}_cvtermprops for {self.datatype}s.')
         # Phase 3. Add rel info to entities.
         assignment_counter = 0
