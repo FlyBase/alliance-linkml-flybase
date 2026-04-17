@@ -781,10 +781,10 @@ class ConstructHandler(FeatureHandler):
         self.flag_internal_fb_entities('generic_ti_anon_constructs')
         self.flag_unexportable_entities(
             self.generic_ti_anon_constructs,
-            'generic_ti_anon_construct_ingest_set')
+            'construct_ingest_set')
         self.generate_export_dict(
             self.generic_ti_anon_constructs,
-            'generic_ti_anon_construct_ingest_set')
+            'construct_ingest_set')
 
     # Elaborate on synthesize_info() for the ConstructHandler.
     def synthesize_info(self):

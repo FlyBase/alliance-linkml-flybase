@@ -228,17 +228,6 @@ def main():
             cassette_handler.receive_anon_cassette_data(cassette_data)
             cassette_handler.map_anon_cassettes()
             cassette_handler.export_anon_cassettes()
-            # Export anonymous constructs to a separate JSON file.
-            anon_con_set = 'generic_ti_anon_construct_ingest_set'
-            if anon_con_set in cons_handler.export_data and cons_handler.export_data[anon_con_set]:
-                anon_construct_export = {
-                    'linkml_version': linkml_release,
-                    'alliance_member_release_version': database_release,
-                    anon_con_set: cons_handler.export_data[anon_con_set],
-                }
-                anon_con_filename = output_filename.replace(
-                    'cassette', 'generic_ti_anon_construct')
-                generate_export_file(anon_construct_export, log, anon_con_filename)
             log.info(f'Created {len(generic_ti_data)} anonymous constructs '
                      f'and cassettes for generic TI insertions.')
         else:
