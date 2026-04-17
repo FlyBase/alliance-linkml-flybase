@@ -31,6 +31,7 @@ class ConstructHandler(FeatureHandler):
         self.fb_export_type = fb_datatypes.FBConstruct
         self.agr_export_type = agr_datatypes.ConstructDTO
         self.primary_export_set = 'construct_ingest_set'
+        self.generic_ti_anon_constructs = []  # FBExportEntity wrappers for anonymous constructs.
 
     test_set = {
         # FBtp corresponding to 'cassette FBal that are associated_with at least one FBtp' in cassette_handler.py
@@ -745,12 +746,8 @@ class ConstructHandler(FeatureHandler):
 
         Args:
             anon_data: List of dicts from get_generic_ti_anon_construct_data().
-
-        Returns:
-            List of FBExportEntity wrappers containing anonymous ConstructDTOs.
         """
         self.log.info('Map anonymous constructs for generic TI insertions.')
-        anon_constructs = []
         for data in anon_data:
             ins_uname = data['insertion_uniquename']
             construct_id = f'FB:{ins_uname}_con'
@@ -773,11 +770,21 @@ class ConstructHandler(FeatureHandler):
             fb_entity.entity_desc = (
                 f'anon construct for {ins_uname} '
                 f'(from {data["construct_uniquename"]})')
-            anon_constructs.append(fb_entity)
+            self.generic_ti_anon_constructs.append(fb_entity)
         self.log.info(
-            f'Created {len(anon_constructs)} anonymous ConstructDTOs '
-            f'for generic TI insertions.')
-        return anon_constructs
+            f'Created {len(self.generic_ti_anon_constructs)} anonymous '
+            f'ConstructDTOs for generic TI insertions.')
+
+    def export_generic_ti_anon_constructs(self):
+        """Export anonymous constructs through the standard pipeline."""
+        self.log.info('Export anonymous constructs for generic TI insertions.')
+        self.flag_internal_fb_entities('generic_ti_anon_constructs')
+        self.flag_unexportable_entities(
+            self.generic_ti_anon_constructs,
+            'generic_ti_anon_construct_ingest_set')
+        self.generate_export_dict(
+            self.generic_ti_anon_constructs,
+            'generic_ti_anon_construct_ingest_set')
 
     # Elaborate on synthesize_info() for the ConstructHandler.
     def synthesize_info(self):
