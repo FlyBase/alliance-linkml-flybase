@@ -31,6 +31,7 @@ class ConstructHandler(FeatureHandler):
         self.fb_export_type = fb_datatypes.FBConstruct
         self.agr_export_type = agr_datatypes.ConstructDTO
         self.primary_export_set = 'construct_ingest_set'
+        self.generic_ti_anon_constructs = []  # FBExportEntity wrappers for anonymous constructs.
 
     test_set = {
         # FBtp corresponding to 'cassette FBal that are associated_with at least one FBtp' in cassette_handler.py
@@ -576,6 +577,20 @@ class ConstructHandler(FeatureHandler):
                       f'({excluded_counter} excluded as generic TI constructs).')
         return
 
+    def identify_generic_ti_constructs(self):
+        """Identify constructs marked as 'generic TI' style (FTA-136)."""
+        self.log.info('Identify generic TI constructs.')
+        counter = 0
+        for construct in self.fb_data_entities.values():
+            internal_notes = construct.props_by_type.get('internalnotes', [])
+            for note in internal_notes:
+                if note.chado_obj.value == 'FTA: generic TI construct':
+                    construct.is_generic_ti = True
+                    counter += 1
+                    break
+        self.log.info(f'Identified {counter} generic TI constructs.')
+        return
+
     def get_anon_cassette_data(self):
         """Return extracted data for anonymous cassette creation by CassetteHandler.
 
@@ -609,6 +624,168 @@ class ConstructHandler(FeatureHandler):
         self.log.info(f'Extracted anonymous cassette data for {len(anon_data)} constructs.')
         return anon_data
 
+    def get_generic_ti_insertions(self, session):
+        """Query insertions (FBti) for each generic TI construct via producedby relationship.
+
+        Returns a dict keyed by construct feature_id, each value is a list of
+        insertion dicts: {'uniquename': str, 'feature_id': int}.
+        """
+        self.log.info('Get insertions for generic TI constructs.')
+        generic_ti_ids = [
+            cid for cid, c in self.fb_data_entities.items()
+            if c.is_generic_ti
+        ]
+        if not generic_ti_ids:
+            self.log.info('No generic TI constructs found.')
+            return {}
+        rel_type = aliased(Cvterm, name='rel_type')
+        ins_type = aliased(Cvterm, name='ins_type')
+        results = session.query(
+            Feature.uniquename,
+            Feature.feature_id,
+            FeatureRelationship.object_id).\
+            select_from(FeatureRelationship).\
+            join(Feature, Feature.feature_id == FeatureRelationship.subject_id).\
+            join(rel_type, rel_type.cvterm_id == FeatureRelationship.type_id).\
+            join(ins_type, ins_type.cvterm_id == Feature.type_id).\
+            filter(
+                FeatureRelationship.object_id.in_(generic_ti_ids),
+                rel_type.name == 'producedby',
+                Feature.uniquename.op('~')(self.regex['insertion']),
+                Feature.is_obsolete.is_(False),
+                ins_type.name.in_(self.feature_subtypes['insertion'])).\
+            distinct()
+        insertions_by_construct = {}
+        for ins_uname, ins_fid, construct_fid in results:
+            if construct_fid not in insertions_by_construct:
+                insertions_by_construct[construct_fid] = []
+            insertions_by_construct[construct_fid].append({
+                'uniquename': ins_uname,
+                'feature_id': ins_fid,
+            })
+        total = sum(len(v) for v in insertions_by_construct.values())
+        self.log.info(
+            f'Found {total} insertions across '
+            f'{len(insertions_by_construct)} generic TI constructs.')
+        return insertions_by_construct
+
+    def attach_generic_ti_insertions(self, insertions_by_construct):
+        """Attach insertion data to generic TI construct entities.
+
+        Args:
+            insertions_by_construct: Dict from get_generic_ti_insertions().
+        """
+        for construct_fid, insertions in insertions_by_construct.items():
+            if construct_fid in self.fb_data_entities:
+                self.fb_data_entities[construct_fid].generic_ti_insertions = insertions
+
+    def get_generic_ti_anon_construct_data(self):
+        """Extract data for anonymous constructs from generic TI insertions.
+
+        For each insertion of a generic TI construct, returns data to create
+        an anonymous Construct and an anonymous Cassette. The anonymous
+        construct inherits the parent construct's direct tool relationships
+        and tool_uses data.
+
+        Returns a list of dicts:
+        {
+            'insertion_uniquename': str,
+            'construct_uniquename': str,  (parent)
+            'direct_rels': [...],
+            'tool_uses_data': [...],
+        }
+        """
+        self.log.info('Extract anonymous construct data for generic TI insertions.')
+        anon_data = []
+        for construct in self.fb_data_entities.values():
+            if not construct.is_generic_ti:
+                continue
+            if not hasattr(construct, 'generic_ti_insertions'):
+                continue
+            direct_rels = construct.recall_relationships(
+                self.log, entity_role='subject',
+                rel_types=['encodes_tool', 'has_reg_region',
+                           'tagged_with', 'carries_tool'])
+            rel_data = []
+            for rel in direct_rels:
+                rel_data.append({
+                    'rel_type': rel.chado_obj.type.name,
+                    'object_feature_id': rel.chado_obj.object_id,
+                    'pub_ids': list(rel.pubs),
+                })
+            for insertion in construct.generic_ti_insertions:
+                anon_data.append({
+                    'insertion_uniquename': insertion['uniquename'],
+                    'construct_uniquename': construct.uniquename,
+                    'direct_rels': rel_data,
+                    'tool_uses_data': construct.tool_uses_data,
+                })
+        self.log.info(
+            f'Extracted anonymous construct data for '
+            f'{len(anon_data)} generic TI insertions.')
+        return anon_data
+
+    @staticmethod
+    def generic_ti_data_for_cassette_handler(anon_data):
+        """Convert generic TI anon data to cassette handler format.
+
+        Uses the insertion uniquename as construct_uniquename so the
+        cassette handler creates IDs like FB:{FBti}_cas.
+        """
+        cassette_data = []
+        for entry in anon_data:
+            cassette_data.append({
+                'construct_uniquename': entry['insertion_uniquename'],
+                'direct_rels': entry['direct_rels'],
+                'tool_uses_data': entry['tool_uses_data'],
+            })
+        return cassette_data
+
+    def map_generic_ti_anon_constructs(self, anon_data):
+        """Create anonymous ConstructDTOs for generic TI insertions.
+
+        Args:
+            anon_data: List of dicts from get_generic_ti_anon_construct_data().
+        """
+        self.log.info('Map anonymous constructs for generic TI insertions.')
+        for data in anon_data:
+            ins_uname = data['insertion_uniquename']
+            construct_id = f'FB:{ins_uname}_con'
+            agr_construct = agr_datatypes.ConstructDTO()
+            agr_construct.placeholder = True
+            agr_construct.obsolete = False
+            agr_construct.primary_external_id = construct_id
+            agr_construct.construct_symbol_dto = agr_datatypes.NameSlotAnnotationDTO(
+                'nomenclature_symbol', construct_id, construct_id, []
+            ).dict_export()
+            dp_xref = agr_datatypes.CrossReferenceDTO(
+                'FB', f'FB:{data["construct_uniquename"]}',
+                'construct', construct_id
+            ).dict_export()
+            agr_construct.data_provider_dto = agr_datatypes.DataProviderDTO(
+                dp_xref
+            ).dict_export()
+            fb_entity = fb_datatypes.FBExportEntity()
+            fb_entity.linkmldto = agr_construct
+            fb_entity.entity_desc = (
+                f'anon construct for {ins_uname} '
+                f'(from {data["construct_uniquename"]})')
+            self.generic_ti_anon_constructs.append(fb_entity)
+        self.log.info(
+            f'Created {len(self.generic_ti_anon_constructs)} anonymous '
+            f'ConstructDTOs for generic TI insertions.')
+
+    def export_generic_ti_anon_constructs(self):
+        """Export anonymous constructs through the standard pipeline."""
+        self.log.info('Export anonymous constructs for generic TI insertions.')
+        self.flag_internal_fb_entities('generic_ti_anon_constructs')
+        self.flag_unexportable_entities(
+            self.generic_ti_anon_constructs,
+            'construct_ingest_set')
+        self.generate_export_dict(
+            self.generic_ti_anon_constructs,
+            'construct_ingest_set')
+
     # Elaborate on synthesize_info() for the ConstructHandler.
     def synthesize_info(self):
         """Extend the method for the ConstructHandler."""
@@ -629,6 +806,7 @@ class ConstructHandler(FeatureHandler):
             self.log.info('ADD_CASS_TO_CONSTRUCT=YES: skipping synthesize_component_genes and '
                           'synthesize_redundant_tool_genes (cassettes handle this data).')
         self.identify_constructs_needing_anon_cassettes()
+        self.identify_generic_ti_constructs()
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
@@ -637,7 +815,7 @@ class ConstructHandler(FeatureHandler):
         self.log.info('Map basic construct info to Alliance object.')
         for construct in self.fb_data_entities.values():
             agr_construct = self.agr_export_type()
-            agr_construct.obsolete = construct.chado_obj.is_obsolete
+            agr_construct.obsolete = construct.chado_obj.is_obsolete or construct.is_generic_ti
             agr_construct.primary_external_id = f'FB:{construct.uniquename}'
             # agr_construct.mod_internal_id = f'FB.feature_id={construct.chado_obj.feature_id}'
             construct.linkmldto = agr_construct
@@ -887,4 +1065,11 @@ class ConstructHandler(FeatureHandler):
         self.flag_unexportable_entities(
             self.construct_cassette_associations, 'construct_cassette_association_ingest_set')
         self.generate_export_dict(self.construct_cassette_associations, 'construct_cassette_association_ingest_set')
+        # FTA-136: Create anonymous constructs for generic TI insertions.
+        insertions_by_construct = self.get_generic_ti_insertions(session)
+        self.attach_generic_ti_insertions(insertions_by_construct)
+        generic_ti_data = self.get_generic_ti_anon_construct_data()
+        if generic_ti_data:
+            self.map_generic_ti_anon_constructs(generic_ti_data)
+            self.export_generic_ti_anon_constructs()
         return

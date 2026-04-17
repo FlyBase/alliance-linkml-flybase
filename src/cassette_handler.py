@@ -763,8 +763,15 @@ class CassetteHandler(FeatureHandler):
             self.log.info('No anonymous cassette data to export.')
             return
         self.flag_internal_fb_entities('anon_cassettes')
+        self.flag_unexportable_entities(self.anon_cassettes, 'cassette_ingest_set')
         self.flag_internal_fb_entities('anon_cassette_tool_associations')
+        self.flag_unexportable_entities(
+            self.anon_cassette_tool_associations,
+            'cassette_transgenic_tool_association_ingest_set')
         self.flag_internal_fb_entities('anon_cassette_genomic_entity_associations')
+        self.flag_unexportable_entities(
+            self.anon_cassette_genomic_entity_associations,
+            'cassette_genomic_entity_association_ingest_set')
         # Append exportable anon cassettes to the existing export dicts.
         anon_count = 0
         for entity in self.anon_cassettes:

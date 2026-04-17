@@ -179,7 +179,7 @@ def generate_association_tsv_file(export_dict, ingest_name, filename):
     with open(filename, 'w') as outfile:
         outfile.write(f"#{first_entity}\tRelationship\t{second_entity}\tEvidence\tComp type curie\n")
         for entity_dict in export_dict[ingest_name]:
-            print(f"Dumping {entity_dict}.")
+            # print(f"Dumping {entity_dict}.")
             sub = entity_dict[first_entity]
             obj = entity_dict[second_entity]
             rel_type = entity_dict['relation_name']
@@ -220,6 +220,18 @@ def main():
         cassette_handler.receive_anon_cassette_data(anon_data)
         cassette_handler.map_anon_cassettes()
         cassette_handler.export_anon_cassettes()
+        # FTA-136: Anonymous constructs are already created by ConstructHandler.
+        # Pass their data to CassetteHandler for anonymous cassette creation.
+        generic_ti_data = cons_handler.get_generic_ti_anon_construct_data()
+        if generic_ti_data:
+            cassette_data = cons_handler.generic_ti_data_for_cassette_handler(generic_ti_data)
+            cassette_handler.receive_anon_cassette_data(cassette_data)
+            cassette_handler.map_anon_cassettes()
+            cassette_handler.export_anon_cassettes()
+            log.info(f'Created {len(generic_ti_data)} anonymous constructs '
+                     f'and cassettes for generic TI insertions.')
+        else:
+            log.info('No generic TI insertions found.')
     else:
         log.warning('ADD_CASS_TO_CONSTRUCT not set to "YES". '
                     'Skipping anonymous cassette creation.')
