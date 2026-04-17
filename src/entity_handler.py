@@ -610,6 +610,7 @@ class PrimaryEntityHandler(DataHandler):
         self.log.info(f'Found {cvterm_prop_counter} {chado_type}_cvtermprops for {self.datatype}s.')
         # Phase 3. Add rel info to entities.
         assignment_counter = 0
+        bad_counter = 0
         # Assign the CVTermAnnotation to the appropriate entity.
         for cvt_anno_id, cvt_anno in cvterm_annotation_dict.items():
             # First, associate the relationship with the entity.
@@ -618,8 +619,10 @@ class PrimaryEntityHandler(DataHandler):
                 continue
             if entity_id not in self.fb_data_entities:  # (ie constructs/cassettes)
                 if not self.testing:  # test sets have some none fb_data
-                    self.log.error(f"Entity_id:{entity_id} not in list of data_entities")
-                    self.log.error(f"Ignore_list is {self.ignore_list}")
+                    bad_counter += 1
+                    if bad_counter < 10:
+                        self.log.error(f"Entity_id:{entity_id} not in list of data_entities")
+                        self.log.error(f"Ignore_list is {self.ignore_list}")
                 continue
             self.fb_data_entities[entity_id].cvt_annos_by_id[cvt_anno_id] = cvt_anno
             # Second, sort the CVTermAnnotations by CV name.
@@ -641,6 +644,8 @@ class PrimaryEntityHandler(DataHandler):
                 else:
                     self.fb_data_entities[entity_id].cvt_anno_ids_by_prop[prop_type_name] = [cvt_anno_id]
             assignment_counter += 1
+        if bad_counter:
+            self.log.error(f"Bad counter is {bad_counter}")
         self.log.debug(f'Indexed {assignment_counter} {chado_type}_cvterm annotations.')
         return
 
