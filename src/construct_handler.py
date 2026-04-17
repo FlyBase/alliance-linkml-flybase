@@ -643,8 +643,8 @@ class ConstructHandler(FeatureHandler):
         results = session.query(
             Feature.uniquename,
             Feature.feature_id,
-            FeatureRelationship.object_id
-        ).select_from(FeatureRelationship).\
+            FeatureRelationship.object_id).\
+            select_from(FeatureRelationship).\
             join(Feature, Feature.feature_id == FeatureRelationship.subject_id).\
             join(rel_type, rel_type.cvterm_id == FeatureRelationship.type_id).\
             join(ins_type, ins_type.cvterm_id == Feature.type_id).\
@@ -653,8 +653,8 @@ class ConstructHandler(FeatureHandler):
                 rel_type.name == 'producedby',
                 Feature.uniquename.op('~')(self.regex['insertion']),
                 Feature.is_obsolete.is_(False),
-                ins_type.name.in_(self.feature_subtypes['insertion'])
-            ).distinct()
+                ins_type.name.in_(self.feature_subtypes['insertion'])).\
+            distinct()
         insertions_by_construct = {}
         for ins_uname, ins_fid, construct_fid in results:
             if construct_fid not in insertions_by_construct:
@@ -1065,4 +1065,11 @@ class ConstructHandler(FeatureHandler):
         self.flag_unexportable_entities(
             self.construct_cassette_associations, 'construct_cassette_association_ingest_set')
         self.generate_export_dict(self.construct_cassette_associations, 'construct_cassette_association_ingest_set')
+        # FTA-136: Create anonymous constructs for generic TI insertions.
+        insertions_by_construct = self.get_generic_ti_insertions(session)
+        self.attach_generic_ti_insertions(insertions_by_construct)
+        generic_ti_data = self.get_generic_ti_anon_construct_data()
+        if generic_ti_data:
+            self.map_generic_ti_anon_constructs(generic_ti_data)
+            self.export_generic_ti_anon_constructs()
         return
