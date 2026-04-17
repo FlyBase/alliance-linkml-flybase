@@ -220,6 +220,35 @@ def main():
         cassette_handler.receive_anon_cassette_data(anon_data)
         cassette_handler.map_anon_cassettes()
         cassette_handler.export_anon_cassettes()
+        # FTA-136: Process generic TI constructs — create anon constructs + cassettes per insertion.
+        insertions_by_construct = cons_handler.get_generic_ti_insertions(session)
+        cons_handler.attach_generic_ti_insertions(insertions_by_construct)
+        generic_ti_data = cons_handler.get_generic_ti_anon_construct_data()
+        if generic_ti_data:
+            # Create anonymous constructs for each insertion.
+            anon_constructs = cons_handler.map_generic_ti_anon_constructs(generic_ti_data)
+            # Create anonymous cassettes for each anonymous construct.
+            cassette_data = cons_handler.generic_ti_data_for_cassette_handler(generic_ti_data)
+            cassette_handler.receive_anon_cassette_data(cassette_data)
+            cassette_handler.map_anon_cassettes()
+            cassette_handler.export_anon_cassettes()
+            # Export anonymous constructs to a separate JSON file.
+            anon_construct_export = {
+                'linkml_version': linkml_release,
+                'alliance_member_release_version': database_release,
+                'construct_ingest_set': [
+                    e.linkmldto.dict_export() for e in anon_constructs
+                    if e.linkmldto is not None
+                ],
+            }
+            if anon_construct_export['construct_ingest_set']:
+                anon_con_filename = output_filename.replace(
+                    'cassette', 'generic_ti_anon_construct')
+                generate_export_file(anon_construct_export, log, anon_con_filename)
+            log.info(f'Created {len(generic_ti_data)} anonymous constructs '
+                     f'and cassettes for generic TI insertions.')
+        else:
+            log.info('No generic TI insertions found.')
     else:
         log.warning('ADD_CASS_TO_CONSTRUCT not set to "YES". '
                     'Skipping anonymous cassette creation.')
