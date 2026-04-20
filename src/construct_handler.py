@@ -33,6 +33,11 @@ class ConstructHandler(FeatureHandler):
         self.primary_export_set = 'construct_ingest_set'
         self.generic_ti_anon_constructs = []  # FBExportEntity wrappers for anonymous constructs.
 
+    # FBals whose marked_with relationship maps to 'has_transcriptional_unit'
+    # instead of the default 'has_selectable_marker' (FTA-139, reused by FTA-183).
+    has_transcriptional_unit_list = ['FBal0345196', 'FBal0345198', 'FBal0407180',
+                                     'FBal0407181', 'FBal0407182', 'FBal0368073']
+
     test_set = {
         # FBtp corresponding to 'cassette FBal that are associated_with at least one FBtp' in cassette_handler.py
         'FBtp0006749': 'P{UAS-wg.flu}',                           # associated_with FBal0055793
@@ -693,6 +698,8 @@ class ConstructHandler(FeatureHandler):
             'construct_uniquename': str,  (parent)
             'direct_rels': [...],
             'tool_uses_data': [...],
+            'marker_alleles': [...],  (FTA-183: parent's marked_with FBals)
+            'parent_is_obsolete': bool,
         }
         """
         self.log.info('Extract anonymous construct data for generic TI insertions.')
@@ -713,12 +720,26 @@ class ConstructHandler(FeatureHandler):
                     'object_feature_id': rel.chado_obj.object_id,
                     'pub_ids': list(rel.pubs),
                 })
+            # FTA-183: collect marker alleles from parent's marked_with rels.
+            marked_with_rels = construct.recall_relationships(
+                self.log, entity_role='subject',
+                rel_types='marked_with', rel_entity_types='allele')
+            marker_data = []
+            for rel in marked_with_rels:
+                feature_id = rel.chado_obj.object_id
+                marker_data.append({
+                    'feature_id': feature_id,
+                    'uniquename': self.feature_lookup[feature_id]['uniquename'],
+                    'is_obsolete': self.feature_lookup[feature_id]['is_obsolete'],
+                })
             for insertion in construct.generic_ti_insertions:
                 anon_data.append({
                     'insertion_uniquename': insertion['uniquename'],
                     'construct_uniquename': construct.uniquename,
                     'direct_rels': rel_data,
                     'tool_uses_data': construct.tool_uses_data,
+                    'marker_alleles': marker_data,
+                    'parent_is_obsolete': construct.is_obsolete,
                 })
         self.log.info(
             f'Extracted anonymous construct data for '
@@ -910,8 +931,6 @@ class ConstructHandler(FeatureHandler):
         """Map construct cassette relations to ConstructCassetteAssociationDTO."""
         self.log.info('Map construct cassette associations.')
         counter = 0
-        has_transcriptional_unit_list = ['FBal0345196', 'FBal0345198', 'FBal0407180',
-                                         'FBal0407181', 'FBal0407182', 'FBal0368073']
         for construct in self.fb_data_entities.values():
             cons_curie = f'FB:{construct.uniquename}'
             # Handle marked_with relationships (FTA-139).
@@ -923,7 +942,7 @@ class ConstructHandler(FeatureHandler):
                 cassette_curie = f'FB:{cassette_uniquename}'
                 pub_curies = self.lookup_pub_curies(rel.pubs)
                 # has_transcriptional_unit_list are special cases per FTA-139.
-                if cassette_uniquename in has_transcriptional_unit_list:
+                if cassette_uniquename in self.has_transcriptional_unit_list:
                     relation_name = 'has_transcriptional_unit'
                 else:
                     relation_name = 'has_selectable_marker'
@@ -1026,6 +1045,32 @@ class ConstructHandler(FeatureHandler):
         self.log.info(f'Created {counter} ConstructCassetteAssociationDTOs for anonymous cassettes.')
         return
 
+    def map_generic_ti_anon_marker_associations(self, anon_data):
+        """Emit marked_with cassette associations for anonymous TI constructs (FTA-183)."""
+        self.log.info('Map marker associations for anonymous generic TI constructs.')
+        counter = 0
+        for data in anon_data:
+            if not data['marker_alleles']:
+                continue
+            cons_curie = f'FB:{data["insertion_uniquename"]}_con'
+            for marker in data['marker_alleles']:
+                cassette_curie = f'FB:{marker["uniquename"]}'
+                if marker['uniquename'] in self.has_transcriptional_unit_list:
+                    relation_name = 'has_transcriptional_unit'
+                else:
+                    relation_name = 'has_selectable_marker'
+                fb_rel = fb_datatypes.FBExportEntity()
+                rel_dto = agr_datatypes.ConstructCassetteAssociationDTO(
+                    cons_curie, relation_name, cassette_curie, [])
+                if data['parent_is_obsolete'] or marker['is_obsolete']:
+                    rel_dto.obsolete = True
+                    rel_dto.internal = True
+                fb_rel.linkmldto = rel_dto
+                self.construct_cassette_associations.append(fb_rel)
+                counter += 1
+        self.log.info(f'Created {counter} anon TI marker ConstructCassetteAssociationDTOs.')
+        return
+
     # Elaborate on map_fb_data_to_alliance() for the ConstructHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the ConstructHandler."""
@@ -1062,14 +1107,17 @@ class ConstructHandler(FeatureHandler):
         super().query_chado_and_export(session)
         self.flag_unexportable_entities(self.construct_associations, 'construct_genomic_entity_association_ingest_set')
         self.generate_export_dict(self.construct_associations, 'construct_genomic_entity_association_ingest_set')
-        self.flag_unexportable_entities(
-            self.construct_cassette_associations, 'construct_cassette_association_ingest_set')
-        self.generate_export_dict(self.construct_cassette_associations, 'construct_cassette_association_ingest_set')
         # FTA-136: Create anonymous constructs for generic TI insertions.
         insertions_by_construct = self.get_generic_ti_insertions(session)
         self.attach_generic_ti_insertions(insertions_by_construct)
         generic_ti_data = self.get_generic_ti_anon_construct_data()
         if generic_ti_data:
             self.map_generic_ti_anon_constructs(generic_ti_data)
+            # FTA-183: marker associations for anonymous TI constructs.
+            self.map_generic_ti_anon_marker_associations(generic_ti_data)
             self.export_generic_ti_anon_constructs()
+        # Export cassette associations LAST so anon marker rels are included.
+        self.flag_unexportable_entities(
+            self.construct_cassette_associations, 'construct_cassette_association_ingest_set')
+        self.generate_export_dict(self.construct_cassette_associations, 'construct_cassette_association_ingest_set')
         return
