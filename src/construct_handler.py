@@ -910,7 +910,9 @@ class ConstructHandler(FeatureHandler):
                     'direct_rels': rel_data,
                     'tool_uses_data': construct.tool_uses_data,
                     'marker_alleles': marker_data,
-                    'parent_is_obsolete': construct.is_obsolete,
+                    # FTA-179: flag anon marker associations as obsolete+internal
+                    # when the parent FBtp is generic-TI (effectively obsolete).
+                    'parent_is_obsolete': construct.is_obsolete or construct.is_generic_ti,
                     # FTA-182:
                     'is_generic_ti': True,
                     'associated_alleles': associated_data,
@@ -1099,7 +1101,8 @@ class ConstructHandler(FeatureHandler):
                     fb_rel = fb_datatypes.FBExportEntity()
                     rel_dto = agr_datatypes.ConstructGenomicEntityAssociationDTO(
                         cons_curie, rel_type, obj_curie, pub_curies)
-                    if construct.is_obsolete is True or self.feature_lookup[feature_id]['is_obsolete'] is True:
+                    # FTA-179: treat generic-TI FBtps as effectively obsolete.
+                    if construct.is_obsolete is True or construct.is_generic_ti or self.feature_lookup[feature_id]['is_obsolete'] is True:
                         rel_dto.obsolete = True
                         rel_dto.internal = True
                     fb_rel.linkmldto = rel_dto
@@ -1130,7 +1133,8 @@ class ConstructHandler(FeatureHandler):
                 fb_rel = fb_datatypes.FBExportEntity()
                 rel_dto = agr_datatypes.ConstructCassetteAssociationDTO(
                     cons_curie, relation_name, cassette_curie, pub_curies)
-                if construct.is_obsolete is True or self.feature_lookup[cassette_feature_id]['is_obsolete'] is True:
+                # FTA-179: treat generic-TI FBtps as effectively obsolete.
+                if construct.is_obsolete is True or construct.is_generic_ti or self.feature_lookup[cassette_feature_id]['is_obsolete'] is True:
                     rel_dto.obsolete = True
                     rel_dto.internal = True
                 fb_rel.linkmldto = rel_dto
@@ -1170,7 +1174,8 @@ class ConstructHandler(FeatureHandler):
                 rel_dto = agr_datatypes.ConstructCassetteAssociationDTO(
                     cons_curie, 'has_transcriptional_unit', cassette_curie, pub_curies)
                 rel_dto.note_dtos = note_dtos
-                if construct.is_obsolete is True or self.feature_lookup[allele_id]['is_obsolete'] is True:
+                # FTA-179: treat generic-TI FBtps as effectively obsolete.
+                if construct.is_obsolete is True or construct.is_generic_ti or self.feature_lookup[allele_id]['is_obsolete'] is True:
                     rel_dto.obsolete = True
                     rel_dto.internal = True
                 fb_rel.linkmldto = rel_dto
