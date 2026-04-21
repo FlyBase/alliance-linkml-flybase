@@ -162,7 +162,7 @@ def generate_tsv_file(export_dict, filename):
                     if 'evidence_curies' in comp:
                         evidence = '|'.join(comp['evidence_curies'])
                     else:
-                        evidence = ""
+                        evidence = "NO PUBS"
                     tools = '|'.join(comp["use_curies"])
                     outfile.write(f"{primary}\t{tools}\t{evidence}\n")
 
@@ -189,7 +189,7 @@ def generate_association_tsv_file(export_dict, ingest_name, filename):
             if 'evidence_curies' in entity_dict:
                 pubs = "|".join(entity_dict['evidence_curies'])
             else:
-                pubs = ""
+                pubs = "NO PUBS"
             if 'component_type_curies' in entity_dict:
                 comp = "|".join(entity_dict['component_type_curies'])
             else:
