@@ -797,9 +797,7 @@ class ConstructHandler(FeatureHandler):
                 FeatureRelationshipPub.feature_relationship_id,
                 FeatureRelationshipPub.pub_id).\
                 select_from(FeatureRelationshipPub).\
-                join(FeatureRelationship,
-                     FeatureRelationship.feature_relationship_id
-                     == FeatureRelationshipPub.feature_relationship_id).\
+                join(FeatureRelationship, FeatureRelationship.feature_relationship_id == FeatureRelationshipPub.feature_relationship_id).\
                 join(pub_type, pub_type.cvterm_id == FeatureRelationship.type_id).\
                 filter(
                     FeatureRelationship.subject_id.in_(fbal_ids_list),
@@ -818,9 +816,7 @@ class ConstructHandler(FeatureHandler):
         prop_type = aliased(Cvterm, name='prop_type')
         tu_results = session.query(FeatureCvterm, FeatureCvtermprop).\
             select_from(FeatureCvterm).\
-            join(FeatureCvtermprop,
-                 FeatureCvtermprop.feature_cvterm_id
-                 == FeatureCvterm.feature_cvterm_id).\
+            join(FeatureCvtermprop, FeatureCvtermprop.feature_cvterm_id == FeatureCvterm.feature_cvterm_id).\
             join(prop_type, prop_type.cvterm_id == FeatureCvtermprop.type_id).\
             filter(
                 FeatureCvterm.feature_id.in_(fbal_ids_list),
