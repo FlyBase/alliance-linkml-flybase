@@ -159,7 +159,10 @@ def generate_tsv_file(export_dict, filename):
             primary = entity_dict["primary_external_id"]
             if "cassette_use_dtos" in entity_dict:
                 for comp in entity_dict["cassette_use_dtos"]:
-                    evidence = '|'.join(comp["evidence_curies"])
+                    if 'evidence_curies' in comp:
+                        evidence = '|'.join(comp['evidence_curies'])
+                    else:
+                        evidence = ""
                     tools = '|'.join(comp["use_curies"])
                     outfile.write(f"{primary}\t{tools}\t{evidence}\n")
 
