@@ -474,8 +474,9 @@ class ConstructHandler(FeatureHandler):
                     construct.regulating_features[reg_region_id].extend(cons_reg_region_rel.pubs)
                 except KeyError:
                     construct.regulating_features[reg_region_id] = cons_reg_region_rel.pubs
-            self.log.debug(f'For {construct}, found {len(construct.regulating_features.keys())} '
-                           'encoded reg_regions via direct relationships.')
+            if self.testing:
+                self.log.debug(f'For {construct}, found {len(construct.regulating_features.keys())} '
+                                'encoded reg_regions via direct relationships.')
             # Direct relationships to regulatory_regions (old implementation).
             old_cons_reg_region_rels = construct.recall_relationships(
                 self.log, entity_role='object',
