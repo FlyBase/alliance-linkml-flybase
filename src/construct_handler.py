@@ -373,7 +373,8 @@ class ConstructHandler(FeatureHandler):
         self.log.info('Synthesize encoded components.')
         counter = 0
         for construct in self.fb_data_entities.values():
-            self.log.debug(f'Assess encoded tools for {construct}.')
+            if self.testing:
+                self.log.debug(f'Assess encoded tools for {construct}.')
             # Reference of related alleles.
             cons_al_rels = construct.recall_relationships(
                 self.log, entity_role='object', rel_types='associated_with',
@@ -389,8 +390,9 @@ class ConstructHandler(FeatureHandler):
                     construct.expressed_features[component_id].extend(cons_tool_rel.pubs)
                 except KeyError:
                     construct.expressed_features[component_id] = cons_tool_rel.pubs
-            self.log.debug(f'For {construct}, found {len(construct.expressed_features.keys())} '
-                           'encoded tools via direct relationships.')
+            if self.testing:
+                self.log.debug(f'For {construct}, found {len(construct.expressed_features.keys())} '
+                               'encoded tools via direct relationships.')
             # Indirect encodes_tool relationships.
             # self.log.debug(f'{construct} has {len(construct.al_encodes_tool_rels)} '
             #                'indirect tool relationships via alleles.')

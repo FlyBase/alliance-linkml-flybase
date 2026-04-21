@@ -440,7 +440,8 @@ class CassetteHandler(FeatureHandler):
                         self.log.debug(f"{entity.uniquename} has parent {rel.chado_obj.object.uniquename}")
                     gene = self.feature_lookup[rel.chado_obj.object.feature_id]
                     assoc_type = self.cassette_dto_type(gene)
-                    self.log.debug(f"{entity.uniquename} {gene} has {assoc_type} association")
+                    if self.testing:
+                        self.log.debug(f"{entity.uniquename} {gene} has {assoc_type} association")
                     # Always a gene currently BUT might in future have
                     # subset of foreign genes so check now anyway
                     if assoc_type == 'component_free_text':

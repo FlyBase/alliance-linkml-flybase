@@ -1074,7 +1074,8 @@ class DataHandler(object):
             if missing_info is True:
                 missing_required_info_counter += 1
             if i.for_export is False:
-                self.log.debug(f'DO NOT EXPORT {i}: {i.export_warnings}')
+                if self.testing:
+                    self.log.debug(f'DO NOT EXPORT {i}: {i.export_warnings}')
                 no_export_counter += 1
         self.log.info(f'Assessed {input_counter} objects for exportability.')
         self.log.info(f'Found {no_linkml_mapping_counter} objects with no LinkML mapping at all.')
@@ -1106,7 +1107,8 @@ class DataHandler(object):
             self.export_count += 1
             if i.linkmldto.internal is True:
                 self.internal_count += 1
-                self.log.debug(f'Export {i} but keep INTERNAL at the Alliance: {i.internal_reasons}')
+                if self.testing:
+                    self.log.debug(f'Export {i} but keep INTERNAL at the Alliance: {i.internal_reasons}')
             export_agr_dict = {}
             for attr in i.linkmldto.__dict__.keys():
                 # self.log.debug(f'Assess this attr: {attr}')
