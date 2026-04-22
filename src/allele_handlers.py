@@ -1081,7 +1081,6 @@ class InsertionHandler(MetaAlleleHandler):
         'FBti0000005': 'P{hsneo}102',               # type=transposable_element_insertion_site. Has synTE_insertion subtype, producedby FBtp0000078 (P{hsneo}).
         'FBti0145331': 'P{PTGAL}26',                # type=transposable_element_insertion_site. Has synTE_insertion TI_subtype, no current producedby.
         'FBti0128384': 'FBti0128384',               # Had null mutation_type_curies bug.
-        'FBti0167947': 'FBti0167947',               # Anon
     }
 
     # Elaborate on get_general_data() for the InsertionHandler.
