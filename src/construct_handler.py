@@ -38,6 +38,8 @@ class ConstructHandler(FeatureHandler):
         self.fbal_ti_represented = set()      # (fbal_fid, ti_fid) pairs for 'is_represented_at_alliance_as'
         self.fbal_tool_rels = {}              # {fbal_fid: [{rel_type, object_feature_id, pub_ids}, ...]}
         self.fbal_tool_uses = {}              # {fbal_fid: [{cvterm_name, accession, pub_id}, ...]}
+        # FTA-182 v3: pubs on the producedby rel (FBti subject -> generic-TI FBtp object).
+        self.ti_producedby_pubs = {}          # {ti_fid: [pub_id, ...]}
 
     # FBals whose marked_with relationship maps to 'has_transcriptional_unit'
     # instead of the default 'has_selectable_marker' (FTA-139, reused by FTA-183).
@@ -660,7 +662,8 @@ class ConstructHandler(FeatureHandler):
         results = session.query(
             Feature.uniquename,
             Feature.feature_id,
-            FeatureRelationship.object_id).\
+            FeatureRelationship.object_id,
+            FeatureRelationship.feature_relationship_id).\
             select_from(FeatureRelationship).\
             join(Feature, Feature.feature_id == FeatureRelationship.subject_id).\
             join(rel_type, rel_type.cvterm_id == FeatureRelationship.type_id).\
@@ -673,12 +676,13 @@ class ConstructHandler(FeatureHandler):
                 ins_type.name.in_(self.feature_subtypes['insertion'])).\
             distinct()
         insertions_by_construct = {}
-        for ins_uname, ins_fid, construct_fid in results:
+        for ins_uname, ins_fid, construct_fid, fr_id in results:
             if construct_fid not in insertions_by_construct:
                 insertions_by_construct[construct_fid] = []
             insertions_by_construct[construct_fid].append({
                 'uniquename': ins_uname,
                 'feature_id': ins_fid,
+                'producedby_fr_id': fr_id,
             })
         total = sum(len(v) for v in insertions_by_construct.values())
         self.log.info(
@@ -695,6 +699,32 @@ class ConstructHandler(FeatureHandler):
         for construct_fid, insertions in insertions_by_construct.items():
             if construct_fid in self.fb_data_entities:
                 self.fb_data_entities[construct_fid].generic_ti_insertions = insertions
+
+    def get_generic_ti_producedby_pubs(self, session):
+        """Load pubs on the producedby feature_relationship (FBti -> generic-TI FBtp) (FTA-182 v3)."""
+        self.log.info('Get producedby-rel pubs for generic TI insertions.')
+        fr_ids = []
+        ti_by_fr = {}
+        for construct in self.fb_data_entities.values():
+            if not construct.is_generic_ti:
+                continue
+            for ins in getattr(construct, 'generic_ti_insertions', []):
+                fr_ids.append(ins['producedby_fr_id'])
+                ti_by_fr[ins['producedby_fr_id']] = ins['feature_id']
+        if not fr_ids:
+            self.log.info('No generic TI insertions; skipping producedby-pub load.')
+            return
+        results = session.query(
+            FeatureRelationshipPub.feature_relationship_id,
+            FeatureRelationshipPub.pub_id).\
+            filter(FeatureRelationshipPub.feature_relationship_id.in_(fr_ids)).\
+            distinct()
+        total = 0
+        for fr_id, pub_id in results:
+            ti_fid = ti_by_fr[fr_id]
+            self.ti_producedby_pubs.setdefault(ti_fid, []).append(pub_id)
+            total += 1
+        self.log.info(f'Found {total} producedby pubs across {len(self.ti_producedby_pubs)} FBtis.')
 
     def get_associated_allele_tool_data(self, session):
         """Load allele-side data needed for FTA-182 anon cassette tool gating.
@@ -921,6 +951,8 @@ class ConstructHandler(FeatureHandler):
                     'is_generic_ti': True,
                     'associated_alleles': associated_data,
                     'propagate_transgenic_uses': propagate,
+                    # FTA-182 v3: pubs for producedby rel (used when emitting parent-sourced tool data).
+                    'producedby_pub_ids': list(self.ti_producedby_pubs.get(ti_fid, [])),
                 })
         self.log.info(
             f'Extracted anonymous construct data for '
@@ -946,6 +978,8 @@ class ConstructHandler(FeatureHandler):
                 'associated_alleles': entry.get('associated_alleles', []),
                 'propagate_transgenic_uses':
                     entry.get('propagate_transgenic_uses', True),
+                # FTA-182 v3:
+                'producedby_pub_ids': list(entry.get('producedby_pub_ids', [])),
             })
         return cassette_data
 
@@ -1300,6 +1334,8 @@ class ConstructHandler(FeatureHandler):
         # FTA-136: Create anonymous constructs for generic TI insertions.
         insertions_by_construct = self.get_generic_ti_insertions(session)
         self.attach_generic_ti_insertions(insertions_by_construct)
+        # FTA-182 v3: load pubs on the producedby rel (FBti -> generic-TI FBtp).
+        self.get_generic_ti_producedby_pubs(session)
         # FTA-182: load associated-allele tool data before building anon_data.
         self.get_associated_allele_tool_data(session)
         generic_ti_data = self.get_generic_ti_anon_construct_data()

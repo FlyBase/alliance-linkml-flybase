@@ -826,15 +826,22 @@ class CassetteHandler(FeatureHandler):
             # Accumulate across sources for dedup.
             rels_by_key = {}      # (rel_type, object_feature_id) -> set(pub_curies)
             tool_uses_by_acc = {}  # accession -> set(pub_curies)
-            # 1. Parent FBtp data (blank pub_curies), only if propagate.
+            # 1. Parent FBtp data, only if propagate.
+            # FTA-182 v3: if the producedby FR has exactly ONE pub, use it as
+            # the pub_curie for parent-sourced tool data; otherwise blank.
             if propagate:
+                producedby_pubs = data.get('producedby_pub_ids', [])
+                if len(producedby_pubs) == 1:
+                    parent_pub_curies = self.lookup_pub_curies(producedby_pubs)
+                else:
+                    parent_pub_curies = []
                 for rel in data.get('direct_rels', []):
                     if rel['rel_type'] not in self._tool_rel_alliance_name:
                         continue
                     key = (rel['rel_type'], rel['object_feature_id'])
-                    rels_by_key.setdefault(key, set())
+                    rels_by_key.setdefault(key, set()).update(parent_pub_curies)
                 for tu in data.get('tool_uses_data', []):
-                    tool_uses_by_acc.setdefault(tu['accession'], set())
+                    tool_uses_by_acc.setdefault(tu['accession'], set()).update(parent_pub_curies)
             # 2. Per associated FBal.
             for fbal in data.get('associated_alleles', []):
                 has_tool = bool(fbal['direct_rels']) or bool(fbal['tool_uses_data'])
