@@ -285,7 +285,8 @@ class AlleleHandler(MetaAlleleHandler):
                                                                   rel_entity_types=self.feature_subtypes['insertion'])
             for feat_rel in fbal_fbti_alliance_rels:
                 insertion = self.feature_lookup[feat_rel.chado_obj.object_id]
-                self.log.debug(f'Report {allele} under {insertion["name"]} ({insertion["uniquename"]}).')
+                if self.testing:
+                    self.log.debug(f'Report {allele} under {insertion["name"]} ({insertion["uniquename"]}).')
                 try:
                     self.at_locus_fbal_fbti_dict[allele.db_primary_id].append(insertion["feature_id"])
                     self.log.warning(f'Found another FBti for {allele}, but expected a one-to-one relationship.')
