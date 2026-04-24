@@ -1,0 +1,104 @@
+FTA-182: Add tool-related data to anonymous Cassettes made in FTA-181
+
+Tool-related information to be added to the <FBti_number>_cas Cassette made in FTA-181 can either come from:
+
+1. the parent generic TI FBtp of the original FBti
+  - in this case, the relevant FBtp is the object_id of feature_relationship type 'producedby', subject_id = FBti
+
+and/or
+
+2. any associated_with FBal that are linked to the original FBti
+
+ - in this case we need to check whether it is 'safe' to take information from the FBal to the FBti
+     - for this we should use the 'is_represented_at_alliance_as' feature_relationship in chado (this f_r is populated by map_alleles_to_insertions_for_alliance_genotypes.py is run each week every epicycle).
+
+
+foreach <FBti_number>_cas
+
+
+1. information needed:
+
+1a. get the list of associated FBal for the FBti: feature_relationship type: associated_with, object_id = FBti number, subject_id ~ FBal
+
+
+1b. for the list of associated FBal, see whether any FBal has a featureprop, type 'propagate_transgenic_uses'
+
+- an FBal only ever has this type of featureprop with the value 'n' (i.e. 'NO' do not propagate_transgenic_uses) - you don't need to check what the value of the featureprop is, just whether an FBal has a featureprop of this type
+
+- its quite rare for an FBal to have this featureprop - the featureprop only exists with the value 'n' in chado for the *small* proportion of cases where we do NOT want to propagate_transgenic_uses from the current generic FBtp to the FBal on the FlyBase web pages.
+
+- so I think the least least confusing way to do this is probably to have a propagate_transgenic_uses variable in the linkml code that has a default value of True, and if *any* of the associated FBal for an FBti that we are making a <FBti_number>_cas for have this kind of 'propagate_transgenic_uses' featureprop in chado, set the linkml code propagate_transgenic_uses to False - thats what I've done in the algorithm suggestion in 2. below
+
+
+
+1c. get the 'is_represented_at_alliance_as' feature_relationship information for the FBti, so we can check whether or not it is safe to add in any tool-related data attached to the FBal to the <FBti_number>_cas Cassette.
+
+info is in chado as: feature_relationship type = 'is_represented_at_alliance_as', object_id = FBti number, subject_id ~ FBal
+
+allele_handlers.py already has a dictionary with this info which can maybe be used:
+
+        self.at_locus_fbal_fbti_dict = {}      # Will be FBal-feature_id-keyed dict of FBti feature_id lists ("is_represented_at_Alliance_as").
+
+(I am not 100% sure, because we want to be looking at it from the point of view of the FBti, whereas at_locus_fbal_fbti_dict is keyed to FBal, so perhaps you'll need to make a new dictionary keyed to FBti instead so the lookup is easier ?)
+
+
+1d. tool-related information from the original parent generic TI FBtp
+
+this is the same kind of info that was grabbed previously for the 'construct.needs_anon_cassette' style FBtp
+
+
+- the 4 tool-related feature_relationships: 'encodes_tool', 'has_reg_region', 'tagged_with', 'carries_tool'  (parent generic TI FBtp = subject)
+- the tool_uses_data information that 'def get_construct_tool_uses' gathers (ie. FeatureCvterm with prop_type.name == 'tool_uses')
+- when we use this to add component information to the cassette, we should NOT used any pub_curies from the parent generic TI FBtp (they will not be correct for the individual <FBti_number>_cas)
+
+1e. tool-related information that is attached to any of the associated FBal identified in 1a.
+
+- the 4 tool-related feature_relationships: 'encodes_tool', 'has_reg_region', 'tagged_with', 'carries_tool'  - in this case the associated FBal is the subject
+- tool_uses_data information that is attached to the associated FBal (it is the same kind of data as for FBtp, i.e. FeatureCvterm with prop_type.name == 'tool_uses')
+- in this case we *will* want to use the list of pub_curies attached to this tool-related info when adding it to the <FBti_number>_cas
+
+
+
+1f. pub_curies from the 'producedby' feature_relationship that links the FBti (subject_id) to the generic TI FBtp (object_id)
+
+
+2. Overall logic for algorithm
+
+for each <FBti_number>_cas
+
+    if the number of associated FBal for the FBti = 0
+        add tool-related information from the original parent generic TI FBtp # data from 1d. above 
+             # assigning the pub curie
+             if the FBti producedby FBtp feature_relationship has a single FBrf attached to it # data from 1f. above
+                 use that FBrf as the pub curie for the tool-related info
+             else leave the pub curie blank
+
+
+    else
+         # set the value of propagate_transgenic_uses variable to True/False depending on whether we want to use the information from associated FBal
+         # set to True as default, as this is the most common case
+         propagate_transgenic_uses = True
+             foreach (associated FBal)
+                if (exists featureprop, type 'propagate_transgenic_uses' for that associated FBal) # data from 1b. above
+                     propagate_transgenic_uses = False
+                     break # I think this is what you need in python to just short-circuit out of the loop here (i.e. last in perl) - once we've found one case we don't need to go through all the associated FBal, we just leave it as False
+
+         # first, add tool-related info from original parent generic TI FBtp if appropriate
+         if (propagate_transgenic_uses = True):
+             add tool-related information from the original parent generic TI FBtp # data from 1d. above
+                 # assigning the pub curie
+                 if the FBti producedby FBtp feature_relationship has a single FBrf attached to it # data from 1f. above
+                     use that FBrf as the pub curie for the tool-related info
+                 else leave the pub curie blank
+
+         # second, add tool-related info from the associated FBal(s) if safe to do so
+         foreach (associated FBal)
+             if (there is tool-related information from the associated FBal) # data from 1e. above
+                     if (there is a 'is_represented_at_alliance_as' feature_relationship between the associated FBal and the FBti) # data from 1c. above
+                         add tool-related information from the associated FBal # data from 1e. above - use pub_curies
+                     else
+                         # add a log warning/counter that did not add any tool-related info
+                         # add an internal_note NoteDTO to the anonymous cassette so its easy to clean up later
+                         # text of internal_note: "FTA: unable to add tool information from <FBal_number> (failed 'is_represented_at_alliance_as' cross-check)"
+
+

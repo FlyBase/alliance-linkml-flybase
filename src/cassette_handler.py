@@ -440,7 +440,8 @@ class CassetteHandler(FeatureHandler):
                         self.log.debug(f"{entity.uniquename} has parent {rel.chado_obj.object.uniquename}")
                     gene = self.feature_lookup[rel.chado_obj.object.feature_id]
                     assoc_type = self.cassette_dto_type(gene)
-                    self.log.debug(f"{entity.uniquename} {gene} has {assoc_type} association")
+                    if self.testing:
+                        self.log.debug(f"{entity.uniquename} {gene} has {assoc_type} association")
                     # Always a gene currently BUT might in future have
                     # subset of foreign genes so check now anyway
                     if assoc_type == 'component_free_text':
@@ -649,6 +650,9 @@ class CassetteHandler(FeatureHandler):
         }
         counter = 0
         for data in self.anon_cassette_data:
+            # FTA-182: generic TI entries use the gated path below.
+            if data.get('is_generic_ti'):
+                continue
             cassette_id = f'FB:{data["construct_uniquename"]}_cas'
             for rel in data['direct_rels']:
                 if rel['rel_type'] not in rel_type_mapping:
@@ -686,6 +690,9 @@ class CassetteHandler(FeatureHandler):
         self.log.info('Map anonymous cassette encodes_tool relationships.')
         counter = 0
         for data in self.anon_cassette_data:
+            # FTA-182: generic TI entries use the gated path below.
+            if data.get('is_generic_ti'):
+                continue
             cassette_id = f'FB:{data["construct_uniquename"]}_cas'
             for rel in data['direct_rels']:
                 if rel['rel_type'] != 'encodes_tool':
@@ -726,6 +733,9 @@ class CassetteHandler(FeatureHandler):
         self.log.info('Map anonymous cassette tool_uses.')
         counter = 0
         for data in self.anon_cassette_data:
+            # FTA-182: generic TI entries use the gated path below.
+            if data.get('is_generic_ti'):
+                continue
             if not data['tool_uses_data']:
                 continue
             # Group pub_ids by FBcv accession.
@@ -745,6 +755,138 @@ class CassetteHandler(FeatureHandler):
                 counter += 1
         self.log.info(f'Mapped {counter} tool_uses DTOs for anonymous cassettes.')
 
+    # FTA-182: alliance-side relation names for each chado tool rel_type.
+    _tool_rel_alliance_name = {
+        'has_reg_region': 'is_regulated_by',
+        'tagged_with': 'tagged_with',
+        'carries_tool': 'contains',
+        'encodes_tool': 'expresses',
+    }
+
+    def _append_cassette_tool_dto(self, cassette_id, rel_type, object_feature_id,
+                                  pub_curies, cassette_dto):
+        """Dispatch a tool direct_rel to the right cassette DTO list.
+
+        Shared by the FTA-182 generic-TI path. Mirrors the FBto/FBgn/FBsf
+        branching in map_anon_cassette_simple_components /
+        map_anon_cassette_encodes_tool so behavior stays consistent.
+        """
+        alliance_rel = self._tool_rel_alliance_name.get(rel_type)
+        if alliance_rel is None:
+            return False
+        component = self.feature_lookup[object_feature_id]
+        component_curie = component['curie']
+        uname = component['uniquename']
+        if uname.startswith('FBto'):
+            fb_rel = fb_datatypes.FBExportEntity()
+            fb_rel.linkmldto = agr_datatypes.CassetteTransgenicToolAssociationDTO(
+                cassette_id, component_curie, pub_curies, False, alliance_rel)
+            self.anon_cassette_tool_associations.append(fb_rel)
+            return True
+        if uname.startswith('FBgn'):
+            fb_rel = fb_datatypes.FBExportEntity()
+            fb_rel.linkmldto = agr_datatypes.CassetteGenomicEntityAssociationDTO(
+                cassette_id, component_curie, pub_curies, False, alliance_rel)
+            self.anon_cassette_genomic_entity_associations.append(fb_rel)
+            return True
+        if uname.startswith('FBsf'):
+            organism_id = component['organism_id']
+            comp_dto = agr_datatypes.CassetteComponentSlotAnnotationDTO(
+                alliance_rel, component['symbol'],
+                self.organism_lookup[organism_id]['taxon_curie'],
+                self.organism_lookup[organism_id]['full_species_name'],
+                pub_curies).dict_export()
+            cassette_dto.cassette_component_dtos.append(comp_dto)
+            return True
+        return False
+
+    def map_anon_generic_ti_tool_data(self):
+        """Emit tool data for generic-TI anon cassettes per FTA-182 gating.
+
+        For each <FBti>_cas entry flagged is_generic_ti:
+          * Parent FBtp tool data (direct_rels + tool_uses) is emitted with
+            BLANK pub_curies, only if propagate_transgenic_uses is True.
+          * Per associated FBal: if is_represented_at_alliance_as passes,
+            emit FBal tool data with the FBal's own pub_curies; else attach
+            an internal_note NoteDTO and increment a warning counter.
+        Deduplicates across sources keyed by (cassette_id, rel_type,
+        object_feature_id); pub_curies are unioned when the same tool comes
+        from multiple FBals (or parent + FBal).
+        """
+        self.log.info('Map anonymous cassette tool data for generic TI insertions (FTA-182).')
+        rel_counter = 0
+        tu_counter = 0
+        ir_failures = 0
+        for data in self.anon_cassette_data:
+            if not data.get('is_generic_ti'):
+                continue
+            cassette_id = f'FB:{data["construct_uniquename"]}_cas'
+            cassette_dto = data['anon_cassette_dto']
+            propagate = data.get('propagate_transgenic_uses', True)
+            # Accumulate across sources for dedup.
+            rels_by_key = {}      # (rel_type, object_feature_id) -> set(pub_curies)
+            tool_uses_by_acc = {}  # accession -> set(pub_curies)
+            # 1. Parent FBtp data, only if propagate.
+            # FTA-182 v3: if the producedby FR has exactly ONE pub, use it as
+            # the pub_curie for parent-sourced tool data; otherwise blank.
+            if propagate:
+                producedby_pubs = data.get('producedby_pub_ids', [])
+                if len(producedby_pubs) == 1:
+                    parent_pub_curies = self.lookup_pub_curies(producedby_pubs)
+                else:
+                    parent_pub_curies = []
+                for rel in data.get('direct_rels', []):
+                    if rel['rel_type'] not in self._tool_rel_alliance_name:
+                        continue
+                    key = (rel['rel_type'], rel['object_feature_id'])
+                    rels_by_key.setdefault(key, set()).update(parent_pub_curies)
+                for tu in data.get('tool_uses_data', []):
+                    tool_uses_by_acc.setdefault(tu['accession'], set()).update(parent_pub_curies)
+            # 2. Per associated FBal.
+            for fbal in data.get('associated_alleles', []):
+                has_tool = bool(fbal['direct_rels']) or bool(fbal['tool_uses_data'])
+                if not has_tool:
+                    continue
+                if fbal['is_represented_at_alliance_as']:
+                    for rel in fbal['direct_rels']:
+                        if rel['rel_type'] not in self._tool_rel_alliance_name:
+                            continue
+                        key = (rel['rel_type'], rel['object_feature_id'])
+                        pub_curies = self.lookup_pub_curies(rel['pub_ids'])
+                        rels_by_key.setdefault(key, set()).update(pub_curies)
+                    for tu in fbal['tool_uses_data']:
+                        pub_curies = self.lookup_pub_curies([tu['pub_id']])
+                        tool_uses_by_acc.setdefault(tu['accession'], set()).update(pub_curies)
+                else:
+                    self.log.warning(
+                        f"Skipping tool data from {fbal['uniquename']} for "
+                        f"{cassette_id}: failed 'is_represented_at_alliance_as' "
+                        f"cross-check.")
+                    note_dto = agr_datatypes.NoteDTO(
+                        'internal_note',
+                        f"FTA: unable to add tool information from "
+                        f"{fbal['uniquename']} (failed "
+                        f"'is_represented_at_alliance_as' cross-check)",
+                        []).dict_export()
+                    cassette_dto.note_dtos.append(note_dto)
+                    ir_failures += 1
+            # 3. Emit deduped DTOs.
+            for (rel_type, obj_fid), pub_set in rels_by_key.items():
+                emitted = self._append_cassette_tool_dto(
+                    cassette_id, rel_type, obj_fid,
+                    sorted(pub_set), cassette_dto)
+                if emitted:
+                    rel_counter += 1
+            for accession, pub_set in tool_uses_by_acc.items():
+                slot_dto = agr_datatypes.CassetteUseSlotAnnotationDTO(
+                    sorted(pub_set), [f'FBcv:{accession}']).dict_export()
+                cassette_dto.cassette_use_dtos.append(slot_dto)
+                tu_counter += 1
+        self.log.info(
+            f'Generic TI anon cassettes: {rel_counter} tool component DTOs, '
+            f'{tu_counter} tool_uses DTOs, '
+            f"{ir_failures} 'is_represented_at_alliance_as' cross-check failures.")
+
     def map_anon_cassettes(self):
         """Orchestrate anonymous cassette mapping from ConstructHandler data."""
         self.log.info('Map anonymous cassettes from construct data.')
@@ -755,6 +897,8 @@ class CassetteHandler(FeatureHandler):
         self.map_anon_cassette_simple_components()
         self.map_anon_cassette_encodes_tool()
         self.map_anon_cassette_tool_uses()
+        # FTA-182: gated tool data for generic-TI anon cassettes.
+        self.map_anon_generic_ti_tool_data()
 
     def export_anon_cassettes(self):
         """Flag and export anonymous cassette data, appending to existing export dicts."""
@@ -763,8 +907,15 @@ class CassetteHandler(FeatureHandler):
             self.log.info('No anonymous cassette data to export.')
             return
         self.flag_internal_fb_entities('anon_cassettes')
+        self.flag_unexportable_entities(self.anon_cassettes, 'cassette_ingest_set')
         self.flag_internal_fb_entities('anon_cassette_tool_associations')
+        self.flag_unexportable_entities(
+            self.anon_cassette_tool_associations,
+            'cassette_transgenic_tool_association_ingest_set')
         self.flag_internal_fb_entities('anon_cassette_genomic_entity_associations')
+        self.flag_unexportable_entities(
+            self.anon_cassette_genomic_entity_associations,
+            'cassette_genomic_entity_association_ingest_set')
         # Append exportable anon cassettes to the existing export dicts.
         anon_count = 0
         for entity in self.anon_cassettes:

@@ -31,6 +31,20 @@ class ConstructHandler(FeatureHandler):
         self.fb_export_type = fb_datatypes.FBConstruct
         self.agr_export_type = agr_datatypes.ConstructDTO
         self.primary_export_set = 'construct_ingest_set'
+        self.generic_ti_anon_constructs = []  # FBExportEntity wrappers for anonymous constructs.
+        # FTA-182: caches for associated-allele tool data on generic TI insertions.
+        self.ti_associated_alleles = {}       # {ti_fid: [fbal_fid, ...]}
+        self.fbal_block_propagation = set()   # fbal_fids with 'propagate_transgenic_uses' featureprop
+        self.fbal_ti_represented = set()      # (fbal_fid, ti_fid) pairs for 'is_represented_at_alliance_as'
+        self.fbal_tool_rels = {}              # {fbal_fid: [{rel_type, object_feature_id, pub_ids}, ...]}
+        self.fbal_tool_uses = {}              # {fbal_fid: [{cvterm_name, accession, pub_id}, ...]}
+        # FTA-182 v3: pubs on the producedby rel (FBti subject -> generic-TI FBtp object).
+        self.ti_producedby_pubs = {}          # {ti_fid: [pub_id, ...]}
+
+    # FBals whose marked_with relationship maps to 'has_transcriptional_unit'
+    # instead of the default 'has_selectable_marker' (FTA-139, reused by FTA-183).
+    has_transcriptional_unit_list = ['FBal0345196', 'FBal0345198', 'FBal0407180',
+                                     'FBal0407181', 'FBal0407182', 'FBal0368073']
 
     test_set = {
         # FBtp corresponding to 'cassette FBal that are associated_with at least one FBtp' in cassette_handler.py
@@ -112,8 +126,8 @@ class ConstructHandler(FeatureHandler):
         'FBtp0017513': 'P{PTT-GB}',
         # test example for change to map_construct_cassette_associations when pub > 1
         'FBtp0040555': 'P{NIG.4696R}',  # associated_with FBal0220378, not appearing in file pre-change
-
-
+        # test example for anon cons with has_selectsable_marker
+        'FBtp0143312': 'TI{GMR-HMS04515}',
 
     }
 
@@ -361,7 +375,8 @@ class ConstructHandler(FeatureHandler):
         self.log.info('Synthesize encoded components.')
         counter = 0
         for construct in self.fb_data_entities.values():
-            self.log.debug(f'Assess encoded tools for {construct}.')
+            if self.testing:
+                self.log.debug(f'Assess encoded tools for {construct}.')
             # Reference of related alleles.
             cons_al_rels = construct.recall_relationships(
                 self.log, entity_role='object', rel_types='associated_with',
@@ -377,8 +392,9 @@ class ConstructHandler(FeatureHandler):
                     construct.expressed_features[component_id].extend(cons_tool_rel.pubs)
                 except KeyError:
                     construct.expressed_features[component_id] = cons_tool_rel.pubs
-            self.log.debug(f'For {construct}, found {len(construct.expressed_features.keys())} '
-                           'encoded tools via direct relationships.')
+            if self.testing:
+                self.log.debug(f'For {construct}, found {len(construct.expressed_features.keys())} '
+                               'encoded tools via direct relationships.')
             # Indirect encodes_tool relationships.
             # self.log.debug(f'{construct} has {len(construct.al_encodes_tool_rels)} '
             #                'indirect tool relationships via alleles.')
@@ -460,8 +476,10 @@ class ConstructHandler(FeatureHandler):
                     construct.regulating_features[reg_region_id].extend(cons_reg_region_rel.pubs)
                 except KeyError:
                     construct.regulating_features[reg_region_id] = cons_reg_region_rel.pubs
-            self.log.debug(f'For {construct}, found {len(construct.regulating_features.keys())} '
-                           'encoded reg_regions via direct relationships.')
+            if self.testing:
+                self.log.debug(f'For {construct}, '
+                               f'found {len(construct.regulating_features.keys())} '
+                               'encoded reg_regions via direct relationships.')
             # Direct relationships to regulatory_regions (old implementation).
             old_cons_reg_region_rels = construct.recall_relationships(
                 self.log, entity_role='object',
@@ -576,6 +594,20 @@ class ConstructHandler(FeatureHandler):
                       f'({excluded_counter} excluded as generic TI constructs).')
         return
 
+    def identify_generic_ti_constructs(self):
+        """Identify constructs marked as 'generic TI' style (FTA-136)."""
+        self.log.info('Identify generic TI constructs.')
+        counter = 0
+        for construct in self.fb_data_entities.values():
+            internal_notes = construct.props_by_type.get('internalnotes', [])
+            for note in internal_notes:
+                if note.chado_obj.value == 'FTA: generic TI construct':
+                    construct.is_generic_ti = True
+                    counter += 1
+                    break
+        self.log.info(f'Identified {counter} generic TI constructs.')
+        return
+
     def get_anon_cassette_data(self):
         """Return extracted data for anonymous cassette creation by CassetteHandler.
 
@@ -605,9 +637,396 @@ class ConstructHandler(FeatureHandler):
                 'construct_uniquename': construct.uniquename,
                 'direct_rels': rel_data,
                 'tool_uses_data': construct.tool_uses_data,
+                # FTA-182: mark this as the non-generic-TI FTA-181 path.
+                'is_generic_ti': False,
             })
         self.log.info(f'Extracted anonymous cassette data for {len(anon_data)} constructs.')
         return anon_data
+
+    def get_generic_ti_insertions(self, session):
+        """Query insertions (FBti) for each generic TI construct via producedby relationship.
+
+        Returns a dict keyed by construct feature_id, each value is a list of
+        insertion dicts: {'uniquename': str, 'feature_id': int}.
+        """
+        self.log.info('Get insertions for generic TI constructs.')
+        generic_ti_ids = [
+            cid for cid, c in self.fb_data_entities.items()
+            if c.is_generic_ti
+        ]
+        if not generic_ti_ids:
+            self.log.info('No generic TI constructs found.')
+            return {}
+        rel_type = aliased(Cvterm, name='rel_type')
+        ins_type = aliased(Cvterm, name='ins_type')
+        results = session.query(
+            Feature.uniquename,
+            Feature.feature_id,
+            FeatureRelationship.object_id,
+            FeatureRelationship.feature_relationship_id).\
+            select_from(FeatureRelationship).\
+            join(Feature, Feature.feature_id == FeatureRelationship.subject_id).\
+            join(rel_type, rel_type.cvterm_id == FeatureRelationship.type_id).\
+            join(ins_type, ins_type.cvterm_id == Feature.type_id).\
+            filter(
+                FeatureRelationship.object_id.in_(generic_ti_ids),
+                rel_type.name == 'producedby',
+                Feature.uniquename.op('~')(self.regex['insertion']),
+                Feature.is_obsolete.is_(False),
+                ins_type.name.in_(self.feature_subtypes['insertion'])).\
+            distinct()
+        insertions_by_construct = {}
+        for ins_uname, ins_fid, construct_fid, fr_id in results:
+            if construct_fid not in insertions_by_construct:
+                insertions_by_construct[construct_fid] = []
+            insertions_by_construct[construct_fid].append({
+                'uniquename': ins_uname,
+                'feature_id': ins_fid,
+                'producedby_fr_id': fr_id,
+            })
+        total = sum(len(v) for v in insertions_by_construct.values())
+        self.log.info(
+            f'Found {total} insertions across '
+            f'{len(insertions_by_construct)} generic TI constructs.')
+        return insertions_by_construct
+
+    def attach_generic_ti_insertions(self, insertions_by_construct):
+        """Attach insertion data to generic TI construct entities.
+
+        Args:
+            insertions_by_construct: Dict from get_generic_ti_insertions().
+        """
+        for construct_fid, insertions in insertions_by_construct.items():
+            if construct_fid in self.fb_data_entities:
+                self.fb_data_entities[construct_fid].generic_ti_insertions = insertions
+
+    def get_generic_ti_producedby_pubs(self, session):
+        """Load pubs on the producedby feature_relationship (FBti -> generic-TI FBtp) (FTA-182 v3)."""
+        self.log.info('Get producedby-rel pubs for generic TI insertions.')
+        fr_ids = []
+        ti_by_fr = {}
+        for construct in self.fb_data_entities.values():
+            if not construct.is_generic_ti:
+                continue
+            for ins in getattr(construct, 'generic_ti_insertions', []):
+                fr_ids.append(ins['producedby_fr_id'])
+                ti_by_fr[ins['producedby_fr_id']] = ins['feature_id']
+        if not fr_ids:
+            self.log.info('No generic TI insertions; skipping producedby-pub load.')
+            return
+        results = session.query(
+            FeatureRelationshipPub.feature_relationship_id,
+            FeatureRelationshipPub.pub_id).\
+            filter(FeatureRelationshipPub.feature_relationship_id.in_(fr_ids)).\
+            distinct()
+        total = 0
+        for fr_id, pub_id in results:
+            ti_fid = ti_by_fr[fr_id]
+            self.ti_producedby_pubs.setdefault(ti_fid, []).append(pub_id)
+            total += 1
+        self.log.info(f'Found {total} producedby pubs across {len(self.ti_producedby_pubs)} FBtis.')
+
+    def get_associated_allele_tool_data(self, session):
+        """Load allele-side data needed for FTA-182 anon cassette tool gating.
+
+        Populates five instance caches keyed by fbal_feature_id (or (fbal_fid,
+        ti_fid) pairs) covering: associated_with FBals per FBti, the
+        propagate_transgenic_uses featureprop existence flag, the
+        is_represented_at_alliance_as relationship pairs, and the 4
+        tool-related FeatureRelationships + tool_uses FeatureCvtermprops for
+        each associated FBal.
+        """
+        self.log.info('Get associated-allele tool data for generic TI insertions.')
+        ti_feature_ids = []
+        for construct in self.fb_data_entities.values():
+            if not construct.is_generic_ti:
+                continue
+            if not hasattr(construct, 'generic_ti_insertions'):
+                continue
+            for insertion in construct.generic_ti_insertions:
+                ti_feature_ids.append(insertion['feature_id'])
+        if not ti_feature_ids:
+            self.log.info('No generic TI insertions; skipping associated-allele loads.')
+            return
+        # Query 1: associated_with FBals per FBti.
+        rel_type = aliased(Cvterm, name='rel_type')
+        allele_type = aliased(Cvterm, name='allele_type')
+        results = session.query(
+            FeatureRelationship.object_id,
+            Feature.feature_id).\
+            select_from(FeatureRelationship).\
+            join(Feature, Feature.feature_id == FeatureRelationship.subject_id).\
+            join(rel_type, rel_type.cvterm_id == FeatureRelationship.type_id).\
+            join(allele_type, allele_type.cvterm_id == Feature.type_id).\
+            filter(
+                FeatureRelationship.object_id.in_(ti_feature_ids),
+                rel_type.name == 'associated_with',
+                Feature.uniquename.op('~')(self.regex['allele']),
+                Feature.is_obsolete.is_(False),
+                allele_type.name.in_(self.feature_subtypes['allele'])).\
+            distinct()
+        fbal_ids = set()
+        for ti_fid, fbal_fid in results:
+            self.ti_associated_alleles.setdefault(ti_fid, []).append(fbal_fid)
+            fbal_ids.add(fbal_fid)
+        self.log.info(
+            f'Found {len(fbal_ids)} associated FBals across '
+            f'{len(self.ti_associated_alleles)} FBtis.')
+        if not fbal_ids:
+            return
+        fbal_ids_list = list(fbal_ids)
+        # Query 2: propagate_transgenic_uses featureprop existence per FBal.
+        fp_type = aliased(Cvterm, name='fp_type')
+        block_results = session.query(Featureprop.feature_id).\
+            join(fp_type, fp_type.cvterm_id == Featureprop.type_id).\
+            filter(
+                Featureprop.feature_id.in_(fbal_ids_list),
+                fp_type.name == 'propagate_transgenic_uses').\
+            distinct()
+        for (fbal_fid,) in block_results:
+            self.fbal_block_propagation.add(fbal_fid)
+        self.log.info(
+            f'Found {len(self.fbal_block_propagation)} FBals with '
+            f"'propagate_transgenic_uses' featureprop (block flag).")
+        # Query 3: is_represented_at_alliance_as pairs (FBal subject -> FBti object).
+        ir_type = aliased(Cvterm, name='ir_type')
+        ir_results = session.query(
+            FeatureRelationship.subject_id,
+            FeatureRelationship.object_id).\
+            join(ir_type, ir_type.cvterm_id == FeatureRelationship.type_id).\
+            filter(
+                FeatureRelationship.subject_id.in_(fbal_ids_list),
+                FeatureRelationship.object_id.in_(ti_feature_ids),
+                ir_type.name == 'is_represented_at_alliance_as').\
+            distinct()
+        for fbal_fid, ti_fid in ir_results:
+            self.fbal_ti_represented.add((fbal_fid, ti_fid))
+        self.log.info(
+            f"Found {len(self.fbal_ti_represented)} 'is_represented_at_alliance_as' pairs.")
+        # Query 4: tool-related FeatureRelationships for each FBal (subject).
+        tool_rel_names = ['encodes_tool', 'has_reg_region', 'tagged_with', 'carries_tool']
+        tr_type = aliased(Cvterm, name='tr_type')
+        tr_results = session.query(
+            FeatureRelationship.feature_relationship_id,
+            FeatureRelationship.subject_id,
+            FeatureRelationship.object_id,
+            tr_type.name).\
+            join(tr_type, tr_type.cvterm_id == FeatureRelationship.type_id).\
+            filter(
+                FeatureRelationship.subject_id.in_(fbal_ids_list),
+                tr_type.name.in_(tool_rel_names)).\
+            distinct()
+        rel_by_id = {}
+        for fr_id, fbal_fid, obj_fid, rel_name in tr_results:
+            rel_by_id[fr_id] = {
+                'fbal_fid': fbal_fid,
+                'rel_type': rel_name,
+                'object_feature_id': obj_fid,
+                'pub_ids': [],
+            }
+        # Query 4b: pubs for those tool rels.
+        if rel_by_id:
+            pub_type = aliased(Cvterm, name='pub_type')
+            pub_results = session.query(
+                FeatureRelationshipPub.feature_relationship_id,
+                FeatureRelationshipPub.pub_id).\
+                select_from(FeatureRelationshipPub).\
+                join(FeatureRelationship, FeatureRelationship.feature_relationship_id == FeatureRelationshipPub.feature_relationship_id).\
+                join(pub_type, pub_type.cvterm_id == FeatureRelationship.type_id).\
+                filter(
+                    FeatureRelationship.subject_id.in_(fbal_ids_list),
+                    pub_type.name.in_(tool_rel_names)).\
+                distinct()
+            for fr_id, pub_id in pub_results:
+                if fr_id in rel_by_id:
+                    rel_by_id[fr_id]['pub_ids'].append(pub_id)
+        for entry in rel_by_id.values():
+            fbal_fid = entry.pop('fbal_fid')
+            self.fbal_tool_rels.setdefault(fbal_fid, []).append(entry)
+        self.log.info(
+            f'Found {len(rel_by_id)} tool-related feature_relationships '
+            f'for {len(self.fbal_tool_rels)} FBals.')
+        # Query 5: tool_uses FeatureCvtermprops per FBal.
+        prop_type = aliased(Cvterm, name='prop_type')
+        tu_results = session.query(FeatureCvterm, FeatureCvtermprop).\
+            select_from(FeatureCvterm).\
+            join(FeatureCvtermprop, FeatureCvtermprop.feature_cvterm_id == FeatureCvterm.feature_cvterm_id).\
+            join(prop_type, prop_type.cvterm_id == FeatureCvtermprop.type_id).\
+            filter(
+                FeatureCvterm.feature_id.in_(fbal_ids_list),
+                prop_type.name == 'tool_uses').\
+            distinct()
+        tu_counter = 0
+        for fc, _fcp in tu_results:
+            self.fbal_tool_uses.setdefault(fc.feature_id, []).append({
+                'cvterm_name': fc.cvterm.name,
+                'accession': fc.cvterm.dbxref.accession,
+                'pub_id': fc.pub_id,
+            })
+            tu_counter += 1
+        self.log.info(
+            f'Found {tu_counter} tool_uses annotations for '
+            f'{len(self.fbal_tool_uses)} FBals.')
+
+    def get_generic_ti_anon_construct_data(self):
+        """Extract data for anonymous constructs from generic TI insertions.
+
+        For each insertion of a generic TI construct, returns data to create
+        an anonymous Construct and an anonymous Cassette. The anonymous
+        construct inherits the parent construct's direct tool relationships
+        and tool_uses data.
+
+        Returns a list of dicts:
+        {
+            'insertion_uniquename': str,
+            'construct_uniquename': str,  (parent)
+            'direct_rels': [...],
+            'tool_uses_data': [...],
+            'marker_alleles': [...],  (FTA-183: parent's marked_with FBals)
+            'parent_is_obsolete': bool,
+            # FTA-182 fields:
+            'is_generic_ti': True,
+            'associated_alleles': [...],
+            'propagate_transgenic_uses': bool,
+        }
+        """
+        self.log.info('Extract anonymous construct data for generic TI insertions.')
+        anon_data = []
+        for construct in self.fb_data_entities.values():
+            if not construct.is_generic_ti:
+                continue
+            if not hasattr(construct, 'generic_ti_insertions'):
+                continue
+            direct_rels = construct.recall_relationships(
+                self.log, entity_role='subject',
+                rel_types=['encodes_tool', 'has_reg_region',
+                           'tagged_with', 'carries_tool'])
+            rel_data = []
+            for rel in direct_rels:
+                rel_data.append({
+                    'rel_type': rel.chado_obj.type.name,
+                    'object_feature_id': rel.chado_obj.object_id,
+                    'pub_ids': list(rel.pubs),
+                })
+            # FTA-183: collect marker alleles from parent's marked_with rels.
+            marked_with_rels = construct.recall_relationships(
+                self.log, entity_role='subject',
+                rel_types='marked_with', rel_entity_types='allele')
+            marker_data = []
+            for rel in marked_with_rels:
+                feature_id = rel.chado_obj.object_id
+                marker_data.append({
+                    'feature_id': feature_id,
+                    'uniquename': self.feature_lookup[feature_id]['uniquename'],
+                    'is_obsolete': self.feature_lookup[feature_id]['is_obsolete'],
+                })
+            for insertion in construct.generic_ti_insertions:
+                ti_fid = insertion['feature_id']
+                associated_fbal_ids = self.ti_associated_alleles.get(ti_fid, [])
+                associated_data = []
+                block = False
+                for fbal_fid in associated_fbal_ids:
+                    if fbal_fid in self.fbal_block_propagation:
+                        block = True
+                    associated_data.append({
+                        'feature_id': fbal_fid,
+                        'uniquename': self.feature_lookup[fbal_fid]['uniquename'],
+                        'blocks_propagation': fbal_fid in self.fbal_block_propagation,
+                        'is_represented_at_alliance_as':
+                            (fbal_fid, ti_fid) in self.fbal_ti_represented,
+                        'direct_rels': self.fbal_tool_rels.get(fbal_fid, []),
+                        'tool_uses_data': self.fbal_tool_uses.get(fbal_fid, []),
+                    })
+                propagate = not block
+                anon_data.append({
+                    'insertion_uniquename': insertion['uniquename'],
+                    'construct_uniquename': construct.uniquename,
+                    'direct_rels': rel_data,
+                    'tool_uses_data': construct.tool_uses_data,
+                    'marker_alleles': marker_data,
+                    # FTA-179: flag anon marker associations as obsolete+internal
+                    # when the parent FBtp is generic-TI (effectively obsolete).
+                    'parent_is_obsolete': construct.is_obsolete or construct.is_generic_ti,
+                    # FTA-182:
+                    'is_generic_ti': True,
+                    'associated_alleles': associated_data,
+                    'propagate_transgenic_uses': propagate,
+                    # FTA-182 v3: pubs for producedby rel (used when emitting parent-sourced tool data).
+                    'producedby_pub_ids': list(self.ti_producedby_pubs.get(ti_fid, [])),
+                })
+        self.log.info(
+            f'Extracted anonymous construct data for '
+            f'{len(anon_data)} generic TI insertions.')
+        return anon_data
+
+    @staticmethod
+    def generic_ti_data_for_cassette_handler(anon_data):
+        """Convert generic TI anon data to cassette handler format.
+
+        Uses the insertion uniquename as construct_uniquename so the
+        cassette handler creates IDs like FB:{FBti}_cas. Forwards FTA-182
+        fields (is_generic_ti flag, associated_alleles, propagate flag) so
+        the cassette handler can apply the gated tool-data logic.
+        """
+        cassette_data = []
+        for entry in anon_data:
+            cassette_data.append({
+                'construct_uniquename': entry['insertion_uniquename'],
+                'direct_rels': entry['direct_rels'],
+                'tool_uses_data': entry['tool_uses_data'],
+                'is_generic_ti': entry.get('is_generic_ti', True),
+                'associated_alleles': entry.get('associated_alleles', []),
+                'propagate_transgenic_uses':
+                    entry.get('propagate_transgenic_uses', True),
+                # FTA-182 v3:
+                'producedby_pub_ids': list(entry.get('producedby_pub_ids', [])),
+            })
+        return cassette_data
+
+    def map_generic_ti_anon_constructs(self, anon_data):
+        """Create anonymous ConstructDTOs for generic TI insertions.
+
+        Args:
+            anon_data: List of dicts from get_generic_ti_anon_construct_data().
+        """
+        self.log.info('Map anonymous constructs for generic TI insertions.')
+        for data in anon_data:
+            ins_uname = data['insertion_uniquename']
+            construct_id = f'FB:{ins_uname}_con'
+            agr_construct = agr_datatypes.ConstructDTO()
+            agr_construct.placeholder = True
+            agr_construct.obsolete = False
+            agr_construct.primary_external_id = construct_id
+            agr_construct.construct_symbol_dto = agr_datatypes.NameSlotAnnotationDTO(
+                'nomenclature_symbol', construct_id, construct_id, []
+            ).dict_export()
+            dp_xref = agr_datatypes.CrossReferenceDTO(
+                'FB', f'FB:{data["construct_uniquename"]}',
+                'construct', construct_id
+            ).dict_export()
+            agr_construct.data_provider_dto = agr_datatypes.DataProviderDTO(
+                dp_xref
+            ).dict_export()
+            fb_entity = fb_datatypes.FBExportEntity()
+            fb_entity.linkmldto = agr_construct
+            fb_entity.entity_desc = (
+                f'anon construct for {ins_uname} '
+                f'(from {data["construct_uniquename"]})')
+            self.generic_ti_anon_constructs.append(fb_entity)
+        self.log.info(
+            f'Created {len(self.generic_ti_anon_constructs)} anonymous '
+            f'ConstructDTOs for generic TI insertions.')
+
+    def export_generic_ti_anon_constructs(self):
+        """Export anonymous constructs through the standard pipeline."""
+        self.log.info('Export anonymous constructs for generic TI insertions.')
+        self.flag_internal_fb_entities('generic_ti_anon_constructs')
+        self.flag_unexportable_entities(
+            self.generic_ti_anon_constructs,
+            'construct_ingest_set')
+        self.generate_export_dict(
+            self.generic_ti_anon_constructs,
+            'construct_ingest_set')
 
     # Elaborate on synthesize_info() for the ConstructHandler.
     def synthesize_info(self):
@@ -629,6 +1048,7 @@ class ConstructHandler(FeatureHandler):
             self.log.info('ADD_CASS_TO_CONSTRUCT=YES: skipping synthesize_component_genes and '
                           'synthesize_redundant_tool_genes (cassettes handle this data).')
         self.identify_constructs_needing_anon_cassettes()
+        self.identify_generic_ti_constructs()
         return
 
     # Add methods to be run by map_fb_data_to_alliance() below.
@@ -637,7 +1057,7 @@ class ConstructHandler(FeatureHandler):
         self.log.info('Map basic construct info to Alliance object.')
         for construct in self.fb_data_entities.values():
             agr_construct = self.agr_export_type()
-            agr_construct.obsolete = construct.chado_obj.is_obsolete
+            agr_construct.obsolete = construct.chado_obj.is_obsolete or construct.is_generic_ti
             agr_construct.primary_external_id = f'FB:{construct.uniquename}'
             # agr_construct.mod_internal_id = f'FB.feature_id={construct.chado_obj.feature_id}'
             construct.linkmldto = agr_construct
@@ -719,7 +1139,8 @@ class ConstructHandler(FeatureHandler):
                     fb_rel = fb_datatypes.FBExportEntity()
                     rel_dto = agr_datatypes.ConstructGenomicEntityAssociationDTO(
                         cons_curie, rel_type, obj_curie, pub_curies)
-                    if construct.is_obsolete is True or self.feature_lookup[feature_id]['is_obsolete'] is True:
+                    # FTA-179: treat generic-TI FBtps as effectively obsolete.
+                    if construct.is_obsolete is True or construct.is_generic_ti or self.feature_lookup[feature_id]['is_obsolete'] is True:
                         rel_dto.obsolete = True
                         rel_dto.internal = True
                     fb_rel.linkmldto = rel_dto
@@ -732,8 +1153,6 @@ class ConstructHandler(FeatureHandler):
         """Map construct cassette relations to ConstructCassetteAssociationDTO."""
         self.log.info('Map construct cassette associations.')
         counter = 0
-        has_transcriptional_unit_list = ['FBal0345196', 'FBal0345198', 'FBal0407180',
-                                         'FBal0407181', 'FBal0407182', 'FBal0368073']
         for construct in self.fb_data_entities.values():
             cons_curie = f'FB:{construct.uniquename}'
             # Handle marked_with relationships (FTA-139).
@@ -745,14 +1164,15 @@ class ConstructHandler(FeatureHandler):
                 cassette_curie = f'FB:{cassette_uniquename}'
                 pub_curies = self.lookup_pub_curies(rel.pubs)
                 # has_transcriptional_unit_list are special cases per FTA-139.
-                if cassette_uniquename in has_transcriptional_unit_list:
+                if cassette_uniquename in self.has_transcriptional_unit_list:
                     relation_name = 'has_transcriptional_unit'
                 else:
                     relation_name = 'has_selectable_marker'
                 fb_rel = fb_datatypes.FBExportEntity()
                 rel_dto = agr_datatypes.ConstructCassetteAssociationDTO(
                     cons_curie, relation_name, cassette_curie, pub_curies)
-                if construct.is_obsolete is True or self.feature_lookup[cassette_feature_id]['is_obsolete'] is True:
+                # FTA-179: treat generic-TI FBtps as effectively obsolete.
+                if construct.is_obsolete is True or construct.is_generic_ti or self.feature_lookup[cassette_feature_id]['is_obsolete'] is True:
                     rel_dto.obsolete = True
                     rel_dto.internal = True
                 fb_rel.linkmldto = rel_dto
@@ -792,7 +1212,8 @@ class ConstructHandler(FeatureHandler):
                 rel_dto = agr_datatypes.ConstructCassetteAssociationDTO(
                     cons_curie, 'has_transcriptional_unit', cassette_curie, pub_curies)
                 rel_dto.note_dtos = note_dtos
-                if construct.is_obsolete is True or self.feature_lookup[allele_id]['is_obsolete'] is True:
+                # FTA-179: treat generic-TI FBtps as effectively obsolete.
+                if construct.is_obsolete is True or construct.is_generic_ti or self.feature_lookup[allele_id]['is_obsolete'] is True:
                     rel_dto.obsolete = True
                     rel_dto.internal = True
                 fb_rel.linkmldto = rel_dto
@@ -848,6 +1269,32 @@ class ConstructHandler(FeatureHandler):
         self.log.info(f'Created {counter} ConstructCassetteAssociationDTOs for anonymous cassettes.')
         return
 
+    def map_generic_ti_anon_marker_associations(self, anon_data):
+        """Emit marked_with cassette associations for anonymous TI constructs (FTA-183)."""
+        self.log.info('Map marker associations for anonymous generic TI constructs.')
+        counter = 0
+        for data in anon_data:
+            if not data['marker_alleles']:
+                continue
+            cons_curie = f'FB:{data["insertion_uniquename"]}_con'
+            for marker in data['marker_alleles']:
+                cassette_curie = f'FB:{marker["uniquename"]}'
+                if marker['uniquename'] in self.has_transcriptional_unit_list:
+                    relation_name = 'has_transcriptional_unit'
+                else:
+                    relation_name = 'has_selectable_marker'
+                fb_rel = fb_datatypes.FBExportEntity()
+                rel_dto = agr_datatypes.ConstructCassetteAssociationDTO(
+                    cons_curie, relation_name, cassette_curie, [])
+                if data['parent_is_obsolete'] or marker['is_obsolete']:
+                    rel_dto.obsolete = True
+                    rel_dto.internal = True
+                fb_rel.linkmldto = rel_dto
+                self.construct_cassette_associations.append(fb_rel)
+                counter += 1
+        self.log.info(f'Created {counter} anon TI marker ConstructCassetteAssociationDTOs.')
+        return
+
     # Elaborate on map_fb_data_to_alliance() for the ConstructHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the ConstructHandler."""
@@ -884,6 +1331,20 @@ class ConstructHandler(FeatureHandler):
         super().query_chado_and_export(session)
         self.flag_unexportable_entities(self.construct_associations, 'construct_genomic_entity_association_ingest_set')
         self.generate_export_dict(self.construct_associations, 'construct_genomic_entity_association_ingest_set')
+        # FTA-136: Create anonymous constructs for generic TI insertions.
+        insertions_by_construct = self.get_generic_ti_insertions(session)
+        self.attach_generic_ti_insertions(insertions_by_construct)
+        # FTA-182 v3: load pubs on the producedby rel (FBti -> generic-TI FBtp).
+        self.get_generic_ti_producedby_pubs(session)
+        # FTA-182: load associated-allele tool data before building anon_data.
+        self.get_associated_allele_tool_data(session)
+        generic_ti_data = self.get_generic_ti_anon_construct_data()
+        if generic_ti_data:
+            self.map_generic_ti_anon_constructs(generic_ti_data)
+            # FTA-183: marker associations for anonymous TI constructs.
+            self.map_generic_ti_anon_marker_associations(generic_ti_data)
+            self.export_generic_ti_anon_constructs()
+        # Export cassette associations LAST so anon marker rels are included.
         self.flag_unexportable_entities(
             self.construct_cassette_associations, 'construct_cassette_association_ingest_set')
         self.generate_export_dict(self.construct_cassette_associations, 'construct_cassette_association_ingest_set')

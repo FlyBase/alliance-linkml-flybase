@@ -12,13 +12,14 @@ Author(s):
 from logging import Logger
 from sqlalchemy.orm import aliased
 import agr_datatypes
+import fb_datatypes
 from fb_datatypes import (
     FBAberration, FBAllele, FBBalancer
 )
 from feature_handler import FeatureHandler
 from harvdev_utils.reporting import (
     Cvterm, Feature, FeatureGenotype, FeatureRelationship,
-    Genotype, Phenotype, PhenotypeCvterm, Phenstatement, Pub
+    Featureprop, Genotype, Phenotype, PhenotypeCvterm, Phenstatement, Pub
 )
 from utils import export_chado_data
 
@@ -133,6 +134,7 @@ class AlleleHandler(MetaAlleleHandler):
         self.at_locus_fbal_fbti_dict = {}      # Will be FBal-feature_id-keyed dict of FBti feature_id lists ("is_represented_at_Alliance_as").
         self.transgenic_fbal_fbti_dict = {}    # Will be FBal-feature_id-keyed dict of FBti feature_id lists (via FBtp to unspecified FBti).
         self.fbti_entities = {}                # Will be feature_id-keyed FBAllele objects generated from FBti insertions.
+        self.generic_ti_fbtp_ids = set()       # FTA-180 Part B: set of FBtp feature_ids flagged 'FTA: generic TI construct'.
 
     test_set = {
         'FBal0386858': 'SppL[CR70402-TG4.1]',   # Insertion allele superceded by FBti0226866 (superseded_by_at_locus_insertion).
@@ -283,7 +285,8 @@ class AlleleHandler(MetaAlleleHandler):
                                                                   rel_entity_types=self.feature_subtypes['insertion'])
             for feat_rel in fbal_fbti_alliance_rels:
                 insertion = self.feature_lookup[feat_rel.chado_obj.object_id]
-                self.log.debug(f'Report {allele} under {insertion["name"]} ({insertion["uniquename"]}).')
+                if self.testing:
+                    self.log.debug(f'Report {allele} under {insertion["name"]} ({insertion["uniquename"]}).')
                 try:
                     self.at_locus_fbal_fbti_dict[allele.db_primary_id].append(insertion["feature_id"])
                     self.log.warning(f'Found another FBti for {allele}, but expected a one-to-one relationship.')
@@ -346,6 +349,25 @@ class AlleleHandler(MetaAlleleHandler):
         self.log.info(f'The AlleleHandler obtained {len(self.fbti_entities)} FBti insertions from chado.\n{separator}')
         return
 
+    def get_generic_ti_fbtp_ids(self, session):
+        """Identify FBtp feature_ids flagged 'FTA: generic TI construct' (FTA-180 Part B)."""
+        self.log.info('Get generic-TI FBtp feature_ids.')
+        fp_type = aliased(Cvterm, name='fp_type')
+        results = session.query(Featureprop.feature_id).\
+            select_from(Feature).\
+            join(Featureprop, Featureprop.feature_id == Feature.feature_id).\
+            join(fp_type, fp_type.cvterm_id == Featureprop.type_id).\
+            filter(
+                Feature.uniquename.op('~')(self.regex['construct']),
+                Feature.is_obsolete.is_(False),
+                fp_type.name == 'internalnotes',
+                Featureprop.value == 'FTA: generic TI construct').\
+            distinct()
+        for (fid,) in results:
+            self.generic_ti_fbtp_ids.add(fid)
+        self.log.info(f'Found {len(self.generic_ti_fbtp_ids)} generic-TI FBtp feature_ids.')
+        return
+
     # Elaborate on get_datatype_data() for the AlleleHandler.
     def get_datatype_data(self, session):
         """Extend the method for the AlleleHandler."""
@@ -374,6 +396,8 @@ class AlleleHandler(MetaAlleleHandler):
         self.get_phenotypes(session)
         self.get_fbal_fbti_replacements(session)
         self.get_insertion_entities(session)
+        # FTA-180 Part B: FBtp feature_ids flagged 'FTA: generic TI construct'.
+        self.get_generic_ti_fbtp_ids(session)
         return
 
     # Additional sub-methods to be run by synthesize_info() below.
@@ -945,6 +969,39 @@ class AlleleHandler(MetaAlleleHandler):
         self.log.info(f'Generated {counter} allele-construct unique associations.')
         return
 
+    def map_generic_ti_anon_construct_associations(self):
+        """Emit AlleleConstructAssociationDTOs linking each generic-TI FBti to its <FBti>_con anon construct (FTA-180 Part B)."""
+        self.log.info('Map generic-TI anon AlleleConstructAssociationDTOs.')
+        if not self.generic_ti_fbtp_ids:
+            self.log.info('No generic-TI FBtps; skipping.')
+            return
+        counter = 0
+        for fbti in self.fbti_entities.values():
+            producedby_rels = fbti.recall_relationships(
+                self.log, entity_role='subject', rel_types='producedby')
+            all_pub_ids = []
+            matched = False
+            for rel in producedby_rels:
+                if rel.chado_obj.object_id in self.generic_ti_fbtp_ids:
+                    matched = True
+                    all_pub_ids.extend(rel.pubs)
+            if not matched:
+                continue
+            allele_curie = f'FB:{fbti.uniquename}'
+            construct_curie = f'FB:{fbti.uniquename}_con'
+            pub_curies = self.lookup_pub_curies(all_pub_ids)
+            fb_rel = fb_datatypes.FBExportEntity()
+            rel_dto = agr_datatypes.AlleleConstructAssociationDTO(
+                allele_curie, 'contains', construct_curie, pub_curies)
+            # Parent FBtp is effectively obsolete (generic-TI, FTA-179) -> flag association too.
+            rel_dto.obsolete = True
+            rel_dto.internal = True
+            fb_rel.linkmldto = rel_dto
+            self.allele_construct_associations.append(fb_rel)
+            counter += 1
+        self.log.info(f'Created {counter} generic-TI anon AlleleConstructAssociationDTOs.')
+        return
+
     # Elaborate on map_fb_data_to_alliance() for the AlleleHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the AlleleHandler."""
@@ -968,6 +1025,8 @@ class AlleleHandler(MetaAlleleHandler):
         self.map_allele_gene_associations()
         self.flag_internal_fb_entities('allele_gene_associations')
         self.map_allele_construct_associations()
+        # FTA-180 Part B: anon <FBti>_con associations for generic-TI insertions.
+        self.map_generic_ti_anon_construct_associations()
         self.flag_internal_fb_entities('allele_construct_associations')
         return
 
