@@ -10,6 +10,7 @@ Author(s):
 """
 
 from logging import Logger
+from os import getenv
 from sqlalchemy.orm import aliased
 import agr_datatypes
 import fb_datatypes
@@ -397,7 +398,14 @@ class AlleleHandler(MetaAlleleHandler):
         self.get_fbal_fbti_replacements(session)
         self.get_insertion_entities(session)
         # FTA-180 Part B: FBtp feature_ids flagged 'FTA: generic TI construct'.
-        self.get_generic_ti_fbtp_ids(session)
+        # Gated by ADD_CASS_TO_CONSTRUCT=YES so the anon AlleleConstructAssociationDTOs
+        # are only emitted when the matching <FBti>_con constructs are also being submitted
+        # (which happens in the cassette/construct retrieval scripts under the same gate).
+        if getenv('ADD_CASS_TO_CONSTRUCT', None) == 'YES':
+            self.get_generic_ti_fbtp_ids(session)
+        else:
+            self.log.info('ADD_CASS_TO_CONSTRUCT not set to "YES"; skipping generic-TI FBtp lookup '
+                          '(no anon AlleleConstructAssociationDTOs will be emitted).')
         return
 
     # Additional sub-methods to be run by synthesize_info() below.

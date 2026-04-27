@@ -1332,18 +1332,24 @@ class ConstructHandler(FeatureHandler):
         self.flag_unexportable_entities(self.construct_associations, 'construct_genomic_entity_association_ingest_set')
         self.generate_export_dict(self.construct_associations, 'construct_genomic_entity_association_ingest_set')
         # FTA-136: Create anonymous constructs for generic TI insertions.
-        insertions_by_construct = self.get_generic_ti_insertions(session)
-        self.attach_generic_ti_insertions(insertions_by_construct)
-        # FTA-182 v3: load pubs on the producedby rel (FBti -> generic-TI FBtp).
-        self.get_generic_ti_producedby_pubs(session)
-        # FTA-182: load associated-allele tool data before building anon_data.
-        self.get_associated_allele_tool_data(session)
-        generic_ti_data = self.get_generic_ti_anon_construct_data()
-        if generic_ti_data:
-            self.map_generic_ti_anon_constructs(generic_ti_data)
-            # FTA-183: marker associations for anonymous TI constructs.
-            self.map_generic_ti_anon_marker_associations(generic_ti_data)
-            self.export_generic_ti_anon_constructs()
+        # Gated by ADD_CASS_TO_CONSTRUCT=YES (same gate as the rest of the
+        # cassette-related ConstructHandler work, e.g. lines 1041, 1312).
+        dump_cass_assoc = getenv('ADD_CASS_TO_CONSTRUCT', None)
+        if dump_cass_assoc == 'YES':
+            insertions_by_construct = self.get_generic_ti_insertions(session)
+            self.attach_generic_ti_insertions(insertions_by_construct)
+            # FTA-182 v3: load pubs on the producedby rel (FBti -> generic-TI FBtp).
+            self.get_generic_ti_producedby_pubs(session)
+            # FTA-182: load associated-allele tool data before building anon_data.
+            self.get_associated_allele_tool_data(session)
+            generic_ti_data = self.get_generic_ti_anon_construct_data()
+            if generic_ti_data:
+                self.map_generic_ti_anon_constructs(generic_ti_data)
+                # FTA-183: marker associations for anonymous TI constructs.
+                self.map_generic_ti_anon_marker_associations(generic_ti_data)
+                self.export_generic_ti_anon_constructs()
+        else:
+            self.log.info('ADD_CASS_TO_CONSTRUCT not set to "YES"; skipping generic-TI anon construct pipeline.')
         # Export cassette associations LAST so anon marker rels are included.
         self.flag_unexportable_entities(
             self.construct_cassette_associations, 'construct_cassette_association_ingest_set')
