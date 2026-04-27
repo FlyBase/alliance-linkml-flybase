@@ -107,7 +107,10 @@ def collect_tsv_counts(tsv_dir):
         counter = Counter()
         with path.open() as fh:
             for line in fh:
-                for m in FBAL_RE.findall(line):
+                if not line or line.startswith('#'):
+                    continue
+                first_col = line.split('\t', 1)[0]
+                for m in FBAL_RE.findall(first_col):
                     counter[m] += 1
         counts_by_file[path.name] = counter
         log.info(
