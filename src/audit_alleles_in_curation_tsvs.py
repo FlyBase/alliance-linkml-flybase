@@ -64,7 +64,7 @@ TSV_GLOB = '*_curation*.tsv'
 # Filter out filenames whose names contain any of these substrings; these
 # are auxiliary curation TSVs (notes, association, component slots) that we
 # don't want in the cross-reference audit.
-EXCLUDE_SUBSTRINGS = ('_notes', 'association', 'slots', 'tool_uses')
+EXCLUDE_SUBSTRINGS = ('_notes', 'association', 'slots', 'tool_uses', 'curation_tsvs')
 SENTINEL_NO_TSV = '<not in any tsv>'
 SENTINEL_NOT_IN_CHADO = '<not_in_chado>'
 
