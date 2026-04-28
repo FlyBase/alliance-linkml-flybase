@@ -1,6 +1,6 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Cross-reference chado cassette-eligible features against curation TSV files.
+r"""Cross-reference chado cassette-eligible features against curation TSV files.
 
 Author(s):
     Ian Longden ilongden@morgan.harvard.edu
