@@ -78,6 +78,10 @@ TSV_GLOB = '*_curation*.tsv'
 EXCLUDE_SUBSTRINGS = ('_notes', 'association', 'slots', 'tool_uses', 'curation_tsvs')
 SENTINEL_NO_TSV = '<not in any tsv>'
 SENTINEL_NOT_IN_CHADO = '<not_in_chado>'
+# Used in place of SENTINEL_NOT_IN_CHADO when the TSV row carried
+# internal=True (likely an obsolete-in-chado entity that the chado query
+# filtered out via is_obsolete=False).
+SENTINEL_OBSOLETE_IN_CHADO = '<obsolete_in_chado>'
 
 
 def query_chado_constructs(session):
@@ -106,6 +110,7 @@ def collect_tsv_counts(tsv_dir):
     """
     log.info(f'Walk TSV files matching "{TSV_GLOB}" under {tsv_dir}.')
     counts_by_file = {}
+    internal_ids = set()
     all_paths = sorted(Path(tsv_dir).glob(TSV_GLOB))
     paths = [p for p in all_paths
              if not any(sub in p.name for sub in EXCLUDE_SUBSTRINGS)]
@@ -122,17 +127,24 @@ def collect_tsv_counts(tsv_dir):
             for line in fh:
                 if not line or line.startswith('#'):
                     continue
-                first_col = line.split('\t', 1)[0]
+                parts = line.rstrip('\n').split('\t')
+                first_col = parts[0]
+                # The 'internal' flag is the last column on rows produced by
+                # the curation retrieval scripts; older TSVs without that
+                # column will fall through as 'not internal'.
+                row_is_internal = (parts[-1].strip() == 'True' and len(parts) > 1)
                 for m in FBTP_RE.findall(first_col):
                     counter[m] += 1
+                    if row_is_internal:
+                        internal_ids.add(m)
         counts_by_file[path.name] = counter
         log.info(
             f'  {path.name}: {len(counter):,} unique FBtps, '
             f'{sum(counter.values()):,} occurrences.')
-    return counts_by_file
+    return counts_by_file, internal_ids
 
 
-def write_audit(chado_constructs, counts_by_file, output_path):
+def write_audit(chado_constructs, counts_by_file, internal_ids, output_path):
     """Write the long-format audit TSV plus a summary footer."""
     log.info(f'Write audit output to {output_path}.')
     # Build the union universe so we cover both chado-only and TSV-only constructs.
@@ -145,19 +157,23 @@ def write_audit(chado_constructs, counts_by_file, output_path):
     in_chado_and_any_tsv = 0
     in_chado_no_tsv = 0
     in_tsv_not_in_chado = 0
+    in_tsv_obsolete_in_chado = 0
     per_file_unique = {fn: 0 for fn in file_names}
 
     with open(output_path, 'w') as out:
         out.write('# uniquename\tfile\tcount\n')
         for construct in universe:
             in_chado = construct in chado_constructs
+            orphan_sentinel = (SENTINEL_OBSOLETE_IN_CHADO
+                               if construct in internal_ids
+                               else SENTINEL_NOT_IN_CHADO)
             found_anywhere = False
             for fn in file_names:
                 count = counts_by_file[fn].get(construct, 0)
                 if count == 0:
                     continue
                 found_anywhere = True
-                tag = fn if in_chado else f'{fn} {SENTINEL_NOT_IN_CHADO}'
+                tag = fn if in_chado else f'{fn} {orphan_sentinel}'
                 out.write(f'{construct}\t{tag}\t{count}\n')
                 per_file_unique[fn] += 1
             if in_chado and not found_anywhere:
@@ -166,7 +182,10 @@ def write_audit(chado_constructs, counts_by_file, output_path):
             if in_chado and found_anywhere:
                 in_chado_and_any_tsv += 1
             if not in_chado and found_anywhere:
-                in_tsv_not_in_chado += 1
+                if construct in internal_ids:
+                    in_tsv_obsolete_in_chado += 1
+                else:
+                    in_tsv_not_in_chado += 1
         # Summary footer.
         out.write('# --- summary ---\n')
         out.write(f'# total constructs in chado: {len(chado_constructs):,}\n')
@@ -175,8 +194,10 @@ def write_audit(chado_constructs, counts_by_file, output_path):
         out.write(
             f'# constructs in chado but absent from every TSV: {in_chado_no_tsv:,}\n')
         out.write(
-            f'# constructs in TSVs but absent from chado: {in_tsv_not_in_chado:,} '
-            f'(orphaned references)\n')
+            f'# constructs in TSVs but absent from chado (orphans): {in_tsv_not_in_chado:,}\n')
+        out.write(
+            f'# constructs in TSVs marked internal (obsolete-in-chado): '
+            f'{in_tsv_obsolete_in_chado:,}\n')
         out.write('# per-file unique-construct totals:\n')
         for fn in file_names:
             out.write(f'#   {fn}: {per_file_unique[fn]:,}\n')
@@ -185,7 +206,8 @@ def write_audit(chado_constructs, counts_by_file, output_path):
     log.info(
         f'  in-chado-and-any-tsv={in_chado_and_any_tsv:,}, '
         f'in-chado-no-tsv={in_chado_no_tsv:,}, '
-        f'in-tsv-not-in-chado={in_tsv_not_in_chado:,}.')
+        f'in-tsv-not-in-chado={in_tsv_not_in_chado:,}, '
+        f'in-tsv-obsolete-in-chado={in_tsv_obsolete_in_chado:,}.')
 
 
 def main():
@@ -197,8 +219,8 @@ def main():
         chado_constructs = query_chado_constructs(session)
     finally:
         session.close()
-    counts_by_file = collect_tsv_counts(args.tsv_dir)
-    write_audit(chado_constructs, counts_by_file, output_filename)
+    counts_by_file, internal_ids = collect_tsv_counts(args.tsv_dir)
+    write_audit(chado_constructs, counts_by_file, internal_ids, output_filename)
     log.info('Ended main function.\n')
 
 
