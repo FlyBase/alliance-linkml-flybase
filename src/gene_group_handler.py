@@ -65,6 +65,9 @@ class GeneGroupHandler(PrimaryEntityHandler):
         'HGNC_Group': 'gene_group',
         'WBGeneClass': 'gene_class',
         'ComplexPortal': 'default',
+        'CAZy': 'default',
+        'MEROPS_fam': 'default',
+        'TCDB': 'default',
     }
 
     # Elaborate on get_general_data() for the GeneGroupHandler.
