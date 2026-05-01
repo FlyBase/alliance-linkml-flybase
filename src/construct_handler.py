@@ -1018,15 +1018,28 @@ class ConstructHandler(FeatureHandler):
             f'ConstructDTOs for generic TI insertions.')
 
     def export_generic_ti_anon_constructs(self):
-        """Export anonymous constructs through the standard pipeline."""
+        """Export anonymous constructs through the standard pipeline.
+
+        generate_export_dict resets the target list, so we save the
+        regular-FBtp entries (already exported by super().query_chado_and_export)
+        and concatenate them back after the anon export run. Without this,
+        the anon export would clobber the ~173k regular constructs and leave
+        construct_ingest_set with only the ~5k anon entries.
+        """
         self.log.info('Export anonymous constructs for generic TI insertions.')
         self.flag_internal_fb_entities('generic_ti_anon_constructs')
         self.flag_unexportable_entities(
             self.generic_ti_anon_constructs,
             'construct_ingest_set')
+        existing = list(self.export_data.get('construct_ingest_set', []))
         self.generate_export_dict(
             self.generic_ti_anon_constructs,
             'construct_ingest_set')
+        anon_entries = self.export_data['construct_ingest_set']
+        self.export_data['construct_ingest_set'] = existing + anon_entries
+        self.log.info(
+            f'construct_ingest_set: {len(existing):,} regular + '
+            f'{len(anon_entries):,} anon = {len(existing) + len(anon_entries):,} total.')
 
     # Elaborate on synthesize_info() for the ConstructHandler.
     def synthesize_info(self):
