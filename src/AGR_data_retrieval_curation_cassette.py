@@ -98,7 +98,8 @@ else:
 def generate_tsv_file(export_dict, filename):
     """Generate tsv files for curators to read more easily. This can be commented out later."""
     with open(filename, 'w') as outfile:
-        outfile.write("# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms\n")
+        outfile.write(
+            "# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms\tinternal\n")
         for entity_dict in export_dict["cassette_ingest_set"]:
             primary = entity_dict["primary_external_id"]
             symbol = ''
@@ -114,8 +115,10 @@ def generate_tsv_file(export_dict, filename):
                     syns.append(synonym["format_text"])
             if "secondary_identifiers" in entity_dict:
                 secondary = entity_dict["secondary_identifiers"]
+            internal = entity_dict.get("internal", False)
             try:
-                outfile.write(f"{primary}\t{symbol}\t{name}\t{'|'.join(secondary)}\t{'|'.join(syns)}\n")
+                outfile.write(
+                    f"{primary}\t{symbol}\t{name}\t{'|'.join(secondary)}\t{'|'.join(syns)}\t{internal}\n")
             except TypeError:
                 log.error(f"entity_dict: {entity_dict}")
                 log.error(f"primary: {primary}")
@@ -123,6 +126,7 @@ def generate_tsv_file(export_dict, filename):
                 log.error(f"symbol: {symbol}")
                 log.error(f"name: {name}")
                 log.error(f"syns: {syns}")
+                log.error(f"internal: {internal}")
                 raise
 
     filename = filename.replace('.tsv', '_notes.tsv')
@@ -159,7 +163,10 @@ def generate_tsv_file(export_dict, filename):
             primary = entity_dict["primary_external_id"]
             if "cassette_use_dtos" in entity_dict:
                 for comp in entity_dict["cassette_use_dtos"]:
-                    evidence = '|'.join(comp["evidence_curies"])
+                    if 'evidence_curies' in comp:
+                        evidence = '|'.join(comp['evidence_curies'])
+                    else:
+                        evidence = "NO PUBS"
                     tools = '|'.join(comp["use_curies"])
                     outfile.write(f"{primary}\t{tools}\t{evidence}\n")
 
@@ -179,14 +186,14 @@ def generate_association_tsv_file(export_dict, ingest_name, filename):
     with open(filename, 'w') as outfile:
         outfile.write(f"#{first_entity}\tRelationship\t{second_entity}\tEvidence\tComp type curie\n")
         for entity_dict in export_dict[ingest_name]:
-            print(f"Dumping {entity_dict}.")
+            # print(f"Dumping {entity_dict}.")
             sub = entity_dict[first_entity]
             obj = entity_dict[second_entity]
             rel_type = entity_dict['relation_name']
             if 'evidence_curies' in entity_dict:
                 pubs = "|".join(entity_dict['evidence_curies'])
             else:
-                pubs = ""
+                pubs = "NO PUBS"
             if 'component_type_curies' in entity_dict:
                 comp = "|".join(entity_dict['component_type_curies'])
             else:
@@ -219,6 +226,23 @@ def main():
         anon_data = cons_handler.get_anon_cassette_data()
         cassette_handler.receive_anon_cassette_data(anon_data)
         cassette_handler.map_anon_cassettes()
+        # Note: do NOT export yet. self.anon_cassettes accumulates across
+        # both map passes below, and export_anon_cassettes iterates the
+        # full list, so calling it twice would duplicate the FTA-181
+        # batch in cassette_ingest_set. Single export at the end covers
+        # both batches.
+        # FTA-136: Anonymous constructs are already created by ConstructHandler.
+        # Pass their data to CassetteHandler for anonymous cassette creation.
+        generic_ti_data = cons_handler.get_generic_ti_anon_construct_data()
+        if generic_ti_data:
+            cassette_data = cons_handler.generic_ti_data_for_cassette_handler(generic_ti_data)
+            cassette_handler.receive_anon_cassette_data(cassette_data)
+            cassette_handler.map_anon_cassettes()
+            log.info(f'Created {len(generic_ti_data)} anonymous constructs '
+                     f'and cassettes for generic TI insertions.')
+        else:
+            log.info('No generic TI insertions found.')
+        # Export both batches (FTA-181 non-generic + FTA-136 generic TI) together.
         cassette_handler.export_anon_cassettes()
     else:
         log.warning('ADD_CASS_TO_CONSTRUCT not set to "YES". '

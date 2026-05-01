@@ -356,6 +356,7 @@ class FBConstruct(FBFeature):
         self.regulating_tool_genes = []   # Will be list of feature_ids for genes for which related tools are also associated in construct.targeted_features.
         # Anonymous cassette data.
         self.needs_anon_cassette = False
+        self.is_generic_ti = False  # Flag for 'generic TI' style constructs (FTA-136).
         self.tool_uses_data = []    # Will be list of dicts: {'cvterm_name', 'accession', 'pub_id'}
         self.anon_cassette_dto = None    # Will hold the CassetteDTO for the anonymous cassette.
 
