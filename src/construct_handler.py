@@ -1295,6 +1295,24 @@ class ConstructHandler(FeatureHandler):
         self.log.info(f'Created {counter} anon TI marker ConstructCassetteAssociationDTOs.')
         return
 
+    def map_generic_ti_anon_construct_cassette_associations(self, anon_data):
+        """Emit <FBti>_con -> <FBti>_cas has_component associations (FTA-181)."""
+        self.log.info('Map anon construct -> anon cassette has_component associations.')
+        counter = 0
+        for data in anon_data:
+            ins_uname = data['insertion_uniquename']
+            cons_curie = f'FB:{ins_uname}_con'
+            cassette_curie = f'FB:{ins_uname}_cas'
+            pub_curies = self.lookup_pub_curies(data.get('producedby_pub_ids', []))
+            fb_rel = fb_datatypes.FBExportEntity()
+            rel_dto = agr_datatypes.ConstructCassetteAssociationDTO(
+                cons_curie, 'has_component', cassette_curie, pub_curies)
+            fb_rel.linkmldto = rel_dto
+            self.construct_cassette_associations.append(fb_rel)
+            counter += 1
+        self.log.info(f'Created {counter} anon construct->cassette ConstructCassetteAssociationDTOs.')
+        return
+
     # Elaborate on map_fb_data_to_alliance() for the ConstructHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the ConstructHandler."""
@@ -1347,6 +1365,8 @@ class ConstructHandler(FeatureHandler):
                 self.map_generic_ti_anon_constructs(generic_ti_data)
                 # FTA-183: marker associations for anonymous TI constructs.
                 self.map_generic_ti_anon_marker_associations(generic_ti_data)
+                # FTA-181: con -> cas has_component associations.
+                self.map_generic_ti_anon_construct_cassette_associations(generic_ti_data)
                 self.export_generic_ti_anon_constructs()
         else:
             self.log.info('ADD_CASS_TO_CONSTRUCT not set to "YES"; skipping generic-TI anon construct pipeline.')
