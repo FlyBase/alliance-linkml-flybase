@@ -226,7 +226,11 @@ def main():
         anon_data = cons_handler.get_anon_cassette_data()
         cassette_handler.receive_anon_cassette_data(anon_data)
         cassette_handler.map_anon_cassettes()
-        cassette_handler.export_anon_cassettes()
+        # Note: do NOT export yet. self.anon_cassettes accumulates across
+        # both map passes below, and export_anon_cassettes iterates the
+        # full list, so calling it twice would duplicate the FTA-181
+        # batch in cassette_ingest_set. Single export at the end covers
+        # both batches.
         # FTA-136: Anonymous constructs are already created by ConstructHandler.
         # Pass their data to CassetteHandler for anonymous cassette creation.
         generic_ti_data = cons_handler.get_generic_ti_anon_construct_data()
@@ -234,11 +238,12 @@ def main():
             cassette_data = cons_handler.generic_ti_data_for_cassette_handler(generic_ti_data)
             cassette_handler.receive_anon_cassette_data(cassette_data)
             cassette_handler.map_anon_cassettes()
-            cassette_handler.export_anon_cassettes()
             log.info(f'Created {len(generic_ti_data)} anonymous constructs '
                      f'and cassettes for generic TI insertions.')
         else:
             log.info('No generic TI insertions found.')
+        # Export both batches (FTA-181 non-generic + FTA-136 generic TI) together.
+        cassette_handler.export_anon_cassettes()
     else:
         log.warning('ADD_CASS_TO_CONSTRUCT not set to "YES". '
                     'Skipping anonymous cassette creation.')
