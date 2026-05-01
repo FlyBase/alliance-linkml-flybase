@@ -90,7 +90,7 @@ def generate_association_tsv_file(export_dict, ingest_name, filename):
     else:
         second_entity = 'object_identifier'
     with open(filename, 'w') as outfile:
-        outfile.write(f"#{first_entity}\tRelationship\t{second_entity}\tEvidence\n")
+        outfile.write(f"#{first_entity}\tRelationship\t{second_entity}\tEvidence\tinternal\n")
         for entity_dict in export_dict[ingest_name]:
             sub = entity_dict[first_entity]
             obj = entity_dict[second_entity]
@@ -99,7 +99,8 @@ def generate_association_tsv_file(export_dict, ingest_name, filename):
                 pubs = "|".join(entity_dict['evidence_curies'])
             else:
                 pubs = "NO PUBS"
-            outfile.write(f"{sub}\t{rel_type}\t{obj}\t{pubs}\n")
+            internal = entity_dict.get('internal', False)
+            outfile.write(f"{sub}\t{rel_type}\t{obj}\t{pubs}\t{internal}\n")
 
 
 # Data types handled by this script.

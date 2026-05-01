@@ -968,7 +968,10 @@ class AlleleHandler(MetaAlleleHandler):
             first_feat_rel.pubs = all_pub_ids
             pub_curies = self.lookup_pub_curies(all_pub_ids)
             rel_dto = agr_datatypes.AlleleConstructAssociationDTO(allele_curie, alliance_rel_type_name, construct_curie, pub_curies)
-            if allele.is_obsolete is True or construct['is_obsolete'] is True:
+            construct_feature_id = allele_construct_key[CONSTRUCT]
+            # FTA-179 follow-up: generic-TI FBtps are effectively obsolete on
+            # the Alliance side, so flag their incoming associations to match.
+            if allele.is_obsolete is True or construct['is_obsolete'] is True or construct_feature_id in self.generic_ti_fbtp_ids:
                 rel_dto.obsolete = True
                 rel_dto.internal = True
             first_feat_rel.linkmldto = rel_dto
@@ -1001,9 +1004,9 @@ class AlleleHandler(MetaAlleleHandler):
             fb_rel = fb_datatypes.FBExportEntity()
             rel_dto = agr_datatypes.AlleleConstructAssociationDTO(
                 allele_curie, 'contains', construct_curie, pub_curies)
-            # Parent FBtp is effectively obsolete (generic-TI, FTA-179) -> flag association too.
-            rel_dto.obsolete = True
-            rel_dto.internal = True
+            # Both endpoints are active: the FBti and its <FBti>_con anon
+            # construct (the public-facing replacement for the obsoleted
+            # parent FBtp link). Leave obsolete/internal at their defaults.
             fb_rel.linkmldto = rel_dto
             self.allele_construct_associations.append(fb_rel)
             counter += 1
