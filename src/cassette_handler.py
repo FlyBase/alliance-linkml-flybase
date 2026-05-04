@@ -232,6 +232,8 @@ class CassetteHandler(FeatureHandler):
         # self.map_xrefs()
         self.map_secondary_ids('secondary_identifiers')
         self.map_cassette_associations()
+        # Cascade chado-obsolete -> internal=True (matches every other handler).
+        self.flag_internal_fb_entities('fb_data_entities')
 
     def map_secondary_ids(self, slot_name):
         """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for a FlyBase entity."""
