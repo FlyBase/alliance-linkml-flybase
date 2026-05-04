@@ -21,6 +21,7 @@ Notes:
 """
 
 import argparse
+from os import environ
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
@@ -50,6 +51,7 @@ parser = argparse.ArgumentParser(
 Environment variables:
   SERVER              Database server (e.g. flysql25)
   DATABASE            Database name (e.g. production_chado)
+  ADD_OBSOLETE        Set to 'NO' to exclude obsolete/internal rows from the TSVs only; JSON output is unaffected
 """,
     formatter_class=argparse.RawDescriptionHelpFormatter
 )
@@ -82,11 +84,24 @@ else:
 
 
 def generate_tsv_file(export_dict, filename):
-    """Generate tsv files for curators to read more easily. This can be commented out later."""
+    """Generate tsv files for curators to read more easily.
+
+    ADD_OBSOLETE=NO suppresses obsolete/internal rows in the TSVs only; the
+    JSON output is unaffected.
+    """
+    skip_obsolete = environ.get('ADD_OBSOLETE') == 'NO'
+    if skip_obsolete:
+        log.info('ADD_OBSOLETE=NO: excluding obsolete/internal tools from TSV.')
+
+    def _skip(d):
+        return skip_obsolete and (d.get('internal') or d.get('obsolete'))
+
     with open(filename, 'w') as outfile:
         outfile.write(
             "# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms\tinternal\n")
         for entity_dict in export_dict["transgenic_tool_ingest_set"]:
+            if _skip(entity_dict):
+                continue
             primary = entity_dict["primary_external_id"]
             symbol = ''
             name = ''
@@ -109,6 +124,8 @@ def generate_tsv_file(export_dict, filename):
     with open(filename, 'w') as outfile:
         outfile.write("# Primary FBid\ttype\tcomment\n")
         for entity_dict in export_dict["transgenic_tool_ingest_set"]:
+            if _skip(entity_dict):
+                continue
             primary = entity_dict["primary_external_id"]
             if "note_dtos" in entity_dict:
                 for note in entity_dict["note_dtos"]:
@@ -118,10 +135,14 @@ def generate_tsv_file(export_dict, filename):
 
 
 def generate_association_tsv_file(export_dict, filename):
+    """ADD_OBSOLETE=NO suppresses obsolete/internal rows from the TSV only."""
+    skip_obsolete = environ.get('ADD_OBSOLETE') == 'NO'
     filename = filename.replace('.tsv', '_associations.tsv')
     with open(filename, 'w') as outfile:
         outfile.write("# Object curie\tSubject curie\tPub\n")
         for entity_dict in export_dict['transgenic_tool_transgenic_tool_association_ingest_set']:
+            if skip_obsolete and (entity_dict.get('internal') or entity_dict.get('obsolete')):
+                continue
             obj = entity_dict['transgenic_tool_object_identifier']
             sub = entity_dict['transgenic_tool_subject_identifier']
             # pubs = "|".join(entity_dict['evidence_curies'])

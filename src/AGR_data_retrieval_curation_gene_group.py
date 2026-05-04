@@ -88,7 +88,7 @@ Environment variables:
   DATABASE            Database name (e.g. production_chado)
   SQL_PORT            Database port (default: 5432)
   ALT_OUTPUT          Override default output file path
-  ADD_OBSOLETE        Set to 'NO' to exclude obsolete gene groups from JSON and TSV output
+  ADD_OBSOLETE        Set to 'NO' to exclude obsolete gene groups from the TSV only; JSON still includes them (with internal=True)
   EXPORT_GG_XREFS    Set to 'YES' to include gene group cross-references
 """,
     formatter_class=argparse.RawDescriptionHelpFormatter

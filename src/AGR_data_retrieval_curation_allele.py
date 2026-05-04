@@ -22,6 +22,7 @@ Notes:
 """
 
 import argparse
+from os import environ
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
@@ -34,11 +35,23 @@ def generate_tsv_file(export_dict, filename):
 
     Writes two TSVs: a main allele-summary file (symbols/names/synonyms) and
     a notes file. Mirrors the pattern in AGR_data_retrieval_curation_cassette.py.
+
+    ADD_OBSOLETE=NO suppresses obsolete/internal rows in the TSV only; the
+    JSON output is unaffected.
     """
+    skip_obsolete = environ.get('ADD_OBSOLETE') == 'NO'
+    if skip_obsolete:
+        log.info('ADD_OBSOLETE=NO: excluding obsolete/internal alleles from TSV.')
+
+    def _skip(d):
+        return skip_obsolete and (d.get('internal') or d.get('obsolete'))
+
     with open(filename, 'w') as outfile:
         outfile.write(
             "# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms\tinternal\n")
         for entity_dict in export_dict["allele_ingest_set"]:
+            if _skip(entity_dict):
+                continue
             primary = entity_dict["primary_external_id"]
             symbol = ''
             name = ''
@@ -71,6 +84,8 @@ def generate_tsv_file(export_dict, filename):
     with open(filename, 'w') as outfile:
         outfile.write("# Primary FBid\ttype\tcomment\n")
         for entity_dict in export_dict["allele_ingest_set"]:
+            if _skip(entity_dict):
+                continue
             primary = entity_dict["primary_external_id"]
             if "note_dtos" in entity_dict:
                 for note in entity_dict["note_dtos"]:
@@ -80,7 +95,10 @@ def generate_tsv_file(export_dict, filename):
 
 
 def generate_association_tsv_file(export_dict, ingest_name, filename):
-    """Generate tsv file for an allele-* association ingest set."""
+    """Generate tsv file for an allele-* association ingest set.
+
+    ADD_OBSOLETE=NO suppresses obsolete/internal rows in the TSV only.
+    """
     filename = filename.replace('.tsv', '_associations.tsv')
     first_entity = 'allele_identifier'
     if ingest_name == 'allele_gene_association_ingest_set':
@@ -89,9 +107,12 @@ def generate_association_tsv_file(export_dict, ingest_name, filename):
         second_entity = 'construct_identifier'
     else:
         second_entity = 'object_identifier'
+    skip_obsolete = environ.get('ADD_OBSOLETE') == 'NO'
     with open(filename, 'w') as outfile:
         outfile.write(f"#{first_entity}\tRelationship\t{second_entity}\tEvidence\tinternal\n")
         for entity_dict in export_dict[ingest_name]:
+            if skip_obsolete and (entity_dict.get('internal') or entity_dict.get('obsolete')):
+                continue
             sub = entity_dict[first_entity]
             obj = entity_dict[second_entity]
             rel_type = entity_dict['relation_name']
@@ -126,6 +147,7 @@ parser = argparse.ArgumentParser(
 Environment variables:
   SERVER              Database server (e.g. flysql25)
   DATABASE            Database name (e.g. production_chado)
+  ADD_OBSOLETE        Set to 'NO' to exclude obsolete/internal rows from the TSVs only; JSON output is unaffected
 """,
     formatter_class=argparse.RawDescriptionHelpFormatter
 )

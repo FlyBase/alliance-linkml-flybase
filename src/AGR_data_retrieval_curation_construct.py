@@ -55,6 +55,7 @@ Environment variables:
   SERVER              Database server (e.g. flysql25)
   DATABASE            Database name (e.g. production_chado)
   ADD_CASS_TO_CONSTRUCT  Set to 'YES' to include cassette associations
+  ADD_OBSOLETE        Set to 'NO' to exclude obsolete/internal rows from the TSVs only; JSON output is unaffected
 """,
     formatter_class=argparse.RawDescriptionHelpFormatter
 )
@@ -87,11 +88,20 @@ else:
 
 
 def generate_tsv_file(export_dict, filename):
-    """Generate tsv files for curators to read more easily."""
+    """Generate tsv files for curators to read more easily.
+
+    ADD_OBSOLETE=NO suppresses obsolete/internal rows in the TSV only; the
+    JSON output is unaffected.
+    """
+    skip_obsolete = os.environ.get('ADD_OBSOLETE') == 'NO'
+    if skip_obsolete:
+        log.info('ADD_OBSOLETE=NO: excluding obsolete/internal constructs from TSV.')
     with open(filename, 'w') as outfile:
         outfile.write("# Primary FBid\tValid symbol\tValid full name\t"
                       "secondary FBid(s)\tsynonyms\tinternal\n")
         for entity_dict in export_dict["construct_ingest_set"]:
+            if skip_obsolete and (entity_dict.get('internal') or entity_dict.get('obsolete')):
+                continue
             primary = entity_dict["primary_external_id"]
             symbol = ''
             name = ''
@@ -123,7 +133,11 @@ def generate_tsv_file(export_dict, filename):
 
 
 def generate_association_tsv_file(export_dict, ingest_name, filename):
-    """Generate a TSV file for an association ingest set."""
+    """Generate a TSV file for an association ingest set.
+
+    ADD_OBSOLETE=NO suppresses obsolete/internal rows from the TSV only.
+    """
+    skip_obsolete = os.environ.get('ADD_OBSOLETE') == 'NO'
     first_entity = 'construct_identifier'
     if ingest_name == 'construct_cassette_association_ingest_set':
         second_entity = 'cassette_identifier'
@@ -132,6 +146,8 @@ def generate_association_tsv_file(export_dict, ingest_name, filename):
     with open(filename, 'w') as outfile:
         outfile.write(f"#{first_entity}\tRelationship\t{second_entity}\tEvidence\n")
         for entity_dict in export_dict[ingest_name]:
+            if skip_obsolete and (entity_dict.get('internal') or entity_dict.get('obsolete')):
+                continue
             sub = entity_dict[first_entity]
             obj = entity_dict[second_entity]
             rel_type = entity_dict['relation_name']

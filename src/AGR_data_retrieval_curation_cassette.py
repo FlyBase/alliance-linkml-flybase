@@ -57,6 +57,7 @@ Environment variables:
   DATABASE            Database name (e.g. production_chado)
   SQL_PORT            Database port (default: 5432)
   ALT_OUTPUT          Override default output file path
+  ADD_OBSOLETE        Set to 'NO' to exclude obsolete/internal rows from the TSVs only; JSON output is unaffected
 """,
     formatter_class=argparse.RawDescriptionHelpFormatter
 )
@@ -96,11 +97,24 @@ else:
 
 
 def generate_tsv_file(export_dict, filename):
-    """Generate tsv files for curators to read more easily. This can be commented out later."""
+    """Generate tsv files for curators to read more easily. This can be commented out later.
+
+    ADD_OBSOLETE=NO suppresses obsolete/internal rows in the TSVs only; the
+    JSON output is unaffected.
+    """
+    skip_obsolete = environ.get('ADD_OBSOLETE') == 'NO'
+    if skip_obsolete:
+        log.info('ADD_OBSOLETE=NO: excluding obsolete/internal cassettes from TSV.')
+
+    def _skip(d):
+        return skip_obsolete and (d.get('internal') or d.get('obsolete'))
+
     with open(filename, 'w') as outfile:
         outfile.write(
             "# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms\tinternal\n")
         for entity_dict in export_dict["cassette_ingest_set"]:
+            if _skip(entity_dict):
+                continue
             primary = entity_dict["primary_external_id"]
             symbol = ''
             name = ''
@@ -133,6 +147,8 @@ def generate_tsv_file(export_dict, filename):
     with open(filename, 'w') as outfile:
         outfile.write("# Primary FBid\ttype\tcomment\n")
         for entity_dict in export_dict["cassette_ingest_set"]:
+            if _skip(entity_dict):
+                continue
             primary = entity_dict["primary_external_id"]
             if "note_dtos" in entity_dict:
                 for note in entity_dict["note_dtos"]:
@@ -144,6 +160,8 @@ def generate_tsv_file(export_dict, filename):
     with open(filename, 'w') as outfile:
         outfile.write("# Primary FBid\tsymbol\trelation\ttaxon\tevidence\n")
         for entity_dict in export_dict["cassette_ingest_set"]:
+            if _skip(entity_dict):
+                continue
             primary = entity_dict["primary_external_id"]
             if "cassette_component_dtos" in entity_dict:
                 for comp in entity_dict["cassette_component_dtos"]:
@@ -160,6 +178,8 @@ def generate_tsv_file(export_dict, filename):
     with open(filename, 'w') as outfile:
         outfile.write("# Primary FBid\tevidence\ttool_uses\n")
         for entity_dict in export_dict["cassette_ingest_set"]:
+            if _skip(entity_dict):
+                continue
             primary = entity_dict["primary_external_id"]
             if "cassette_use_dtos" in entity_dict:
                 for comp in entity_dict["cassette_use_dtos"]:
@@ -172,6 +192,8 @@ def generate_tsv_file(export_dict, filename):
 
 
 def generate_association_tsv_file(export_dict, ingest_name, filename):
+    """ADD_OBSOLETE=NO suppresses obsolete/internal rows from the TSV only."""
+    skip_obsolete = environ.get('ADD_OBSOLETE') == 'NO'
     filename = filename.replace('.tsv', '_associations.tsv')
     # To help in debugging, the 'first_entity' and 'second_entity' variables are used:
     # - to get the entities involved in the association out of the relevant 'export_dict[ingest_name]'
@@ -186,6 +208,8 @@ def generate_association_tsv_file(export_dict, ingest_name, filename):
     with open(filename, 'w') as outfile:
         outfile.write(f"#{first_entity}\tRelationship\t{second_entity}\tEvidence\tComp type curie\n")
         for entity_dict in export_dict[ingest_name]:
+            if skip_obsolete and (entity_dict.get('internal') or entity_dict.get('obsolete')):
+                continue
             # print(f"Dumping {entity_dict}.")
             sub = entity_dict[first_entity]
             obj = entity_dict[second_entity]
