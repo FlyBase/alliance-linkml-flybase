@@ -163,7 +163,7 @@ class DataHandler(object):
         "SignaLink": "SignaLink",
         "TAIR": "tair.locus",
         "UniProt": "UniProtKB",
-        "UniProt/GCRP": "UniProtKB",
+        # "UniProt/GCRP": "UniProtKB",  # Should only go the gcrp_cross_reference_dto
         "UniProt/Swiss-Prot": "UniProtKB",
         "UniProt/TrEMBL": "UniProtKB",
         "UniProtKB": "UniProtKB",
