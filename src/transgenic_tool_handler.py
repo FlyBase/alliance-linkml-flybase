@@ -89,6 +89,8 @@ class ExperimentalToolHandler(FeatureHandler):
         self.map_entity_props_to_notes('transgenic_tool_prop_to_note_mapping')
         self.map_secondary_ids('secondary_identifiers')
         self.map_tool_associations()
+        # Cascade chado-obsolete -> internal=True (matches every other handler).
+        self.flag_internal_fb_entities('fb_data_entities')
 
     # Add methods to be run by map_fb_data_to_alliance() below.
     def map_tool_basic(self):

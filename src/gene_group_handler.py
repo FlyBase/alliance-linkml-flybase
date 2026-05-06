@@ -57,11 +57,17 @@ class GeneGroupHandler(PrimaryEntityHandler):
         'HGNC-GG1': 'HGNC_Group',
         'WB-GG': 'WBGeneClass',
         'ComplexPortal': 'ComplexPortal',
+        'CAZy': 'cazy',
+        'MEROPS_fam': 'merops.family',
+        'TCDB': 'tcdb',
     }
     gene_group_page_area = {
         'HGNC_Group': 'gene_group',
         'WBGeneClass': 'gene_class',
         'ComplexPortal': 'default',
+        'CAZy': 'default',
+        'MEROPS_fam': 'default',
+        'TCDB': 'default',
     }
 
     # Elaborate on get_general_data() for the GeneGroupHandler.
@@ -232,19 +238,6 @@ class GeneGroupHandler(PrimaryEntityHandler):
             self.export_data_for_tsv.append(tsv_row)
             counter += 1
         self.log.info(f'Generated {counter} gene group TSV rows.')
-        return
-
-    def filter_obsolete_gene_groups(self):
-        """Exclude obsolete gene groups from export when ADD_OBSOLETE=NO."""
-        self.log.info('ADD_OBSOLETE=NO: excluding obsolete gene groups.')
-        excluded = 0
-        for gene_group in self.fb_data_entities.values():
-            if gene_group.linkmldto is None:
-                continue
-            if gene_group.chado_obj.is_obsolete:
-                gene_group.linkmldto = None
-                excluded += 1
-        self.log.info(f'Excluded {excluded} obsolete gene groups.')
         return
 
     def filter_by_grp_cvterm_type(self):
@@ -443,8 +436,10 @@ class GeneGroupHandler(PrimaryEntityHandler):
         super().map_fb_data_to_alliance()
         self.map_gene_group_basic()
         self.filter_by_grp_cvterm_type()
-        if environ.get('ADD_OBSOLETE') == 'NO':
-            self.filter_obsolete_gene_groups()
+        # ADD_OBSOLETE=NO only suppresses obsolete groups in the curator TSV
+        # (process_for_tsv_export); the JSON always includes them so the
+        # standard chado-obsolete -> internal=True cascade (flag_internal_fb_entities
+        # below) produces an audit trail Alliance can still hide from the public.
         self.map_gene_group_synonyms()
         self.map_data_provider_dto()
         self.map_timestamps()
