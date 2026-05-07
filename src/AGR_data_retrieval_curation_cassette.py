@@ -21,7 +21,7 @@ Notes:
 """
 
 import argparse
-from os import environ, getenv
+import os
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -32,6 +32,16 @@ from utils import export_chado_data, generate_export_file
 
 # Data types handled by this script.
 REPORT_LABEL = 'cassette_curation'
+
+# TSV format constants.
+CASSETTE_PRIMARY_HEADER = (
+    "# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms\tinternal\n"
+)
+CASSETTE_NOTES_HEADER = "# Primary FBid\ttype\tcomment\n"
+CASSETTE_COMPONENTS_HEADER = "# Primary FBid\tsymbol\trelation\ttaxon\tevidence\n"
+CASSETTE_TOOL_USES_HEADER = "# Primary FBid\tevidence\ttool_uses\n"
+NO_PUBS_SENTINEL = "NO PUBS"
+EVIDENCE_DELIMITER = "|"
 
 # Now proceed with generic setup.
 set_up_dict = set_up_db_reading(REPORT_LABEL)
@@ -46,7 +56,7 @@ output_filename = set_up_dict['output_filename'].replace('tsv', 'json')
 log = set_up_dict['log']
 testing = set_up_dict['testing']
 
-output_filename = environ.get('ALT_OUTPUT', output_filename)
+output_filename = os.environ.get('ALT_OUTPUT', output_filename)
 
 # Process additional input parameters not handled by the set_up_db_reading() function above.
 parser = argparse.ArgumentParser(
@@ -75,7 +85,7 @@ log.info(f'Parsing args specific to this script; ignoring these: {extra_args}')
 linkml_release = args.linkml_release
 reference_db = args.reference_db
 
-port = environ.get('SQL_PORT', '5432')
+port = os.environ.get('SQL_PORT', '5432')
 
 # Create SQL Alchemy engines from environmental variables.
 engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server + ':' + port + '/' + database
@@ -88,7 +98,9 @@ session = Session()
 
 # Create a session to the reference db.
 if reference_db:
-    engine_var_ref = 'postgresql://' + username + ":" + password + '@' + 'flysql23' + '/' + reference_db
+    # Reference DB host defaults to the primary SERVER unless REFERENCE_SERVER overrides it.
+    reference_server = os.environ.get('REFERENCE_SERVER', server)
+    engine_var_ref = 'postgresql://' + username + ":" + password + '@' + reference_server + '/' + reference_db
     ref_engine = create_engine(engine_var_ref)
     RefSession = sessionmaker(bind=ref_engine)
     reference_session = RefSession()
@@ -102,7 +114,7 @@ def generate_tsv_file(export_dict, filename):
     ADD_OBSOLETE=NO suppresses obsolete/internal rows in the TSVs only; the
     JSON output is unaffected.
     """
-    skip_obsolete = environ.get('ADD_OBSOLETE') == 'NO'
+    skip_obsolete = os.environ.get('ADD_OBSOLETE') == 'NO'
     if skip_obsolete:
         log.info('ADD_OBSOLETE=NO: excluding obsolete/internal cassettes from TSV.')
 
@@ -110,8 +122,7 @@ def generate_tsv_file(export_dict, filename):
         return skip_obsolete and (d.get('internal') or d.get('obsolete'))
 
     with open(filename, 'w') as outfile:
-        outfile.write(
-            "# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms\tinternal\n")
+        outfile.write(CASSETTE_PRIMARY_HEADER)
         for entity_dict in export_dict["cassette_ingest_set"]:
             if _skip(entity_dict):
                 continue
@@ -130,9 +141,11 @@ def generate_tsv_file(export_dict, filename):
             if "secondary_identifiers" in entity_dict:
                 secondary = entity_dict["secondary_identifiers"]
             internal = entity_dict.get("internal", False)
+            secondary_str = EVIDENCE_DELIMITER.join(secondary)
+            syns_str = EVIDENCE_DELIMITER.join(syns)
             try:
                 outfile.write(
-                    f"{primary}\t{symbol}\t{name}\t{'|'.join(secondary)}\t{'|'.join(syns)}\t{internal}\n")
+                    f"{primary}\t{symbol}\t{name}\t{secondary_str}\t{syns_str}\t{internal}\n")
             except TypeError:
                 log.error(f"entity_dict: {entity_dict}")
                 log.error(f"primary: {primary}")
@@ -145,7 +158,7 @@ def generate_tsv_file(export_dict, filename):
 
     filename = filename.replace('.tsv', '_notes.tsv')
     with open(filename, 'w') as outfile:
-        outfile.write("# Primary FBid\ttype\tcomment\n")
+        outfile.write(CASSETTE_NOTES_HEADER)
         for entity_dict in export_dict["cassette_ingest_set"]:
             if _skip(entity_dict):
                 continue
@@ -158,7 +171,7 @@ def generate_tsv_file(export_dict, filename):
 
     filename = filename.replace('_notes.tsv', '_component_slots.tsv')
     with open(filename, 'w') as outfile:
-        outfile.write("# Primary FBid\tsymbol\trelation\ttaxon\tevidence\n")
+        outfile.write(CASSETTE_COMPONENTS_HEADER)
         for entity_dict in export_dict["cassette_ingest_set"]:
             if _skip(entity_dict):
                 continue
@@ -169,14 +182,14 @@ def generate_tsv_file(export_dict, filename):
                     relation = comp['relation_name']
                     taxon = comp['taxon_curie']
                     if 'evidence_curies' in comp:
-                        evidence = '|'.join(comp['evidence_curies'])
+                        evidence = EVIDENCE_DELIMITER.join(comp['evidence_curies'])
                     else:
                         evidence = ""
                     outfile.write(f"{primary}\t{symbol}\t{relation}\t{taxon}\t{evidence}\n")
 
     filename = filename.replace('_component_slots.tsv', '_tool_uses.tsv')
     with open(filename, 'w') as outfile:
-        outfile.write("# Primary FBid\tevidence\ttool_uses\n")
+        outfile.write(CASSETTE_TOOL_USES_HEADER)
         for entity_dict in export_dict["cassette_ingest_set"]:
             if _skip(entity_dict):
                 continue
@@ -184,16 +197,16 @@ def generate_tsv_file(export_dict, filename):
             if "cassette_use_dtos" in entity_dict:
                 for comp in entity_dict["cassette_use_dtos"]:
                     if 'evidence_curies' in comp:
-                        evidence = '|'.join(comp['evidence_curies'])
+                        evidence = EVIDENCE_DELIMITER.join(comp['evidence_curies'])
                     else:
-                        evidence = "NO PUBS"
-                    tools = '|'.join(comp["use_curies"])
+                        evidence = NO_PUBS_SENTINEL
+                    tools = EVIDENCE_DELIMITER.join(comp["use_curies"])
                     outfile.write(f"{primary}\t{tools}\t{evidence}\n")
 
 
 def generate_association_tsv_file(export_dict, ingest_name, filename):
     """ADD_OBSOLETE=NO suppresses obsolete/internal rows from the TSV only."""
-    skip_obsolete = environ.get('ADD_OBSOLETE') == 'NO'
+    skip_obsolete = os.environ.get('ADD_OBSOLETE') == 'NO'
     filename = filename.replace('.tsv', '_associations.tsv')
     # To help in debugging, the 'first_entity' and 'second_entity' variables are used:
     # - to get the entities involved in the association out of the relevant 'export_dict[ingest_name]'
@@ -210,16 +223,15 @@ def generate_association_tsv_file(export_dict, ingest_name, filename):
         for entity_dict in export_dict[ingest_name]:
             if skip_obsolete and (entity_dict.get('internal') or entity_dict.get('obsolete')):
                 continue
-            # print(f"Dumping {entity_dict}.")
             sub = entity_dict[first_entity]
             obj = entity_dict[second_entity]
             rel_type = entity_dict['relation_name']
             if 'evidence_curies' in entity_dict:
-                pubs = "|".join(entity_dict['evidence_curies'])
+                pubs = EVIDENCE_DELIMITER.join(entity_dict['evidence_curies'])
             else:
-                pubs = "NO PUBS"
+                pubs = NO_PUBS_SENTINEL
             if 'component_type_curies' in entity_dict:
-                comp = "|".join(entity_dict['component_type_curies'])
+                comp = EVIDENCE_DELIMITER.join(entity_dict['component_type_curies'])
             else:
                 comp = ""
             outfile.write(f"{sub}\t{rel_type}\t{obj}\t{pubs}\t{comp}\n")
@@ -242,8 +254,7 @@ def main():
 
     # Optionally run ConstructHandler to get anonymous cassette data.
     # This must happen before export so anon cassettes are included in the output.
-    dump_cass_assoc = getenv('ADD_CASS_TO_CONSTRUCT', None)
-    if dump_cass_assoc and dump_cass_assoc == 'YES':
+    if os.getenv('ADD_CASS_TO_CONSTRUCT') == 'YES':
         log.info('Running ConstructHandler to get anonymous cassette data.')
         cons_handler = ConstructHandler(log, testing)
         export_chado_data(session, log, cons_handler)
@@ -289,8 +300,7 @@ def main():
         generate_export_file(export_dict, log, output_filename)
         generate_tsv_file(export_dict, set_up_dict['output_filename'])
 
-    ignore = False
-    if not reference_session and not ignore:
+    if not reference_session:
         # Export cassette_associations to a separate files.
         association_export_dict = {
             'linkml_version': linkml_release,
