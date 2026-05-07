@@ -22,106 +22,21 @@ Notes:
 """
 
 import argparse
-from os import environ
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
 from allele_handlers import AlleleHandler, AberrationHandler    # BalancerHandler
 from utils import export_chado_data, generate_export_file
+import curation_tsv
 
 
-def generate_tsv_file(export_dict, filename):
-    """Generate tsv files for curators to read more easily.
-
-    Writes two TSVs: a main allele-summary file (symbols/names/synonyms) and
-    a notes file. Mirrors the pattern in AGR_data_retrieval_curation_cassette.py.
-
-    ADD_OBSOLETE=NO suppresses obsolete/internal rows in the TSV only; the
-    JSON output is unaffected.
-    """
-    skip_obsolete = environ.get('ADD_OBSOLETE') == 'NO'
-    if skip_obsolete:
-        log.info('ADD_OBSOLETE=NO: excluding obsolete/internal alleles from TSV.')
-
-    def _skip(d):
-        return skip_obsolete and (d.get('internal') or d.get('obsolete'))
-
-    with open(filename, 'w') as outfile:
-        outfile.write(
-            "# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms\tinternal\n")
-        for entity_dict in export_dict["allele_ingest_set"]:
-            if _skip(entity_dict):
-                continue
-            primary = entity_dict["primary_external_id"]
-            symbol = ''
-            name = ''
-            secondary = []
-            syns = []
-            if "allele_full_name_dto" in entity_dict:
-                name = entity_dict["allele_full_name_dto"]["format_text"]
-            if "allele_symbol_dto" in entity_dict:
-                symbol = entity_dict["allele_symbol_dto"]["format_text"]
-            if "allele_synonym_dtos" in entity_dict:
-                for synonym in entity_dict["allele_synonym_dtos"]:
-                    syns.append(synonym["format_text"])
-            if "secondary_identifiers" in entity_dict:
-                secondary = entity_dict["secondary_identifiers"]
-            internal = entity_dict.get("internal", False)
-            try:
-                outfile.write(
-                    f"{primary}\t{symbol}\t{name}\t{'|'.join(secondary)}\t{'|'.join(syns)}\t{internal}\n")
-            except TypeError:
-                log.error(f"entity_dict: {entity_dict}")
-                log.error(f"primary: {primary}")
-                log.error(f"secondary {secondary}")
-                log.error(f"symbol: {symbol}")
-                log.error(f"name: {name}")
-                log.error(f"syns: {syns}")
-                log.error(f"internal: {internal}")
-                raise
-
-    filename = filename.replace('.tsv', '_notes.tsv')
-    with open(filename, 'w') as outfile:
-        outfile.write("# Primary FBid\ttype\tcomment\n")
-        for entity_dict in export_dict["allele_ingest_set"]:
-            if _skip(entity_dict):
-                continue
-            primary = entity_dict["primary_external_id"]
-            if "note_dtos" in entity_dict:
-                for note in entity_dict["note_dtos"]:
-                    ntype = note["note_type_name"]
-                    txt = note['free_text']
-                    outfile.write(f"{primary}\t{ntype}\t{txt}\n")
-
-
-def generate_association_tsv_file(export_dict, ingest_name, filename):
-    """Generate tsv file for an allele-* association ingest set.
-
-    ADD_OBSOLETE=NO suppresses obsolete/internal rows in the TSV only.
-    """
-    filename = filename.replace('.tsv', '_associations.tsv')
-    first_entity = 'allele_identifier'
-    if ingest_name == 'allele_gene_association_ingest_set':
-        second_entity = 'gene_identifier'
-    elif ingest_name == 'allele_construct_association_ingest_set':
-        second_entity = 'construct_identifier'
-    else:
-        second_entity = 'object_identifier'
-    skip_obsolete = environ.get('ADD_OBSOLETE') == 'NO'
-    with open(filename, 'w') as outfile:
-        outfile.write(f"#{first_entity}\tRelationship\t{second_entity}\tEvidence\tinternal\n")
-        for entity_dict in export_dict[ingest_name]:
-            if skip_obsolete and (entity_dict.get('internal') or entity_dict.get('obsolete')):
-                continue
-            sub = entity_dict[first_entity]
-            obj = entity_dict[second_entity]
-            rel_type = entity_dict['relation_name']
-            if 'evidence_curies' in entity_dict:
-                pubs = "|".join(entity_dict['evidence_curies'])
-            else:
-                pubs = "NO PUBS"
-            internal = entity_dict.get('internal', False)
-            outfile.write(f"{sub}\t{rel_type}\t{obj}\t{pubs}\t{internal}\n")
+# Map each allele association ingest set to its 'object' identifier field.
+_ALLELE_ASSOC_SECOND_FIELDS = {
+    'allele_gene_association_ingest_set': 'gene_identifier',
+    'allele_construct_association_ingest_set': 'construct_identifier',
+}
+# Allele association TSVs include an extra 'internal' boolean column.
+_ALLELE_ASSOC_EXTRAS = [('internal', 'internal', False)]
 
 
 # Data types handled by this script.
@@ -179,7 +94,7 @@ else:
 
 # The main process.
 def main():
-    """Run the steps for exporting LinkML-compliant FlyBase AGM."""
+    """Run the steps for exporting LinkML-compliant FlyBase allele data."""
     log.info(f'Running script "{__file__}"')
     log.info('Started main function.')
     log.info(f'Exporting data from FlyBase release: {database_release}')
@@ -215,7 +130,14 @@ def main():
             raise ValueError('The "allele_ingest_set" is unexpectedly empty.')
     else:
         generate_export_file(export_dict, log, output_filename)
-        generate_tsv_file(export_dict, set_up_dict['output_filename'])
+        tsv_filename = set_up_dict['output_filename']
+        entities = export_dict['allele_ingest_set']
+        curation_tsv.write_primary_tsv(
+            log=log, filename=tsv_filename, entities=entities, datatype='allele',
+        )
+        curation_tsv.write_notes_tsv(
+            filename=tsv_filename.replace('.tsv', '_notes.tsv'), entities=entities,
+        )
 
     if not reference_session:
         # Export the gene-allele associations to a separate file.
@@ -243,9 +165,16 @@ def main():
         for ingest_name in ('allele_gene_association_ingest_set',
                             'allele_construct_association_ingest_set'):
             set_name = ingest_name.replace('_ingest_set', '')
-            tsv_filename = set_up_dict['output_filename'].replace('allele', set_name)
+            assoc_tsv_filename = set_up_dict['output_filename'].replace('allele', set_name)
+            assoc_tsv_filename = assoc_tsv_filename.replace('.tsv', '_associations.tsv')
             try:
-                generate_association_tsv_file(association_export_dict, ingest_name, tsv_filename)
+                curation_tsv.write_association_tsv(
+                    filename=assoc_tsv_filename,
+                    rows=association_export_dict[ingest_name],
+                    first_field='allele_identifier',
+                    second_field=_ALLELE_ASSOC_SECOND_FIELDS[ingest_name],
+                    extra_fields=_ALLELE_ASSOC_EXTRAS,
+                )
             except KeyError as e:
                 log.error(f'The "{ingest_name}" blew up on tsv generation. KeyError {e}')
                 raise
