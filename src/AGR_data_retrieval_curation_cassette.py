@@ -28,19 +28,18 @@ from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
 from cassette_handler import CassetteHandler
 from utils import export_chado_data, generate_export_file
+import curation_tsv
 
 # Data types handled by this script.
 REPORT_LABEL = 'cassette_curation'
 
-# TSV format constants.
-CASSETTE_PRIMARY_HEADER = (
-    "# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms\tinternal\n"
-)
-CASSETTE_NOTES_HEADER = "# Primary FBid\ttype\tcomment\n"
-CASSETTE_COMPONENTS_HEADER = "# Primary FBid\tsymbol\trelation\ttaxon\tevidence\n"
-CASSETTE_TOOL_USES_HEADER = "# Primary FBid\tevidence\ttool_uses\n"
-NO_PUBS_SENTINEL = "NO PUBS"
-EVIDENCE_DELIMITER = "|"
+# Map each cassette association ingest set to its 'object' identifier field.
+_CASSETTE_ASSOC_SECOND_FIELDS = {
+    'cassette_transgenic_tool_association_ingest_set': 'transgenic_tool_identifier',
+    'cassette_genomic_entity_association_ingest_set': 'genomic_entity_identifier',
+}
+# Extra TSV columns specific to cassette associations.
+_CASSETTE_ASSOC_EXTRAS = [('Comp type curie', 'component_type_curies', '')]
 
 # Now proceed with generic setup.
 set_up_dict = set_up_db_reading(REPORT_LABEL)
@@ -107,137 +106,28 @@ else:
     reference_session = None
 
 
-def generate_tsv_file(export_dict, filename):
-    """Generate tsv files for curators to read more easily. This can be commented out later.
-
-    ADD_OBSOLETE=NO suppresses obsolete/internal rows in the TSVs only; the
-    JSON output is unaffected.
-    """
-    skip_obsolete = os.environ.get('ADD_OBSOLETE') == 'NO'
-    if skip_obsolete:
-        log.info('ADD_OBSOLETE=NO: excluding obsolete/internal cassettes from TSV.')
-
-    def _skip(d):
-        return skip_obsolete and (d.get('internal') or d.get('obsolete'))
-
-    with open(filename, 'w') as outfile:
-        outfile.write(CASSETTE_PRIMARY_HEADER)
-        for entity_dict in export_dict["cassette_ingest_set"]:
-            if _skip(entity_dict):
-                continue
-            primary = entity_dict["primary_external_id"]
-            symbol = ''
-            name = ''
-            secondary = []
-            syns = []
-            if "cassette_full_name_dto" in entity_dict:
-                name = entity_dict["cassette_full_name_dto"]["format_text"]
-            if "cassette_symbol_dto" in entity_dict:
-                symbol = entity_dict["cassette_symbol_dto"]["format_text"]
-            if "cassette_synonym_dtos" in entity_dict:
-                for synonym in entity_dict["cassette_synonym_dtos"]:
-                    syns.append(synonym["format_text"])
-            if "secondary_identifiers" in entity_dict:
-                secondary = entity_dict["secondary_identifiers"]
-            internal = entity_dict.get("internal", False)
-            secondary_str = EVIDENCE_DELIMITER.join(secondary)
-            syns_str = EVIDENCE_DELIMITER.join(syns)
-            try:
-                outfile.write(
-                    f"{primary}\t{symbol}\t{name}\t{secondary_str}\t{syns_str}\t{internal}\n")
-            except TypeError:
-                log.error(f"entity_dict: {entity_dict}")
-                log.error(f"primary: {primary}")
-                log.error(f"secondary {secondary}")
-                log.error(f"symbol: {symbol}")
-                log.error(f"name: {name}")
-                log.error(f"syns: {syns}")
-                log.error(f"internal: {internal}")
-                raise
-
-    filename = filename.replace('.tsv', '_notes.tsv')
-    with open(filename, 'w') as outfile:
-        outfile.write(CASSETTE_NOTES_HEADER)
-        for entity_dict in export_dict["cassette_ingest_set"]:
-            if _skip(entity_dict):
-                continue
-            primary = entity_dict["primary_external_id"]
-            if "note_dtos" in entity_dict:
-                for note in entity_dict["note_dtos"]:
-                    ntype = note["note_type_name"]
-                    txt = note['free_text']
-                    outfile.write(f"{primary}\t{ntype}\t{txt}\n")
-
-    filename = filename.replace('_notes.tsv', '_component_slots.tsv')
-    with open(filename, 'w') as outfile:
-        outfile.write(CASSETTE_COMPONENTS_HEADER)
-        for entity_dict in export_dict["cassette_ingest_set"]:
-            if _skip(entity_dict):
-                continue
-            primary = entity_dict["primary_external_id"]
-            if "cassette_component_dtos" in entity_dict:
-                for comp in entity_dict["cassette_component_dtos"]:
-                    symbol = comp["component_symbol"]
-                    relation = comp['relation_name']
-                    taxon = comp['taxon_curie']
-                    if 'evidence_curies' in comp:
-                        evidence = EVIDENCE_DELIMITER.join(comp['evidence_curies'])
-                    else:
-                        evidence = ""
-                    outfile.write(f"{primary}\t{symbol}\t{relation}\t{taxon}\t{evidence}\n")
-
-    filename = filename.replace('_component_slots.tsv', '_tool_uses.tsv')
-    with open(filename, 'w') as outfile:
-        outfile.write(CASSETTE_TOOL_USES_HEADER)
-        for entity_dict in export_dict["cassette_ingest_set"]:
-            if _skip(entity_dict):
-                continue
-            primary = entity_dict["primary_external_id"]
-            if "cassette_use_dtos" in entity_dict:
-                for comp in entity_dict["cassette_use_dtos"]:
-                    if 'evidence_curies' in comp:
-                        evidence = EVIDENCE_DELIMITER.join(comp['evidence_curies'])
-                    else:
-                        evidence = NO_PUBS_SENTINEL
-                    tools = EVIDENCE_DELIMITER.join(comp["use_curies"])
-                    outfile.write(f"{primary}\t{tools}\t{evidence}\n")
-
-
-def generate_association_tsv_file(export_dict, ingest_name, filename):
-    """ADD_OBSOLETE=NO suppresses obsolete/internal rows from the TSV only."""
-    skip_obsolete = os.environ.get('ADD_OBSOLETE') == 'NO'
-    filename = filename.replace('.tsv', '_associations.tsv')
-    # To help in debugging, the 'first_entity' and 'second_entity' variables are used:
-    # - to get the entities involved in the association out of the relevant 'export_dict[ingest_name]'
-    # - AND as the column headers in the tsv output file
-    first_entity = 'cassette_identifier'
-    if ingest_name == 'cassette_transgenic_tool_association_ingest_set':
-        second_entity = 'transgenic_tool_identifier'
-    elif ingest_name == 'cassette_genomic_entity_association_ingest_set':
-        second_entity = 'genomic_entity_identifier'
-    else:
-        second_entity = 'sequence_targeting_reagent_identifier'
-    with open(filename, 'w') as outfile:
-        outfile.write(f"#{first_entity}\tRelationship\t{second_entity}\tEvidence\tComp type curie\n")
-        for entity_dict in export_dict[ingest_name]:
-            if skip_obsolete and (entity_dict.get('internal') or entity_dict.get('obsolete')):
-                continue
-            sub = entity_dict[first_entity]
-            obj = entity_dict[second_entity]
-            rel_type = entity_dict['relation_name']
-            if 'evidence_curies' in entity_dict:
-                pubs = EVIDENCE_DELIMITER.join(entity_dict['evidence_curies'])
-            else:
-                pubs = NO_PUBS_SENTINEL
-            if 'component_type_curies' in entity_dict:
-                comp = EVIDENCE_DELIMITER.join(entity_dict['component_type_curies'])
-            else:
-                comp = ""
-            outfile.write(f"{sub}\t{rel_type}\t{obj}\t{pubs}\t{comp}\n")
+def _write_cassette_tsvs(entities, base_filename):
+    """Write the four cassette curator TSVs (primary, notes, component slots, tool uses)."""
+    curation_tsv.write_primary_tsv(
+        log=log, filename=base_filename, entities=entities, datatype='cassette',
+    )
+    curation_tsv.write_notes_tsv(
+        filename=base_filename.replace('.tsv', '_notes.tsv'), entities=entities,
+    )
+    curation_tsv.write_components_tsv(
+        filename=base_filename.replace('.tsv', '_component_slots.tsv'),
+        entities=entities,
+        datatype='cassette',
+    )
+    curation_tsv.write_tool_uses_tsv(
+        filename=base_filename.replace('.tsv', '_tool_uses.tsv'),
+        entities=entities,
+        datatype='cassette',
+    )
 
 
 def _export_primary(cassette_handler):
-    """Write the primary cassette JSON and curator TSV.
+    """Write the primary cassette JSON and curator TSVs.
 
     Raises ValueError on unexpected empty exports for non-reference-DB runs;
     reference-DB runs treat an empty export as 'no updates' and skip writing.
@@ -255,7 +145,7 @@ def _export_primary(cassette_handler):
         log.error(f'The "{set_name}" is unexpectedly empty.')
         raise ValueError(f'The "{set_name}" is unexpectedly empty.')
     generate_export_file(export_dict, log, output_filename)
-    generate_tsv_file(export_dict, set_up_dict['output_filename'])
+    _write_cassette_tsvs(export_dict[set_name], set_up_dict['output_filename'])
 
 
 def _export_associations(cassette_handler):
@@ -277,9 +167,15 @@ def _export_associations(cassette_handler):
             )
             continue
         association_output_filename = output_filename.replace('cassette', f'{set_name}')
-        tsv_filename = association_output_filename.replace('.json', '.tsv')
+        tsv_filename = association_output_filename.replace('.json', '_associations.tsv')
         try:
-            generate_association_tsv_file(association_export_dict, ingest_name, tsv_filename)
+            curation_tsv.write_association_tsv(
+                filename=tsv_filename,
+                rows=association_export_dict[ingest_name],
+                first_field='cassette_identifier',
+                second_field=_CASSETTE_ASSOC_SECOND_FIELDS[ingest_name],
+                extra_fields=_CASSETTE_ASSOC_EXTRAS,
+            )
         except KeyError as e:
             log.error(f'The "{sub_type}" blew up on tsv generation. keyError {e}')
             raise
