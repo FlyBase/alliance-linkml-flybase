@@ -236,29 +236,12 @@ def generate_association_tsv_file(export_dict, ingest_name, filename):
             outfile.write(f"{sub}\t{rel_type}\t{obj}\t{pubs}\t{comp}\n")
 
 
-# The main process.
-def main():
-    """Run the steps for exporting LinkML-compliant FlyBase AGM."""
-    log.info(f'Running script "{__file__}"')
-    log.info('Started main function.')
-    log.info(f'Exporting data from FlyBase release: {database_release}')
-    log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
+def _export_primary(cassette_handler):
+    """Write the primary cassette JSON and curator TSV.
 
-    # Get the data and process it.
-    cassette_handler = CassetteHandler(log, testing)
-    if reference_session:
-        export_chado_data(session, log, cassette_handler, reference_session=reference_session)
-    else:
-        export_chado_data(session, log, cassette_handler)
-
-    # Optionally pull anonymous cassette data from the construct pipeline.
-    if os.getenv('ADD_CASS_TO_CONSTRUCT') == 'YES':
-        cassette_handler.populate_anon_cassettes_from_constructs(session)
-    else:
-        log.warning('ADD_CASS_TO_CONSTRUCT not set to "YES". '
-                    'Skipping anonymous cassette creation.')
-
-    # Export the data.
+    Raises ValueError on unexpected empty exports for non-reference-DB runs;
+    reference-DB runs treat an empty export as 'no updates' and skip writing.
+    """
     export_dict = {
         'linkml_version': linkml_release,
         'alliance_member_release_version': database_release,
@@ -268,45 +251,67 @@ def main():
     if len(export_dict[set_name]) == 0:
         if reference_session:
             log.info('No updates to report.')
-        else:
-            log.error(f'The "{set_name}" is unexpectedly empty.')
-            raise ValueError(f'The "{set_name}" is unexpectedly empty.')
+            return
+        log.error(f'The "{set_name}" is unexpectedly empty.')
+        raise ValueError(f'The "{set_name}" is unexpectedly empty.')
+    generate_export_file(export_dict, log, output_filename)
+    generate_tsv_file(export_dict, set_up_dict['output_filename'])
+
+
+def _export_associations(cassette_handler):
+    """Write per-sub-type association TSVs and a combined association JSON."""
+    association_export_dict = {
+        'linkml_version': linkml_release,
+        'alliance_member_release_version': database_release,
+    }
+    for sub_type in ('transgenic_tool', 'genomic_entity'):
+        set_name = f"cassette_{sub_type}_association"
+        ingest_name = f"{set_name}_ingest_set"
+        association_export_dict[ingest_name] = []
+        association_export_dict[ingest_name].extend(cassette_handler.export_data[ingest_name])
+        if len(association_export_dict[ingest_name]) == 0:
+            if os.getenv('ADD_CASS_TO_CONSTRUCT') == 'YES':
+                raise ValueError(f'The "{set_name}" is unexpectedly empty.')
+            log.info(
+                f'The "{set_name}" is empty (ADD_CASS_TO_CONSTRUCT not set to YES); skipping.'
+            )
+            continue
+        association_output_filename = output_filename.replace('cassette', f'{set_name}')
+        tsv_filename = association_output_filename.replace('.json', '.tsv')
+        try:
+            generate_association_tsv_file(association_export_dict, ingest_name, tsv_filename)
+        except KeyError as e:
+            log.error(f'The "{sub_type}" blew up on tsv generation. keyError {e}')
+            raise
+
+    combined_filename = output_filename.replace('cassette', 'cassette_association')
+    generate_export_file(association_export_dict, log, combined_filename)
+
+
+# The main process.
+def main():
+    """Run the steps for exporting LinkML-compliant FlyBase cassette data."""
+    log.info(f'Running script "{__file__}"')
+    log.info('Started main function.')
+    log.info(f'Exporting data from FlyBase release: {database_release}')
+    log.info(f'Output JSON file corresponds to "agr_curation_schema" release: {linkml_release}')
+
+    cassette_handler = CassetteHandler(log, testing)
+    if reference_session:
+        export_chado_data(session, log, cassette_handler, reference_session=reference_session)
     else:
-        generate_export_file(export_dict, log, output_filename)
-        generate_tsv_file(export_dict, set_up_dict['output_filename'])
+        export_chado_data(session, log, cassette_handler)
 
+    if os.getenv('ADD_CASS_TO_CONSTRUCT') == 'YES':
+        cassette_handler.populate_anon_cassettes_from_constructs(session)
+    else:
+        log.warning('ADD_CASS_TO_CONSTRUCT not set to "YES". '
+                    'Skipping anonymous cassette creation.')
+
+    _export_primary(cassette_handler)
     if not reference_session:
-        # Export cassette_associations to a separate files.
-        association_export_dict = {
-            'linkml_version': linkml_release,
-            'alliance_member_release_version': database_release,
-        }
-        # add each set to association export dict
-        # and output tsv's to separate files.
-        for sub_type in ('transgenic_tool', 'genomic_entity'):
-            set_name = f"cassette_{sub_type}_association"
-            ingest_name = f"{set_name}_ingest_set"
-            association_export_dict[ingest_name] = []
-            association_export_dict[ingest_name].extend(cassette_handler.export_data[ingest_name])
-            if len(association_export_dict[ingest_name]) == 0:
-                if os.getenv('ADD_CASS_TO_CONSTRUCT') == 'YES':
-                    raise ValueError(f'The "{set_name}" is unexpectedly empty.')
-                log.info(
-                    f'The "{set_name}" is empty (ADD_CASS_TO_CONSTRUCT not set to YES); skipping.'
-                )
-                continue
-            # Print the output tsv file.
-            association_output_filename = output_filename.replace('cassette', f'{set_name}')
-            tsv_filename = association_output_filename.replace('.json', '.tsv')
-            try:
-                generate_association_tsv_file(association_export_dict, ingest_name, tsv_filename)
-            except KeyError as e:
-                log.error(f'The "{sub_type}" blew up on tsv generation. keyError {e}')
-                raise
+        _export_associations(cassette_handler)
 
-        # output all association in one file.
-        association_output_filename = output_filename.replace('cassette', 'cassette_association')
-        generate_export_file(association_export_dict, log, association_output_filename)
     log.info('Ended main function.\n')
 
 
