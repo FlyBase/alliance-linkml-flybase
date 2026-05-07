@@ -941,6 +941,48 @@ class CassetteHandler(FeatureHandler):
                 ge_count += 1
         self.log.info(f'Appended {ge_count} anon cassette genomic entity associations.')
 
+    def populate_anon_cassettes_from_constructs(self, session):
+        """Run ConstructHandler, ingest anon-cassette data, map both batches, and export.
+
+        Encapsulates the full ADD_CASS_TO_CONSTRUCT=YES pipeline that previously
+        lived in the export script's main(): builds an anon cassette set from
+        the FTA-181 non-generic batch, then layers the FTA-136 generic-TI batch
+        on top, and emits both via a single export pass to avoid duplicating
+        the FTA-181 entries.
+        """
+        # Lazy import: keeps construct_handler off the import graph for callers
+        # that don't need anon cassettes, and avoids any future circular-import risk.
+        from construct_handler import ConstructHandler
+        from utils import export_chado_data
+
+        self.log.info('Running ConstructHandler to get anonymous cassette data.')
+        cons_handler = ConstructHandler(self.log, self.testing)
+        export_chado_data(session, self.log, cons_handler)
+
+        anon_data = cons_handler.get_anon_cassette_data()
+        self.receive_anon_cassette_data(anon_data)
+        self.map_anon_cassettes()
+        # Note: do NOT export yet. self.anon_cassettes accumulates across
+        # both map passes below, and export_anon_cassettes iterates the
+        # full list, so calling it twice would duplicate the FTA-181
+        # batch in cassette_ingest_set. Single export at the end covers
+        # both batches.
+        # FTA-136: Anonymous constructs are already created by ConstructHandler.
+        # Pass their data to CassetteHandler for anonymous cassette creation.
+        generic_ti_data = cons_handler.get_generic_ti_anon_construct_data()
+        if generic_ti_data:
+            cassette_data = cons_handler.generic_ti_data_for_cassette_handler(generic_ti_data)
+            self.receive_anon_cassette_data(cassette_data)
+            self.map_anon_cassettes()
+            self.log.info(
+                f'Created {len(generic_ti_data)} anonymous constructs '
+                f'and cassettes for generic TI insertions.'
+            )
+        else:
+            self.log.info('No generic TI insertions found.')
+        # Export both batches (FTA-181 non-generic + FTA-136 generic TI) together.
+        self.export_anon_cassettes()
+
     # Elaborate on synthesize_info() for the Handler.
     def synthesize_info(self):
         """Extend the method for the CassetteHandler."""

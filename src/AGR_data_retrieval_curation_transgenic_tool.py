@@ -21,12 +21,12 @@ Notes:
 """
 
 import argparse
-from os import environ
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
 from transgenic_tool_handler import ExperimentalToolHandler
 from utils import export_chado_data, generate_export_file
+import curation_tsv
 
 # Data types handled by this script.
 REPORT_LABEL = 'transgenic_tool_curation'
@@ -83,76 +83,9 @@ else:
     reference_session = None
 
 
-def generate_tsv_file(export_dict, filename):
-    """Generate tsv files for curators to read more easily.
-
-    ADD_OBSOLETE=NO suppresses obsolete/internal rows in the TSVs only; the
-    JSON output is unaffected.
-    """
-    skip_obsolete = environ.get('ADD_OBSOLETE') == 'NO'
-    if skip_obsolete:
-        log.info('ADD_OBSOLETE=NO: excluding obsolete/internal tools from TSV.')
-
-    def _skip(d):
-        return skip_obsolete and (d.get('internal') or d.get('obsolete'))
-
-    with open(filename, 'w') as outfile:
-        outfile.write(
-            "# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms\tinternal\n")
-        for entity_dict in export_dict["transgenic_tool_ingest_set"]:
-            if _skip(entity_dict):
-                continue
-            primary = entity_dict["primary_external_id"]
-            symbol = ''
-            name = ''
-            secondary = []
-            syns = []
-            if "transgenic_tool_full_name_dto" in entity_dict:
-                name = entity_dict["transgenic_tool_full_name_dto"]["format_text"]
-            if "transgenic_tool_symbol_dto" in entity_dict:
-                symbol = entity_dict["transgenic_tool_symbol_dto"]["format_text"]
-            if "transgenic_tool_synonym_dtos" in entity_dict:
-                for synonym in entity_dict["transgenic_tool_synonym_dtos"]:
-                    syns.append(synonym["format_text"])
-            if "secondary_identifiers" in entity_dict:
-                secondary = entity_dict["secondary_identifiers"]
-            internal = entity_dict.get("internal", False)
-            outfile.write(
-                f"{primary}\t{symbol}\t{name}\t{'|'.join(secondary)}\t{'|'.join(syns)}\t{internal}\n")
-
-    filename = filename.replace('.tsv', '_notes.tsv')
-    with open(filename, 'w') as outfile:
-        outfile.write("# Primary FBid\ttype\tcomment\n")
-        for entity_dict in export_dict["transgenic_tool_ingest_set"]:
-            if _skip(entity_dict):
-                continue
-            primary = entity_dict["primary_external_id"]
-            if "note_dtos" in entity_dict:
-                for note in entity_dict["note_dtos"]:
-                    ntype = note["note_type_name"]
-                    txt = note['free_text']
-                    outfile.write(f"{primary}\t{ntype}\t{txt}\n")
-
-
-def generate_association_tsv_file(export_dict, filename):
-    """ADD_OBSOLETE=NO suppresses obsolete/internal rows from the TSV only."""
-    skip_obsolete = environ.get('ADD_OBSOLETE') == 'NO'
-    filename = filename.replace('.tsv', '_associations.tsv')
-    with open(filename, 'w') as outfile:
-        outfile.write("# Object curie\tSubject curie\tPub\n")
-        for entity_dict in export_dict['transgenic_tool_transgenic_tool_association_ingest_set']:
-            if skip_obsolete and (entity_dict.get('internal') or entity_dict.get('obsolete')):
-                continue
-            obj = entity_dict['transgenic_tool_object_identifier']
-            sub = entity_dict['transgenic_tool_subject_identifier']
-            # pubs = "|".join(entity_dict['evidence_curies'])
-            rel = entity_dict['relation_name']
-            outfile.write(f"{obj}\t{sub}\t{rel}\n")
-
-
 # The main process.
 def main():
-    """Run the steps for exporting LinkML-compliant FlyBase AGM."""
+    """Run the steps for exporting LinkML-compliant FlyBase transgenic tool data."""
     log.info(f'Running script "{__file__}"')
     log.info('Started main function.')
     log.info(f'Exporting data from FlyBase release: {database_release}')
@@ -179,7 +112,14 @@ def main():
             raise ValueError(f'The "{tool_handler.primary_export_set}" is unexpectedly empty.')
     else:
         generate_export_file(export_dict, log, output_filename)
-        generate_tsv_file(export_dict, set_up_dict['output_filename'])
+        tsv_filename = set_up_dict['output_filename']
+        entities = export_dict[tool_handler.primary_export_set]
+        curation_tsv.write_primary_tsv(
+            log=log, filename=tsv_filename, entities=entities, datatype='transgenic_tool',
+        )
+        curation_tsv.write_notes_tsv(
+            filename=tsv_filename.replace('.tsv', '_notes.tsv'), entities=entities,
+        )
 
     if not reference_session:
         # Export tool associations to a separate file.
@@ -197,7 +137,16 @@ def main():
             raise ValueError(f'The "{assoc}" is unexpectedly empty.')
         # Print the output file.
         generate_export_file(association_export_dict, log, association_output_filename)
-        generate_association_tsv_file(association_export_dict, set_up_dict['output_filename'])
+        # Migrate to standard subject/relation/object/evidence layout (was previously
+        # a 3-column file with relation_name written under a misleading 'Pub' header
+        # and evidence_curies suppressed).
+        assoc_tsv_filename = set_up_dict['output_filename'].replace('.tsv', '_associations.tsv')
+        curation_tsv.write_association_tsv(
+            filename=assoc_tsv_filename,
+            rows=association_export_dict[assoc],
+            first_field='transgenic_tool_subject_identifier',
+            second_field='transgenic_tool_object_identifier',
+        )
     log.info('Ended main function.\n')
 
 

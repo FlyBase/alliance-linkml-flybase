@@ -15,7 +15,8 @@ Example:
     -r fb_2024_06_reporting
 Notes:
     This script exports FlyBase gene data as a JSON file conforming to the
-    Gene LinkML specs for the Alliance persistent curation database.
+    Gene LinkML specs for the Alliance persistent curation database, plus
+    companion TSV files for curators (primary identifiers and notes).
     A chado database with a full "audit_chado" table is required.
 
 """
@@ -26,6 +27,7 @@ from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
 from gene_handler import GeneHandler
 from utils import export_chado_data, generate_export_file
+import curation_tsv
 
 # Data types handled by this script.
 REPORT_LABEL = 'gene_curation'
@@ -50,6 +52,7 @@ parser = argparse.ArgumentParser(
 Environment variables:
   SERVER              Database server (e.g. flysql25)
   DATABASE            Database name (e.g. production_chado)
+  ADD_OBSOLETE        Set to 'NO' to exclude obsolete/internal rows from the TSVs only; JSON output is unaffected
 """,
     formatter_class=argparse.RawDescriptionHelpFormatter
 )
@@ -81,7 +84,7 @@ else:
 
 # The main process.
 def main():
-    """Run the steps for exporting LinkML-compliant FlyBase AGM."""
+    """Run the steps for exporting LinkML-compliant FlyBase gene data."""
     log.info(f'Running script "{__file__}"')
     log.info('Started main function.')
     log.info(f'Exporting data from FlyBase release: {database_release}')
@@ -108,6 +111,15 @@ def main():
             raise ValueError('The "gene_ingest_set" is unexpectedly empty.')
     else:
         generate_export_file(export_dict, log, output_filename)
+        tsv_filename = set_up_dict['output_filename']
+        entities = export_dict[gene_handler.primary_export_set]
+        curation_tsv.write_primary_tsv(
+            log=log, filename=tsv_filename, entities=entities, datatype='gene',
+        )
+        curation_tsv.write_notes_tsv(
+            filename=tsv_filename.replace('.tsv', '_notes.tsv'), entities=entities,
+        )
+        log.info(f'Generated TSV: {tsv_filename}')
 
     log.info('Ended main function.\n')
 

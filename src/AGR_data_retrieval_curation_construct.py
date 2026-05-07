@@ -23,12 +23,12 @@ Notes:
 
 import argparse
 import os
-from os import getenv
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
 from construct_handler import ConstructHandler
+import curation_tsv
 from utils import export_chado_data, generate_export_file
 
 # Data types handled by this script.
@@ -87,75 +87,11 @@ else:
     reference_session = None
 
 
-def generate_tsv_file(export_dict, filename):
-    """Generate tsv files for curators to read more easily.
-
-    ADD_OBSOLETE=NO suppresses obsolete/internal rows in the TSV only; the
-    JSON output is unaffected.
-    """
-    skip_obsolete = os.environ.get('ADD_OBSOLETE') == 'NO'
-    if skip_obsolete:
-        log.info('ADD_OBSOLETE=NO: excluding obsolete/internal constructs from TSV.')
-    with open(filename, 'w') as outfile:
-        outfile.write("# Primary FBid\tValid symbol\tValid full name\t"
-                      "secondary FBid(s)\tsynonyms\tinternal\n")
-        for entity_dict in export_dict["construct_ingest_set"]:
-            if skip_obsolete and (entity_dict.get('internal') or entity_dict.get('obsolete')):
-                continue
-            primary = entity_dict["primary_external_id"]
-            symbol = ''
-            name = ''
-            secondary = []
-            syns = []
-            if "construct_full_name_dto" in entity_dict:
-                name = entity_dict["construct_full_name_dto"]["format_text"]
-            if "construct_symbol_dto" in entity_dict:
-                symbol = entity_dict["construct_symbol_dto"]["format_text"]
-            if "construct_synonym_dtos" in entity_dict:
-                for synonym in entity_dict["construct_synonym_dtos"]:
-                    syns.append(synonym["format_text"])
-            if "secondary_identifiers" in entity_dict:
-                secondary = entity_dict["secondary_identifiers"]
-            internal = entity_dict.get("internal", False)
-            try:
-                outfile.write(
-                    f"{primary}\t{symbol}\t{name}\t"
-                    f"{'|'.join(secondary)}\t{'|'.join(syns)}\t{internal}\n")
-            except TypeError:
-                log.error(f"entity_dict: {entity_dict}")
-                log.error(f"primary: {primary}")
-                log.error(f"secondary {secondary}")
-                log.error(f"symbol: {symbol}")
-                log.error(f"name: {name}")
-                log.error(f"syns: {syns}")
-                log.error(f"internal: {internal}")
-                raise
-
-
-def generate_association_tsv_file(export_dict, ingest_name, filename):
-    """Generate a TSV file for an association ingest set.
-
-    ADD_OBSOLETE=NO suppresses obsolete/internal rows from the TSV only.
-    """
-    skip_obsolete = os.environ.get('ADD_OBSOLETE') == 'NO'
-    first_entity = 'construct_identifier'
-    if ingest_name == 'construct_cassette_association_ingest_set':
-        second_entity = 'cassette_identifier'
-    else:
-        second_entity = 'genomic_entity_identifier'
-    with open(filename, 'w') as outfile:
-        outfile.write(f"#{first_entity}\tRelationship\t{second_entity}\tEvidence\n")
-        for entity_dict in export_dict[ingest_name]:
-            if skip_obsolete and (entity_dict.get('internal') or entity_dict.get('obsolete')):
-                continue
-            sub = entity_dict[first_entity]
-            obj = entity_dict[second_entity]
-            rel_type = entity_dict['relation_name']
-            if 'evidence_curies' in entity_dict:
-                pubs = "|".join(entity_dict['evidence_curies'])
-            else:
-                pubs = ""
-            outfile.write(f"{sub}\t{rel_type}\t{obj}\t{pubs}\n")
+# Map each construct association ingest set to its 'object' identifier field.
+_CONSTRUCT_ASSOC_SECOND_FIELDS = {
+    'construct_cassette_association_ingest_set': 'cassette_identifier',
+    'construct_genomic_entity_association_ingest_set': 'genomic_entity_identifier',
+}
 
 
 # The main process.
@@ -188,7 +124,12 @@ def main():
     else:
         generate_export_file(export_dict, log, output_filename)
         tsv_filename = output_filename.replace('.json', '.tsv')
-        generate_tsv_file(export_dict, tsv_filename)
+        curation_tsv.write_primary_tsv(
+            log=log,
+            filename=tsv_filename,
+            entities=export_dict['construct_ingest_set'],
+            datatype='construct',
+        )
         log.info(f'Generated TSV: {tsv_filename}')
 
     if not reference_session:
@@ -200,8 +141,7 @@ def main():
         }
         association_export_dict['construct_genomic_entity_association_ingest_set'] = \
             cons_handler.export_data['construct_genomic_entity_association_ingest_set']
-        dump_cass_assoc = getenv('ADD_CASS_TO_CONSTRUCT', None)
-        cassettes_enabled = dump_cass_assoc and dump_cass_assoc == 'YES'
+        cassettes_enabled = os.getenv('ADD_CASS_TO_CONSTRUCT') == 'YES'
         if len(association_export_dict['construct_genomic_entity_association_ingest_set']) == 0:
             if cassettes_enabled:
                 log.info('construct_genomic_entity_association_ingest_set is empty as expected '
@@ -227,7 +167,13 @@ def main():
                 continue
             tsv_filename = os.path.join(tsv_dir, f"{ingest_name.replace('_ingest_set', '')}.tsv")
             try:
-                generate_association_tsv_file(association_export_dict, ingest_name, tsv_filename)
+                curation_tsv.write_association_tsv(
+                    filename=tsv_filename,
+                    rows=association_export_dict[ingest_name],
+                    first_field='construct_identifier',
+                    second_field=_CONSTRUCT_ASSOC_SECOND_FIELDS[ingest_name],
+                    no_pubs_sentinel="",
+                )
                 log.info(f'Generated TSV: {tsv_filename}')
             except KeyError as e:
                 log.error(f'TSV generation for "{ingest_name}" failed: KeyError {e}')
