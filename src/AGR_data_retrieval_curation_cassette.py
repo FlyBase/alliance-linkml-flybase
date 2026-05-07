@@ -314,8 +314,11 @@ def main():
             association_export_dict[ingest_name] = []
             association_export_dict[ingest_name].extend(cassette_handler.export_data[ingest_name])
             if len(association_export_dict[ingest_name]) == 0:
-                log.error(f'The "{set_name}" is unexpectedly empty.')
-                # raise ValueError(f'The "{set_name}" is unexpectedly empty.')
+                if os.getenv('ADD_CASS_TO_CONSTRUCT') == 'YES':
+                    raise ValueError(f'The "{set_name}" is unexpectedly empty.')
+                log.info(
+                    f'The "{set_name}" is empty (ADD_CASS_TO_CONSTRUCT not set to YES); skipping.'
+                )
                 continue
             # Print the output tsv file.
             association_output_filename = output_filename.replace('cassette', f'{set_name}')
@@ -323,8 +326,8 @@ def main():
             try:
                 generate_association_tsv_file(association_export_dict, ingest_name, tsv_filename)
             except KeyError as e:
-                log.error(f'The "{sub_type} blew up on tsv generation. keyError {e}')
-                exit(-1)
+                log.error(f'The "{sub_type}" blew up on tsv generation. keyError {e}')
+                raise
 
         # output all association in one file.
         association_output_filename = output_filename.replace('cassette', 'cassette_association')
