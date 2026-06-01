@@ -56,6 +56,7 @@ class GeneHandler(FeatureHandler):
 
     gene_prop_to_note_mapping = {
         'misc': ('comment', 'note_dtos'),
+        'etymology': ('gene_etymology', 'note_dtos'),
     }
 
     # Elaborate on get_general_data() for the GeneHandler.
