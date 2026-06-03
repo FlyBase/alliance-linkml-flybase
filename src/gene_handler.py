@@ -12,9 +12,21 @@ Author(s):
 import csv
 import re
 from logging import Logger
+from harvdev_utils.char_conversions import clean_free_text
 import agr_datatypes
 import fb_datatypes
 from feature_handler import FeatureHandler
+
+# TODO(FTA-193): confirm these VocabularyTerm names + version semantics with Steven (schema PR #323 author).
+# These are placeholder values for the required GeneChangeEventSlotAnnotationDTO fields. The DTO/mapping
+# structure is complete; only these literal values need confirming before the export will validate.
+GENE_CHANGE_EVENT_TYPE_PLACEHOLDER = 'rename'                # event_type_name for 'identity_source' (a rename).
+GENE_NOMEN_COMMENT_EVENT_TYPE_PLACEHOLDER = 'rename'         # event_type_name for 'gene_nomenclature_comment' (semantics TBD).
+GENE_CHANGE_EVENT_STATUS_PLACEHOLDER = 'current'            # event_status_name.
+GENE_CHANGE_EVENT_VERSION_PLACEHOLDER = 1                   # current_version.
+# TODO(FTA-193): confirm the 'identity_source' value delimiter against real chado data before relying on this.
+# None => split on any run of whitespace (defensive default; the value is expected to hold exactly two symbols).
+IDENTITY_SOURCE_DELIMITER = None
 
 
 class GeneHandler(FeatureHandler):
@@ -269,6 +281,71 @@ class GeneHandler(FeatureHandler):
         self.flag_internal_fb_entities('fb_data_entities')
         self.flag_unexportable_genes()
         self.map_entity_props_to_notes('gene_prop_to_note_mapping')
+        self.map_gene_change_events()
+        return
+
+    def map_gene_change_events(self):
+        """Map 'Nomenclature History' featureprops to GeneChangeEventSlotAnnotationDTOs.
+
+        Handles two FlyBase gene featureprops (FTA-193 / FTA-192):
+        - 'gene_nomenclature_comment' (G41): one change event per comment, the comment carried as
+          an inner 'gene_nomenclature_note' NoteDTO in the event's note_dtos.
+        - 'identity_source' (G28b): the value holds two symbols (new then old) mapped to
+          symbol_renamed_to and symbol_renamed_from.
+
+        Both reuse props_by_type (already loaded by get_entityprops, no new query) and derive
+        evidence from each prop's pubs via lookup_pub_curies().
+
+        Note:
+            The required event_type_name/event_status_name/current_version values are placeholders
+            pending confirmation with Steven (schema PR #323 author) - see module-level TODOs.
+
+        """
+        self.log.info('Map gene "Nomenclature History" props to Alliance gene change events.')
+        nomen_comment_counter = 0
+        identity_source_counter = 0
+        skipped_identity_source_counter = 0
+        for gene in self.fb_data_entities.values():
+            if gene.linkmldto is None:
+                continue
+            gene_id = gene.linkmldto.primary_external_id
+            # 'gene_nomenclature_comment' -> one change event per comment, comment held as inner note.
+            nomen_notes = self.convert_prop_to_note(gene, 'gene_nomenclature_comment', 'gene_nomenclature_note')
+            for note in nomen_notes:
+                change_event = agr_datatypes.GeneChangeEventSlotAnnotationDTO(
+                    gene_id,
+                    GENE_NOMEN_COMMENT_EVENT_TYPE_PLACEHOLDER,
+                    GENE_CHANGE_EVENT_STATUS_PLACEHOLDER,
+                    GENE_CHANGE_EVENT_VERSION_PLACEHOLDER,
+                    note.get('evidence_curies', []),
+                )
+                change_event.note_dtos = [note]
+                gene.linkmldto.gene_change_event_dtos.append(change_event.dict_export())
+                nomen_comment_counter += 1
+            # 'identity_source' -> symbol_renamed_to (new, first) and symbol_renamed_from (old, second).
+            for fb_prop in gene.props_by_type.get('identity_source', []):
+                raw_value = fb_prop.chado_obj.value
+                symbols = [clean_free_text(part) for part in raw_value.split(IDENTITY_SOURCE_DELIMITER) if part.strip()]
+                if len(symbols) != 2:
+                    self.log.warning(f'Skipping "identity_source" prop for {gene_id} - expected 2 symbols, '
+                                     f'got {len(symbols)} from value: "{raw_value}"')
+                    skipped_identity_source_counter += 1
+                    continue
+                pub_curies = self.lookup_pub_curies(fb_prop.pubs)
+                change_event = agr_datatypes.GeneChangeEventSlotAnnotationDTO(
+                    gene_id,
+                    GENE_CHANGE_EVENT_TYPE_PLACEHOLDER,
+                    GENE_CHANGE_EVENT_STATUS_PLACEHOLDER,
+                    GENE_CHANGE_EVENT_VERSION_PLACEHOLDER,
+                    pub_curies,
+                )
+                change_event.symbol_renamed_to = symbols[0]
+                change_event.symbol_renamed_from = symbols[1]
+                gene.linkmldto.gene_change_event_dtos.append(change_event.dict_export())
+                identity_source_counter += 1
+        self.log.info(f'Mapped {nomen_comment_counter} "gene_nomenclature_comment" change events.')
+        self.log.info(f'Mapped {identity_source_counter} "identity_source" change events '
+                      f'({skipped_identity_source_counter} skipped due to unexpected value format).')
         return
 
     # Elaborate on query_chado_and_export() for the GeneHandler.
