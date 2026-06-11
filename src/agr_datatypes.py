@@ -203,6 +203,7 @@ class GeneDTO(GenomicEntityDTO):
         self.gene_secondary_id_dtos = []        # Annotation IDs and 2o FlyBase IDs.
         # self.reference_curies = []              # Not yet part of LinkML, so not exported - should be added to LinkML model?
         self.note_dtos = []                     # Will be NoteDTO objects.
+        self.gene_change_event_dtos = []        # Will be GeneChangeEventSlotAnnotationDTO objects.
         self.gcrp_cross_reference_dto = None    # Will be a single CrossReferenceDTO object for UniProt/GCRP xref, if any.
         self.required_fields.extend(['gene_symbol_dto'])
 
@@ -659,6 +660,53 @@ class ConstructComponentSlotAnnotationDTO(SlotAnnotationDTO):
         self.taxon_text = taxon_text
         self.note_dtos = []
         self.required_fields.extend([])
+
+
+class ChangeEventSlotAnnotationDTO(SlotAnnotationDTO):
+    """ChangeEventSlotAnnotationDTO class."""
+    def __init__(self, event_type_name: str, evidence_curies: list):
+        """Create a ChangeEventSlotAnnotationDTO for a FlyBase entity change event.
+
+        Args:
+            event_type_name (str): The name of the VocabularyTerm for the change event category.
+            evidence_curies (list): A list of FB:FBrf or PMID:### curies.
+
+        Notes:
+            event_status_name and current_version were made optional in agr_curation_schema
+            PR #326. FlyBase has no nomenclature event status or versioning data to import, so
+            both are left as None and dropped from the export (see FTA-193).
+
+        """
+        super().__init__(evidence_curies)
+        self.event_type_name = event_type_name
+        self.event_status_name = None
+        self.current_version = None
+        self.note_dtos = []
+        self.symbol_renamed_to = None
+        self.symbol_renamed_from = None
+        self.full_name_renamed_to = None
+        self.full_name_renamed_from = None
+        self.acquires_in_merge_curies = []
+        self.merged_into_curie = None
+        self.split_from_curie = None
+        self.split_into_curies = []
+        self.required_fields.extend(['event_type_name'])
+
+
+class GeneChangeEventSlotAnnotationDTO(ChangeEventSlotAnnotationDTO):
+    """GeneChangeEventSlotAnnotationDTO class."""
+    def __init__(self, gene_identifier: str, event_type_name: str, evidence_curies: list):
+        """Create a GeneChangeEventSlotAnnotationDTO for a FlyBase gene change event.
+
+        Args:
+            gene_identifier (str): The curie/primary_external_id/mod_internal_id of the gene.
+            event_type_name (str): The name of the VocabularyTerm for the change event category.
+            evidence_curies (list): A list of FB:FBrf or PMID:### curies.
+
+        """
+        super().__init__(event_type_name, evidence_curies)
+        self.gene_identifier = gene_identifier
+        self.required_fields.extend(['gene_identifier'])
 
 
 class NameSlotAnnotationDTO(SlotAnnotationDTO):
