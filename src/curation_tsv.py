@@ -23,6 +23,9 @@ PRIMARY_TSV_HEADER = (
     "# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms\tinternal\n"
 )
 NOTES_TSV_HEADER = "# Primary FBid\ttype\tcomment\n"
+GENE_CHANGE_EVENTS_TSV_HEADER = (
+    "# Primary FBid\tevent_type\tsymbol_renamed_from\tsymbol_renamed_to\tnote\tevidence\n"
+)
 COMPONENTS_TSV_HEADER = "# Primary FBid\tsymbol\trelation\ttaxon\tevidence\n"
 # NB: existing tool_uses TSVs write rows as primary, tools, evidence; the
 # header preserves that historic column order verbatim.
@@ -94,6 +97,32 @@ def write_notes_tsv(*, filename, entities):
             primary = entity_dict["primary_external_id"]
             for note in entity_dict.get("note_dtos", []):
                 outfile.write(f"{primary}\t{note['note_type_name']}\t{note['free_text']}\n")
+
+
+def write_gene_change_events_tsv(*, filename, entities):
+    """Write the gene change events TSV (`gene_change_event_dtos` slot).
+
+    One row per change event. Rename events (from 'identity_source') fill the
+    symbol columns; nomenclature comment events fill the note column with the
+    inner note's free_text. Evidence curies are pipe-joined.
+    """
+    skip = should_skip_obsolete()
+    with open(filename, 'w') as outfile:
+        outfile.write(GENE_CHANGE_EVENTS_TSV_HEADER)
+        for entity_dict in entities:
+            if skip and _is_excluded(entity_dict):
+                continue
+            primary = entity_dict["primary_external_id"]
+            for event in entity_dict.get("gene_change_event_dtos", []):
+                event_type = event.get("event_type_name", "")
+                renamed_from = event.get("symbol_renamed_from", "")
+                renamed_to = event.get("symbol_renamed_to", "")
+                inner_notes = event.get("note_dtos", [])
+                note = inner_notes[0]["free_text"] if inner_notes else ""
+                evidence = EVIDENCE_DELIMITER.join(event.get("evidence_curies", []))
+                outfile.write(
+                    f"{primary}\t{event_type}\t{renamed_from}\t{renamed_to}\t{note}\t{evidence}\n"
+                )
 
 
 def write_components_tsv(*, filename, entities, datatype):

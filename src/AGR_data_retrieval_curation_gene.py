@@ -119,6 +119,9 @@ def main():
         curation_tsv.write_notes_tsv(
             filename=tsv_filename.replace('.tsv', '_notes.tsv'), entities=entities,
         )
+        curation_tsv.write_gene_change_events_tsv(
+            filename=tsv_filename.replace('.tsv', '_gene_change_events.tsv'), entities=entities,
+        )
         log.info(f'Generated TSV: {tsv_filename}')
 
     log.info('Ended main function.\n')
