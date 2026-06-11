@@ -251,7 +251,10 @@ class GeneHandler(FeatureHandler):
             for xref in gene.dbxrefs:
                 if xref.dbxref.db.name != 'UniProt/GCRP':
                     continue
-                prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
+                # 'UniProt/GCRP' is intentionally excluded from fb_agr_db_dict (it must only
+                # populate gcrp_cross_reference_dto, not the general xrefs - see handler.py), so
+                # hardcode its AGR prefix here rather than looking it up.
+                prefix = 'UniProtKB'
                 page_area = self.agr_page_area_dict[prefix]
                 curie = f'{prefix}:{xref.dbxref.accession}'
                 display_name = curie
