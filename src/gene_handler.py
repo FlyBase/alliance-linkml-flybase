@@ -26,6 +26,10 @@ GENE_CHANGE_EVENT_TYPE_RENAME = 'rename'
 # whitespace is safe; None => split on any run of whitespace. Values not yielding exactly two symbols
 # are skipped and logged for Steven to review (FTA-193).
 IDENTITY_SOURCE_DELIMITER = None
+# Every 'identity_source' featureprop value carries this leading boilerplate before the two symbols
+# (e.g. 'Source for identity of: Bar B'). It must be stripped before splitting, else the symbols are
+# never recovered and the rename event is silently skipped (FTA-192).
+IDENTITY_SOURCE_PREFIX = 'Source for identity of: '
 
 
 class GeneHandler(FeatureHandler):
@@ -323,6 +327,8 @@ class GeneHandler(FeatureHandler):
             # 'identity_source' -> symbol_renamed_to (new, first) and symbol_renamed_from (old, second).
             for fb_prop in gene.props_by_type.get('identity_source', []):
                 raw_value = fb_prop.chado_obj.value
+                if raw_value.startswith(IDENTITY_SOURCE_PREFIX):
+                    raw_value = raw_value[len(IDENTITY_SOURCE_PREFIX):]
                 symbols = [clean_free_text(part) for part in raw_value.split(IDENTITY_SOURCE_DELIMITER) if part.strip()]
                 if len(symbols) != 2:
                     self.log.warning(f'Skipping "identity_source" prop for {gene_id} - expected 2 symbols, '

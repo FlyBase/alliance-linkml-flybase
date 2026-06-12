@@ -22,7 +22,7 @@ EVIDENCE_DELIMITER = "|"
 PRIMARY_TSV_HEADER = (
     "# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms\tinternal\n"
 )
-NOTES_TSV_HEADER = "# Primary FBid\ttype\tcomment\n"
+NOTES_TSV_HEADER = "# Primary FBid\ttype\tcomment\tevidence\n"
 GENE_CHANGE_EVENTS_TSV_HEADER = (
     "# Primary FBid\tevent_type\tsymbol_renamed_from\tsymbol_renamed_to\tnote\tevidence\n"
 )
@@ -96,7 +96,8 @@ def write_notes_tsv(*, filename, entities):
                 continue
             primary = entity_dict["primary_external_id"]
             for note in entity_dict.get("note_dtos", []):
-                outfile.write(f"{primary}\t{note['note_type_name']}\t{note['free_text']}\n")
+                evidence = EVIDENCE_DELIMITER.join(note.get('evidence_curies', []))
+                outfile.write(f"{primary}\t{note['note_type_name']}\t{note['free_text']}\t{evidence}\n")
 
 
 def write_gene_change_events_tsv(*, filename, entities):
