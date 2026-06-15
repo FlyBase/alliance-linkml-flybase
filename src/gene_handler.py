@@ -41,6 +41,7 @@ class GeneHandler(FeatureHandler):
         self.fb_export_type = fb_datatypes.FBGene
         self.agr_export_type = agr_datatypes.GeneDTO
         self.primary_export_set = 'gene_ingest_set'
+        self.skipped_identity_source = []    # Multi-token "identity_source" props skipped during change event mapping.
 
     test_set = {
         'FBgn0284084': 'wg',                  # Current annotated nuclear protein_coding gene.
@@ -333,6 +334,13 @@ class GeneHandler(FeatureHandler):
                 if len(symbols) != 2:
                     self.log.warning(f'Skipping "identity_source" prop for {gene_id} - expected 2 symbols, '
                                      f'got {len(symbols)} from value: "{raw_value}"')
+                    self.skipped_identity_source.append({
+                        'fb_id': gene_id,
+                        'raw_value': raw_value,
+                        'token_count': len(symbols),
+                        'internal': gene.linkmldto.internal,
+                        'obsolete': gene.linkmldto.obsolete,
+                    })
                     skipped_identity_source_counter += 1
                     continue
                 pub_curies = self.lookup_pub_curies(fb_prop.pubs)

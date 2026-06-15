@@ -26,6 +26,9 @@ NOTES_TSV_HEADER = "# Primary FBid\ttype\tcomment\tevidence\n"
 GENE_CHANGE_EVENTS_TSV_HEADER = (
     "# Primary FBid\tevent_type\tsymbol_renamed_from\tsymbol_renamed_to\tnote\tevidence\n"
 )
+SKIPPED_IDENTITY_SOURCE_TSV_HEADER = (
+    "# Primary FBid\traw_value\ttoken_count\tinternal\tobsolete\n"
+)
 COMPONENTS_TSV_HEADER = "# Primary FBid\tsymbol\trelation\ttaxon\tevidence\n"
 # NB: existing tool_uses TSVs write rows as primary, tools, evidence; the
 # header preserves that historic column order verbatim.
@@ -124,6 +127,25 @@ def write_gene_change_events_tsv(*, filename, entities):
                 outfile.write(
                     f"{primary}\t{event_type}\t{renamed_from}\t{renamed_to}\t{note}\t{evidence}\n"
                 )
+
+
+def write_skipped_identity_source_tsv(*, filename, skipped):
+    """Write the diagnostic TSV of skipped multi-token 'identity_source' props.
+
+    These are values that did not split into exactly two symbols (gene merges
+    with multiple old IDs, or values with embedded provenance sentences) and so
+    were not exported as rename events. One row per skipped prop. Unlike the
+    other writers this is NOT filtered by should_skip_obsolete(): obsolete/internal
+    rows are included so curators can check whether bad-syntax values sit on
+    obsolete FBgns.
+    """
+    with open(filename, 'w') as outfile:
+        outfile.write(SKIPPED_IDENTITY_SOURCE_TSV_HEADER)
+        for item in skipped:
+            outfile.write(
+                f"{item['fb_id']}\t{item['raw_value']}\t{item['token_count']}\t"
+                f"{item['internal']}\t{item['obsolete']}\n"
+            )
 
 
 def write_components_tsv(*, filename, entities, datatype):

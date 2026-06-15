@@ -122,6 +122,10 @@ def main():
         curation_tsv.write_gene_change_events_tsv(
             filename=tsv_filename.replace('.tsv', '_gene_change_events.tsv'), entities=entities,
         )
+        curation_tsv.write_skipped_identity_source_tsv(
+            filename=tsv_filename.replace('.tsv', '_skipped_identity_source.tsv'),
+            skipped=gene_handler.skipped_identity_source,
+        )
         log.info(f'Generated TSV: {tsv_filename}')
 
     log.info('Ended main function.\n')
