@@ -569,7 +569,7 @@ class FBExpressionCvterm(object):
             self.type = chado_obj.cvterm_type.name          # assay, anatomy, cellular, or stage.
             self.cv_name = chado_obj.cvterm.cv.name         # experimental assays, cellular_component, FlyBase anatomy/development/miscellaneous CV.
             self.obo = chado_obj.cvterm.dbxref.db.name      # FBbt, FBdv, FBcv, GO, or FlyBase_internal.
-        # For NULL placeholder entities.
+        # For annotations lacking an assay, anatomy, stage or cellular value, NULL placeholders are needed downstream.
         except AttributeError:
             self.db_primary_id = 'placeholder'
             self.cvterm_id = 'placeholder'
@@ -577,13 +577,18 @@ class FBExpressionCvterm(object):
             self.type = 'placeholder'
             self.cv_name = 'placeholder'
             self.obo = 'placeholder'
-        # Collect related expression_cvtermprops of type "operator" having non-null expression_cvtermprop.value.
+        # Collect information from expression_cvtermprops: qualifiers and operators.
+        # Qualifiers are represented by their own expression_cvterm objects, but the code will bundle them here under the primary term.
+        # Qualifiers are flagged in chado by a "qualifier" type expression_cvtermprop with a NULL expression_cvtermprop.value.
+        self.qualifier_cvterm_ids = []    # Will be a list of qualifier cvterm_ids for this term.
+        # Operators provide range info for a non-qualifier stage, anatomy or cellular term.
+        # Operators are represented by an "operator" type expression_cvtermprop with info in the expression_cvtermprop.value.
         # stage - operator props will have text of "FROM/TO" to indicate a temporal range.
         # cellular - operator props will have text of "OF" (to mark a larger xprn domain).
         # anatomy - operator props will have text of "OF" (to mark a larger xprn domain), or "FROM/TO" (to indicate a spatial range).
         self.operators = []               # Will be a list of strings (FROM, TO, or OF): usually zero or one, but 49 cases of two.
-        self.qualifier_cvterm_ids = []    # Will be a list of qualifier cvterm_ids for this term.
         # Processed FB data.
+        # Downstream code will collect information from distinct expression_cvterms representing a single stage or anatomy range.
         self.is_stage_start = False    # True for a stage term having a "FROM" operator.
         self.is_stage_end = False      # True for a stage term having a "TO" operator.
         self.has_stage_end = None      # For a stage term having a "FROM" operator, put the matching "TO" FBExpressionCvterm stage term here.
@@ -611,7 +616,6 @@ class FBExpressionAnnotation(object):
         self.anatomy_terms = {}          # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, anatomy.
         self.cellular_terms = {}         # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, cellular.
         self.stage_terms = {}            # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, stage.
-        self.curated_notes = []          # Will be FeatureExpressionprop.value for type "comment".
         # Processed FB data.
         self.sub_anatomy_terms = {}      # expression_cvterm_id-keyed dict of FBExpressionCvterm objects, anatomy sub_parts.
         self.xprn_pattern_combos = []    # Discrete anatomy/assay/cellular/stage term combinations for this annotation.
@@ -633,16 +637,16 @@ class FBFeatureExpressionAnnotation(FBExportEntity):
         self.chado_obj = chado_obj
         self.db_primary_id = chado_obj.feature_expression_id
         self.feature_id = chado_obj.feature_id
-        self.xprn_type = chado_obj.feature.type.name    # Simplify to polypeptide or RNA.
+        self.xprn_type = chado_obj.feature.type.name    # Will be simplified downstream to polypeptide or RNA.
         self.expression_id = chado_obj.expression_id
         self.pub_curie = chado_obj.pub.uniquename
         self.tap_stmt_notes = []        # Will be a list of <note> text from the original curation (type='comment'); usually one, rarely two.
         # Processed FB data.
-        self.current_gp_ids = []         # Will be feature_ids of parental XR/XP features for isoforms (e.g., tkv[+]R4.4, Appl[+]P130kD)
+        self.current_gp_ids = []         # Will be feature_ids of parental gene product XR/XP features for isoforms (e.g., tkv[+]R4.4, Appl[+]P130kD).
         self.current_gene_ids = []       # Will be gene feature_ids for the parental genes (for XR/XP).
         self.current_allele_ids = []     # Will be allele feature_ids for the current alleles (for RA/PA).
         self.parental_fbco_ids = []      # Will be split system combination feature_ids for hemi-driver alleles.
-        self.public_feature_id = None    # Will be the feature_id of the feature to use in the TSV export file: e.g., the gene, or the allele/insertion.
+        self.public_feature_id = None    # Will be the feature_id of the feature to use in the FB TSV export file: e.g., the gene, or the allele/insertion.
         self.is_problematic = False      # True if there are problems that preclude export.
         self.notes = []
 
