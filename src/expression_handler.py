@@ -468,7 +468,8 @@ class ExpressionHandler(DataHandler):
     def get_expression_patterns(self, session):
         """Build a dictionary of expression patterns from the "expression" table."""
         self.log.info('Build a dictionary of expression patterns from the "expression" table.')
-        # Note - get only expression patterns related to CV terms (ignore those with only a TAP statement note).
+        # Note - get only expression patterns related to CV terms.
+        # Ignore ~500 note-only TAP statements curated under the "Frequently used GAL4 table data" pub FBrf0237128 (FTA-206).
         filters = (
             Feature.is_obsolete.is_(False),
         )
