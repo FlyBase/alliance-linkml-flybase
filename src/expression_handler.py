@@ -700,7 +700,7 @@ class ExpressionHandler(DataHandler):
                 # self.log.debug(f'For xprn_id={xprn_pattern.db_primary_id}, found this stage range: {stage_range_string}')
                 counter += 1
             else:
-                self.log.error(f'Many/partial stage ranges found for xprn_id={xprn_pattern.db_primary_id}')
+                self.log.error(f'Many and/or partial stage ranges found for xprn_id={xprn_pattern.db_primary_id}')
                 xprn_pattern.is_problematic = True
                 xprn_pattern.notes.append('Found many and/or partial stage ranges.')
                 prob_counter += 1
@@ -752,7 +752,7 @@ class ExpressionHandler(DataHandler):
                 end_terms[0].has_anat_term_ids.sort()
                 counter += 1
             else:
-                self.log.error(f'Many/partial tissue ranges found for xprn_id={xprn_pattern.db_primary_id}')
+                self.log.error(f'Many and/or partial tissue ranges found for xprn_id={xprn_pattern.db_primary_id}')
                 xprn_pattern.is_problematic = True
                 xprn_pattern.notes.append('Found many and/or partial tissue ranges.')
                 prob_counter += 1

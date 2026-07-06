@@ -594,6 +594,8 @@ class FBExpressionCvterm(object):
         self.has_stage_end = None      # For a stage term having a "FROM" operator, put the matching "TO" FBExpressionCvterm stage term here.
         self.is_anat_start = False     # True for an anatomy term having a "FROM" operator.
         self.is_anat_end = False       # True for an anatomy term having a "TO" operator.
+        # Handle tissue ranges by collecting tissues in range under the range end term.
+        # Collecting under the range end term because it has the qualifiers.
         if self.db_primary_id == 'placeholder':
             self.has_anat_term_ids = ['placeholder']
         else:
