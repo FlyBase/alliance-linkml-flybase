@@ -838,6 +838,8 @@ class ExpressionHandler(DataHandler):
             n_combos = 0
             # Skip expression patterns already flagged as problematic.
             if xprn_pattern.is_problematic:
+                prob_notes = ', '.join(xprn_pattern.notes)
+                self.log.error(f'Skipping problematic xprn_id={xprn_id}: {prob_notes}')
                 continue
             # Add a placeholder to slots with zero terms.
             for slot_type in self.slot_types:
@@ -845,6 +847,7 @@ class ExpressionHandler(DataHandler):
                 xprn_pattern_slot = getattr(xprn_pattern, slot_name)
                 if not xprn_pattern_slot:
                     xprn_pattern_slot['placeholder'] = self.placeholder
+            # Now generate all combinations.
             for assay_term in xprn_pattern.assay_terms.values():
                 for stage_term in xprn_pattern.stage_terms.values():
                     # Skip stage range end terms, as these are folded into reporting of the stage range start term.
@@ -971,6 +974,8 @@ class ExpressionHandler(DataHandler):
         counter = 0
         for feat_xprn in self.fb_data_entities.values():
             if feat_xprn.is_problematic:
+                prob_notes = ', '.join(feat_xprn.notes)
+                self.log.error(f'Skipping problematic feat_xprn_id={feat_xprn.db_primary_id}: {prob_notes}')
                 continue
             xprn_pattern = self.expression_patterns[feat_xprn.expression_id]
             if xprn_pattern.is_problematic:
