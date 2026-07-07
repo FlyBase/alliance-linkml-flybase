@@ -210,8 +210,6 @@ class AntibodyHandler(DataHandler):
         for antibody in self.fb_data_entities.values():
             agr_antibody = self.agr_export_type()
             agr_antibody.name = antibody.antibody_name
-            # FlyBase antibodies have no FB curie, so key them by the made-up name.
-            agr_antibody.mod_internal_id = antibody.antibody_name
             agr_antibody.clonality_name = antibody.clonality
             agr_antibody.antigen_taxon_curie = antibody.antigen_taxon_curie
             agr_antibody.antibody_target_gene_identifiers = [f'FB:{antibody.gene_uniquename}']
@@ -224,19 +222,13 @@ class AntibodyHandler(DataHandler):
     def map_data_provider_dto(self):
         """Map the data provider to the Alliance object.
 
-        Antibodies have no dedicated FB report page, so the data provider
-        cross-reference points to the target gene's FB report, where the
-        antibody information is displayed.
+        Antibodies have no dedicated FB report page (and no FB curie), so the
+        DataProviderDTO carries only the "FB" source organization, with no
+        cross-reference.
         """
         self.log.info('Map data provider to the Alliance object.')
         for antibody in self.fb_data_entities.values():
             if antibody.linkmldto is None:
                 continue
-            dp_xref = agr_datatypes.CrossReferenceDTO(
-                'FB',
-                f'FB:{antibody.gene_uniquename}',
-                'gene',
-                antibody.gene_name,
-            ).dict_export()
-            antibody.linkmldto.data_provider_dto = agr_datatypes.DataProviderDTO(dp_xref).dict_export()
+            antibody.linkmldto.data_provider_dto = agr_datatypes.DataProviderDTO(None).dict_export()
         return
