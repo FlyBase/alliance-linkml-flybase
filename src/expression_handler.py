@@ -16,6 +16,7 @@ from harvdev_utils.reporting import (
     Cv, Cvterm, Db, Dbxref, Expression, ExpressionCvterm, ExpressionCvtermprop,
     Feature, FeatureExpression, FeatureExpressionprop, FeatureRelationship
 )
+import agr_datatypes
 import fb_datatypes
 from handler import DataHandler
 
@@ -26,8 +27,10 @@ class ExpressionHandler(DataHandler):
         """Create the ExpressionHandler object."""
         super().__init__(log, testing)
         self.datatype = 'feature_expression'
-        self.agr_export_type = None
+        self.agr_export_type = agr_datatypes.GeneExpressionExperimentDTO
+        self.primary_export_set = 'gene_expression_experiment_ingest_set'
         self.slot_types = ['anatomy', 'assay', 'cellular', 'stage']
+        self.gene_expression_experiments = {}     # uniq_key-keyed FBGeneExpressionExperiment grouping objects.
         self.placeholder = fb_datatypes.FBExpressionCvterm(None)
         self.expression_patterns = {}             # expression_id-keyed FBExpressionAnnotation objects.
         self.export_data_for_tsv = []             # List of dicts for export to TSV.
@@ -90,6 +93,40 @@ class ExpressionHandler(DataHandler):
         'sensory system': ['UBERON:0001032'],
         'embryonic sensory system': ['UBERON:0001032'],
         'visual system': ['UBERON:0002104'],
+    }
+
+    # Mapping between FB "experimental assays" CV term names and public MMO curies.
+    # FB assay terms are "FlyBase_internal" (no public OBO curie), so this map supplies the
+    # exportable MMO curie for each assay. Mostly developed by Sian Gramates (curator), ported
+    # from the legacy alliance-flybase/src/expression/AGR_data_retrieval_expression.py assay_map.
+    fb_mmo_assay_map = {
+        'cell fractionation': 'MMO:0000669',                            # western blot assay
+        'co-fractionation': 'MMO:0000669',                             # western blot assay
+        'dot blot': 'MMO:0000646',                                     # nucleic acid dot/slot blot assay
+        'distribution deduced from reporter': 'MMO:0000670',           # in situ reporter assay
+        'distribution deduced from reporter or direct label': 'MMO:0000670',    # in situ reporter assay
+        'distribution deduced from reporter (Gal4 UAS)': 'MMO:0000670',         # in situ reporter assay
+        'enzyme assay or biochemical detection': 'MMO:0000661',        # protein function-based expression assay
+        'expression microarray': 'MMO:0000649',                        # high throughput transcription profiling by microarray
+        'immuno-electron microscopy': 'MMO:0000663',                   # immunoelectron microscopy
+        'immunohistochemistry': 'MMO:0000498',                         # immunohistochemistry
+        'immunolocalization': 'MMO:0000498',                           # immunohistochemistry
+        'in situ': 'MMO:0000658',                                      # ribonucleic acid in situ hybridization assay
+        'in situ RT-PCR': 'MMO:0000657',                               # in situ reverse transcription PCR assay
+        'mass spectroscopy': 'MMO:0000534',                            # mass spectrometry
+        'northern blot': 'MMO:0000647',                                # Northern blot assay
+        'pcr': 'MMO:0000655',                                          # reverse transcription PCR assay
+        'radioisotope in situ': 'MMO:0000658',                         # ribonucleic acid in situ hybridization assay
+        'RNase protection, primer extension, SI map': 'MMO:0000651',   # nuclease protection assay
+        'RT-PCR': 'MMO:0000655',                                       # reverse transcription PCR assay
+        'western blot': 'MMO:0000669',                                 # western blot assay
+    }
+
+    # Generic MMO assay curies applied when a feature_expression lacks a mappable assay term,
+    # selected by expressed-product type (matches the legacy assay_map "protein_assay"/"transcript_assay" defaults).
+    fb_mmo_default_assay_map = {
+        'polypeptide': 'MMO:0000642',    # protein expression assay
+        'transcript': 'MMO:0000641',     # transcript expression assay
     }
 
     # Utility functions.
@@ -1027,4 +1064,273 @@ class ExpressionHandler(DataHandler):
         return
 
     # Additional methods to be run by map_fb_data_to_alliance() below.
-    # Placeholder
+    def _term_curie(self, cvterm_id):
+        """Return the public curie for a cvterm_id, or None for placeholders/internal terms."""
+        if cvterm_id is None or cvterm_id in ('', 'placeholder'):
+            return None
+        if cvterm_id not in self.cvterm_lookup:
+            return None
+        curie = self.cvterm_lookup[cvterm_id]['curie']
+        if not curie or curie.startswith(':'):
+            return None
+        return curie
+
+    def _term_name(self, cvterm_id):
+        """Return the name for a cvterm_id, or None for placeholders."""
+        if cvterm_id is None or cvterm_id in ('', 'placeholder'):
+            return None
+        if cvterm_id not in self.cvterm_lookup:
+            return None
+        name = self.cvterm_lookup[cvterm_id]['name']
+        return name if name else None
+
+    def _qualifier_curies(self, cvterm_ids):
+        """Return a list of public qualifier curies for a list of cvterm_ids."""
+        curies = []
+        for cvterm_id in cvterm_ids:
+            curie = self._term_curie(cvterm_id)
+            if curie:
+                curies.append(curie)
+        return curies
+
+    def map_assay_curie(self, assay_cvterm_id, xprn_type):
+        """Map an FB assay to a public MMO curie.
+
+        A named assay term is mapped to its MMO curie via fb_mmo_assay_map. If there is no
+        assay term, or the term has no MMO mapping, a generic MMO curie is applied based on
+        the expressed-product type (polypeptide vs transcript), matching the legacy logic in
+        alliance-flybase/src/expression/AGR_data_retrieval_expression.py.
+
+        Args:
+            assay_cvterm_id (int|str): The chado cvterm_id of the assay term ('placeholder' if none).
+            xprn_type (str): The expressed-product type: 'polypeptide', 'RNA', or 'split system combination'.
+
+        """
+        if assay_cvterm_id not in (None, '', 'placeholder') and assay_cvterm_id in self.cvterm_lookup:
+            name = self.cvterm_lookup[assay_cvterm_id]['name']
+            if name in self.fb_mmo_assay_map:
+                return self.fb_mmo_assay_map[name]
+        # No mappable assay term: apply a generic MMO term based on product type.
+        if xprn_type == 'polypeptide':
+            return self.fb_mmo_default_assay_map['polypeptide']
+        return self.fb_mmo_default_assay_map['transcript']
+
+    def map_slim_curies(self, slim_cvterm_ids, kind):
+        """Convert FB slim term cvterm_ids into (UBERON curies, temporal qualifier names).
+
+        Args:
+            slim_cvterm_ids (list): FB slim term cvterm_ids attached to a primary term.
+            kind (str): 'stage' or 'anatomy', to select the correct slim->UBERON map.
+
+        """
+        slim_map = self.fb_uberon_stage_slim_map if kind == 'stage' else self.fb_uberon_anatomy_slim_map
+        uberon_curies = []
+        qualifier_names = []
+        for slim_id in slim_cvterm_ids:
+            if slim_id in ('', 'placeholder') or slim_id not in self.cvterm_lookup:
+                continue
+            slim_name = self.cvterm_lookup[slim_id]['name']
+            for val in slim_map.get(slim_name, []):
+                if val.startswith('UBERON:'):
+                    uberon_curies.append(val)
+                else:
+                    qualifier_names.extend([q.strip() for q in val.split(',')])
+        return list(set(uberon_curies)), list(set(qualifier_names))
+
+    def build_stage_statement(self, xp_combo):
+        """Build a human-readable "when expressed" stage statement, or None if no stage."""
+        start_name = self._term_name(xp_combo['stage_start_cvterm_id'])
+        stop_name = self._term_name(xp_combo['stage_end_cvterm_id'])
+        qual_names = [self._term_name(i) for i in xp_combo['stage_qualifier_cvterm_ids']]
+        qual_names = [q for q in qual_names if q]
+        if not start_name and not stop_name:
+            return None
+        if start_name and stop_name:
+            statement = f'{start_name}--{stop_name}'
+        else:
+            statement = start_name or stop_name
+        if qual_names:
+            statement = f'{statement} ({" | ".join(qual_names)})'
+        return statement
+
+    def build_where_statement(self, xp_combo):
+        """Build a human-readable "where expressed" anatomy statement, or None if no anatomy."""
+        parts = []
+        term_specs = [
+            ('anatomical_structure_cvterm_id', 'anatomical_structure_qualifier_cvterm_ids'),
+            ('anatomical_substructure_cvterm_id', 'anatomical_substructure_qualifier_cvterm_ids'),
+            ('cellular_component_cvterm_id', 'cellular_component_qualifier_cvterm_ids'),
+        ]
+        for term_key, qual_key in term_specs:
+            term_name = self._term_name(xp_combo[term_key])
+            if not term_name:
+                continue
+            qual_names = [self._term_name(i) for i in xp_combo[qual_key]]
+            qual_names = [q for q in qual_names if q]
+            if qual_names:
+                term_name = f'{term_name} ({" | ".join(qual_names)})'
+            parts.append(term_name)
+        if not parts:
+            return None
+        return ' | '.join(parts)
+
+    def build_temporal_context_dto(self, xp_combo):
+        """Build a TemporalContextDTO from an expression pattern term combination."""
+        temporal_context = agr_datatypes.TemporalContextDTO()
+        temporal_context.developmental_stage_start_curie = self._term_curie(xp_combo['stage_start_cvterm_id'])
+        temporal_context.developmental_stage_stop_curie = self._term_curie(xp_combo['stage_end_cvterm_id'])
+        uberon_curies, qualifier_names = self.map_slim_curies(xp_combo['stage_slim_cvterm_ids'], 'stage')
+        temporal_context.stage_uberon_slim_term_curies = uberon_curies
+        temporal_context.temporal_qualifier_names = qualifier_names
+        temporal_context.when_expressed_free_text = self.build_stage_statement(xp_combo)
+        return temporal_context
+
+    def build_anatomical_site_dto(self, xp_combo):
+        """Build an AnatomicalSiteDTO from an expression pattern term combination."""
+        site = agr_datatypes.AnatomicalSiteDTO()
+        # Anatomical structure (main part).
+        site.anatomical_structure_curie = self._term_curie(xp_combo['anatomical_structure_cvterm_id'])
+        site.anatomical_structure_qualifier_curies = self._qualifier_curies(xp_combo['anatomical_structure_qualifier_cvterm_ids'])
+        structure_uberon, _ = self.map_slim_curies(xp_combo['anatomical_structure_slim_cvterm_ids'], 'anatomy')
+        site.anatomical_structure_uberon_term_curies = structure_uberon
+        # Anatomical substructure (sub-part).
+        site.anatomical_substructure_curie = self._term_curie(xp_combo['anatomical_substructure_cvterm_id'])
+        site.anatomical_substructure_qualifier_curies = self._qualifier_curies(xp_combo['anatomical_substructure_qualifier_cvterm_ids'])
+        substructure_uberon, _ = self.map_slim_curies(xp_combo['anatomical_substructure_slim_cvterm_ids'], 'anatomy')
+        site.anatomical_substructure_uberon_term_curies = substructure_uberon
+        # Cellular component.
+        site.cellular_component_curie = self._term_curie(xp_combo['cellular_component_cvterm_id'])
+        site.cellular_component_qualifier_curies = self._qualifier_curies(xp_combo['cellular_component_qualifier_cvterm_ids'])
+        site.where_expressed_free_text = self.build_where_statement(xp_combo)
+        return site
+
+    def build_expression_annotation_dto(self, feat_xprn, xp_combo):
+        """Build a GeneExpressionAnnotationDTO from a feature_expression and a term combination.
+
+        Returns None if the combination cannot satisfy the required LinkML fields (a "where"
+        anatomical site with at least a structure or cellular component, and human-readable
+        stage/anatomy statements).
+        """
+        site = self.build_anatomical_site_dto(xp_combo)
+        # AnatomicalSite rule: at least one of anatomical_structure_curie or cellular_component_curie.
+        if not site.anatomical_structure_curie and not site.cellular_component_curie:
+            return None
+        where_statement = site.where_expressed_free_text
+        stage_statement = self.build_stage_statement(xp_combo)
+        if not where_statement or not stage_statement:
+            return None
+        pattern = agr_datatypes.ExpressionPatternDTO()
+        pattern.where_expressed_dto = site.dict_export()
+        temporal_context = self.build_temporal_context_dto(xp_combo)
+        if any([temporal_context.developmental_stage_start_curie, temporal_context.developmental_stage_stop_curie,
+                temporal_context.age, temporal_context.temporal_qualifier_names,
+                temporal_context.stage_uberon_slim_term_curies, temporal_context.when_expressed_free_text]):
+            pattern.when_expressed_dto = temporal_context.dict_export()
+        annotation = agr_datatypes.GeneExpressionAnnotationDTO()
+        annotation.expression_pattern_dto = pattern.dict_export()
+        annotation.when_expressed_stage_name = stage_statement
+        annotation.where_expressed_statement = where_statement
+        annotation.relation_name = 'is_expressed_in'
+        for note_text in feat_xprn.tap_stmt_notes:
+            note_dto = agr_datatypes.NoteDTO('comment', note_text, [f'FB:{feat_xprn.pub_curie}']).dict_export()
+            annotation.note_dtos.append(note_dto)
+        return annotation
+
+    def group_annotations_into_experiments(self):
+        """Group feature_expression term combinations into GeneExpressionExperiment objects.
+
+        Experiments are defined by (subject gene, supporting reference, assay). Only gene-mapped
+        expression (FBgn) is grouped for now; allele (FBal) and split system combination (FBco)
+        annotations are skipped, but the grouping is written generically to allow future expansion.
+        """
+        self.log.info('Group feature_expression term combinations into GeneExpressionExperiment objects.')
+        non_gene_counter = 0
+        no_assay_counter = 0
+        member_counter = 0
+        for feat_xprn in self.fb_data_entities.values():
+            if feat_xprn.is_problematic or feat_xprn.public_feature_id is None:
+                continue
+            subject_uniquename = self.feature_lookup[feat_xprn.public_feature_id]['uniquename']
+            # Gene-only scope for now; alleles (FBal) and split system combos (FBco) deferred.
+            if not subject_uniquename.startswith('FBgn'):
+                feat_xprn.for_export = False
+                feat_xprn.export_warnings.append(f'Non-gene subject ({subject_uniquename}) not yet exported.')
+                non_gene_counter += 1
+                continue
+            subject_curie = f'FB:{subject_uniquename}'
+            reference_curie = f'FB:{feat_xprn.pub_curie}'
+            xprn_pattern = self.expression_patterns[feat_xprn.expression_id]
+            if xprn_pattern.is_problematic or not xprn_pattern.xprn_pattern_combos:
+                continue
+            for xp_combo in xprn_pattern.xprn_pattern_combos:
+                assay_curie = self.map_assay_curie(xp_combo['assay_cvterm_id'], feat_xprn.xprn_type)
+                if not assay_curie:
+                    no_assay_counter += 1
+                    continue
+                uniq_key = f'{subject_curie}|{reference_curie}|{assay_curie}'
+                if uniq_key not in self.gene_expression_experiments:
+                    self.gene_expression_experiments[uniq_key] = fb_datatypes.FBGeneExpressionExperiment(
+                        uniq_key, subject_curie, 'gene', reference_curie, assay_curie, xp_combo['assay_cvterm_id'])
+                self.gene_expression_experiments[uniq_key].members.append((feat_xprn, xp_combo))
+                member_counter += 1
+        self.log.info(f'Grouped {member_counter} term combinations into {len(self.gene_expression_experiments)} gene expression experiments.')
+        self.log.info(f'Skipped {non_gene_counter} non-gene (allele/FBco) feature_expression annotations (deferred).')
+        self.log.info(f'Skipped {no_assay_counter} term combinations lacking an assay curie.')
+        return
+
+    def map_gene_expression_experiment_basic(self):
+        """Build the GeneExpressionExperimentDTO (with inlined annotations) for each experiment."""
+        self.log.info('Build GeneExpressionExperimentDTOs with inlined GeneExpressionAnnotationDTOs.')
+        empty_counter = 0
+        annotation_counter = 0
+        for experiment in self.gene_expression_experiments.values():
+            agr_experiment = self.agr_export_type()
+            agr_experiment.gene_identifier = experiment.subject_curie
+            agr_experiment.reference_curie = experiment.reference_curie
+            agr_experiment.expression_assay_curie = experiment.assay_curie
+            # Data provider: an FB cross-reference to the assayed gene's report.
+            subject = self.feature_lookup[experiment.members[0][0].public_feature_id]
+            dp_xref = agr_datatypes.CrossReferenceDTO('FB', experiment.subject_curie, 'gene', subject['name']).dict_export()
+            agr_experiment.data_provider_dto = agr_datatypes.DataProviderDTO(dp_xref).dict_export()
+            # Build one annotation per member term combination, de-duplicating identical patterns.
+            seen_annotations = set()
+            for feat_xprn, xp_combo in experiment.members:
+                annotation = self.build_expression_annotation_dto(feat_xprn, xp_combo)
+                if annotation is None:
+                    continue
+                dedup_key = (annotation.when_expressed_stage_name, annotation.where_expressed_statement,
+                             annotation.negated, annotation.uncertain)
+                if dedup_key in seen_annotations:
+                    continue
+                seen_annotations.add(dedup_key)
+                agr_experiment.expression_annotation_dtos.append(annotation.dict_export())
+                annotation_counter += 1
+            if not agr_experiment.expression_annotation_dtos:
+                experiment.for_export = False
+                experiment.export_warnings.append('No valid expression annotations.')
+                empty_counter += 1
+            experiment.linkmldto = agr_experiment
+        self.log.info(f'Built {annotation_counter} gene expression annotations across all experiments.')
+        self.log.info(f'Flagged {empty_counter} experiments with no valid annotations as not for export.')
+        return
+
+    # Elaborate on map_fb_data_to_alliance() for the ExpressionHandler.
+    def map_fb_data_to_alliance(self):
+        """Extend the method for the ExpressionHandler."""
+        super().map_fb_data_to_alliance()
+        self.group_annotations_into_experiments()
+        self.map_gene_expression_experiment_basic()
+        return
+
+    # Override query_chado_and_export() to pass the session to synthesize_info() and to export
+    # the grouped GeneExpressionExperiment objects (rather than the feature_expression entities).
+    def query_chado_and_export(self, session):
+        """Run all query, synthesis, mapping and export steps within an SQLAlchemy session."""
+        self.log.info(f'RUN MAIN {type(self)} QUERY_CHADO_AND_EXPORT() METHOD.')
+        self.get_general_data(session)
+        self.get_datatype_data(session)
+        self.synthesize_info(session)
+        self.map_fb_data_to_alliance()
+        self.flag_unexportable_entities(self.gene_expression_experiments.values(), self.primary_export_set)
+        self.generate_export_dict(self.gene_expression_experiments.values(), self.primary_export_set)
+        return

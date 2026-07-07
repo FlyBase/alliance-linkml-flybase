@@ -653,6 +653,40 @@ class FBFeatureExpressionAnnotation(FBExportEntity):
         self.notes = []
 
 
+class FBGeneExpressionExperiment(FBExportEntity):
+    """FBGeneExpressionExperiment class.
+
+    A grouping of FBFeatureExpressionAnnotation term-combinations that share the
+    same defining features of an Alliance GeneExpressionExperiment: the assayed
+    subject, the supporting reference, and the assay used. This is the FB-side
+    export entity that carries the GeneExpressionExperimentDTO through the standard
+    flag_unexportable_entities()/generate_export_dict() flow. Written generically
+    (subject_curie + subject_type) so it can extend from genes to alleles/FBco.
+    """
+    def __init__(self, uniq_key, subject_curie, subject_type, reference_curie, assay_curie, assay_cvterm_id):
+        """Create an FBGeneExpressionExperiment grouping object.
+
+        Args:
+            uniq_key (str): A string uniquely identifying the experiment (subject|reference|assay).
+            subject_curie (str): The curie of the assayed subject (e.g., FB:FBgn... gene).
+            subject_type (str): The subject type: 'gene' (now), 'allele' or 'split_system_combination' (future).
+            reference_curie (str): The supporting reference curie (FB:FBrf or PMID:...).
+            assay_curie (str): The assay term MMO curie.
+            assay_cvterm_id (int): The chado cvterm_id of the assay term.
+
+        """
+        super().__init__()
+        self.db_primary_id = uniq_key
+        self.uniq_key = uniq_key
+        self.entity_desc = f'gene_expression_experiment {uniq_key}'
+        self.subject_curie = subject_curie
+        self.subject_type = subject_type
+        self.reference_curie = reference_curie
+        self.assay_curie = assay_curie
+        self.assay_cvterm_id = assay_cvterm_id
+        self.members = []    # List of (FBFeatureExpressionAnnotation, xp_combo dict) tuples for this experiment.
+
+
 # Second class annotations (submitted as part of other objects).
 class FBProp(object):
     """A generic FlyBase property annotation for a first class entity."""

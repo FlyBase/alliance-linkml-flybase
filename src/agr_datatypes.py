@@ -694,3 +694,109 @@ class SecondaryIdSlotAnnotationDTO(SlotAnnotationDTO):
         super().__init__(evidence_curies)
         self.secondary_id = secondary_id
         self.required_fields.extend(['secondary_id'])
+
+
+# Alliance DTO classes for gene expression (agr_curation_schema expression.yaml).
+class TemporalContextDTO(AuditedObjectDTO):
+    """TemporalContextDTO class.
+
+    The developmental stage and/or age of the specimen in an expression annotation
+    (the "when expressed" aspect of an ExpressionPattern).
+    """
+    def __init__(self):
+        """Create a TemporalContextDTO for a FlyBase expression annotation."""
+        super().__init__()
+        self.developmental_stage_start_curie = None    # An FBdv term curie.
+        self.developmental_stage_stop_curie = None     # An FBdv term curie (for stage ranges).
+        self.age = None                                # Free text age.
+        self.temporal_qualifier_names = []             # e.g., "post embryonic", "pre-adult".
+        self.stage_uberon_slim_term_curies = []        # UBERON:0000068 (embryo), UBERON:0000113 (post-embryonic), etc.
+        self.when_expressed_free_text = None           # Human-readable stage statement.
+
+
+class AnatomicalSiteDTO(AuditedObjectDTO):
+    """AnatomicalSiteDTO class.
+
+    The set of terms that define a specific anatomical site within a specimen
+    (the "where expressed" aspect of an ExpressionPattern). At least one of
+    anatomical_structure_curie or cellular_component_curie should be populated
+    (enforced by the handler, not as a required_field, since it is conditional).
+    """
+    def __init__(self):
+        """Create an AnatomicalSiteDTO for a FlyBase expression annotation."""
+        super().__init__()
+        # Anatomical structure (main part) - FBbt.
+        self.anatomical_structure_curie = None
+        self.anatomical_structure_qualifier_curies = []          # FBcv qualifier curies.
+        self.anatomical_structure_uberon_term_curies = []        # UBERON slim curies.
+        self.anatomical_structure_uberon_term_other = None       # Boolean.
+        # Anatomical substructure (sub-part) - FBbt.
+        self.anatomical_substructure_curie = None
+        self.anatomical_substructure_qualifier_curies = []       # FBcv qualifier curies.
+        self.anatomical_substructure_uberon_term_curies = []     # UBERON slim curies.
+        self.anatomical_substructure_uberon_term_other = None    # Boolean.
+        # Cellular component - GO.
+        self.cellular_component_curie = None
+        self.cellular_component_ribbon_term_curies = []
+        self.cellular_component_other = None                     # Boolean.
+        self.cellular_component_qualifier_curies = []            # FBcv qualifier curies.
+        self.where_expressed_free_text = None                    # Human-readable anatomy statement.
+
+
+class ExpressionPatternDTO(AuditedObjectDTO):
+    """ExpressionPatternDTO class.
+
+    Captures the spatial (where) and temporal (when) aspects of an expression
+    annotation. The where_expressed_dto is required; when_expressed_dto is optional.
+    """
+    def __init__(self):
+        """Create an ExpressionPatternDTO for a FlyBase expression annotation."""
+        super().__init__()
+        self.when_expressed_dto = None    # A TemporalContextDTO dict.
+        self.where_expressed_dto = None   # An AnatomicalSiteDTO dict.
+        self.required_fields.extend(['where_expressed_dto'])
+
+
+class GeneExpressionAnnotationDTO(AuditedObjectDTO):
+    """GeneExpressionAnnotationDTO class.
+
+    An annotation describing an expression pattern for a gene. The annotated gene
+    and the supporting reference are provided once at the GeneExpressionExperimentDTO
+    level and are not repeated here.
+    """
+    def __init__(self):
+        """Create a GeneExpressionAnnotationDTO for a FlyBase expression annotation."""
+        super().__init__()
+        self.expression_pattern_dto = None       # An ExpressionPatternDTO dict.
+        self.when_expressed_stage_name = None     # Human-readable stage name.
+        self.where_expressed_statement = None     # Human-readable anatomical location.
+        self.negated = None                       # Boolean.
+        self.uncertain = None                     # Boolean.
+        self.relation_name = None                 # Expected "is_expressed_in".
+        self.cross_reference_dtos = []
+        self.related_figure_identifiers = []
+        self.mod_internal_id = None
+        self.primary_external_id = None
+        self.note_dtos = []
+        self.required_fields.extend(['expression_pattern_dto', 'when_expressed_stage_name', 'where_expressed_statement'])
+
+
+class GeneExpressionExperimentDTO(SubmittedObjectDTO):
+    """GeneExpressionExperimentDTO class.
+
+    The experimental design used to determine the expression of a Gene. Member
+    annotations are provided inline via expression_annotation_dtos.
+    """
+    def __init__(self):
+        """Create a GeneExpressionExperimentDTO for FlyBase expression data."""
+        super().__init__()
+        self.cross_reference_dtos = []
+        self.reference_curie = None                     # The single supporting Reference (FBrf/PMID).
+        self.gene_identifier = None                     # The assayed Gene (FB:FBgn...).
+        self.expression_assay_curie = None              # The assay used (MMO curie, ideally).
+        self.detection_reagent_identifiers = []         # Antibody/probe reagent IDs.
+        self.specimen_genomic_model_identifier = None   # An AffectedGenomicModel identifier.
+        self.specimen_allele_identifiers = []           # Allele IDs of the specimen.
+        self.condition_relation_dtos = []               # ConditionRelationDTOs.
+        self.expression_annotation_dtos = []            # Inlined GeneExpressionAnnotationDTO dicts.
+        self.required_fields.extend(['reference_curie', 'gene_identifier', 'expression_assay_curie'])
