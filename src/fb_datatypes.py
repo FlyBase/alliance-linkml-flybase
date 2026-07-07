@@ -415,6 +415,51 @@ class FBGeneGroup(FBDataEntity):
         self.db_primary_id = chado_obj.grp_id
 
 
+class FBAntibody(FBExportEntity):
+    """A synthetic FlyBase antibody entity for export to the Alliance.
+
+    Antibodies are not first class chado entities; each FBAntibody is derived
+    from gene-level antibody data and maps to a single Alliance AntibodyDTO.
+    There are two sources of antibody data, both hung off a current gene (FBgn):
+      1. "Lab-generated" antibodies, from a "reported_antibod_gen" Featureprop of
+         the gene (clonality in the prop value) and its FeaturepropPub pub(s).
+      2. "Commercial" antibodies, from a gene FeatureDbxref to the "DSHB" or
+         "Cell Signaling Technology" db, with clonality in a "linkout" Dbxrefprop
+         value, and the antibody ID in the Dbxref accession.
+
+    """
+    def __init__(self, uniq_key, gene_uniquename, gene_name, gene_organism_id, clonality):
+        """Create a FBAntibody object.
+
+        Args:
+            uniq_key (str): A string uniquely identifying this antibody (also the db_primary_id).
+            gene_uniquename (str): The current FBgn ID of the antibody's target gene.
+            gene_name (str): The chado feature.name of the target gene (ASCII), used to build the name.
+            gene_organism_id (int): The organism_id of the target gene (for the antigen taxon).
+            clonality (str): The antibody clonality: "monoclonal" or "polyclonal".
+
+        """
+        super().__init__()
+        self.db_primary_id = uniq_key
+        self.uniq_key = uniq_key
+        self.entity_desc = uniq_key
+        # Primary FB data shared by both sources.
+        self.gene_uniquename = gene_uniquename    # The current FBgn ID of the target gene.
+        self.gene_name = gene_name                # The chado feature.name of the target gene.
+        self.gene_organism_id = gene_organism_id  # The organism_id of the target gene.
+        self.clonality = clonality                # "monoclonal" or "polyclonal".
+        # Source 1 (lab-generated) data.
+        self.pub_id = None            # The internal chado pub_id supporting the antibody (from FeaturepropPub).
+        self.pub_uniquename = None    # The supporting pub FBrf ID (pub.uniquename), used to build the name.
+        # Source 2 (commercial) data.
+        self.source = None            # The commercial source label: "DSHB" or "CST".
+        self.accession = None         # The antibody ID (dbxref.accession), used to build the name.
+        # Processed FB data.
+        self.antibody_name = None          # The made-up antibody name.
+        self.antigen_taxon_curie = None    # NCBITaxon curie for the target gene's organism.
+        self.reference_curie = None        # The supporting pub curie (FB:FBrf or PMID), if applicable.
+
+
 # First class associations and annotations.
 class FBAlleleDiseaseAnnotation(FBExportEntity):
     """FBAlleleDiseaseAnnotation class."""

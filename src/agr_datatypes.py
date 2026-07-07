@@ -244,6 +244,21 @@ class TransgenicToolDTO(ReagentDTO):
         self.required_fields.extend(['transgenic_tool_symbol_dto'])
 
 
+class AntibodyDTO(ReagentDTO):
+    """AntibodyDTO class."""
+    def __init__(self):
+        """Create AntibodyDTO for FlyBase object."""
+        super().__init__()
+        self.name = None                            # The publicly displayed (FB-generated) name of the antibody.
+        self.clonality_name = None                  # "monoclonal" or "polyclonal" (from the Antibody Clonality CV).
+        self.antigen_taxon_curie = None             # The NCBITaxon curie of the antibody's target gene organism.
+        self.antibody_target_gene_identifiers = []  # FB:FBgn curie(s) of the antibody's target gene(s).
+        self.reference_curies = []                  # Supporting reference curies (FB:FBrf or PMID).
+        self.original_reference_curie = None        # Reference describing the antibody's original generation.
+        self.cross_reference_dtos = []
+        self.required_fields.extend(['name', 'clonality_name'])
+
+
 class CassetteDTO(ReagentDTO):
     """CassetteDTO class."""
     def __init__(self):
