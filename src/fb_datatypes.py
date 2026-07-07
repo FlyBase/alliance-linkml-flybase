@@ -671,7 +671,7 @@ class FBGeneExpressionExperiment(FBExportEntity):
             subject_curie (str): The curie of the assayed subject (e.g., FB:FBgn... gene).
             subject_type (str): The subject type: 'gene' (now), 'allele' or 'split_system_combination' (future).
             reference_curie (str): The supporting reference curie (FB:FBrf or PMID:...).
-            assay_curie (str): The assay term curie.
+            assay_curie (str): The assay term MMO curie.
             assay_cvterm_id (int): The chado cvterm_id of the assay term.
 
         """
