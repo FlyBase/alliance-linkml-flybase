@@ -37,6 +37,7 @@ class ExpressionHandler(DataHandler):
         self.isoform_gene_product_lookup = {}     # Will be feature_id-keyed feature_id that connects an isoform to an XR/XP gene product.
         self.gene_product_gene_lookup = {}        # Will be feature_id-keyed feature_id that connects an XR/XP gene product to a gene.
         self.allele_product_allele_lookup = {}    # Will be feature_id-keyed feature_id that connects an RA\PA allele product to an allele.
+        self.allele_product_gene_lookup = {}      # Will be feature_id-keyed feature_id that connects an RA\PA allele product to a gene.
         self.insertion_allele_lookup = {}         # Will be FBti ID keyed lists of related allele FBal IDs (list).
         self.construct_allele_lookup = {}         # Will be FBtp ID keyed lists of related allele FBal IDs (list).
         self.hemi_drivers = []                    # Will be a list of feature_ids for hemidriver alleles that have FBco parents.
@@ -100,7 +101,7 @@ class ExpressionHandler(DataHandler):
     # exportable MMO curie for each assay. Mostly developed by Sian Gramates (curator), ported
     # from the legacy alliance-flybase/src/expression/AGR_data_retrieval_expression.py assay_map.
     fb_mmo_assay_map = {
-        'cell fractionation': 'MMO:0000669',                            # western blot assay
+        'cell fractionation': 'MMO:0000669',                           # western blot assay
         'co-fractionation': 'MMO:0000669',                             # western blot assay
         'dot blot': 'MMO:0000646',                                     # nucleic acid dot/slot blot assay
         'distribution deduced from reporter': 'MMO:0000670',           # in situ reporter assay
@@ -393,6 +394,36 @@ class ExpressionHandler(DataHandler):
         self.log.info(f'Found {counter} distinct allele_product to allele relationships.')
         return
 
+    def get_allele_product_gene_mappings(self, session):
+        """Get allele product to gene mappings."""
+        self.log.info('Get allele product to gene mappings.')
+        allele_product = aliased(Feature, name='allele_product')
+        gene = aliased(Feature, name='gene')
+        filters = (
+            allele_product.is_obsolete.is_(False),
+            allele_product.uniquename.op('~')(r'^FB(tr|pp)[0-9]{7}$'),
+            gene.is_obsolete.is_(False),
+            gene.uniquename.op('~')(r'^FBgn[0-9]{7}$'),
+            Cvterm.name == 'attributed_as_expression_of',
+        )
+        results = session.query(allele_product, gene).\
+            select_from(allele_product).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == allele_product.feature_id)).\
+            join(gene, (FeatureRelationship.object_id == gene.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            counter += 1
+            if result.allele_product.feature_id in self.allele_product_gene_lookup.keys():
+                allele_product_str = f'{result.allele_product.name} ({result.allele_product.uniquename})'
+                self.log.warning(f'Found multiple genes for allele product {allele_product_str}.')
+                continue
+            self.allele_product_gene_lookup[result.allele_product.feature_id] = result.gene.feature_id
+        self.log.info(f'Found {counter} distinct allele_product to gene "attributed_as_expression_of" relationships.')
+        return
+
     def get_insertion_allele_mappings(self, session):
         """Get insertion to allele mappings."""
         self.log.info('Get insertion to allele mappings.')
@@ -496,6 +527,7 @@ class ExpressionHandler(DataHandler):
         self.get_isoform_mappings(session)
         self.get_gene_product_gene_mappings(session)
         self.get_allele_product_allele_mappings(session)
+        self.get_allele_product_gene_mappings(session)
         self.get_insertion_allele_mappings(session)
         self.get_construct_allele_mappings(session)
         self.get_hemi_driver_info(session)
@@ -989,6 +1021,7 @@ class ExpressionHandler(DataHandler):
                         self.log.debug(f'Suppress fx_id={feat_xprn.db_primary_id} as it represents split system combos: {split_system_features_represented}')
                         hemidriver_counter += 1
                         continue
+                # 4b. Map gene products to alleles (for FlyBase TSV export file).
                 feat_xprn.public_feature_id = allele_feature_id
                 allele_product_to_allele_counter += 1
             # 5. Deal with expressed products that cannot be mapped to a gene or allele.
