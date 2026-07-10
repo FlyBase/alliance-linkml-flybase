@@ -14,7 +14,8 @@ from sqlalchemy.orm import aliased
 from harvdev_utils.char_conversions import clean_free_text
 from harvdev_utils.reporting import (
     Cv, Cvterm, Db, Dbxref, Expression, ExpressionCvterm, ExpressionCvtermprop,
-    Feature, FeatureExpression, FeatureExpressionprop, FeatureRelationship
+    Feature, FeatureExpression, FeatureExpressionprop, FeatureRelationship,
+    FeatureRelationshipprop
 )
 import agr_datatypes
 import fb_datatypes
@@ -37,7 +38,7 @@ class ExpressionHandler(DataHandler):
         self.isoform_gene_product_lookup = {}     # Will be feature_id-keyed feature_id that connects an isoform to an XR/XP gene product.
         self.gene_product_gene_lookup = {}        # Will be feature_id-keyed feature_id that connects an XR/XP gene product to a gene.
         self.allele_product_allele_lookup = {}    # Will be feature_id-keyed feature_id that connects an RA\PA allele product to an allele.
-        self.allele_product_gene_lookup = {}      # Will be feature_id-keyed feature_id that connects an RA\PA allele product to a gene.
+        self.allele_product_gene_lookup = {}      # Will be feature_id-keyed feature_id that connects an RA\PA allele product to a gene dict w/additional info.
         self.fb_alliance_allele_lookup = {}       # Will be feature_id-keyed feature_id that connects an allele to the Alliance FBti allele.
         self.insertion_allele_lookup = {}         # Will be FBti ID keyed lists of related allele FBal IDs (list).
         self.construct_allele_lookup = {}         # Will be FBtp ID keyed lists of related allele FBal IDs (list).
@@ -415,6 +416,7 @@ class ExpressionHandler(DataHandler):
             filter(*filters).\
             distinct()
         counter = 0
+        allele_ids_to_delete = []
         # Note - ignore rare cases where a transgenic reported reflects multiple genes.
         # Some cases are complex (reporter is a chimera of many genes) that could be misinterpreted.
         # Other cases are simpler (genes that share an enhancer).
@@ -422,11 +424,53 @@ class ExpressionHandler(DataHandler):
         for result in results:
             counter += 1
             if result.allele_product.feature_id in self.allele_product_gene_lookup.keys():
+                allele_ids_to_delete.append(result.allele_product.feature_id)
                 allele_product_str = f'{result.allele_product.name} ({result.allele_product.uniquename})'
                 self.log.warning(f'Found multiple genes for allele product {allele_product_str}.')
                 continue
-            self.allele_product_gene_lookup[result.allele_product.feature_id] = result.gene.feature_id
+            self.allele_product_gene_lookup[result.allele_product.feature_id] = {
+                'gene_id': result.gene.feature_id,
+                'is_subset_expression': False,
+                'is_relative_wildtype': False,
+            }
         self.log.info(f'Found {counter} distinct allele_product to gene "attributed_as_expression_of" relationships.')
+        # Remove any allele products that were found to have multiple genes.
+        allele_ids_to_delete = set(allele_ids_to_delete)
+        self.log.info(f'Deleting {len(allele_ids_to_delete)} allele_products with multiple gene assignments.')
+        for allele_id in allele_ids_to_delete:
+            del self.allele_product_gene_lookup[allele_id]
+        # Need to get feature_relationshipprops that expand on how the transgenic gene product's expression compares to that of the gene.
+        # Query each prop type separately: most feature_relationships have no featurerelationshipprop, and some have both types;
+        # running one query per type is deliberately redundant but keeps each query self-contained and readable.
+        rel_prop_type_names = ['is_subset_expression', 'is_relative_wildtype']
+        for rel_prop_type_name in rel_prop_type_names:
+            rel_type = aliased(Cvterm, name='rel_type')
+            rel_prop_type = aliased(Cvterm, name='rel_prop_type')
+            filters = (
+                allele_product.is_obsolete.is_(False),
+                allele_product.uniquename.op('~')(r'^FB(tr|pp)[0-9]{7}$'),
+                gene.is_obsolete.is_(False),
+                gene.uniquename.op('~')(r'^FBgn[0-9]{7}$'),
+                rel_type.name == 'attributed_as_expression_of',
+                rel_prop_type.name == rel_prop_type_name,
+            )
+            results = session.query(allele_product, gene).\
+                select_from(allele_product).\
+                join(FeatureRelationship, (FeatureRelationship.subject_id == allele_product.feature_id)).\
+                join(gene, (FeatureRelationship.object_id == gene.feature_id)).\
+                join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
+                join(FeatureRelationshipprop, (FeatureRelationshipprop.feature_relationship_id == FeatureRelationship.feature_relationship_id)).\
+                join(rel_prop_type, (rel_prop_type.cvterm_id == FeatureRelationshipprop.type_id)).\
+                filter(*filters).\
+                distinct()
+            prop_type_counter = 0
+            for result in results:
+                try:
+                    self.allele_product_gene_lookup[result.allele_product.feature_id][rel_prop_type_name] = True
+                    prop_type_counter += 1
+                except KeyError:
+                    pass
+            self.log.info(f'{prop_type_counter} allele_products have "{rel_prop_type_name}" gene relationship proptype.')
         return
 
     def get_fb_alliance_allele_mappings(self, session):
