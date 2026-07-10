@@ -38,6 +38,7 @@ class ExpressionHandler(DataHandler):
         self.gene_product_gene_lookup = {}        # Will be feature_id-keyed feature_id that connects an XR/XP gene product to a gene.
         self.allele_product_allele_lookup = {}    # Will be feature_id-keyed feature_id that connects an RA\PA allele product to an allele.
         self.allele_product_gene_lookup = {}      # Will be feature_id-keyed feature_id that connects an RA\PA allele product to a gene.
+        self.fb_alliance_allele_lookup = {}       # Will be feature_id-keyed feature_id that connects an allele to the Alliance FBti allele.
         self.insertion_allele_lookup = {}         # Will be FBti ID keyed lists of related allele FBal IDs (list).
         self.construct_allele_lookup = {}         # Will be FBtp ID keyed lists of related allele FBal IDs (list).
         self.hemi_drivers = []                    # Will be a list of feature_ids for hemidriver alleles that have FBco parents.
@@ -414,6 +415,10 @@ class ExpressionHandler(DataHandler):
             filter(*filters).\
             distinct()
         counter = 0
+        # Note - ignore rare cases where a transgenic reported reflects multiple genes.
+        # Some cases are complex (reporter is a chimera of many genes) that could be misinterpreted.
+        # Other cases are simpler (genes that share an enhancer).
+        # It is difficult to distinguish these two cases without digging into the publication.
         for result in results:
             counter += 1
             if result.allele_product.feature_id in self.allele_product_gene_lookup.keys():
@@ -422,6 +427,36 @@ class ExpressionHandler(DataHandler):
                 continue
             self.allele_product_gene_lookup[result.allele_product.feature_id] = result.gene.feature_id
         self.log.info(f'Found {counter} distinct allele_product to gene "attributed_as_expression_of" relationships.')
+        return
+
+    def get_fb_alliance_allele_mappings(self, session):
+        """Get 1:1 allele (FBal) to alliance-representative insertion (FBti) mappings."""
+        self.log.info('Get allele (FBal) to alliance-representative insertion (FBti) mappings.')
+        allele = aliased(Feature, name='allele')
+        insertion = aliased(Feature, name='insertion')
+        filters = (
+            allele.is_obsolete.is_(False),
+            allele.uniquename.op('~')(r'^FBal[0-9]{7}$'),
+            insertion.is_obsolete.is_(False),
+            insertion.uniquename.op('~')(r'^FBti[0-9]{7}$'),
+            Cvterm.name == 'is_represented_at_alliance_as',
+        )
+        results = session.query(allele, insertion).\
+            select_from(allele).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == allele.feature_id)).\
+            join(insertion, (FeatureRelationship.object_id == insertion.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*filters).\
+            distinct()
+        counter = 0
+        for result in results:
+            counter += 1
+            if result.allele.feature_id in self.fb_alliance_allele_lookup.keys():
+                allele_str = f'{result.allele.name} ({result.allele.uniquename})'
+                self.log.warning(f'Found multiple alliance-representative insertions for allele {allele_str}.')
+                continue
+            self.fb_alliance_allele_lookup[result.allele.feature_id] = result.insertion.feature_id
+        self.log.info(f'Found {counter} distinct allele to insertion "is_represented_at_alliance_as" relationships.')
         return
 
     def get_insertion_allele_mappings(self, session):
@@ -528,6 +563,7 @@ class ExpressionHandler(DataHandler):
         self.get_gene_product_gene_mappings(session)
         self.get_allele_product_allele_mappings(session)
         self.get_allele_product_gene_mappings(session)
+        self.get_fb_alliance_allele_mappings(session)
         self.get_insertion_allele_mappings(session)
         self.get_construct_allele_mappings(session)
         self.get_hemi_driver_info(session)
