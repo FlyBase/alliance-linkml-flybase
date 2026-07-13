@@ -641,6 +641,7 @@ class FBFeatureExpressionAnnotation(FBExportEntity):
         self.feature_id = chado_obj.feature_id
         self.xprn_type = chado_obj.feature.type.name    # Will be simplified downstream to polypeptide,RNA, or "split system combination".
         self.expression_id = chado_obj.expression_id
+        self.pub_id = chado_obj.pub.pub_id             # Chado pub_id; resolve to a curie via DataHandler.lookup_single_pub_curie().
         self.pub_curie = chado_obj.pub.uniquename
         self.tap_stmt_notes = []         # Will be a list of <note> text from the original curation (type='comment'); usually one, rarely two.
         # Processed FB data.

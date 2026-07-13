@@ -63,7 +63,6 @@ linkml_release = args.linkml_release
 # Create SQL Alchemy engines from environmental variables.
 engine_var_rep = 'postgresql://' + username + ":" + password + '@' + server + '/' + database
 engine = create_engine(engine_var_rep)
-# insp = inspect(engine)    # I always have this line, but I do not know what it does.
 Session = sessionmaker(bind=engine)
 session = Session()
 

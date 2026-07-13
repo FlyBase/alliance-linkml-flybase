@@ -1344,8 +1344,10 @@ class ExpressionHandler(DataHandler):
         annotation.when_expressed_stage_name = stage_statement
         annotation.where_expressed_statement = where_statement
         annotation.relation_name = 'is_expressed_in'
+        pub_curie = self.lookup_single_pub_curie(feat_xprn.pub_id)
+        evidence_curies = [pub_curie] if pub_curie else []
         for note_text in feat_xprn.tap_stmt_notes:
-            note_dto = agr_datatypes.NoteDTO('comment', note_text, [f'FB:{feat_xprn.pub_curie}']).dict_export()
+            note_dto = agr_datatypes.NoteDTO('comment', note_text, evidence_curies).dict_export()
             annotation.note_dtos.append(note_dto)
         return annotation
 
@@ -1358,7 +1360,7 @@ class ExpressionHandler(DataHandler):
         """
         self.log.info('Group feature_expression term combinations into GeneExpressionExperiment objects.')
         non_gene_counter = 0
-        no_assay_counter = 0
+        no_pub_counter = 0
         member_counter = 0
         for feat_xprn in self.fb_data_entities.values():
             if feat_xprn.is_problematic or feat_xprn.public_feature_id is None:
@@ -1366,20 +1368,19 @@ class ExpressionHandler(DataHandler):
             subject_uniquename = self.feature_lookup[feat_xprn.public_feature_id]['uniquename']
             # Gene-only scope for now; alleles (FBal) and split system combos (FBco) deferred.
             if not subject_uniquename.startswith('FBgn'):
-                feat_xprn.for_export = False
-                feat_xprn.export_warnings.append(f'Non-gene subject ({subject_uniquename}) not yet exported.')
                 non_gene_counter += 1
                 continue
             subject_curie = f'FB:{subject_uniquename}'
-            reference_curie = f'FB:{feat_xprn.pub_curie}'
+            # Resolve the reference via the bibliography (prefers PMID, excludes obsolete/non-FBrf pubs).
+            reference_curie = self.lookup_single_pub_curie(feat_xprn.pub_id)
+            if reference_curie is None:
+                no_pub_counter += 1
+                continue
             xprn_pattern = self.expression_patterns[feat_xprn.expression_id]
             if xprn_pattern.is_problematic or not xprn_pattern.xprn_pattern_combos:
                 continue
             for xp_combo in xprn_pattern.xprn_pattern_combos:
                 assay_curie = self.map_assay_curie(xp_combo['assay_cvterm_id'], feat_xprn.xprn_type)
-                if not assay_curie:
-                    no_assay_counter += 1
-                    continue
                 uniq_key = f'{subject_curie}|{reference_curie}|{assay_curie}'
                 if uniq_key not in self.gene_expression_experiments:
                     self.gene_expression_experiments[uniq_key] = fb_datatypes.FBGeneExpressionExperiment(
@@ -1388,7 +1389,7 @@ class ExpressionHandler(DataHandler):
                 member_counter += 1
         self.log.info(f'Grouped {member_counter} term combinations into {len(self.gene_expression_experiments)} gene expression experiments.')
         self.log.info(f'Skipped {non_gene_counter} non-gene (allele/FBco) feature_expression annotations (deferred).')
-        self.log.info(f'Skipped {no_assay_counter} term combinations lacking an assay curie.')
+        self.log.info(f'Skipped {no_pub_counter} feature_expression annotations lacking a resolvable reference curie.')
         return
 
     def map_gene_expression_experiment_basic(self):
