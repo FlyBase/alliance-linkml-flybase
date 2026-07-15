@@ -1399,7 +1399,6 @@ class ExpressionHandler(DataHandler):
         site = self.build_anatomical_site_dto(xp_combo)
         # AnatomicalSite rule: at least one of anatomical_structure_curie or cellular_component_curie.
         if not site.anatomical_structure_curie and not site.cellular_component_curie:
-            self.log.error(f"Failed to build anatomical site for feature_expression: {feat_xprn.id}")
             return None
         where_statement = site.where_expressed_free_text
         stage_statement = self.build_stage_statement(xp_combo)
@@ -1455,7 +1454,7 @@ class ExpressionHandler(DataHandler):
                 continue
             else:
                 unmappable_feature_counter += 1
-                self.log.error(f"Failed to map feature_expression to a known expression type: {feat_xprn.id}")
+                self.log.error(f"Failed to map feature_expression of UNKNOWN TYPE for feat_xprn_id={feat_xprn.db_primary_id}")
                 continue
             reference_curie = self.lookup_single_pub_curie(feat_xprn.pub_id)
             if reference_curie is None:
@@ -1463,10 +1462,10 @@ class ExpressionHandler(DataHandler):
                 continue
             xprn_pattern = self.expression_patterns[feat_xprn.expression_id]
             if xprn_pattern.is_problematic:
-                self.log.error(f"Failed to build expression pattern for problematic feature_expression: {feat_xprn.id}")
+                self.log.error(f"Failed to build expression pattern for PROBLEMATIC feature_expression feat_xprn_id={feat_xprn.db_primary_id}")
                 continue
             elif not xprn_pattern.xprn_pattern_combos:
-                self.log.error(f"Failed to build expression pattern for empty feature_expression: {feat_xprn.id}")
+                self.log.error(f"Failed to build expression pattern for EMPTY feature_expression feat_xprn_id={feat_xprn.db_primary_id}")
                 continue
             for xp_combo in xprn_pattern.xprn_pattern_combos:
                 assay_curie = self.map_assay_curie(xp_combo['assay_cvterm_id'], feat_xprn.xprn_type)
@@ -1511,6 +1510,7 @@ class ExpressionHandler(DataHandler):
                     continue
                 annotation = self.build_expression_annotation_dto(feat_xprn, xp_combo)
                 if annotation is None:
+                    self.log.error(f'Failed to build GeneExpressionAnnotation for feat_xprn_id={feat_xprn.db_primary_id}')
                     continue
                 seen_annotations.add(xp_combo['uniq_key'])
                 agr_experiment.expression_annotation_dtos.append(annotation.dict_export())
