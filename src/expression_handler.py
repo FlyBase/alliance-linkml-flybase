@@ -1491,7 +1491,7 @@ class ExpressionHandler(DataHandler):
         annotation_counter = 0
         skip_counter = 0
         for experiment in self.gene_expression_experiments.values():
-            if experiment.expression_type != 'gene':
+            if experiment.type != 'gene':
                 experiment.for_export = False
                 skip_counter += 1
                 continue
