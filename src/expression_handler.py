@@ -33,6 +33,8 @@ class ExpressionHandler(DataHandler):
         self.slot_types = ['anatomy', 'assay', 'cellular', 'stage']
         self.gene_expression_experiments = {}     # uniq_key-keyed FBGeneExpressionExperiment grouping objects.
         self.placeholder = fb_datatypes.FBExpressionCvterm(None)
+        self.anatomy_placeholder = fb_datatypes.FBExpressionCvterm(None)
+        self.stage_placeholder = fb_datatypes.FBExpressionCvterm(None)
         self.expression_patterns = {}             # expression_id-keyed FBExpressionAnnotation objects.
         self.export_data_for_tsv = []             # List of dicts for export to TSV.
         self.isoform_gene_product_lookup = {}     # Will be feature_id-keyed feature_id that connects an isoform to an XR/XP gene product.
@@ -48,7 +50,10 @@ class ExpressionHandler(DataHandler):
 
     # Key info.
 
-    # Mappings between FB stage slim terms and UBERON: embryonic (UBERON:0000068), post-embryonic, adult (UBERON:0000113).
+    # Mappings between FB stage slim terms and UBERON stage terms: embryonic (UBERON:0000068)
+    # and adult (UBERON:0000113). The larval/pupal ("P") stages have no UBERON equivalent, so
+    # they map to the non-UBERON term "post embryonic, pre-adult", which is allowed as an
+    # honorary member of the UBERON stage slim set.
     fb_uberon_stage_slim_map = {
         'fertilized egg stage': ['UBERON:0000068'],
         'embryonic stage': ['UBERON:0000068'],
@@ -253,6 +258,56 @@ class ExpressionHandler(DataHandler):
             'slim_term_cvterm_ids': [],
         }
         self.cvterm_lookup['placeholder'] = placeholder_cvterm_dict
+        return
+
+    def fill_in_anatomy_placeholder(self, session):
+        """Create a placeholder for anatomy terms."""
+        self.log.info('Create a placeholder for anatomy terms.')
+        filters = (
+            Cvterm.is_obsolete == 0,
+            Cvterm.name == 'organism',
+            Cv.name == 'FlyBase anatomy CV',
+            Db.name == 'FBbt',
+        )
+        anatomy_root_term = session.query(Cvterm).\
+            select_from(Cvterm).\
+            join(Cv, (Cv.cv_id == Cvterm.cv_id)).\
+            join(Dbxref, (Dbxref.dbxref_id == Cvterm.dbxref_id)).\
+            join(Db, (Db.db_id == Dbxref.db_id)).\
+            filter(*filters).\
+            one_or_none()
+        if not anatomy_root_term:
+            self.log.error('Could not find FBbt term for root "organism" term.')
+            return
+        self.anatomy_placeholder.cvterm_id = anatomy_root_term.cvterm_id
+        self.anatomy_placeholder.cvterm_name = anatomy_root_term.name
+        self.anatomy_placeholder.cv_name = anatomy_root_term.cv.name
+        self.anatomy_placeholder.obo = anatomy_root_term.dbxref.db.name
+        return
+
+    def fill_in_stage_placeholder(self, session):
+        """Create a placeholder for stage terms."""
+        self.log.info('Create a placeholder for stage terms.')
+        filters = (
+            Cvterm.is_obsolete == 0,
+            Cvterm.name == 'life stage',
+            Cv.name == 'FlyBase development CV',
+            Db.name == 'FBdv',
+        )
+        stage_root_term = session.query(Cvterm).\
+            select_from(Cvterm).\
+            join(Cv, (Cv.cv_id == Cvterm.cv_id)).\
+            join(Dbxref, (Dbxref.dbxref_id == Cvterm.dbxref_id)).\
+            join(Db, (Db.db_id == Dbxref.db_id)).\
+            filter(*filters).\
+            one_or_none()
+        if not stage_root_term:
+            self.log.error('Could not find FBdv term for root "life stage" term.')
+            return
+        self.stage_placeholder.cvterm_id = stage_root_term.cvterm_id
+        self.stage_placeholder.cvterm_name = stage_root_term.name
+        self.stage_placeholder.cv_name = stage_root_term.cv.name
+        self.stage_placeholder.obo = stage_root_term.dbxref.db.name
         return
 
     def get_slim_term_mappings(self, session):
@@ -600,6 +655,8 @@ class ExpressionHandler(DataHandler):
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
         self.add_placeholder_cvterm()
+        self.fill_in_anatomy_placeholder(session)
+        self.fill_in_stage_placeholder(session)
         self.get_slim_term_mappings(session)
         self.build_organism_lookup(session)
         self.build_feature_lookup(session, feature_types=['transcript', 'polypeptide', 'allele', 'gene', 'insertion', 'split system combination'])
@@ -832,6 +889,11 @@ class ExpressionHandler(DataHandler):
         counter = 0
         prob_counter = 0
         for xprn_pattern in self.expression_patterns.values():
+            # Add placeholder "life stage" term if no stage terms are present (to preserve annotation at Alliance).
+            if not xprn_pattern.stage_terms:
+                xprn_pattern.stage_terms['stage_placeholder'] = self.stage_placeholder
+                continue
+            # Otherwise, sort out start and end terms.
             start_terms = []
             end_terms = []
             for stage_term in xprn_pattern.stage_terms.values():
@@ -914,6 +976,11 @@ class ExpressionHandler(DataHandler):
         self.log.info('Identify tissue sub_parts in expression patterns.')
         counter = 0
         for xprn_pattern in self.expression_patterns.values():
+            # Add placeholder "organism" term if no anatomy terms are present (to preserve annotation at Alliance).
+            if not xprn_pattern.anatomy_terms:
+                xprn_pattern.anatomy_terms['anatomy_placeholder'] = self.anatomy_placeholder
+                continue
+            # Otherwise, sort out main and subpart anatomy terms.
             main_parts = []
             potential_sub_parts = []
             for anatomy_term in xprn_pattern.anatomy_terms.values():
@@ -974,7 +1041,8 @@ class ExpressionHandler(DataHandler):
                     xprn_pattern_dict['stage_qualifier_cvterm_ids'].extend(stage_term.has_stage_end.qualifier_cvterm_ids)
                     additional_slim_term_ids = self.cvterm_lookup[stage_term.has_stage_end.cvterm_id]['slim_term_cvterm_ids'].copy()
                     xprn_pattern_dict['stage_slim_cvterm_ids'].extend(additional_slim_term_ids)
-                    xprn_pattern_dict['stage_slim_cvterm_ids'] = list(set(xprn_pattern_dict['stage_slim_cvterm_ids']))
+                xprn_pattern_dict['stage_qualifier_cvterm_ids'] = list(set(xprn_pattern_dict['stage_qualifier_cvterm_ids']))
+                xprn_pattern_dict['stage_slim_cvterm_ids'] = list(set(xprn_pattern_dict['stage_slim_cvterm_ids']))
                 xprn_pattern_dict_list.append(xprn_pattern_dict)
                 # self.log.debug(f'For xprn_id={xprn_id}, generated xprn_pattern_dict: {xprn_pattern_dict}')
         return xprn_pattern_dict_list
@@ -1238,20 +1306,15 @@ class ExpressionHandler(DataHandler):
         """
         slim_map = self.fb_uberon_stage_slim_map if kind == 'stage' else self.fb_uberon_anatomy_slim_map
         uberon_curies = []
-        qualifier_names = []
         for slim_id in slim_cvterm_ids:
             if slim_id in ('', 'placeholder') or slim_id not in self.cvterm_lookup:
                 continue
             slim_name = self.cvterm_lookup[slim_id]['name']
-            for val in slim_map.get(slim_name, []):
-                if val.startswith('UBERON:'):
-                    uberon_curies.append(val)
-                else:
-                    qualifier_names.extend([q.strip() for q in val.split(',')])
-        return list(set(uberon_curies)), list(set(qualifier_names))
+            uberon_curies.extend(slim_map.get(slim_name, []))
+        return list(set(uberon_curies))
 
     def build_stage_statement(self, xp_combo):
-        """Build a human-readable "when expressed" stage statement, or None if no stage."""
+        """Build a human-readable "when expressed" stage statement, or placeholder text if no stage."""
         start_name = self._term_name(xp_combo['stage_start_cvterm_id'])
         stop_name = self._term_name(xp_combo['stage_end_cvterm_id'])
         qual_names = [self._term_name(i) for i in xp_combo['stage_qualifier_cvterm_ids']]
@@ -1292,9 +1355,8 @@ class ExpressionHandler(DataHandler):
         temporal_context = agr_datatypes.TemporalContextDTO()
         temporal_context.developmental_stage_start_curie = self._term_curie(xp_combo['stage_start_cvterm_id'])
         temporal_context.developmental_stage_stop_curie = self._term_curie(xp_combo['stage_end_cvterm_id'])
-        uberon_curies, qualifier_names = self.map_slim_curies(xp_combo['stage_slim_cvterm_ids'], 'stage')
-        temporal_context.stage_uberon_slim_term_curies = uberon_curies
-        temporal_context.temporal_qualifier_names = qualifier_names
+        slim_curies = self.map_slim_curies(xp_combo['stage_slim_cvterm_ids'], 'stage')
+        temporal_context.stage_uberon_slim_term_curies = slim_curies
         temporal_context.when_expressed_free_text = self.build_stage_statement(xp_combo)
         return temporal_context
 
@@ -1304,12 +1366,12 @@ class ExpressionHandler(DataHandler):
         # Anatomical structure (main part).
         site.anatomical_structure_curie = self._term_curie(xp_combo['anatomical_structure_cvterm_id'])
         site.anatomical_structure_qualifier_curies = self._qualifier_curies(xp_combo['anatomical_structure_qualifier_cvterm_ids'])
-        structure_uberon, _ = self.map_slim_curies(xp_combo['anatomical_structure_slim_cvterm_ids'], 'anatomy')
+        structure_uberon = self.map_slim_curies(xp_combo['anatomical_structure_slim_cvterm_ids'], 'anatomy')
         site.anatomical_structure_uberon_term_curies = structure_uberon
         # Anatomical substructure (sub-part).
         site.anatomical_substructure_curie = self._term_curie(xp_combo['anatomical_substructure_cvterm_id'])
         site.anatomical_substructure_qualifier_curies = self._qualifier_curies(xp_combo['anatomical_substructure_qualifier_cvterm_ids'])
-        substructure_uberon, _ = self.map_slim_curies(xp_combo['anatomical_substructure_slim_cvterm_ids'], 'anatomy')
+        substructure_uberon = self.map_slim_curies(xp_combo['anatomical_substructure_slim_cvterm_ids'], 'anatomy')
         site.anatomical_substructure_uberon_term_curies = substructure_uberon
         # Cellular component.
         site.cellular_component_curie = self._term_curie(xp_combo['cellular_component_cvterm_id'])
@@ -1327,6 +1389,7 @@ class ExpressionHandler(DataHandler):
         site = self.build_anatomical_site_dto(xp_combo)
         # AnatomicalSite rule: at least one of anatomical_structure_curie or cellular_component_curie.
         if not site.anatomical_structure_curie and not site.cellular_component_curie:
+            self.log.error(f"Failed to build anatomical site for feature_expression: {feat_xprn.id}")
             return None
         where_statement = site.where_expressed_free_text
         stage_statement = self.build_stage_statement(xp_combo)
@@ -1336,7 +1399,7 @@ class ExpressionHandler(DataHandler):
         pattern.where_expressed_dto = site.dict_export()
         temporal_context = self.build_temporal_context_dto(xp_combo)
         if any([temporal_context.developmental_stage_start_curie, temporal_context.developmental_stage_stop_curie,
-                temporal_context.age, temporal_context.temporal_qualifier_names,
+                temporal_context.temporal_qualifier_names,
                 temporal_context.stage_uberon_slim_term_curies, temporal_context.when_expressed_free_text]):
             pattern.when_expressed_dto = temporal_context.dict_export()
         annotation = agr_datatypes.GeneExpressionAnnotationDTO()
@@ -1352,43 +1415,63 @@ class ExpressionHandler(DataHandler):
         return annotation
 
     def group_annotations_into_experiments(self):
-        """Group feature_expression term combinations into GeneExpressionExperiment objects.
-
-        Experiments are defined by (subject gene, supporting reference, assay). Only gene-mapped
-        expression (FBgn) is grouped for now; allele (FBal) and split system combination (FBco)
-        annotations are skipped, but the grouping is written generically to allow future expansion.
-        """
+        """Group feature_expression term combinations into GeneExpressionExperiment objects."""
         self.log.info('Group feature_expression term combinations into GeneExpressionExperiment objects.')
-        non_gene_counter = 0
+        gene_counter = 0
+        split_system_counter = 0
+        allele_counter = 0
+        unmappable_feature_counter = 0
         no_pub_counter = 0
         member_counter = 0
         for feat_xprn in self.fb_data_entities.values():
             if feat_xprn.is_problematic or feat_xprn.public_feature_id is None:
                 continue
-            subject_uniquename = self.feature_lookup[feat_xprn.public_feature_id]['uniquename']
-            # Gene-only scope for now; alleles (FBal) and split system combos (FBco) deferred.
-            if not subject_uniquename.startswith('FBgn'):
-                non_gene_counter += 1
+            subject_curie = self.feature_lookup[feat_xprn.public_feature_id]['curie']
+            expression_type = None
+            if subject_curie.startswith('FB:FBgn'):
+                gene_counter += 1
+                expression_type = 'gene'
+            elif subject_curie.startswith('FB:FBco'):
+                split_system_counter += 1
                 continue
-            subject_curie = f'FB:{subject_uniquename}'
-            # Resolve the reference via the bibliography (prefers PMID, excludes obsolete/non-FBrf pubs).
+            elif subject_curie.startswith('FB:FBal'):
+                allele_counter += 1
+                # Use FBti curie if appropriate.
+                try:
+                    alliance_allele_to_report_id = self.fb_alliance_allele_lookup[feat_xprn.public_feature_id]
+                    subject_curie = self.feature_lookup[alliance_allele_to_report_id]['curie']
+                except KeyError:
+                    pass
+                continue
+            else:
+                unmappable_feature_counter += 1
+                self.log.error(f"Failed to map feature_expression to a known expression type: {feat_xprn.id}")
+                continue
             reference_curie = self.lookup_single_pub_curie(feat_xprn.pub_id)
             if reference_curie is None:
                 no_pub_counter += 1
                 continue
             xprn_pattern = self.expression_patterns[feat_xprn.expression_id]
-            if xprn_pattern.is_problematic or not xprn_pattern.xprn_pattern_combos:
+            if xprn_pattern.is_problematic:
+                self.log.error(f"Failed to build expression pattern for problematic feature_expression: {feat_xprn.id}")
+                continue
+            elif not xprn_pattern.xprn_pattern_combos:
+                self.log.error(f"Failed to build expression pattern for empty feature_expression: {feat_xprn.id}")
                 continue
             for xp_combo in xprn_pattern.xprn_pattern_combos:
                 assay_curie = self.map_assay_curie(xp_combo['assay_cvterm_id'], feat_xprn.xprn_type)
                 uniq_key = f'{subject_curie}|{reference_curie}|{assay_curie}'
+                # Temporarily collect all allele and split system combination experiments with gene experiments.
                 if uniq_key not in self.gene_expression_experiments:
-                    self.gene_expression_experiments[uniq_key] = fb_datatypes.FBGeneExpressionExperiment(
-                        uniq_key, subject_curie, 'gene', reference_curie, assay_curie, xp_combo['assay_cvterm_id'])
+                    self.gene_expression_experiments[uniq_key] = fb_datatypes.FBExpressionExperiment(
+                        uniq_key, expression_type, subject_curie, reference_curie, assay_curie)
                 self.gene_expression_experiments[uniq_key].members.append((feat_xprn, xp_combo))
                 member_counter += 1
         self.log.info(f'Grouped {member_counter} term combinations into {len(self.gene_expression_experiments)} gene expression experiments.')
-        self.log.info(f'Skipped {non_gene_counter} non-gene (allele/FBco) feature_expression annotations (deferred).')
+        self.log.info(f'Processed {gene_counter} gene feature_expression annotations.')
+        self.log.info(f'Skipped {split_system_counter} split system feature_expression annotations.')
+        self.log.info(f'Skipped {allele_counter} allele feature_expression annotations.')
+        self.log.info(f'Skipped {unmappable_feature_counter} unmappable feature_expression annotations.')
         self.log.info(f'Skipped {no_pub_counter} feature_expression annotations lacking a resolvable reference curie.')
         return
 
@@ -1397,26 +1480,31 @@ class ExpressionHandler(DataHandler):
         self.log.info('Build GeneExpressionExperimentDTOs with inlined GeneExpressionAnnotationDTOs.')
         empty_counter = 0
         annotation_counter = 0
+        skip_counter = 0
         for experiment in self.gene_expression_experiments.values():
+            if experiment.expression_type != 'gene':
+                experiment.for_export = False
+                skip_counter += 1
+                continue
             agr_experiment = self.agr_export_type()
             agr_experiment.gene_identifier = experiment.subject_curie
             agr_experiment.reference_curie = experiment.reference_curie
-            agr_experiment.expression_assay_curie = experiment.assay_curie
+            agr_experiment.expression_assay_curie = experiment.assay_mmo_curie
             # Data provider: an FB cross-reference to the assayed gene's report.
             subject = self.feature_lookup[experiment.members[0][0].public_feature_id]
             dp_xref = agr_datatypes.CrossReferenceDTO('FB', experiment.subject_curie, 'gene', subject['name']).dict_export()
             agr_experiment.data_provider_dto = agr_datatypes.DataProviderDTO(dp_xref).dict_export()
             # Build one annotation per member term combination, de-duplicating identical patterns.
             seen_annotations = set()
+            # BOB - as written, only 1st xp_combo used. Look at a way to create a uniq key for each xp_combo.
+            # Want to avoid adding redundant annotations that come from many alleles mapping to same insertion.
             for feat_xprn, xp_combo in experiment.members:
                 annotation = self.build_expression_annotation_dto(feat_xprn, xp_combo)
                 if annotation is None:
                     continue
-                dedup_key = (annotation.when_expressed_stage_name, annotation.where_expressed_statement,
-                             annotation.negated, annotation.uncertain)
-                if dedup_key in seen_annotations:
+                if feat_xprn.expression_id in seen_annotations:
                     continue
-                seen_annotations.add(dedup_key)
+                seen_annotations.add(feat_xprn.expression_id)
                 agr_experiment.expression_annotation_dtos.append(annotation.dict_export())
                 annotation_counter += 1
             if not agr_experiment.expression_annotation_dtos:
@@ -1426,6 +1514,7 @@ class ExpressionHandler(DataHandler):
             experiment.linkmldto = agr_experiment
         self.log.info(f'Built {annotation_counter} gene expression annotations across all experiments.')
         self.log.info(f'Flagged {empty_counter} experiments with no valid annotations as not for export.')
+        self.log.info(f'Skipped {skip_counter} experiments that were not gene expression experiments (allele, split system combination).')
         return
 
     # Elaborate on map_fb_data_to_alliance() for the ExpressionHandler.

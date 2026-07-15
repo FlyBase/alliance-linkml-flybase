@@ -708,10 +708,9 @@ class TemporalContextDTO(AuditedObjectDTO):
         super().__init__()
         self.developmental_stage_start_curie = None    # An FBdv term curie.
         self.developmental_stage_stop_curie = None     # An FBdv term curie (for stage ranges).
-        self.age = None                                # Free text age.
-        self.temporal_qualifier_names = []             # e.g., "post embryonic", "pre-adult".
-        self.stage_uberon_slim_term_curies = []        # UBERON:0000068 (embryo), UBERON:0000113 (post-embryonic), etc.
-        self.when_expressed_free_text = None           # Human-readable stage statement.
+        self.temporal_qualifier_names = []             # e.g., "male", "virgin female", "restricted".
+        self.stage_uberon_slim_term_curies = []        # UBERON:0000068 (embryo), UBERON:0000113 (post-embryonic), or "post embryonic, pre-adult".
+        self.when_expressed_free_text = None
 
 
 class AnatomicalSiteDTO(AuditedObjectDTO):
@@ -767,7 +766,7 @@ class GeneExpressionAnnotationDTO(AuditedObjectDTO):
     def __init__(self):
         """Create a GeneExpressionAnnotationDTO for a FlyBase expression annotation."""
         super().__init__()
-        self.expression_pattern_dto = None       # An ExpressionPatternDTO dict.
+        self.expression_pattern_dto = None        # An ExpressionPatternDTO dict.
         self.when_expressed_stage_name = None     # Human-readable stage name.
         self.where_expressed_statement = None     # Human-readable anatomical location.
         self.negated = None                       # Boolean.
