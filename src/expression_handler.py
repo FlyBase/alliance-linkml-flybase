@@ -283,6 +283,10 @@ class ExpressionHandler(DataHandler):
         self.anatomy_placeholder.cvterm_name = anatomy_root_term.name
         self.anatomy_placeholder.cv_name = anatomy_root_term.cv.name
         self.anatomy_placeholder.obo = anatomy_root_term.dbxref.db.name
+        # Seed has_anat_term_ids so the placeholder is reported as its own term (like normal
+        # anatomy terms in identify_tissue_ranges); otherwise the combo generator emits a blank
+        # structure and the annotation fails the Alliance "AnatomicalSite" rule.
+        self.anatomy_placeholder.has_anat_term_ids = [anatomy_root_term.cvterm_id]
         return
 
     def fill_in_stage_placeholder(self, session):
@@ -979,6 +983,10 @@ class ExpressionHandler(DataHandler):
             # Add placeholder "organism" term if no anatomy terms are present (to preserve annotation at Alliance).
             if not xprn_pattern.anatomy_terms:
                 xprn_pattern.anatomy_terms['anatomy_placeholder'] = self.anatomy_placeholder
+                # Also seed the sub_anatomy placeholder (as the "else" fallback below does); sub_anatomy
+                # is not in self.slot_types, so without this the combo generator's innermost loop over
+                # sub_anatomy_terms never iterates and the annotation produces zero TSV rows.
+                xprn_pattern.sub_anatomy_terms['placeholder'] = self.placeholder
                 continue
             # Otherwise, sort out main and subpart anatomy terms.
             main_parts = []
