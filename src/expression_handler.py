@@ -1043,6 +1043,16 @@ class ExpressionHandler(DataHandler):
                     xprn_pattern_dict['stage_slim_cvterm_ids'].extend(additional_slim_term_ids)
                 xprn_pattern_dict['stage_qualifier_cvterm_ids'] = list(set(xprn_pattern_dict['stage_qualifier_cvterm_ids']))
                 xprn_pattern_dict['stage_slim_cvterm_ids'] = list(set(xprn_pattern_dict['stage_slim_cvterm_ids']))
+                # Build a uniq_key from all cvterm_id fields (excluding slim term keys) for downstream de-duplication.
+                uniq_key_parts = []
+                for key, value in xprn_pattern_dict.items():
+                    if key.endswith('_slim_cvterm_ids'):
+                        continue
+                    if isinstance(value, list):
+                        uniq_key_parts.append(f'{key}={"|".join(str(v) for v in sorted(value))}')
+                    else:
+                        uniq_key_parts.append(f'{key}={value}')
+                xprn_pattern_dict['uniq_key'] = '||'.join(uniq_key_parts)
                 xprn_pattern_dict_list.append(xprn_pattern_dict)
                 # self.log.debug(f'For xprn_id={xprn_id}, generated xprn_pattern_dict: {xprn_pattern_dict}')
         return xprn_pattern_dict_list
