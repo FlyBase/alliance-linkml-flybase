@@ -1506,15 +1506,13 @@ class ExpressionHandler(DataHandler):
             agr_experiment.data_provider_dto = agr_datatypes.DataProviderDTO(dp_xref).dict_export()
             # Build one annotation per member term combination, de-duplicating identical patterns.
             seen_annotations = set()
-            # BOB - as written, only 1st xp_combo used. Look at a way to create a uniq key for each xp_combo.
-            # Want to avoid adding redundant annotations that come from many alleles mapping to same insertion.
             for feat_xprn, xp_combo in experiment.members:
+                if xp_combo['uniq_key'] in seen_annotations:
+                    continue
                 annotation = self.build_expression_annotation_dto(feat_xprn, xp_combo)
                 if annotation is None:
                     continue
-                if feat_xprn.expression_id in seen_annotations:
-                    continue
-                seen_annotations.add(feat_xprn.expression_id)
+                seen_annotations.add(xp_combo['uniq_key'])
                 agr_experiment.expression_annotation_dtos.append(annotation.dict_export())
                 annotation_counter += 1
             if not agr_experiment.expression_annotation_dtos:
