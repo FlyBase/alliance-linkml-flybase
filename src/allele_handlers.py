@@ -204,7 +204,12 @@ class AlleleHandler(MetaAlleleHandler):
         'aminoacid_rep': ('mutation_description', 'note_dtos'),
         'molecular_info': ('mutation_description', 'note_dtos'),
         'nucleotide_sub': ('mutation_description', 'note_dtos'),
-        # 'internal_notes': ('internal_note', 'note_dtos'),    # At the moment, just for code development.
+        'internal_notes': ('internal_note', 'note_dtos'),      # internal notes for FBal
+        'internalnotes': ('internal_note', 'note_dtos'),       # internal notes for FBti
+        'misc': ('comment', 'note_dtos'),                      # comments for FBal
+        'comment': ('comment', 'note_dtos'),                   # comments for FBti
+        'origin_type': ('notes_on_origin', 'note_dtos'),       # FBal
+        'origin_comment': ('notes_on_origin', 'note_dtos'),    # FBal
     }
 
     # Additional reference info.
@@ -1174,7 +1179,12 @@ class AberrationHandler(MetaAlleleHandler):
     # NB - the code assumes that the Alliance slot for these notes is multivalued (props in FlyBase are almost always multivalued).
     aberration_prop_to_note_mapping = {
         'molecular_info': ('mutation_description', 'note_dtos'),
-        # 'internal_notes': ('internal_note', 'note_dtos'),    # At the moment, just for code development.
+        'internal_notes': ('internal_note', 'note_dtos'),        # internal notes for FBab
+        'misc': ('comment', 'note_dtos'),                        # comments for FBab
+        'origin_type': ('notes_on_origin', 'note_dtos'),         # FBab
+        'origin_comment': ('notes_on_origin', 'note_dtos'),      # FBab
+        'new_order': ('new_cytological_order', 'note_dtos'),     # FBab
+        'complementation': ('complementation', 'note_dtos'),     # FBab
     }
 
     # Additional export sets.
