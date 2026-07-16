@@ -23,6 +23,12 @@ PRIMARY_TSV_HEADER = (
     "# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms\tinternal\n"
 )
 NOTES_TSV_HEADER = "# Primary FBid\ttype\tcomment\tevidence\n"
+GENE_CHANGE_EVENTS_TSV_HEADER = (
+    "# Primary FBid\tevent_type\tsymbol_renamed_from\tsymbol_renamed_to\tnote\tevidence\n"
+)
+SKIPPED_IDENTITY_SOURCE_TSV_HEADER = (
+    "# Primary FBid\traw_value\ttoken_count\tinternal\tobsolete\n"
+)
 COMPONENTS_TSV_HEADER = "# Primary FBid\tsymbol\trelation\ttaxon\tevidence\n"
 # NB: existing tool_uses TSVs write rows as primary, tools, evidence; the
 # header preserves that historic column order verbatim.
@@ -83,7 +89,7 @@ def write_primary_tsv(*, log, filename, entities, datatype):
                 raise
 
 
-def write_notes_tsv(*, filename, entities, no_pubs_sentinel=NO_PUBS_SENTINEL):
+def write_notes_tsv(*, filename, entities):
     """Write the per-entity notes TSV (`note_dtos` column)."""
     skip = should_skip_obsolete()
     with open(filename, 'w') as outfile:
@@ -93,13 +99,53 @@ def write_notes_tsv(*, filename, entities, no_pubs_sentinel=NO_PUBS_SENTINEL):
                 continue
             primary = entity_dict["primary_external_id"]
             for note in entity_dict.get("note_dtos", []):
-                if 'evidence_curies' in note:
-                    evidence = EVIDENCE_DELIMITER.join(note['evidence_curies'])
-                else:
-                    evidence = no_pubs_sentinel
+                evidence = EVIDENCE_DELIMITER.join(note.get('evidence_curies', []))
+                outfile.write(f"{primary}\t{note['note_type_name']}\t{note['free_text']}\t{evidence}\n")
+
+
+def write_gene_change_events_tsv(*, filename, entities):
+    """Write the gene change events TSV (`gene_change_event_dtos` slot).
+
+    One row per change event. Rename events (from 'identity_source') fill the
+    symbol columns; nomenclature comment events fill the note column with the
+    inner note's free_text. Evidence curies are pipe-joined.
+    """
+    skip = should_skip_obsolete()
+    with open(filename, 'w') as outfile:
+        outfile.write(GENE_CHANGE_EVENTS_TSV_HEADER)
+        for entity_dict in entities:
+            if skip and _is_excluded(entity_dict):
+                continue
+            primary = entity_dict["primary_external_id"]
+            for event in entity_dict.get("gene_change_event_dtos", []):
+                event_type = event.get("event_type_name", "")
+                renamed_from = event.get("symbol_renamed_from", "")
+                renamed_to = event.get("symbol_renamed_to", "")
+                inner_notes = event.get("note_dtos", [])
+                note = inner_notes[0]["free_text"] if inner_notes else ""
+                evidence = EVIDENCE_DELIMITER.join(event.get("evidence_curies", []))
                 outfile.write(
-                    f"{primary}\t{note['note_type_name']}\t{note['free_text']}\t{evidence}\n"
+                    f"{primary}\t{event_type}\t{renamed_from}\t{renamed_to}\t{note}\t{evidence}\n"
                 )
+
+
+def write_skipped_identity_source_tsv(*, filename, skipped):
+    """Write the diagnostic TSV of skipped multi-token 'identity_source' props.
+
+    These are values that did not split into exactly two symbols (gene merges
+    with multiple old IDs, or values with embedded provenance sentences) and so
+    were not exported as rename events. One row per skipped prop. Unlike the
+    other writers this is NOT filtered by should_skip_obsolete(): obsolete/internal
+    rows are included so curators can check whether bad-syntax values sit on
+    obsolete FBgns.
+    """
+    with open(filename, 'w') as outfile:
+        outfile.write(SKIPPED_IDENTITY_SOURCE_TSV_HEADER)
+        for item in skipped:
+            outfile.write(
+                f"{item['fb_id']}\t{item['raw_value']}\t{item['token_count']}\t"
+                f"{item['internal']}\t{item['obsolete']}\n"
+            )
 
 
 def write_components_tsv(*, filename, entities, datatype):

@@ -187,6 +187,8 @@ class AlleleHandler(MetaAlleleHandler):
         'FBal0104158': r'Ecol\lacZ[ftz.GFP]',  # Multiple encodes (for now)
         'FBal0191435': r'Avic\GFP[SCAT3.UAS]',  # uses_tool (multiple?)
         'FBal0241325': r'SREBP[GAL4::VP16',  # uses tool
+        'FBal0050505': 'shg[k03401]',   # FTA-207 note props: internal_notes, misc, origin_comment, origin_type.
+        'FBal0064059': 'ebi[k16213]',   # FTA-207 note props: internal_notes, misc, origin_comment, origin_type.
     }
 
     # Additional export sets.
@@ -204,7 +206,12 @@ class AlleleHandler(MetaAlleleHandler):
         'aminoacid_rep': ('mutation_description', 'note_dtos'),
         'molecular_info': ('mutation_description', 'note_dtos'),
         'nucleotide_sub': ('mutation_description', 'note_dtos'),
-        # 'internal_notes': ('internal_note', 'note_dtos'),    # At the moment, just for code development.
+        'internal_notes': ('internal_note', 'note_dtos'),      # internal notes for FBal
+        'internalnotes': ('internal_note', 'note_dtos'),       # internal notes for FBti
+        'misc': ('comment', 'note_dtos'),                      # comments for FBal
+        'comment': ('comment', 'note_dtos'),                   # comments for FBti
+        'origin_type': ('notes_on_origin', 'note_dtos'),       # FBal
+        'origin_comment': ('notes_on_origin', 'note_dtos'),    # FBal
     }
 
     # Additional reference info.
@@ -1165,6 +1172,8 @@ class AberrationHandler(MetaAlleleHandler):
         'FBab0038658': 'Dsim_Int(2L)S',         # Unusual annotation: introgressed_chromosome_region (SO:0000664). Assign 'NCBITaxon:32644' (unidentified).
         'FBab0047489': 'Dp(3;3)NA18',           # Unusual annotation: direct_tandem_duplication (SO:1000039).
         'FBab0010504': 'T(2;3)G16DTE35B-3P',    # Unusual annotation: assortment_derived_deficiency_plus_duplication (SO:0000801).
+        'FBab0004789': 'In(2LR)Px[4]',          # FTA-207 note props: internal_notes, misc, new_order, origin_comment.
+        'FBab0001546': 'Df(2L)Sco[rv10]',  # FTA-207 note props: complementation, internal_notes, misc, origin_comment.
     }
 
     # Simple mapping of props to Alliance note types, for cases where it is one-to-one correspondence.
@@ -1174,7 +1183,12 @@ class AberrationHandler(MetaAlleleHandler):
     # NB - the code assumes that the Alliance slot for these notes is multivalued (props in FlyBase are almost always multivalued).
     aberration_prop_to_note_mapping = {
         'molecular_info': ('mutation_description', 'note_dtos'),
-        # 'internal_notes': ('internal_note', 'note_dtos'),    # At the moment, just for code development.
+        'internal_notes': ('internal_note', 'note_dtos'),        # internal notes for FBab
+        'misc': ('comment', 'note_dtos'),                        # comments for FBab
+        'origin_type': ('notes_on_origin', 'note_dtos'),         # FBab
+        'origin_comment': ('notes_on_origin', 'note_dtos'),      # FBab
+        'new_order': ('new_cytological_order', 'note_dtos'),     # FBab
+        'complementation': ('complementation', 'note_dtos'),     # FBab
     }
 
     # Additional export sets.
