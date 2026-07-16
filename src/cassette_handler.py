@@ -10,10 +10,12 @@ Author(s):
 """
 
 from logging import Logger
+from os import getenv
 import copy
 import agr_datatypes
 import fb_datatypes
 from feature_handler import FeatureHandler
+from harvdev_utils.char_conversions import clean_free_text
 
 
 class CassetteHandler(FeatureHandler):
@@ -232,8 +234,63 @@ class CassetteHandler(FeatureHandler):
         # self.map_xrefs()
         self.map_secondary_ids('secondary_identifiers')
         self.map_cassette_associations()
+        self.map_cassette_internal_notes_fallback()
         # Cascade chado-obsolete -> internal=True (matches every other handler).
         self.flag_internal_fb_entities('fb_data_entities')
+
+    def map_cassette_internal_notes_fallback(self):
+        """FTA-211: route cassette FBal internal_notes that cannot be mapped to a Construct onto the Cassette.
+
+        A note's FBrf is "matched" when the cassette FBal has an associated_with link to an FBtp carrying
+        that same FBrf; those notes are added to the Construct by the ConstructHandler. Any note FBrf with
+        no such link - plus notes that carry no FBrf at all - falls back to the Cassette so data is not
+        lost. Each fallback (note text, FBrf) becomes one internal_note with that FBrf as its pub_curie.
+        Gated by ADD_CASS_TO_CONSTRUCT=YES, matching the ConstructHandler's cassette routing.
+        """
+        dump_cass_assoc = getenv('ADD_CASS_TO_CONSTRUCT', None)
+        if not (dump_cass_assoc and dump_cass_assoc == 'YES'):
+            return
+        self.log.info('FTA-211: map fallback internal_notes onto cassettes.')
+        counter = 0
+        for cassette in self.fb_data_entities.values():
+            if cassette.linkmldto is None:
+                continue
+            if 'internal_notes' not in cassette.props_by_type.keys():
+                continue
+            # Union of FBrf pub_ids across this FBal's associated_with -> construct links.
+            assoc_rels = cassette.recall_relationships(
+                self.log, entity_role='subject', rel_types='associated_with', rel_entity_types='construct')
+            assoc_pub_ids = set()
+            for rel in assoc_rels:
+                assoc_pub_ids.update(rel.pubs)
+            note_keys = set()
+            for fb_prop in cassette.props_by_type['internal_notes']:
+                free_text = clean_free_text(fb_prop.chado_obj.value)
+                note_pub_ids = set(fb_prop.pubs)
+                if note_pub_ids:
+                    # Fall back only the FBrf(s) with no matching associated_with -> construct link.
+                    for pub_id in note_pub_ids - assoc_pub_ids:
+                        note_key = (free_text, pub_id)
+                        if note_key in note_keys:
+                            continue
+                        note_keys.add(note_key)
+                        note_dto = agr_datatypes.NoteDTO(
+                            'internal_note', free_text, self.lookup_pub_curies([pub_id]))
+                        note_dto.internal = True
+                        cassette.linkmldto.note_dtos.append(note_dto.dict_export())
+                        counter += 1
+                else:
+                    # No FBrf at all - cannot route to a Construct; keep on the Cassette (no evidence).
+                    note_key = (free_text, None)
+                    if note_key in note_keys:
+                        continue
+                    note_keys.add(note_key)
+                    note_dto = agr_datatypes.NoteDTO('internal_note', free_text, [])
+                    note_dto.internal = True
+                    cassette.linkmldto.note_dtos.append(note_dto.dict_export())
+                    counter += 1
+        self.log.info(f'FTA-211: added {counter} fallback internal_note(s) to cassettes.')
+        return
 
     def map_secondary_ids(self, slot_name):
         """Return a list of Alliance SecondaryIdSlotAnnotationDTOs for a FlyBase entity."""

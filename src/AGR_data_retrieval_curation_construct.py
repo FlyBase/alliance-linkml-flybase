@@ -131,6 +131,12 @@ def main():
             datatype='construct',
         )
         log.info(f'Generated TSV: {tsv_filename}')
+        # FTA-211: dump ConstructDTO.note_dtos (incl. matched cassette internal notes) with pub_curies.
+        curation_tsv.write_notes_tsv(
+            filename=tsv_filename.replace('.tsv', '_notes.tsv'),
+            entities=export_dict['construct_ingest_set'],
+        )
+        log.info(f"Generated TSV: {tsv_filename.replace('.tsv', '_notes.tsv')}")
 
     if not reference_session:
         # Export the construct associations to a separate file.

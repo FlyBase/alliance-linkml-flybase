@@ -41,6 +41,7 @@ class SubmittedObjectDTO(AuditedObjectDTO):
         self.primary_external_id = None
         self.mod_internal_id = None
         self.data_provider_dto = None
+        self.note_dtos = []        # Inherited note_dtos slot (LinkML SubmittedObjectDTO); many subclasses redefine it.
         self.required_fields.extend(['data_provider_dto'])
 
 
