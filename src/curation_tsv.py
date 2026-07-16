@@ -22,7 +22,7 @@ EVIDENCE_DELIMITER = "|"
 PRIMARY_TSV_HEADER = (
     "# Primary FBid\tValid symbol\tValid full name\tsecondary FBid(s)\tsynonyms\tinternal\n"
 )
-NOTES_TSV_HEADER = "# Primary FBid\ttype\tcomment\n"
+NOTES_TSV_HEADER = "# Primary FBid\ttype\tcomment\tevidence\n"
 COMPONENTS_TSV_HEADER = "# Primary FBid\tsymbol\trelation\ttaxon\tevidence\n"
 # NB: existing tool_uses TSVs write rows as primary, tools, evidence; the
 # header preserves that historic column order verbatim.
@@ -83,7 +83,7 @@ def write_primary_tsv(*, log, filename, entities, datatype):
                 raise
 
 
-def write_notes_tsv(*, filename, entities):
+def write_notes_tsv(*, filename, entities, no_pubs_sentinel=NO_PUBS_SENTINEL):
     """Write the per-entity notes TSV (`note_dtos` column)."""
     skip = should_skip_obsolete()
     with open(filename, 'w') as outfile:
@@ -93,7 +93,13 @@ def write_notes_tsv(*, filename, entities):
                 continue
             primary = entity_dict["primary_external_id"]
             for note in entity_dict.get("note_dtos", []):
-                outfile.write(f"{primary}\t{note['note_type_name']}\t{note['free_text']}\n")
+                if 'evidence_curies' in note:
+                    evidence = EVIDENCE_DELIMITER.join(note['evidence_curies'])
+                else:
+                    evidence = no_pubs_sentinel
+                outfile.write(
+                    f"{primary}\t{note['note_type_name']}\t{note['free_text']}\t{evidence}\n"
+                )
 
 
 def write_components_tsv(*, filename, entities, datatype):
