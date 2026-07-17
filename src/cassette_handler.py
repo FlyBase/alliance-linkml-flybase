@@ -15,7 +15,6 @@ import copy
 import agr_datatypes
 import fb_datatypes
 from feature_handler import FeatureHandler
-from harvdev_utils.char_conversions import clean_free_text
 
 
 class CassetteHandler(FeatureHandler):
@@ -265,7 +264,7 @@ class CassetteHandler(FeatureHandler):
                 assoc_pub_ids.update(rel.pubs)
             note_keys = set()
             for fb_prop in cassette.props_by_type['internal_notes']:
-                free_text = clean_free_text(fb_prop.chado_obj.value)
+                free_text = self.clean_note_free_text(f'FB:{cassette.uniquename}', fb_prop.chado_obj.value)
                 note_pub_ids = set(fb_prop.pubs)
                 if note_pub_ids:
                     # Fall back only the FBrf(s) with no matching associated_with -> construct link.

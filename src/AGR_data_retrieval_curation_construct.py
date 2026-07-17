@@ -137,6 +137,12 @@ def main():
             entities=export_dict['construct_ingest_set'],
         )
         log.info(f"Generated TSV: {tsv_filename.replace('.tsv', '_notes.tsv')}")
+        # FTA-211: diagnostic report of internal_notes whose text failed clean_free_text.
+        curation_tsv.write_note_clean_failures_tsv(
+            filename=tsv_filename.replace('.tsv', '_internal_note_clean_failures.tsv'),
+            failures=cons_handler.internal_note_clean_failures,
+        )
+        log.info(f"Generated TSV: {tsv_filename.replace('.tsv', '_internal_note_clean_failures.tsv')}")
 
     if not reference_session:
         # Export the construct associations to a separate file.

@@ -14,7 +14,6 @@ from sqlalchemy.orm import aliased
 import agr_datatypes
 import fb_datatypes
 from feature_handler import FeatureHandler
-from harvdev_utils.char_conversions import clean_free_text
 from harvdev_utils.reporting import (
     Cvterm, Feature, FeatureCvterm, FeatureCvtermprop,
     FeatureRelationship, FeatureRelationshipPub,
@@ -359,7 +358,8 @@ class ConstructHandler(FeatureHandler):
             Cvterm.name == 'internal_notes',
         )
         results = session.query(
-            allele.feature_id, Featureprop.featureprop_id, Featureprop.value, FeaturepropPub.pub_id).\
+            allele.feature_id, allele.uniquename,
+            Featureprop.featureprop_id, Featureprop.value, FeaturepropPub.pub_id).\
             join(Featureprop, (Featureprop.feature_id == allele.feature_id)).\
             join(Cvterm, (Cvterm.cvterm_id == Featureprop.type_id)).\
             outerjoin(FeaturepropPub, (FeaturepropPub.featureprop_id == Featureprop.featureprop_id)).\
@@ -371,7 +371,7 @@ class ConstructHandler(FeatureHandler):
         for row in results:
             note = note_by_prop_id.get(row.featureprop_id)
             if note is None:
-                note = {'text': clean_free_text(row.value), 'pub_ids': set()}
+                note = {'text': self.clean_note_free_text(f'FB:{row.uniquename}', row.value), 'pub_ids': set()}
                 note_by_prop_id[row.featureprop_id] = note
                 self.allele_internal_notes.setdefault(row.feature_id, []).append(note)
             if row.pub_id is not None:

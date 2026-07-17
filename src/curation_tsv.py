@@ -29,6 +29,7 @@ GENE_CHANGE_EVENTS_TSV_HEADER = (
 SKIPPED_IDENTITY_SOURCE_TSV_HEADER = (
     "# Primary FBid\traw_value\ttoken_count\tinternal\tobsolete\n"
 )
+NOTE_CLEAN_FAILURES_TSV_HEADER = "# Primary FBid\traw_value\terror\n"
 COMPONENTS_TSV_HEADER = "# Primary FBid\tsymbol\trelation\ttaxon\tevidence\n"
 # NB: existing tool_uses TSVs write rows as primary, tools, evidence; the
 # header preserves that historic column order verbatim.
@@ -146,6 +147,20 @@ def write_skipped_identity_source_tsv(*, filename, skipped):
                 f"{item['fb_id']}\t{item['raw_value']}\t{item['token_count']}\t"
                 f"{item['internal']}\t{item['obsolete']}\n"
             )
+
+
+def write_note_clean_failures_tsv(*, filename, failures):
+    """Write the diagnostic TSV of internal_notes whose text failed clean_free_text (FTA-211).
+
+    One row per failed note: the raw featureprop value (tabs/newlines flattened) and the
+    exception, so curators can see the offending characters (e.g. an unknown SGML entity
+    like "&3;"). Not filtered by should_skip_obsolete().
+    """
+    with open(filename, 'w') as outfile:
+        outfile.write(NOTE_CLEAN_FAILURES_TSV_HEADER)
+        for item in failures:
+            raw = item['raw_value'].replace('\t', ' ').replace('\n', ' ')
+            outfile.write(f"{item['fb_id']}\t{raw}\t{item['error']}\n")
 
 
 def write_components_tsv(*, filename, entities, datatype):
