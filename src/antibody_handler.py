@@ -199,6 +199,7 @@ class AntibodyHandler(DataHandler):
         """Extend the method for the AntibodyHandler."""
         super().map_fb_data_to_alliance()
         self.map_antibody_basic()
+        self.map_antibody_cross_references()
         self.map_data_provider_dto()
         self.flag_internal_fb_entities('fb_data_entities')
         return
@@ -217,6 +218,27 @@ class AntibodyHandler(DataHandler):
                 agr_antibody.reference_curies = [antibody.reference_curie]
                 agr_antibody.original_reference_curie = antibody.reference_curie
             antibody.linkmldto = agr_antibody
+        return
+
+    def map_antibody_cross_references(self):
+        """Map the commercial source cross-reference to the Alliance object.
+
+        Each commercial antibody (DSHB or CST) gets a single CrossReferenceDTO
+        built from the feature_dbxref's db (prefix) and dbxref.accession.
+        Lab-generated antibodies have no such cross-reference.
+        """
+        self.log.info('Map commercial antibody cross-references to the Alliance object.')
+        counter = 0
+        for antibody in self.fb_data_entities.values():
+            if antibody.linkmldto is None or antibody.source is None:
+                continue
+            prefix = antibody.source
+            referenced_curie = f'{prefix}:{antibody.accession}'
+            display_name = f'{prefix}:{antibody.accession}'
+            xref_dto = agr_datatypes.CrossReferenceDTO(prefix, referenced_curie, 'default', display_name).dict_export()
+            antibody.linkmldto.cross_reference_dtos.append(xref_dto)
+            counter += 1
+        self.log.info(f'Mapped {counter} commercial antibody cross-references.')
         return
 
     def map_data_provider_dto(self):
