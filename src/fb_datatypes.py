@@ -450,7 +450,6 @@ class FBAntibody(FBExportEntity):
         self.clonality = clonality                # "monoclonal" or "polyclonal".
         # Source 1 (lab-generated) data.
         self.pub_id = None            # The internal chado pub_id supporting the antibody (from FeaturepropPub).
-        self.pub_uniquename = None    # The supporting pub FBrf ID (pub.uniquename), used to build the name.
         # Source 2 (commercial) data.
         self.source = None            # The commercial source label: "DSHB" or "CST".
         self.accession = None         # The antibody ID (dbxref.accession), used to build the name.

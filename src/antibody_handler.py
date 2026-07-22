@@ -103,7 +103,6 @@ class AntibodyHandler(DataHandler):
                 continue
             antibody = self.fb_export_type(uniq_key, gene.uniquename, gene.name, gene.organism_id, clonality)
             antibody.pub_id = pub.pub_id
-            antibody.pub_uniquename = pub.uniquename
             self.fb_data_entities[uniq_key] = antibody
             counter += 1
         self.log.info(f'Found {counter} lab-generated antibodies ({skipped_counter} skipped for unrecognized clonality).')
@@ -165,8 +164,9 @@ class AntibodyHandler(DataHandler):
                 # Commercial: gene name, clonality, source (DSHB/CST), antibody ID.
                 components = [antibody.gene_name, antibody.clonality, antibody.source, antibody.accession]
             else:
-                # Lab-generated: gene name, clonality, pub ID (FBrf).
-                components = [antibody.gene_name, antibody.clonality, antibody.pub_uniquename]
+                # Lab-generated: gene name, clonality, pub curie (PMID if available, else FB:FBrf).
+                pub_curie = self.lookup_single_pub_curie(antibody.pub_id)
+                components = [antibody.gene_name, antibody.clonality, pub_curie]
             antibody.antibody_name = '_'.join([str(component) for component in components])
         return
 
