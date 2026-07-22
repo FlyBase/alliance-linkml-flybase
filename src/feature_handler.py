@@ -13,6 +13,7 @@ Author(s):
 
 from logging import Logger
 from sqlalchemy.orm import aliased
+from harvdev_utils.char_conversions import clean_free_text
 from harvdev_utils.reporting import (
     Cvterm, Db, Dbxref, Featureloc, Feature, FeatureDbxref, FeatureRelationship,
     FeatureCvterm, Library, LibraryFeature, LibraryFeatureprop
@@ -26,6 +27,21 @@ class FeatureHandler(PrimaryEntityHandler):
     def __init__(self, log: Logger, testing: bool):
         """Create the FeatureHandler object."""
         super().__init__(log, testing)
+        self.internal_note_clean_failures = []    # FTA-211: internal_notes whose text failed clean_free_text.
+
+    def clean_note_free_text(self, fb_id, raw_value):
+        """Clean internal-note free text, tolerating unknown SGML entities (FTA-211).
+
+        clean_free_text() raises KeyError on any &word; token not in harvdev_utils'
+        Greek dict (e.g. the junk "&3;"). On failure we strip &word; tokens and retry
+        leniently, keep the note, and record the raw value for the diagnostic report.
+        """
+        try:
+            return clean_free_text(raw_value)
+        except Exception as error:
+            self.internal_note_clean_failures.append(
+                {'fb_id': fb_id, 'raw_value': raw_value, 'error': str(error)})
+            return raw_value
 
     # Add methods to be run by get_general_data() below.
     # Placeholder.

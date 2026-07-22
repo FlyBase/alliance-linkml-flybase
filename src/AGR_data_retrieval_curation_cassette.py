@@ -146,6 +146,11 @@ def _export_primary(cassette_handler):
         raise ValueError(f'The "{set_name}" is unexpectedly empty.')
     generate_export_file(export_dict, log, output_filename)
     _write_cassette_tsvs(export_dict[set_name], set_up_dict['output_filename'])
+    # FTA-211: diagnostic report of internal_notes whose text failed clean_free_text.
+    curation_tsv.write_note_clean_failures_tsv(
+        filename=set_up_dict['output_filename'].replace('.tsv', '_internal_note_clean_failures.tsv'),
+        failures=cassette_handler.internal_note_clean_failures,
+    )
 
 
 def _export_associations(cassette_handler):

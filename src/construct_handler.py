@@ -344,6 +344,42 @@ class ConstructHandler(FeatureHandler):
         self.log.info(f'Found {counter} molecular_info featureprop pub links for alleles.')
         return
 
+    def get_allele_internal_notes(self, session):
+        """Get internal_notes featureprops (text + pubs) for cassette alleles, keyed by allele feature_id (FTA-211).
+
+        Populates self.allele_internal_notes[allele_feature_id] = [{'text': str, 'pub_ids': set()}, ...],
+        one entry per featureprop (internal note), so notes can be routed per-FBrf to the correct Construct.
+        """
+        self.log.info('Get internal_notes featureprops for alleles.')
+        allele = aliased(Feature, name='allele')
+        filters = (
+            allele.is_obsolete.is_(False),
+            allele.uniquename.op('~')(self.regex['allele']),
+            Cvterm.name == 'internal_notes',
+        )
+        results = session.query(
+            allele.feature_id, allele.uniquename,
+            Featureprop.featureprop_id, Featureprop.value, FeaturepropPub.pub_id).\
+            join(Featureprop, (Featureprop.feature_id == allele.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == Featureprop.type_id)).\
+            outerjoin(FeaturepropPub, (FeaturepropPub.featureprop_id == Featureprop.featureprop_id)).\
+            filter(*filters).\
+            distinct()
+        self.allele_internal_notes = {}
+        note_by_prop_id = {}    # featureprop_id -> note dict (to group multiple pubs of one prop).
+        counter = 0
+        for row in results:
+            note = note_by_prop_id.get(row.featureprop_id)
+            if note is None:
+                note = {'text': self.clean_note_free_text(f'FB:{row.uniquename}', row.value), 'pub_ids': set()}
+                note_by_prop_id[row.featureprop_id] = note
+                self.allele_internal_notes.setdefault(row.feature_id, []).append(note)
+            if row.pub_id is not None:
+                note['pub_ids'].add(row.pub_id)
+            counter += 1
+        self.log.info(f'Found {len(note_by_prop_id)} internal_notes featureprops for alleles.')
+        return
+
     def get_datatype_data(self, session):
         """Extend the method for the ConstructHandler."""
         super().get_datatype_data(session)
@@ -364,9 +400,11 @@ class ConstructHandler(FeatureHandler):
         # Because the Alliance is not yet able to handle cassettes we do not want to add these
         # associations. For testing set the env ADD_CASS_TO_CONSTRUCT which will then do this
         self.allele_molecular_info_pubs = {}
+        self.allele_internal_notes = {}
         dump_cass_assoc = getenv('ADD_CASS_TO_CONSTRUCT', None)
         if dump_cass_assoc and dump_cass_assoc == 'YES':
             self.get_allele_molecular_info_pubs(session)
+            self.get_allele_internal_notes(session)
         return
 
     # Add methods to be run by synthesize_info() below.
@@ -1168,6 +1206,8 @@ class ConstructHandler(FeatureHandler):
         counter = 0
         for construct in self.fb_data_entities.values():
             cons_curie = f'FB:{construct.uniquename}'
+            # FTA-211: dedup key set for internal notes attached to this Construct (text, pub_id).
+            construct_note_keys = set()
             # Handle marked_with relationships (FTA-139).
             marked_with_rels = construct.recall_relationships(
                 self.log, entity_role='subject', rel_types='marked_with', rel_entity_types='allele')
@@ -1198,6 +1238,21 @@ class ConstructHandler(FeatureHandler):
                 allele_id = rel.chado_obj.subject_id
                 allele_uniquename = self.feature_lookup[allele_id]['uniquename']
                 cassette_curie = f'FB:{allele_uniquename}'
+                # FTA-211: attach matched cassette-FBal internal notes directly to this Construct.
+                # A note's FBrf matches when it is also on this associated_with link (rel.pubs); each
+                # matched (note text, FBrf) becomes one internal_note with that FBrf as its pub_curie.
+                if construct.linkmldto is not None:
+                    rel_pub_ids = set(rel.pubs)
+                    for note in self.allele_internal_notes.get(allele_id, []):
+                        for pub_id in note['pub_ids'] & rel_pub_ids:
+                            note_key = (note['text'], pub_id)
+                            if note_key in construct_note_keys:
+                                continue
+                            construct_note_keys.add(note_key)
+                            note_dto = agr_datatypes.NoteDTO(
+                                'internal_note', note['text'], self.lookup_pub_curies([pub_id]))
+                            note_dto.internal = True
+                            construct.linkmldto.note_dtos.append(note_dto.dict_export())
                 # Pub filtering logic.
                 if len(rel.pubs) == 1:
                     filtered_pub_ids = rel.pubs
