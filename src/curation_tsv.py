@@ -101,7 +101,10 @@ def write_notes_tsv(*, filename, entities):
             primary = entity_dict["primary_external_id"]
             for note in entity_dict.get("note_dtos", []):
                 evidence = EVIDENCE_DELIMITER.join(note.get('evidence_curies', []))
-                outfile.write(f"{primary}\t{note['note_type_name']}\t{note['free_text']}\t{evidence}\n")
+                # Strip tabs/newlines just before the dump so "dirty" (unmodified) note
+                # free text cannot break the TSV row; the text is otherwise left as-is.
+                free_text = note['free_text'].replace('\t', ' ').replace('\r', ' ').replace('\n', ' ')
+                outfile.write(f"{primary}\t{note['note_type_name']}\t{free_text}\t{evidence}\n")
 
 
 def write_gene_change_events_tsv(*, filename, entities):

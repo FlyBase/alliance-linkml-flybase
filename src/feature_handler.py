@@ -11,7 +11,6 @@ Author(s):
 
 """
 
-import re
 from logging import Logger
 from sqlalchemy.orm import aliased
 from harvdev_utils.char_conversions import clean_free_text
@@ -40,14 +39,9 @@ class FeatureHandler(PrimaryEntityHandler):
         try:
             return clean_free_text(raw_value)
         except Exception as error:
-            stripped = re.sub(r'&\w+;', '', raw_value)
-            try:
-                cleaned = clean_free_text(stripped)
-            except Exception:
-                cleaned = stripped.replace('\n', ' ').replace('\t', ' ').replace('@', '')
             self.internal_note_clean_failures.append(
                 {'fb_id': fb_id, 'raw_value': raw_value, 'error': str(error)})
-            return cleaned
+            return raw_value
 
     # Add methods to be run by get_general_data() below.
     # Placeholder.
