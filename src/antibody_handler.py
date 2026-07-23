@@ -20,7 +20,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import aliased
 from harvdev_utils.reporting import (
     Cvterm, Db, Dbxref, Dbxrefprop, Feature, FeatureDbxref,
-    Featureprop, FeaturepropPub, Pub
+    Featureprop, FeaturepropPub, Organism, Pub
 )
 import agr_datatypes
 import fb_datatypes
@@ -80,9 +80,12 @@ class AntibodyHandler(DataHandler):
             Feature.uniquename.op('~')(self.regex['gene']),
             Cvterm.name == 'reported_antibod_gen',
             Pub.is_obsolete.is_(False),
+            Pub.uniquename != 'unattributed',
+            Organism.abbreviation == 'Dmel'
         )
         results = session.query(Feature, Featureprop, Pub).\
             select_from(Feature).\
+            join(Organism, (Organism.organism_id == Feature.organism_id)).\
             join(Featureprop, (Featureprop.feature_id == Feature.feature_id)).\
             join(Cvterm, (Cvterm.cvterm_id == Featureprop.type_id)).\
             join(FeaturepropPub, (FeaturepropPub.featureprop_id == Featureprop.featureprop_id)).\
@@ -119,9 +122,11 @@ class AntibodyHandler(DataHandler):
             Db.name.in_((list(self.commercial_antibody_dbs.keys()))),
             prop_type.name == 'linkout',
             func.lower(Dbxrefprop.value).in_((self.valid_clonalities)),
+            Organism.abbreviation == 'Dmel',
         )
         results = session.query(Feature, Db, Dbxref, Dbxrefprop).\
             select_from(Feature).\
+            join(Organism, (Organism.organism_id == Feature.organism_id)).\
             join(FeatureDbxref, (FeatureDbxref.feature_id == Feature.feature_id)).\
             join(Dbxref, (Dbxref.dbxref_id == FeatureDbxref.dbxref_id)).\
             join(Db, (Db.db_id == Dbxref.db_id)).\
@@ -150,8 +155,8 @@ class AntibodyHandler(DataHandler):
     def synthesize_info(self):
         """Extend the method for the AntibodyHandler."""
         super().synthesize_info()
-        self.synthesize_antibody_names()
         self.synthesize_antibody_references()
+        self.synthesize_antibody_names()
         self.synthesize_antigen_taxon()
         return
 
@@ -165,13 +170,17 @@ class AntibodyHandler(DataHandler):
                 components = [antibody.gene_name, antibody.clonality, antibody.source, antibody.accession]
             else:
                 # Lab-generated: gene name, clonality, pub curie (PMID if available, else FB:FBrf).
-                pub_curie = self.lookup_single_pub_curie(antibody.pub_id)
-                components = [antibody.gene_name, antibody.clonality, pub_curie]
+                # reference_curie was resolved once in synthesize_antibody_references().
+                components = [antibody.gene_name, antibody.clonality, antibody.reference_curie]
             antibody.antibody_name = '_'.join([str(component) for component in components])
         return
 
     def synthesize_antibody_references(self):
-        """Look up the supporting pub curie for each lab-generated antibody."""
+        """Resolve the supporting pub curie once for each lab-generated antibody.
+
+        Stores it on antibody.reference_curie; synthesize_antibody_names() reuses
+        this value, so the pub curie is looked up only once per antibody.
+        """
         self.log.info('Look up supporting pub curies for lab-generated antibodies.')
         counter = 0
         for antibody in self.fb_data_entities.values():
