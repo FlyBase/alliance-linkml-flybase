@@ -46,6 +46,14 @@ class ConstructHandler(FeatureHandler):
     has_transcriptional_unit_list = ['FBal0345196', 'FBal0345198', 'FBal0407180',
                                      'FBal0407181', 'FBal0407182', 'FBal0368073']
 
+    # Simple mapping of FBtp props to Alliance note types (FTA-214).
+    # key = FB featureprop cvterm.name; value = (Alliance note type name, Alliance slot name).
+    construct_prop_to_note_mapping = {
+        'molecular_info': ('summary', 'note_dtos'),        # MS15
+        'internalnotes': ('internal_note', 'note_dtos'),   # MS11 (marked internal automatically)
+        'comment': ('comment', 'note_dtos'),               # MS10b
+    }
+
     test_set = {
         # FBtp corresponding to 'cassette FBal that are associated_with at least one FBtp' in cassette_handler.py
         'FBtp0006749': 'P{UAS-wg.flu}',                           # associated_with FBal0055793
@@ -1391,6 +1399,10 @@ class ConstructHandler(FeatureHandler):
         # self.map_xrefs(datatype)    # ConstructDTO lacks cross_reference_dtos attribute.
         self.map_pubs()
         self.map_timestamps()
+        # FTA-214: map the FBtp's own free-text props (molecular_info/internalnotes/comment)
+        # to Construct notes. Ungated (not behind ADD_CASS_TO_CONSTRUCT) since the free text
+        # is attached directly to the FBtp in chado.
+        self.map_entity_props_to_notes('construct_prop_to_note_mapping')
         # Note - We do not use self.map_secondary_ids('construct_secondary_id_dtos') here.
         #        This is because for reagents, we report only strings, not SecondaryIdSlotAnnotationDTOs.
         for construct in self.fb_data_entities.values():
