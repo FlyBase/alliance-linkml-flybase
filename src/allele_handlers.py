@@ -19,7 +19,7 @@ from fb_datatypes import (
 )
 from feature_handler import FeatureHandler
 from harvdev_utils.reporting import (
-    Cvterm, Feature, FeatureGenotype, FeatureRelationship,
+    Cvterm, Feature, FeatureCvterm, FeatureGenotype, FeatureRelationship,
     Featureprop, Genotype, Phenotype, PhenotypeCvterm, Phenstatement, Pub
 )
 from utils import export_chado_data
@@ -1208,6 +1208,59 @@ class AberrationHandler(MetaAlleleHandler):
     chr_del_terms = []        # A list of cvterm_ids for child terms of "chromosomal_deletion" (SO:1000029).
 
     # Additional sub-methods for get_general_data().
+    def get_cassette_allele_ids(self, session):
+        """Get feature_ids of FBal alleles that are construct cassettes (FTA-218).
+
+        Cassette FBal features share the "allele" cvterm but are excluded from the allele export by the
+        AlleleHandler (see its self.ignore_list), so aberration-allele associations must not point at them.
+        NB - FeatureHandler.cassette_feature_ids() cannot be reused here: it resolves self.regex[self.datatype]
+        and self.feature_subtypes[self.datatype], which for this handler are the aberration values, so it would
+        return FBab features rather than cassette FBal features. It also restricts to self.test_set in testing
+        mode, which for this handler is a set of FBab IDs. This lookup is deliberately never limited to the
+        test set, since it is reference data used to validate partners, like the feature_lookup.
+        """
+        self.log.info('Get feature_ids of FBal alleles that are construct cassettes.')
+        cassette_ids = set()
+        # First, cassettes flagged with the "in vitro construct" CV term.
+        in_vitro_filters = (
+            Feature.is_obsolete.is_(False),
+            Feature.uniquename.op('~')(self.regex['allele']),
+            Cvterm.name == 'in vitro construct',
+        )
+        in_vitro_results = session.query(Feature.feature_id).\
+            select_from(Feature).\
+            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
+            filter(*in_vitro_filters).\
+            distinct()
+        for result in in_vitro_results:
+            cassette_ids.add(result.feature_id)
+        self.log.info(f'Found {len(cassette_ids)} "in vitro construct" cassette FBal alleles.')
+        # Second, cassettes related to an FBtp construct.
+        construct = aliased(Feature, name='cassette_construct')
+        rel_type = aliased(Cvterm, name='cassette_rel_type')
+        feat_type = aliased(Cvterm, name='cassette_feat_type')
+        main_filters = (
+            Feature.is_obsolete.is_(False),
+            Feature.uniquename.op('~')(self.regex['allele']),
+            feat_type.name.in_((self.feature_subtypes['allele'])),
+            construct.is_obsolete.is_(False),
+            construct.uniquename.op('~')(self.regex['construct']),
+            rel_type.name == 'associated_with',
+        )
+        main_results = session.query(Feature.feature_id).\
+            select_from(Feature).\
+            join(feat_type, (feat_type.cvterm_id == Feature.type_id)).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == Feature.feature_id)).\
+            join(construct, (construct.feature_id == FeatureRelationship.object_id)).\
+            join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*main_filters).\
+            distinct()
+        for result in main_results:
+            cassette_ids.add(result.feature_id)
+        self.log.info(f'Found {len(cassette_ids)} cassette FBal alleles in total.')
+        return cassette_ids
+
     def get_key_cvterm_sets_for_aberrations(self, session):
         """Get key CV term sets for aberrations from chado."""
         self.log.info('Get key CV term sets for aberrations from chado.')
@@ -1229,7 +1282,7 @@ class AberrationHandler(MetaAlleleHandler):
         # look up partner uniquenames. Gated so that production runs make no extra queries until the Alliance is ready.
         if getenv('ADD_ALLELE_ALLELE_ASSOC', None) == 'YES':
             self.build_feature_lookup(session, feature_types=['gene', 'allele', 'insertion'])
-            self.cassette_ignore_list = set(self.cassette_feature_ids(session))
+            self.cassette_ignore_list = self.get_cassette_allele_ids(session)
         else:
             self.build_feature_lookup(session, feature_types=['gene'])
             self.log.info('ADD_ALLELE_ALLELE_ASSOC not set to "YES"; not adding allele/insertion features to the '
