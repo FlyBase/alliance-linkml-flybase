@@ -22,6 +22,7 @@ Notes:
 """
 
 import argparse
+from os import getenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from harvdev_utils.psycopg_functions import set_up_db_reading
@@ -34,6 +35,7 @@ import curation_tsv
 _ALLELE_ASSOC_SECOND_FIELDS = {
     'allele_gene_association_ingest_set': 'gene_identifier',
     'allele_construct_association_ingest_set': 'construct_identifier',
+    'allele_allele_association_ingest_set': 'object_allele_identifier',
 }
 # Allele association TSVs include an extra 'internal' boolean column.
 _ALLELE_ASSOC_EXTRAS = [('internal', 'internal', False)]
@@ -60,9 +62,12 @@ parser = argparse.ArgumentParser(
     description='Export FlyBase allele data to Alliance LinkML JSON.',
     epilog="""
 Environment variables:
-  SERVER              Database server (e.g. flysql25)
-  DATABASE            Database name (e.g. production_chado)
-  ADD_OBSOLETE        Set to 'NO' to exclude obsolete/internal rows from the TSVs only; JSON output is unaffected
+  SERVER                    Database server (e.g. flysql25)
+  DATABASE                  Database name (e.g. production_chado)
+  ADD_OBSOLETE              Set to 'NO' to exclude obsolete/internal rows from the TSVs only; JSON output is unaffected
+  ADD_ALLELE_ALLELE_ASSOC   Set to 'YES' to emit the FTA-218 'allele_allele_association_ingest_set' (aberration
+                            'carries'/'breakpoint_allele' relations). Off by default: the Alliance schema has no
+                            such ingest set and lacks the two CV terms, so the data cannot yet be loaded.
 """,
     formatter_class=argparse.RawDescriptionHelpFormatter
 )
@@ -159,11 +164,25 @@ def main():
         if len(association_export_dict['allele_construct_association_ingest_set']) == 0:
             log.error('The "allele_construct_association_ingest_set" is unexpectedly empty.')
             raise ValueError('The "allele_construct_association_ingest_set" is unexpectedly empty.')
+        # Allele-allele associations (FTA-218). Gated by ADD_ALLELE_ALLELE_ASSOC=YES because the Alliance schema has
+        # no "allele_allele_association_ingest_set" and lacks the "carries"/"breakpoint_allele" CV terms, so including
+        # this set would make the file unloadable.
+        association_ingest_names = ['allele_gene_association_ingest_set',
+                                    'allele_construct_association_ingest_set']
+        if getenv('ADD_ALLELE_ALLELE_ASSOC', None) == 'YES':
+            association_export_dict['allele_allele_association_ingest_set'] = []
+            association_export_dict['allele_allele_association_ingest_set'].extend(
+                aberration_handler.export_data['allele_allele_association_ingest_set'])
+            if len(association_export_dict['allele_allele_association_ingest_set']) == 0:
+                log.error('The "allele_allele_association_ingest_set" is unexpectedly empty.')
+                raise ValueError('The "allele_allele_association_ingest_set" is unexpectedly empty.')
+            association_ingest_names.append('allele_allele_association_ingest_set')
+        else:
+            log.info('ADD_ALLELE_ALLELE_ASSOC not set to "YES"; omitting the "allele_allele_association_ingest_set".')
         # Print the output file.
         generate_export_file(association_export_dict, log, association_output_filename)
         # Per-association-set TSV files for easy curator review.
-        for ingest_name in ('allele_gene_association_ingest_set',
-                            'allele_construct_association_ingest_set'):
+        for ingest_name in association_ingest_names:
             set_name = ingest_name.replace('_ingest_set', '')
             assoc_tsv_filename = set_up_dict['output_filename'].replace('allele', set_name)
             assoc_tsv_filename = assoc_tsv_filename.replace('.tsv', '_associations.tsv')
