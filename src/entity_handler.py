@@ -50,6 +50,32 @@ class PrimaryEntityHandler(DataHandler):
         """Create the generic PrimaryEntityHandler object."""
         super().__init__(log, testing)
         self.ignore_list = []
+        self.internal_note_clean_failures = []    # FTA-211/FTA-221: note props whose text could not be cleaned.
+
+    def clean_note_free_text(self, fb_id, raw_value):
+        """Clean note free text, tolerating NULL values and unknown SGML entities (FTA-211, FTA-221).
+
+        Two ways the raw featureprop value breaks clean_free_text():
+          - FTA-221: chado allows featureprop.value to be NULL, and clean_free_text() calls
+            .replace() on it, raising AttributeError on None.
+          - FTA-211: clean_free_text() raises KeyError on any &word; token not in harvdev_utils'
+            Greek dict (e.g. the junk "&3;").
+        Either way, record the offender for the diagnostic report rather than aborting the export.
+        Returns None for a value with no usable text, so callers can skip it.
+
+        NB - raw_value is coerced to a string in the failure record, because
+        curation_tsv.write_note_clean_failures_tsv() calls .replace() on it.
+        """
+        if raw_value is None or not str(raw_value).strip():
+            self.internal_note_clean_failures.append(
+                {'fb_id': fb_id, 'raw_value': '', 'error': 'featureprop.value is NULL or blank; note skipped'})
+            return None
+        try:
+            return clean_free_text(raw_value)
+        except Exception as error:
+            self.internal_note_clean_failures.append(
+                {'fb_id': fb_id, 'raw_value': str(raw_value), 'error': str(error)})
+            return raw_value
 
     # Conversion of FB datatype to "page_area".
     page_area_conversion = {
@@ -1285,7 +1311,11 @@ class PrimaryEntityHandler(DataHandler):
             return note_dtos
         prop_list = fb_entity.props_by_type[fb_prop_type]
         for fb_prop in prop_list:
-            free_text = clean_free_text(fb_prop.chado_obj.value)
+            # FTA-221: tolerate NULL/blank and uncleanable values instead of aborting the whole export.
+            # A prop with no usable text yields no note, so skip it.
+            free_text = self.clean_note_free_text(fb_entity.uniquename, fb_prop.chado_obj.value)
+            if free_text is None:
+                continue
             if free_text not in text_keyed_props.keys():
                 text_keyed_props[free_text] = []
             text_keyed_props[free_text].extend(fb_prop.pubs)
@@ -1304,6 +1334,7 @@ class PrimaryEntityHandler(DataHandler):
         NOTE_TYPE_NAME = 0
         NOTE_SLOT_NAME = 1
         mapping_dict = getattr(self, mapping_dict_name)
+        failures_before = len(self.internal_note_clean_failures)
         for fb_prop_type, note_specs in mapping_dict.items():
             entity_counter = 0
             prop_counter = 0
@@ -1320,4 +1351,13 @@ class PrimaryEntityHandler(DataHandler):
                     entity_counter += 1
                 prop_counter += len(agr_notes)
             self.log.info(f'For "{fb_prop_type}", mapped {prop_counter} props for {entity_counter} {self.datatype}s.')
+        # FTA-221: surface uncleanable note props in the log. Without this the failures are collected
+        # and never reported, since only the construct and cassette scripts emit the diagnostic TSV.
+        new_failures = self.internal_note_clean_failures[failures_before:]
+        if new_failures:
+            self.log.warning(f'Skipped or kept unmodified {len(new_failures)} "{self.datatype}" note props that could not be cleaned.')
+            for failure in new_failures[:20]:
+                self.log.warning(f'Uncleanable note prop: fb_id={failure["fb_id"]}, error={failure["error"]}')
+            if len(new_failures) > 20:
+                self.log.warning(f'...and {len(new_failures) - 20} more (see the diagnostic TSV where the script emits one).')
         return
