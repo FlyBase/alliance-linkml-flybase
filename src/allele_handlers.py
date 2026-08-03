@@ -332,9 +332,12 @@ class AlleleHandler(MetaAlleleHandler):
             filter(*filters).\
             distinct()
         for result in results:
-            allele_str = f'{result.allele.name} ({result.allele.uniquename})'
-            insertion_str = f'{result.insertion.name} ({result.insertion.uniquename})'
-            self.log.debug(f'The transgenic allele {allele_str} is related to the generic insertion {insertion_str}.')
+            # Only log the per-row detail for the test set: in a full run this is one line per
+            # FBal-FBti pair, which swamps the debug log (and builds the strings needlessly).
+            if self.testing:
+                allele_str = f'{result.allele.name} ({result.allele.uniquename})'
+                insertion_str = f'{result.insertion.name} ({result.insertion.uniquename})'
+                self.log.debug(f'The transgenic allele {allele_str} is related to the generic insertion {insertion_str}.')
             try:
                 self.transgenic_fbal_fbti_dict[result.allele.feature_id].append(result.insertion.feature_id)
             except KeyError:
@@ -434,7 +437,10 @@ class AlleleHandler(MetaAlleleHandler):
         except KeyError:
             self.log.warning(f'Could not find insertion feature_id={allele.superseded_by_at_locus_insertion}')
             return
-        self.log.debug(f'Merge {allele} data into {insertion} data.')
+        # Per-allele/per-attribute detail below is only logged for the test set: in a full run this is
+        # ~14 lines per superseded allele, which swamps the debug log.
+        if self.testing:
+            self.log.debug(f'Merge {allele} data into {insertion} data.')
         insertion.alt_fb_ids.append(f'FB:{allele.uniquename}')
         lists_to_extend = [
             'dbxrefs',
@@ -469,30 +475,36 @@ class AlleleHandler(MetaAlleleHandler):
         for attr_name in lists_to_extend:
             allele_list = getattr(allele, attr_name)
             insertion_list = getattr(insertion, attr_name)
-            self.log.debug(f'For {attr_name}, add {len(allele_list)} elements from the allele to {len(insertion_list)} elements from the insertion.')
+            if self.testing:
+                self.log.debug(f'For {attr_name}, add {len(allele_list)} elements from the allele to {len(insertion_list)} elements from the insertion.')
             insertion_list.extend(allele_list)
-            self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_list)} elements.')
+            if self.testing:
+                self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_list)} elements.')
         # Add to ID-keyed dict of single chado annotations (key is unique for FBCVtermAnnotation or FBRelationship).
         for attr_name in dicts_of_elements_to_add:
             allele_dict = getattr(allele, attr_name)
             insertion_dict = getattr(insertion, attr_name)
-            self.log.debug(f'For {attr_name}, add {len(allele_dict)} elements from the allele to {len(insertion_dict)} elements from the insertion.')
+            if self.testing:
+                self.log.debug(f'For {attr_name}, add {len(allele_dict)} elements from the allele to {len(insertion_dict)} elements from the insertion.')
             for k, v in allele_dict.items():
                 if k not in insertion_dict.keys():
                     insertion_dict[k] = v
-            self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_dict)} elements.')
+            if self.testing:
+                self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_dict)} elements.')
         # Combine lists of annotations.
         for attr_name in dicts_of_lists_to_add:
             allele_dict = getattr(allele, attr_name)
             insertion_dict = getattr(insertion, attr_name)
-            self.log.debug(f'For {attr_name}, add {len(allele_dict)} lists from the allele to {len(insertion_dict)} lists from the insertion.')
+            if self.testing:
+                self.log.debug(f'For {attr_name}, add {len(allele_dict)} lists from the allele to {len(insertion_dict)} lists from the insertion.')
             for k, v in allele_dict.items():
                 try:
                     insertion_dict[k].extend(v)
                 except KeyError:
                     insertion_dict[k] = []
                     insertion_dict[k].extend(v)
-            self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_dict)} lists.')
+            if self.testing:
+                self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_dict)} lists.')
         return
 
     def merge_fbti_fbal(self):
@@ -505,17 +517,22 @@ class AlleleHandler(MetaAlleleHandler):
         classical_counter = 0
         fbti_counter = 0
         for allele in self.fb_data_entities.values():
-            self.log.debug(f'Assess FBti replacement for allele {allele}')
+            # Per-allele detail only for the test set: this loop covers every allele in the database.
+            # NB - the log.error() below is deliberately left ungated; it reports a real data problem.
+            if self.testing:
+                self.log.debug(f'Assess FBti replacement for allele {allele}')
             if allele.db_primary_id in self.at_locus_fbal_fbti_dict.keys() and allele.db_primary_id in self.transgenic_fbal_fbti_dict.keys():
                 self.log.error(f'Allele {allele} unexpectedly has both at-locus and transgenic unspecified FBti insertions.')
                 prob_counter += 1
             elif allele.db_primary_id in self.at_locus_fbal_fbti_dict.keys():
-                self.log.debug(f'Allele {allele} is superseded by an at-locus FBti insertion.')
+                if self.testing:
+                    self.log.debug(f'Allele {allele} is superseded by an at-locus FBti insertion.')
                 allele.superseded_by_at_locus_insertion = self.at_locus_fbal_fbti_dict[allele.db_primary_id][0]
                 self.add_fbal_to_fbti(allele)
                 at_locus_counter += 1
             elif allele.db_primary_id in self.transgenic_fbal_fbti_dict.keys():
-                self.log.debug(f'Allele {allele} is superseded by unspecified FBti insertion(s).')
+                if self.testing:
+                    self.log.debug(f'Allele {allele} is superseded by unspecified FBti insertion(s).')
                 allele.superseded_by_transgnc_insertions = self.transgenic_fbal_fbti_dict[allele.db_primary_id]
                 self.add_fbal_to_fbti(allele)
                 unspecified_ins_counter += len(allele.superseded_by_transgnc_insertions)
@@ -540,7 +557,9 @@ class AlleleHandler(MetaAlleleHandler):
         has_dmel_insertion_counter = 0
         has_non_dmel_insertion_counter = 0
         for allele in self.fb_data_entities.values():
-            self.log.debug(f'Assess {allele}, feature_id={allele.db_primary_id}')
+            # Per-allele detail only for the test set: this loop covers every allele in the database.
+            if self.testing:
+                self.log.debug(f'Assess {allele}, feature_id={allele.db_primary_id}')
             # Assess relationships to ARGs.
             relevant_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='partof', rel_entity_types=self.feature_subtypes['variation'])
             # self.log.debug(f'For {allele}, found {len(relevant_rels)} partof relationships to ARGs.')
@@ -554,7 +573,8 @@ class AlleleHandler(MetaAlleleHandler):
             # Assess relationships to current constructs.
             relevant_cons_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types=['derived_tp_assoc_alleles', 'producedby'],
                                                              rel_entity_types=self.feature_subtypes['construct'])
-            self.log.debug(f'For {allele}, found {len(relevant_cons_rels)} cons rels to review.')
+            if self.testing:
+                self.log.debug(f'For {allele}, found {len(relevant_cons_rels)} cons rels to review.')
             for cons_rel in relevant_cons_rels:
                 construct = self.feature_lookup[cons_rel.chado_obj.object_id]
                 if construct['is_obsolete'] is False and construct['uniquename'].startswith('FBtp'):
@@ -595,7 +615,8 @@ class AlleleHandler(MetaAlleleHandler):
             # self.log.debug(f'Have these f_r sbj types: {allele.sbj_rel_ids_by_type.keys()}')
             # self.log.debug(f'Have these f_r obj types: {allele.obj_rel_ids_by_type.keys()}')
             relevant_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='alleleof', rel_entity_types='gene')
-            self.log.debug(f'For {allele}, found {len(relevant_rels)} alleleof relationships to genes.')
+            if self.testing:
+                self.log.debug(f'For {allele}, found {len(relevant_rels)} alleleof relationships to genes.')
             for allele_gene_rel in relevant_rels:
                 parent_gene = self.feature_lookup[allele_gene_rel.chado_obj.object_id]
                 if parent_gene['is_obsolete'] is False:
@@ -654,8 +675,9 @@ class AlleleHandler(MetaAlleleHandler):
             # For truly non-Dmel alleles, revert organism_id to that of the related allele chado object.
             if is_non_dmel_classical is True:
                 allele.organism_id = allele.chado_obj.organism_id
-                adj_org_abbr = self.organism_lookup[allele.organism_id]['abbreviation']
-                self.log.debug(f'Non-Dmel allele: id={allele.uniquename}, name={allele.name}, org_abbr={adj_org_abbr}')
+                if self.testing:
+                    adj_org_abbr = self.organism_lookup[allele.organism_id]['abbreviation']
+                    self.log.debug(f'Non-Dmel allele: id={allele.uniquename}, name={allele.name}, org_abbr={adj_org_abbr}')
                 counter += 1
         self.log.info(f'Adjusted organism to be "non-Dmel" for {counter} alleles.')
         return
