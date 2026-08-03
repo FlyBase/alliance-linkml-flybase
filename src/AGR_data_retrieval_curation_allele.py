@@ -143,6 +143,13 @@ def main():
         curation_tsv.write_notes_tsv(
             filename=tsv_filename.replace('.tsv', '_notes.tsv'), entities=entities,
         )
+        # FTA-221: diagnostic TSV of note props whose text could not be cleaned (NULL, blank, or bad
+        # SGML), so curators can find and fix the offending rows. Mirrors the construct/cassette
+        # scripts. Combined across both handlers, since each collects its own failures.
+        note_failures = allele_handler.internal_note_clean_failures + aberration_handler.internal_note_clean_failures
+        failures_filename = tsv_filename.replace('.tsv', '_internal_note_clean_failures.tsv')
+        curation_tsv.write_note_clean_failures_tsv(filename=failures_filename, failures=note_failures)
+        log.info(f'Generated TSV: {failures_filename} ({len(note_failures)} uncleanable note props)')
 
     if not reference_session:
         # Export the gene-allele associations to a separate file.

@@ -52,7 +52,7 @@ class PrimaryEntityHandler(DataHandler):
         self.ignore_list = []
         self.internal_note_clean_failures = []    # FTA-211/FTA-221: note props whose text could not be cleaned.
 
-    def clean_note_free_text(self, fb_id, raw_value):
+    def clean_note_free_text(self, fb_id, raw_value, prop_type=None, prop_id=None):
         """Clean note free text, tolerating NULL values and unknown SGML entities (FTA-211, FTA-221).
 
         Two ways the raw featureprop value breaks clean_free_text():
@@ -63,18 +63,34 @@ class PrimaryEntityHandler(DataHandler):
         Either way, record the offender for the diagnostic report rather than aborting the export.
         Returns None for a value with no usable text, so callers can skip it.
 
+        Args:
+            fb_id (str): The FB curie of the entity owning the prop, e.g. "FB:FBal0050505".
+            raw_value: The raw prop value, which may be None.
+            prop_type (str): The cvterm.name of the prop, so curators know which field to fix.
+            prop_id (int): The prop table primary key, to pin down which row when the value is
+                blank and there is therefore no text to identify it by.
+
         NB - raw_value is coerced to a string in the failure record, because
         curation_tsv.write_note_clean_failures_tsv() calls .replace() on it.
         """
-        if raw_value is None or not str(raw_value).strip():
-            self.internal_note_clean_failures.append(
-                {'fb_id': fb_id, 'raw_value': '', 'error': 'featureprop.value is NULL or blank; note skipped'})
+        def record(raw, error):
+            self.internal_note_clean_failures.append({
+                'fb_id': fb_id,
+                'prop_type': prop_type if prop_type is not None else '',
+                'prop_id': prop_id if prop_id is not None else '',
+                'raw_value': raw,
+                'error': error,
+            })
+        if raw_value is None:
+            record('', 'prop value is NULL; note skipped')
+            return None
+        if not str(raw_value).strip():
+            record('', 'prop value is blank/whitespace-only; note skipped')
             return None
         try:
             return clean_free_text(raw_value)
         except Exception as error:
-            self.internal_note_clean_failures.append(
-                {'fb_id': fb_id, 'raw_value': str(raw_value), 'error': str(error)})
+            record(str(raw_value), str(error))
             return raw_value
 
     # Conversion of FB datatype to "page_area".
@@ -1312,8 +1328,14 @@ class PrimaryEntityHandler(DataHandler):
         prop_list = fb_entity.props_by_type[fb_prop_type]
         for fb_prop in prop_list:
             # FTA-221: tolerate NULL/blank and uncleanable values instead of aborting the whole export.
-            # A prop with no usable text yields no note, so skip it.
-            free_text = self.clean_note_free_text(fb_entity.uniquename, fb_prop.chado_obj.value)
+            # A prop with no usable text yields no note, so skip it. Report the prop type and the prop
+            # table primary key, so a curator can find the exact row to fix; a blank value has no text
+            # to identify it by. props_by_type can hold Featureprop, Strainprop, Genotypeprop, etc., so
+            # derive the pkey attribute from the mapped table name (as FBRelationship does).
+            prop_table = getattr(type(fb_prop.chado_obj), '__tablename__', None)
+            prop_id = getattr(fb_prop.chado_obj, f'{prop_table}_id', None) if prop_table else None
+            free_text = self.clean_note_free_text(f'FB:{fb_entity.uniquename}', fb_prop.chado_obj.value,
+                                                  prop_type=fb_prop_type, prop_id=prop_id)
             if free_text is None:
                 continue
             if free_text not in text_keyed_props.keys():
@@ -1356,8 +1378,15 @@ class PrimaryEntityHandler(DataHandler):
         new_failures = self.internal_note_clean_failures[failures_before:]
         if new_failures:
             self.log.warning(f'Skipped or kept unmodified {len(new_failures)} "{self.datatype}" note props that could not be cleaned.')
+            type_tally = {}
+            for failure in new_failures:
+                key = f'{failure["prop_type"]}: {failure["error"]}'
+                type_tally[key] = type_tally.get(key, 0) + 1
+            for key in sorted(type_tally.keys()):
+                self.log.warning(f'Uncleanable note props - {key} ({type_tally[key]} of them).')
             for failure in new_failures[:20]:
-                self.log.warning(f'Uncleanable note prop: fb_id={failure["fb_id"]}, error={failure["error"]}')
+                self.log.warning(f'Uncleanable note prop: fb_id={failure["fb_id"]}, '
+                                 f'prop_type={failure["prop_type"]}, prop_id={failure["prop_id"]}, error={failure["error"]}')
             if len(new_failures) > 20:
-                self.log.warning(f'...and {len(new_failures) - 20} more (see the diagnostic TSV where the script emits one).')
+                self.log.warning(f'...and {len(new_failures) - 20} more; see the *_internal_note_clean_failures.tsv for the full list.')
         return
