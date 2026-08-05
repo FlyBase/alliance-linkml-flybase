@@ -50,11 +50,9 @@ def _is_aberration_cell(entity_dict):
     return 'true' if entity_dict.get('primary_external_id', '').startswith('FB:FBab') else ''
 
 
-# Allele primary TSV carries the FTA-217 aberration flags for curator review.
-# 'is_balancer' is read straight from the DTO slot and stays blank until something populates it.
+# Allele primary TSV carries the FTA-217 aberration flag for curator review.
 _ALLELE_PRIMARY_EXTRAS = [
     ('is_aberration', _is_aberration_cell, ''),
-    ('is_balancer', 'is_balancer', ''),
 ]
 
 
