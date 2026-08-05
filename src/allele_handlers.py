@@ -19,7 +19,7 @@ from fb_datatypes import (
 )
 from feature_handler import FeatureHandler
 from harvdev_utils.reporting import (
-    Cvterm, Feature, FeatureGenotype, FeatureRelationship,
+    Cvterm, Feature, FeatureCvterm, FeatureGenotype, FeatureRelationship,
     Featureprop, Genotype, Phenotype, PhenotypeCvterm, Phenstatement, Pub
 )
 from utils import export_chado_data
@@ -332,9 +332,12 @@ class AlleleHandler(MetaAlleleHandler):
             filter(*filters).\
             distinct()
         for result in results:
-            allele_str = f'{result.allele.name} ({result.allele.uniquename})'
-            insertion_str = f'{result.insertion.name} ({result.insertion.uniquename})'
-            self.log.debug(f'The transgenic allele {allele_str} is related to the generic insertion {insertion_str}.')
+            # Only log the per-row detail for the test set: in a full run this is one line per
+            # FBal-FBti pair, which swamps the debug log (and builds the strings needlessly).
+            if self.testing:
+                allele_str = f'{result.allele.name} ({result.allele.uniquename})'
+                insertion_str = f'{result.insertion.name} ({result.insertion.uniquename})'
+                self.log.debug(f'The transgenic allele {allele_str} is related to the generic insertion {insertion_str}.')
             try:
                 self.transgenic_fbal_fbti_dict[result.allele.feature_id].append(result.insertion.feature_id)
             except KeyError:
@@ -434,7 +437,10 @@ class AlleleHandler(MetaAlleleHandler):
         except KeyError:
             self.log.warning(f'Could not find insertion feature_id={allele.superseded_by_at_locus_insertion}')
             return
-        self.log.debug(f'Merge {allele} data into {insertion} data.')
+        # Per-allele/per-attribute detail below is only logged for the test set: in a full run this is
+        # ~14 lines per superseded allele, which swamps the debug log.
+        if self.testing:
+            self.log.debug(f'Merge {allele} data into {insertion} data.')
         insertion.alt_fb_ids.append(f'FB:{allele.uniquename}')
         lists_to_extend = [
             'dbxrefs',
@@ -469,30 +475,36 @@ class AlleleHandler(MetaAlleleHandler):
         for attr_name in lists_to_extend:
             allele_list = getattr(allele, attr_name)
             insertion_list = getattr(insertion, attr_name)
-            self.log.debug(f'For {attr_name}, add {len(allele_list)} elements from the allele to {len(insertion_list)} elements from the insertion.')
+            if self.testing:
+                self.log.debug(f'For {attr_name}, add {len(allele_list)} elements from the allele to {len(insertion_list)} elements from the insertion.')
             insertion_list.extend(allele_list)
-            self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_list)} elements.')
+            if self.testing:
+                self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_list)} elements.')
         # Add to ID-keyed dict of single chado annotations (key is unique for FBCVtermAnnotation or FBRelationship).
         for attr_name in dicts_of_elements_to_add:
             allele_dict = getattr(allele, attr_name)
             insertion_dict = getattr(insertion, attr_name)
-            self.log.debug(f'For {attr_name}, add {len(allele_dict)} elements from the allele to {len(insertion_dict)} elements from the insertion.')
+            if self.testing:
+                self.log.debug(f'For {attr_name}, add {len(allele_dict)} elements from the allele to {len(insertion_dict)} elements from the insertion.')
             for k, v in allele_dict.items():
                 if k not in insertion_dict.keys():
                     insertion_dict[k] = v
-            self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_dict)} elements.')
+            if self.testing:
+                self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_dict)} elements.')
         # Combine lists of annotations.
         for attr_name in dicts_of_lists_to_add:
             allele_dict = getattr(allele, attr_name)
             insertion_dict = getattr(insertion, attr_name)
-            self.log.debug(f'For {attr_name}, add {len(allele_dict)} lists from the allele to {len(insertion_dict)} lists from the insertion.')
+            if self.testing:
+                self.log.debug(f'For {attr_name}, add {len(allele_dict)} lists from the allele to {len(insertion_dict)} lists from the insertion.')
             for k, v in allele_dict.items():
                 try:
                     insertion_dict[k].extend(v)
                 except KeyError:
                     insertion_dict[k] = []
                     insertion_dict[k].extend(v)
-            self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_dict)} lists.')
+            if self.testing:
+                self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_dict)} lists.')
         return
 
     def merge_fbti_fbal(self):
@@ -505,17 +517,22 @@ class AlleleHandler(MetaAlleleHandler):
         classical_counter = 0
         fbti_counter = 0
         for allele in self.fb_data_entities.values():
-            self.log.debug(f'Assess FBti replacement for allele {allele}')
+            # Per-allele detail only for the test set: this loop covers every allele in the database.
+            # NB - the log.error() below is deliberately left ungated; it reports a real data problem.
+            if self.testing:
+                self.log.debug(f'Assess FBti replacement for allele {allele}')
             if allele.db_primary_id in self.at_locus_fbal_fbti_dict.keys() and allele.db_primary_id in self.transgenic_fbal_fbti_dict.keys():
                 self.log.error(f'Allele {allele} unexpectedly has both at-locus and transgenic unspecified FBti insertions.')
                 prob_counter += 1
             elif allele.db_primary_id in self.at_locus_fbal_fbti_dict.keys():
-                self.log.debug(f'Allele {allele} is superseded by an at-locus FBti insertion.')
+                if self.testing:
+                    self.log.debug(f'Allele {allele} is superseded by an at-locus FBti insertion.')
                 allele.superseded_by_at_locus_insertion = self.at_locus_fbal_fbti_dict[allele.db_primary_id][0]
                 self.add_fbal_to_fbti(allele)
                 at_locus_counter += 1
             elif allele.db_primary_id in self.transgenic_fbal_fbti_dict.keys():
-                self.log.debug(f'Allele {allele} is superseded by unspecified FBti insertion(s).')
+                if self.testing:
+                    self.log.debug(f'Allele {allele} is superseded by unspecified FBti insertion(s).')
                 allele.superseded_by_transgnc_insertions = self.transgenic_fbal_fbti_dict[allele.db_primary_id]
                 self.add_fbal_to_fbti(allele)
                 unspecified_ins_counter += len(allele.superseded_by_transgnc_insertions)
@@ -540,7 +557,9 @@ class AlleleHandler(MetaAlleleHandler):
         has_dmel_insertion_counter = 0
         has_non_dmel_insertion_counter = 0
         for allele in self.fb_data_entities.values():
-            self.log.debug(f'Assess {allele}, feature_id={allele.db_primary_id}')
+            # Per-allele detail only for the test set: this loop covers every allele in the database.
+            if self.testing:
+                self.log.debug(f'Assess {allele}, feature_id={allele.db_primary_id}')
             # Assess relationships to ARGs.
             relevant_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='partof', rel_entity_types=self.feature_subtypes['variation'])
             # self.log.debug(f'For {allele}, found {len(relevant_rels)} partof relationships to ARGs.')
@@ -554,7 +573,8 @@ class AlleleHandler(MetaAlleleHandler):
             # Assess relationships to current constructs.
             relevant_cons_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types=['derived_tp_assoc_alleles', 'producedby'],
                                                              rel_entity_types=self.feature_subtypes['construct'])
-            self.log.debug(f'For {allele}, found {len(relevant_cons_rels)} cons rels to review.')
+            if self.testing:
+                self.log.debug(f'For {allele}, found {len(relevant_cons_rels)} cons rels to review.')
             for cons_rel in relevant_cons_rels:
                 construct = self.feature_lookup[cons_rel.chado_obj.object_id]
                 if construct['is_obsolete'] is False and construct['uniquename'].startswith('FBtp'):
@@ -595,7 +615,8 @@ class AlleleHandler(MetaAlleleHandler):
             # self.log.debug(f'Have these f_r sbj types: {allele.sbj_rel_ids_by_type.keys()}')
             # self.log.debug(f'Have these f_r obj types: {allele.obj_rel_ids_by_type.keys()}')
             relevant_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='alleleof', rel_entity_types='gene')
-            self.log.debug(f'For {allele}, found {len(relevant_rels)} alleleof relationships to genes.')
+            if self.testing:
+                self.log.debug(f'For {allele}, found {len(relevant_rels)} alleleof relationships to genes.')
             for allele_gene_rel in relevant_rels:
                 parent_gene = self.feature_lookup[allele_gene_rel.chado_obj.object_id]
                 if parent_gene['is_obsolete'] is False:
@@ -654,8 +675,9 @@ class AlleleHandler(MetaAlleleHandler):
             # For truly non-Dmel alleles, revert organism_id to that of the related allele chado object.
             if is_non_dmel_classical is True:
                 allele.organism_id = allele.chado_obj.organism_id
-                adj_org_abbr = self.organism_lookup[allele.organism_id]['abbreviation']
-                self.log.debug(f'Non-Dmel allele: id={allele.uniquename}, name={allele.name}, org_abbr={adj_org_abbr}')
+                if self.testing:
+                    adj_org_abbr = self.organism_lookup[allele.organism_id]['abbreviation']
+                    self.log.debug(f'Non-Dmel allele: id={allele.uniquename}, name={allele.name}, org_abbr={adj_org_abbr}')
                 counter += 1
         self.log.info(f'Adjusted organism to be "non-Dmel" for {counter} alleles.')
         return
@@ -1174,6 +1196,8 @@ class AberrationHandler(MetaAlleleHandler):
         'FBab0010504': 'T(2;3)G16DTE35B-3P',    # Unusual annotation: assortment_derived_deficiency_plus_duplication (SO:0000801).
         'FBab0004789': 'In(2LR)Px[4]',          # FTA-207 note props: internal_notes, misc, new_order, origin_comment.
         'FBab0001546': 'Df(2L)Sco[rv10]',  # FTA-207 note props: complementation, internal_notes, misc, origin_comment.
+        'FBab0004410': 'In(2L)Cy',              # FTA-218: all 3 mappings - 2 A24a FBti, 6 A24b FBal, 1 GA10g FBal.
+        'FBab0045412': 'Df(3L)sina[SH]',        # FTA-218: all 3 mappings - 1 A24a FBti, 1 A24b FBal, 2 GA10g FBal.
     }
 
     # Simple mapping of props to Alliance note types, for cases where it is one-to-one correspondence.
@@ -1194,6 +1218,10 @@ class AberrationHandler(MetaAlleleHandler):
     # Additional export sets.
     aberration_gene_rels = {}            # Will be (FBab feature_id, FBgn feature_id, AGR_rel_type, ECO) tuples keying lists of FBRelationships.
     aberration_gene_associations = []    # Will be the final list of gene-aberration FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
+    # FTA-218: aberration-to-allele associations ("carries" and "breakpoint_allele").
+    aberration_allele_rels = {}          # Will be (FBab feature_id, FBal/FBti feature_id, AGR_rel_type) tuples keying lists of FBRelationships.
+    aberration_allele_associations = []  # Will be the final list of aberration-allele FBRelationships (AlleleAlleleAssociationDTO under linkmldto attr).
+    cassette_ignore_list = set()         # FTA-218: FBal feature_ids that are construct cassettes, and so are never exported as alleles.
 
     # Additional reference info.
     chr_str_var_terms = []    # A list of cvterm_ids for child terms of "chromosome_structure_variation" (SO:0000240).
@@ -1202,6 +1230,59 @@ class AberrationHandler(MetaAlleleHandler):
     chr_del_terms = []        # A list of cvterm_ids for child terms of "chromosomal_deletion" (SO:1000029).
 
     # Additional sub-methods for get_general_data().
+    def get_cassette_allele_ids(self, session):
+        """Get feature_ids of FBal alleles that are construct cassettes (FTA-218).
+
+        Cassette FBal features share the "allele" cvterm but are excluded from the allele export by the
+        AlleleHandler (see its self.ignore_list), so aberration-allele associations must not point at them.
+        NB - FeatureHandler.cassette_feature_ids() cannot be reused here: it resolves self.regex[self.datatype]
+        and self.feature_subtypes[self.datatype], which for this handler are the aberration values, so it would
+        return FBab features rather than cassette FBal features. It also restricts to self.test_set in testing
+        mode, which for this handler is a set of FBab IDs. This lookup is deliberately never limited to the
+        test set, since it is reference data used to validate partners, like the feature_lookup.
+        """
+        self.log.info('Get feature_ids of FBal alleles that are construct cassettes.')
+        cassette_ids = set()
+        # First, cassettes flagged with the "in vitro construct" CV term.
+        in_vitro_filters = (
+            Feature.is_obsolete.is_(False),
+            Feature.uniquename.op('~')(self.regex['allele']),
+            Cvterm.name == 'in vitro construct',
+        )
+        in_vitro_results = session.query(Feature.feature_id).\
+            select_from(Feature).\
+            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
+            filter(*in_vitro_filters).\
+            distinct()
+        for result in in_vitro_results:
+            cassette_ids.add(result.feature_id)
+        self.log.info(f'Found {len(cassette_ids)} "in vitro construct" cassette FBal alleles.')
+        # Second, cassettes related to an FBtp construct.
+        construct = aliased(Feature, name='cassette_construct')
+        rel_type = aliased(Cvterm, name='cassette_rel_type')
+        feat_type = aliased(Cvterm, name='cassette_feat_type')
+        main_filters = (
+            Feature.is_obsolete.is_(False),
+            Feature.uniquename.op('~')(self.regex['allele']),
+            feat_type.name.in_((self.feature_subtypes['allele'])),
+            construct.is_obsolete.is_(False),
+            construct.uniquename.op('~')(self.regex['construct']),
+            rel_type.name == 'associated_with',
+        )
+        main_results = session.query(Feature.feature_id).\
+            select_from(Feature).\
+            join(feat_type, (feat_type.cvterm_id == Feature.type_id)).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == Feature.feature_id)).\
+            join(construct, (construct.feature_id == FeatureRelationship.object_id)).\
+            join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*main_filters).\
+            distinct()
+        for result in main_results:
+            cassette_ids.add(result.feature_id)
+        self.log.info(f'Found {len(cassette_ids)} cassette FBal alleles in total.')
+        return cassette_ids
+
     def get_key_cvterm_sets_for_aberrations(self, session):
         """Get key CV term sets for aberrations from chado."""
         self.log.info('Get key CV term sets for aberrations from chado.')
@@ -1218,7 +1299,16 @@ class AberrationHandler(MetaAlleleHandler):
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
         self.build_organism_lookup(session)
-        self.build_feature_lookup(session, feature_types=['gene'])
+        # FTA-218: aberration-allele associations need FBal and FBti features in the feature_lookup, both so that
+        # get_entity_relationships() can bucket relationships by related feature type, and so that the map step can
+        # look up partner uniquenames. Gated so that production runs make no extra queries until the Alliance is ready.
+        if getenv('ADD_ALLELE_ALLELE_ASSOC', None) == 'YES':
+            self.build_feature_lookup(session, feature_types=['gene', 'allele', 'insertion'])
+            self.cassette_ignore_list = self.get_cassette_allele_ids(session)
+        else:
+            self.build_feature_lookup(session, feature_types=['gene'])
+            self.log.info('ADD_ALLELE_ALLELE_ASSOC not set to "YES"; not adding allele/insertion features to the '
+                          'feature_lookup (no aberration-allele associations will be emitted).')
         self.build_allele_gene_lookup(session)
         self.get_key_cvterm_sets_for_aberrations(session)
         return
@@ -1365,6 +1455,61 @@ class AberrationHandler(MetaAlleleHandler):
         self.log.info(f'Found {gene_rel_counter} aberration-gene relationships for {aberration_counter} aberrations.')
         return
 
+    def synthesize_aberration_allele_associations(self):
+        """Synthesize aberration-to-allele associations (FTA-218).
+
+        Three chado feature_relationships map onto two Alliance allele-allele association relations. In every case the
+        Alliance direction is FBab (subject) -> FBti/FBal (object), so the "carried_on" relationship below has to be
+        flipped relative to how it is stored in chado.
+            1. type="associated_with", subject=FBab, object=FBti (proforma A24a) -> "carries"
+            2. type="carried_on",      subject=FBal, object=FBab (proforma A24b) -> "carries"
+            3. type="associated_with", subject=FBab, object=FBal (proforma GA10g) -> "breakpoint_allele"
+        """
+        self.log.info('Synthesize aberration-to-allele associations.')
+        # Each entry is (entity_role of the aberration, chado rel type, related feature types, AGR relation).
+        # The partner feature_id is read from the side of the relationship that the aberration is NOT on.
+        rel_specs = [
+            ('subject', 'associated_with', self.feature_subtypes['insertion'], 'carries'),
+            ('subject', 'associated_with', self.feature_subtypes['allele'], 'breakpoint_allele'),
+            ('object', 'carried_on', self.feature_subtypes['allele'], 'carries'),
+        ]
+        # When the aberration is the subject the partner is the object, and vice versa.
+        partner_attr = {'subject': 'object_id', 'object': 'subject_id'}
+        aberration_counter = 0
+        allele_rel_counter = 0
+        cassette_skipped = 0
+        rel_type_tally = {}
+        for aberration in self.fb_data_entities.values():
+            found_any = False
+            for entity_role, fb_rel_type, rel_entity_types, agr_rel_type in rel_specs:
+                relevant_rels = aberration.recall_relationships(self.log, entity_role=entity_role, rel_types=fb_rel_type,
+                                                                rel_entity_types=rel_entity_types)
+                for feat_rel in relevant_rels:
+                    partner_id = getattr(feat_rel.chado_obj, partner_attr[entity_role])
+                    # Cassettes are FBal features sharing the "allele" cvterm, but they are never exported as alleles,
+                    # so an association pointing at one would dangle at the Alliance.
+                    if partner_id in self.cassette_ignore_list:
+                        cassette_skipped += 1
+                        continue
+                    found_any = True
+                    rel_key = (aberration.db_primary_id, partner_id, agr_rel_type)
+                    try:
+                        self.aberration_allele_rels[rel_key].append(feat_rel)
+                    except KeyError:
+                        self.aberration_allele_rels[rel_key] = [feat_rel]
+                        allele_rel_counter += 1
+                        try:
+                            rel_type_tally[agr_rel_type] += 1
+                        except KeyError:
+                            rel_type_tally[agr_rel_type] = 1
+            if found_any:
+                aberration_counter += 1
+        self.log.info(f'Found {allele_rel_counter} aberration-allele relationships for {aberration_counter} aberrations.')
+        for agr_rel_type in sorted(rel_type_tally.keys()):
+            self.log.info(f'Found {rel_type_tally[agr_rel_type]} aberration-allele relationships of type "{agr_rel_type}".')
+        self.log.info(f'Skipped {cassette_skipped} aberration-allele relationships to cassette FBal features.')
+        return
+
     # Elaborate on synthesize_info() for the AberrationHandler.
     def synthesize_info(self):
         """Extend the method for the AberrationHandler."""
@@ -1377,6 +1522,12 @@ class AberrationHandler(MetaAlleleHandler):
         self.synthesize_ncbi_taxon_id()
         self.flag_deletions()
         self.synthesize_aberration_gene_associations()
+        # FTA-218: gated until the Alliance schema has an "allele_allele_association_ingest_set" and the
+        # "carries"/"breakpoint_allele" CV terms.
+        if getenv('ADD_ALLELE_ALLELE_ASSOC', None) == 'YES':
+            self.synthesize_aberration_allele_associations()
+        else:
+            self.log.info('ADD_ALLELE_ALLELE_ASSOC not set to "YES"; skipping aberration-allele association synthesis.')
         self.qc_aberration_mutation_types()
         return
 
@@ -1434,6 +1585,40 @@ class AberrationHandler(MetaAlleleHandler):
         self.log.info(f'Generated {counter} aberration-gene unique associations.')
         return
 
+    def map_aberration_allele_associations(self):
+        """Map aberration-allele associations to Alliance object (FTA-218)."""
+        self.log.info('Map aberration-allele associations to Alliance object.')
+        ABERRATION_ID = 0
+        PARTNER_ID = 1
+        REL_TYPE_NAME = 2
+        counter = 0
+        obsolete_counter = 0
+        for rel_key, aberration_allele_rels in self.aberration_allele_rels.items():
+            aberration = self.fb_data_entities[rel_key[ABERRATION_ID]]
+            aberration_curie = f'FB:{aberration.uniquename}'
+            partner = self.feature_lookup[rel_key[PARTNER_ID]]
+            partner_curie = f'FB:{partner["uniquename"]}'
+            agr_rel_type_name = rel_key[REL_TYPE_NAME]
+            all_pub_ids = []
+            for aberration_allele_rel in aberration_allele_rels:
+                all_pub_ids.extend(aberration_allele_rel.pubs)
+            pub_curies = self.lookup_pub_curies(all_pub_ids)
+            rel_dto = agr_datatypes.AlleleAlleleAssociationDTO(aberration_curie, agr_rel_type_name, partner_curie, pub_curies)
+            # An FBal superseded by an FBti insertion is marked obsolete by the AlleleHandler's merge_fbti_fbal(), so
+            # some partners here are obsolete alleles. Follow the aberration-gene precedent and report these as internal.
+            if aberration.is_obsolete is True or partner['is_obsolete'] is True:
+                rel_dto.obsolete = True
+                rel_dto.internal = True
+                obsolete_counter += 1
+            first_feat_rel = aberration_allele_rels[0]
+            first_feat_rel.pubs = all_pub_ids
+            first_feat_rel.linkmldto = rel_dto
+            self.aberration_allele_associations.append(first_feat_rel)
+            counter += 1
+        self.log.info(f'Generated {counter} aberration-allele unique associations.')
+        self.log.info(f'Of these, {obsolete_counter} involve an obsolete aberration or allele, and are flagged internal.')
+        return
+
     # Elaborate on map_fb_data_to_alliance() for the AberrationHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the AberrationHandler."""
@@ -1454,6 +1639,13 @@ class AberrationHandler(MetaAlleleHandler):
         self.map_secondary_ids('allele_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
         # self.flag_internal_fb_entities('aberration_gene_associations')
+        # FTA-218: gated until the Alliance schema has an "allele_allele_association_ingest_set" and the
+        # "carries"/"breakpoint_allele" CV terms.
+        if getenv('ADD_ALLELE_ALLELE_ASSOC', None) == 'YES':
+            self.map_aberration_allele_associations()
+            self.flag_internal_fb_entities('aberration_allele_associations')
+        else:
+            self.log.info('ADD_ALLELE_ALLELE_ASSOC not set to "YES"; skipping aberration-allele association mapping.')
         return
 
     # Elaborate on query_chado_and_export() for the AberrationHandler.
@@ -1462,6 +1654,14 @@ class AberrationHandler(MetaAlleleHandler):
         super().query_chado_and_export(session)
         self.flag_unexportable_entities(self.aberration_gene_associations, 'allele_gene_association_ingest_set')
         self.generate_export_dict(self.aberration_gene_associations, 'allele_gene_association_ingest_set')
+        # FTA-218: gated until the Alliance schema has an "allele_allele_association_ingest_set" and the
+        # "carries"/"breakpoint_allele" CV terms. When the gate is off, no such key is added to self.export_data.
+        if getenv('ADD_ALLELE_ALLELE_ASSOC', None) == 'YES':
+            self.flag_unexportable_entities(self.aberration_allele_associations, 'allele_allele_association_ingest_set')
+            self.generate_export_dict(self.aberration_allele_associations, 'allele_allele_association_ingest_set')
+        else:
+            self.log.info('ADD_ALLELE_ALLELE_ASSOC not set to "YES"; not exporting an '
+                          '"allele_allele_association_ingest_set".')
         return
 
 
