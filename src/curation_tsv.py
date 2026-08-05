@@ -29,7 +29,7 @@ GENE_CHANGE_EVENTS_TSV_HEADER = (
 SKIPPED_IDENTITY_SOURCE_TSV_HEADER = (
     "# Primary FBid\traw_value\ttoken_count\tinternal\tobsolete\n"
 )
-NOTE_CLEAN_FAILURES_TSV_HEADER = "# Primary FBid\traw_value\terror\n"
+NOTE_CLEAN_FAILURES_TSV_HEADER = "# Primary FBid\tprop_type\tprop_id\traw_value\terror\n"
 COMPONENTS_TSV_HEADER = "# Primary FBid\tsymbol\trelation\ttaxon\tevidence\n"
 # NB: existing tool_uses TSVs write rows as primary, tools, evidence; the
 # header preserves that historic column order verbatim.
@@ -173,17 +173,21 @@ def write_skipped_identity_source_tsv(*, filename, skipped):
 
 
 def write_note_clean_failures_tsv(*, filename, failures):
-    """Write the diagnostic TSV of internal_notes whose text failed clean_free_text (FTA-211).
+    """Write the diagnostic TSV of note props whose text could not be cleaned (FTA-211, FTA-221).
 
-    One row per failed note: the raw featureprop value (tabs/newlines flattened) and the
-    exception, so curators can see the offending characters (e.g. an unknown SGML entity
-    like "&3;"). Not filtered by should_skip_obsolete().
+    One row per failed note: the prop type and prop table primary key that identify the offending
+    row, the raw value (tabs/newlines flattened), and the reason. The prop type tells a curator
+    which field to fix; the prop_id pins down which row when the value is NULL or blank and there
+    is therefore no text to recognise it by. Not filtered by should_skip_obsolete().
+
+    NB - prop_type/prop_id are read with .get() because callers that predate FTA-221
+    (construct_handler, cassette_handler) do not supply them.
     """
     with open(filename, 'w') as outfile:
         outfile.write(NOTE_CLEAN_FAILURES_TSV_HEADER)
         for item in failures:
-            raw = item['raw_value'].replace('\t', ' ').replace('\n', ' ')
-            outfile.write(f"{item['fb_id']}\t{raw}\t{item['error']}\n")
+            raw = str(item.get('raw_value', '')).replace('\t', ' ').replace('\n', ' ')
+            outfile.write(f"{item['fb_id']}\t{item.get('prop_type', '')}\t{item.get('prop_id', '')}\t{raw}\t{item['error']}\n")
 
 
 def write_components_tsv(*, filename, entities, datatype):
