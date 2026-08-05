@@ -1434,11 +1434,31 @@ class AberrationHandler(MetaAlleleHandler):
         self.log.info(f'Generated {counter} aberration-gene unique associations.')
         return
 
+    def map_aberration_flag(self):
+        """Flag FBab entities with the LinkML "is_aberration" boolean (FTA-217).
+
+        The slot was added to the Alliance schema by agr_curation_schema PR #327, which is merged to
+        "main" but absent from the latest LinkML release (v2.17.0). Emitting it would fail schema
+        validation for the whole allele file, so the mapping is gated behind ADD_IS_ABERRATION until
+        a LinkML release containing the slot is available.
+        """
+        if getenv('ADD_IS_ABERRATION', None) != 'YES':
+            self.log.info('ADD_IS_ABERRATION not set to "YES"; skipping the "is_aberration" flag.')
+            return
+        self.log.info('Flag aberrations with the "is_aberration" boolean.')
+        counter = 0
+        for aberration in self.fb_data_entities.values():
+            aberration.linkmldto.is_aberration = True
+            counter += 1
+        self.log.info(f'Flagged {counter} aberrations with is_aberration=True.')
+        return
+
     # Elaborate on map_fb_data_to_alliance() for the AberrationHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the AberrationHandler."""
         super().map_fb_data_to_alliance()
         self.map_metaallele_basic()
+        self.map_aberration_flag()
         self.map_metaallele_database_status()
         self.map_internal_metaallele_status()
         self.map_aberration_mutation_types()

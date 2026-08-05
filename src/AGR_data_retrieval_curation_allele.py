@@ -63,6 +63,8 @@ Environment variables:
   SERVER              Database server (e.g. flysql25)
   DATABASE            Database name (e.g. production_chado)
   ADD_OBSOLETE        Set to 'NO' to exclude obsolete/internal rows from the TSVs only; JSON output is unaffected
+  ADD_IS_ABERRATION   Set to 'YES' to emit the 'is_aberration' boolean for FBab entities.
+                      Requires a LinkML release containing the slot (absent from v2.17.0).
 """,
     formatter_class=argparse.RawDescriptionHelpFormatter
 )

@@ -106,6 +106,7 @@ class AlleleDTO(GenomicEntityDTO):
         self.allele_synonym_dtos = []                          # Many NameSlotAnnotationDTO objects.
         self.in_collection_name = None                         # Will be the name of a FlyBase library/collection.
         self.is_extinct = None                                 # Make True if extinction reported; make False is stock exists; leave as None otherwise.
+        self.is_aberration = None                              # Make True only for FBab aberrations; leave as None otherwise (FTA-217).
         self.allele_mutation_type_dtos = []                    # AlleleMutationTypeSlotAnnotationDTOs.
         self.allele_inheritance_mode_dtos = []                 # AlleleInheritanceModeSlotAnnotationDTOs.
         self.allele_database_status_dto = None                 # AlleleDatabaseStatusSlotAnnotationDTOs.
