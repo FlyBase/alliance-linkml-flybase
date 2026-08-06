@@ -332,9 +332,11 @@ class AlleleHandler(MetaAlleleHandler):
             filter(*filters).\
             distinct()
         for result in results:
-            # Only log the per-row detail for the test set: in a full run this is one line per
-            # FBal-FBti pair, which swamps the debug log (and builds the strings needlessly).
-            if self.testing:
+            # Only log the per-row detail for the test set. Unlike get_entities(), the query above
+            # is NOT narrowed by test_set, so it returns every FBal-FBti pair in the database in a
+            # testing run too (~168k rows): "self.testing" alone would swamp the debug log and build
+            # the strings needlessly. Check test_set membership as well.
+            if self.testing and result.allele.uniquename in self.test_set:
                 allele_str = f'{result.allele.name} ({result.allele.uniquename})'
                 insertion_str = f'{result.insertion.name} ({result.insertion.uniquename})'
                 self.log.debug(f'The transgenic allele {allele_str} is related to the generic insertion {insertion_str}.')
