@@ -41,6 +41,23 @@ _ALLELE_ASSOC_SECOND_FIELDS = {
 _ALLELE_ASSOC_EXTRAS = [('internal', 'internal', False)]
 
 
+def _is_aberration_cell(entity_dict):
+    """Return 'true' for FBab aberrations, else '' (FTA-217).
+
+    Derived from the primary ID rather than read from the exported 'is_aberration' key so that the
+    curator TSV is populated even when ADD_IS_ABERRATION is unset. That env var gates the JSON only,
+    to protect Alliance schema validation; it says nothing about which entities are aberrations. The
+    two can never disagree: FTA-217 defines an aberration as an entry whose primary ID starts 'FBab'.
+    """
+    return 'true' if entity_dict.get('primary_external_id', '').startswith('FB:FBab') else ''
+
+
+# Allele primary TSV carries the FTA-217 aberration flag for curator review.
+_ALLELE_PRIMARY_EXTRAS = [
+    ('is_aberration', _is_aberration_cell, ''),
+]
+
+
 # Data types handled by this script.
 REPORT_LABEL = 'allele_curation'
 
@@ -68,6 +85,8 @@ Environment variables:
   ADD_ALLELE_ALLELE_ASSOC   Set to 'YES' to emit the FTA-218 'allele_allele_association_ingest_set' (aberration
                             'carries'/'breakpoint_allele' relations). Off by default: the Alliance schema has no
                             such ingest set and lacks the two CV terms, so the data cannot yet be loaded.
+  ADD_IS_ABERRATION         Set to 'YES' to emit the 'is_aberration' boolean for FBab entities.
+                            Requires a LinkML release containing the slot (absent from v2.17.0).
 """,
     formatter_class=argparse.RawDescriptionHelpFormatter
 )
@@ -139,6 +158,7 @@ def main():
         entities = export_dict['allele_ingest_set']
         curation_tsv.write_primary_tsv(
             log=log, filename=tsv_filename, entities=entities, datatype='allele',
+            extra_fields=_ALLELE_PRIMARY_EXTRAS,
         )
         curation_tsv.write_notes_tsv(
             filename=tsv_filename.replace('.tsv', '_notes.tsv'), entities=entities,

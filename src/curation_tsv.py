@@ -45,16 +45,25 @@ def _is_excluded(entity_dict):
     return entity_dict.get('internal') or entity_dict.get('obsolete')
 
 
-def write_primary_tsv(*, log, filename, entities, datatype):
-    """Write the primary identifier TSV (used by every curation script)."""
+def write_primary_tsv(*, log, filename, entities, datatype, extra_fields=None):
+    """Write the primary identifier TSV (used by every curation script).
+
+    `extra_fields` appends datatype-specific columns after the shared ones. It is a list of
+    `(header_label, source, default_when_missing)` tuples, where `source` is either a key into the
+    exported entity dict or a callable taking that dict and returning the cell value. List/tuple
+    values are joined with EVIDENCE_DELIMITER; None and missing keys fall back to the default.
+    Scripts that pass nothing get the historic six-column output unchanged.
+    """
     skip = should_skip_obsolete()
     if skip:
         log.info(f'ADD_OBSOLETE=NO: excluding obsolete/internal {datatype}s from TSV.')
     full_name_key = f'{datatype}_full_name_dto'
     symbol_key = f'{datatype}_symbol_dto'
     synonym_key = f'{datatype}_synonym_dtos'
+    extras = extra_fields or []
+    extra_headers = "".join(f"\t{label}" for label, _, _ in extras)
     with open(filename, 'w') as outfile:
-        outfile.write(PRIMARY_TSV_HEADER)
+        outfile.write(PRIMARY_TSV_HEADER.rstrip('\n') + extra_headers + '\n')
         for entity_dict in entities:
             if skip and _is_excluded(entity_dict):
                 continue
@@ -75,9 +84,19 @@ def write_primary_tsv(*, log, filename, entities, datatype):
             internal = entity_dict.get("internal", False)
             secondary_str = EVIDENCE_DELIMITER.join(secondary)
             syns_str = EVIDENCE_DELIMITER.join(syns)
+            extra_parts = []
+            for _label, source, default in extras:
+                value = source(entity_dict) if callable(source) else entity_dict.get(source)
+                if value is None:
+                    extra_parts.append(default)
+                elif isinstance(value, (list, tuple)):
+                    extra_parts.append(EVIDENCE_DELIMITER.join(value))
+                else:
+                    extra_parts.append(str(value))
+            extras_str = "".join(f"\t{p}" for p in extra_parts)
             try:
                 outfile.write(
-                    f"{primary}\t{symbol}\t{name}\t{secondary_str}\t{syns_str}\t{internal}\n"
+                    f"{primary}\t{symbol}\t{name}\t{secondary_str}\t{syns_str}\t{internal}{extras_str}\n"
                 )
             except TypeError:
                 log.error(f"entity_dict: {entity_dict}")
@@ -87,6 +106,7 @@ def write_primary_tsv(*, log, filename, entities, datatype):
                 log.error(f"name: {name}")
                 log.error(f"syns: {syns}")
                 log.error(f"internal: {internal}")
+                log.error(f"extras: {extra_parts}")
                 raise
 
 
