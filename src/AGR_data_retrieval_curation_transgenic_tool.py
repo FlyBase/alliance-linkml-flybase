@@ -120,6 +120,10 @@ def main():
         curation_tsv.write_notes_tsv(
             filename=tsv_filename.replace('.tsv', '_notes.tsv'), entities=entities,
         )
+        curation_tsv.write_tool_uses_tsv(
+            filename=tsv_filename.replace('.tsv', '_tool_uses.tsv'), entities=entities,
+            datatype='transgenic_tool',
+        )
 
     if not reference_session:
         # Export tool associations to a separate file.

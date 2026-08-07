@@ -377,6 +377,7 @@ class FBTool(FBFeature):
         """Create the FBTool object."""
         super().__init__(chado_obj)
         # Processed FB data.
+        self.prop_data = {'tool_uses': []}    # list of dicts: name/type/pub/accession
 
 
 class FBStrain(FBDataEntity):

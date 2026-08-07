@@ -192,6 +192,14 @@ class CassetteUseSlotAnnotationDTO(SlotAnnotationDTO):
         self.use_curies = cvterm
 
 
+class TransgenicToolUseSlotAnnotationDTO(SlotAnnotationDTO):
+    """TransgenicToolUseSlotAnnotationDTO class."""
+    def __init__(self, pub_curies, cvterm):
+        """Create TransgenicToolUseSlotAnnotationDTO for FlyBase object."""
+        super().__init__(pub_curies)
+        self.use_curies = cvterm
+
+
 class GeneDTO(GenomicEntityDTO):
     """GeneDTO class."""
     def __init__(self):
@@ -242,6 +250,7 @@ class TransgenicToolDTO(ReagentDTO):
         self.transgenic_tool_symbol_dto = None      # One NameSlotAnnotationDTO.
         self.transgenic_tool_full_name_dto = None   # One NameSlotAnnotationDTO.
         self.transgenic_tool_synonym_dtos = []      # Many NameSlotAnnotationDTO objects.
+        self.transgenic_tool_use_dtos = []          # TransgenicToolUseSlotAnnotationDTOs.
         self.note_dtos = []                         # Will be NoteDTO objects.
         self.cross_reference_dtos = []
         self.required_fields.extend(['transgenic_tool_symbol_dto'])
