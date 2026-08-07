@@ -351,23 +351,40 @@ class DataHandler(object):
     def build_cvterm_lookup(self, session):
         """Create a cvterm_id-keyed lookup of Cvterm objects."""
         self.log.info('Create a cvterm_id-keyed dict of Cvterms.')
-        # First get all current pubs having an FBrf uniquename.
         filters = (
             Cvterm.is_obsolete == 0,
         )
-        results = session.query(Cvterm).filter(*filters).distinct()
+        # Select only the columns used below, joining cv/dbxref/db explicitly. Reading these off the
+        # ORM object instead lazy-loads dbxref once per row - cv and db are few enough to stay cached
+        # in the identity map, but dbxref is 1:1 with cvterm - which is ~87K extra round trips, i.e.
+        # over an hour on a remote connection versus under a second here (FTA-220).
+        # No DISTINCT: cvterm.cv_id and cvterm.dbxref_id are NOT NULL 1:1 FKs, so the joins can
+        # neither multiply nor drop rows, and the row set already carries a primary key.
+        results = session.query(Cvterm.cvterm_id, Cvterm.name, Cv.name,
+                                Db.name, Dbxref.accession).\
+            select_from(Cvterm).\
+            join(Cv, (Cv.cv_id == Cvterm.cv_id)).\
+            join(Dbxref, (Dbxref.dbxref_id == Cvterm.dbxref_id)).\
+            join(Db, (Db.db_id == Dbxref.db_id)).\
+            filter(*filters)
+        # Cvterm.name, Cv.name and Db.name all label as "name", so index positionally.
+        CVTERM_ID = 0
+        NAME = 1
+        CV_NAME = 2
+        DB_NAME = 3
+        ACCESSION = 4
         cvterm_counter = 0
         for result in results:
             cvterm_dict = {
-                'cvterm_id': result.cvterm_id,
-                'name': result.name,
-                'cv_name': result.cv.name,
-                'db_name': result.dbxref.db.name,
-                'curie': f'{result.dbxref.db.name}:{result.dbxref.accession}',
-                'name_plus_curie': f'{result.name} ({result.dbxref.db.name}:{result.dbxref.accession})',
+                'cvterm_id': result[CVTERM_ID],
+                'name': result[NAME],
+                'cv_name': result[CV_NAME],
+                'db_name': result[DB_NAME],
+                'curie': f'{result[DB_NAME]}:{result[ACCESSION]}',
+                'name_plus_curie': f'{result[NAME]} ({result[DB_NAME]}:{result[ACCESSION]})',
                 'slim_term_cvterm_ids': [],
             }
-            self.cvterm_lookup[result.cvterm_id] = cvterm_dict
+            self.cvterm_lookup[result[CVTERM_ID]] = cvterm_dict
             cvterm_counter += 1
         self.log.info(f'Found {cvterm_counter} current CV terms in chado.')
         return
