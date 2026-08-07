@@ -31,9 +31,10 @@ SKIPPED_IDENTITY_SOURCE_TSV_HEADER = (
 )
 NOTE_CLEAN_FAILURES_TSV_HEADER = "# Primary FBid\tprop_type\tprop_id\traw_value\terror\n"
 COMPONENTS_TSV_HEADER = "# Primary FBid\tsymbol\trelation\ttaxon\tevidence\n"
-# NB: existing tool_uses TSVs write rows as primary, tools, evidence; the
-# header preserves that historic column order verbatim.
-TOOL_USES_TSV_HEADER = "# Primary FBid\tevidence\ttool_uses\n"
+# NB: rows are written as primary, tool_uses, evidence. The header previously
+# listed the last two the other way round, mislabelling both columns; only the
+# labels are corrected here, so the data columns are unchanged.
+TOOL_USES_TSV_HEADER = "# Primary FBid\ttool_uses\tevidence\n"
 
 
 def should_skip_obsolete():

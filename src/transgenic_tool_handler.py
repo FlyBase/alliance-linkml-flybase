@@ -33,6 +33,8 @@ class ExperimentalToolHandler(FeatureHandler):
         'FBto0000417': 'sgGFP',
         'FBto0000921': 'Sapphire',
         'FBto0000606': 'AflIII',    # Has UniProtKB:E3VX96
+        'FBto0001044': 'cytoFLARE1.0::lexA::VP16',    # Three "tool_uses" terms.
+        'FBto0000859': 'CanlonicSF',                  # Two "tool_uses" terms, and the only tool citing FBrf0199194.
     }
 
     transgenic_tool_prop_to_note_mapping = {
@@ -48,6 +50,7 @@ class ExperimentalToolHandler(FeatureHandler):
         """Extend the method for the AlleleHandler."""
         super().get_general_data(session)
         self.build_bibliography(session)
+        self.build_cvterm_lookup(session)
         self.build_feature_lookup(session, feature_types=['tool'])
         return
 
@@ -56,6 +59,7 @@ class ExperimentalToolHandler(FeatureHandler):
         super().get_datatype_data(session)
         self.get_entities(session)
         self.get_entityprops(session)
+        self.get_entity_cvterms(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
         self.get_entity_fb_xrefs(session)
@@ -84,6 +88,7 @@ class ExperimentalToolHandler(FeatureHandler):
         super().map_fb_data_to_alliance()
         self.map_tool_basic()
         self.map_synonyms()
+        self.map_tool_uses()
         self.map_data_provider_dto()
         self.map_xrefs()
         self.map_entity_props_to_notes('transgenic_tool_prop_to_note_mapping')
@@ -101,6 +106,39 @@ class ExperimentalToolHandler(FeatureHandler):
             agr_tool.obsolete = tool.chado_obj.is_obsolete
             agr_tool.primary_external_id = f'FB:{tool.uniquename}'
             tool.linkmldto = agr_tool
+        return
+
+    def map_tool_uses(self):
+        """Map "tool_uses" FBcv annotations (TO4 proforma field) to the Alliance LinkML object.
+
+        Create one TransgenicToolUseSlotAnnotationDTO per FBcv term, carrying only the
+        pubs that give evidence for that specific term.
+        """
+        self.log.info('Map tool uses to Alliance object.')
+        data_key = 'tool_uses'
+        counter = 0
+        for tool in self.fb_data_entities.values():
+            if tool.linkmldto is None:
+                continue
+            if not tool.prop_data.get(data_key):
+                continue
+            # Group pubs by FBcv accession.
+            accession_to_pubs = {}
+            for prop in tool.prop_data[data_key]:
+                if prop['type'] != 'FlyBase miscellaneous CV':
+                    self.log.warning(f"Unexpected CV '{prop['type']}' for a {data_key} term on {tool.uniquename}: {prop['name']}.")
+                accession = prop['accession']
+                pub_curie = f"FB:{prop['pub']}"
+                if accession not in accession_to_pubs:
+                    accession_to_pubs[accession] = set()
+                accession_to_pubs[accession].add(pub_curie)
+            # Create one DTO per FBcv term.
+            for accession, pub_curies in accession_to_pubs.items():
+                slot_dto = agr_datatypes.TransgenicToolUseSlotAnnotationDTO(
+                    sorted(pub_curies), [f'FBcv:{accession}']).dict_export()
+                tool.linkmldto.transgenic_tool_use_dtos.append(slot_dto)
+                counter += 1
+        self.log.info(f'Generated {counter} transgenic tool use slot annotations.')
         return
 
     def synthesize_tool_associations(self):
