@@ -195,7 +195,7 @@ CATEGORIES = [
         """,
     },
     {
-        'label': 'INS_TRAP',
+        'label': 'INS_TRAP_KNOWN',
         'description': 'An insertion traps nearby regulatory elements; there is an indirectly associated Dmel allele and gene.',
         'sql': """
             SELECT DISTINCT gp.feature_id, g.uniquename
