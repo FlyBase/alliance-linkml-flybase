@@ -57,7 +57,7 @@ In the descriptions below, `feature_relationship` chains are indicated as follow
 
 ## CATEGORY 0
 
-- **Label:** UNK
+- **Label:** UNKNOWN
 - **Description:** A gene product fits none of the following categories.
 
 ## CATEGORY 1
@@ -133,7 +133,7 @@ WHERE gp.is_obsolete IS FALSE
 
 - **Label:** TAGGED
 - **Description:** A gene product is directly "associated_with" a Dmel allele, which is in turn directly "alleleof" a Dmel gene.
-- **Chain:** `[gene_product (RA/PA name suffix, FBtr/FBpp uniquename)] -(associated_with)-> [allele (FBal uniquename, organism_id=1)] -(alleleof)-> [gene (FBgn uniquename, organism_id=1)]`
+- **Chain:** `[gene_product (FBtr/FBpp uniquename)] -(associated_with)-> [allele (FBal uniquename, organism_id=1)] -(alleleof)-> [gene (FBgn uniquename, organism_id=1)]`
 - **Scope:** 0.4K gene products, 1.3K annotations
 - **Examples:**
     - `Bsg[G00413]` (FBal0243207) is an allele of `Bsg` (FBgn0261822).
@@ -149,7 +149,7 @@ JOIN feature a ON a.feature_id = gpa.object_id
 JOIN feature_relationship ag ON ag.subject_id = a.feature_id AND ag.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'alleleof')
 JOIN feature g ON g.feature_id = ag.object_id
 WHERE gp.is_obsolete IS FALSE
-  AND gp.name ~ '](R|P)A$'
+  AND gp.uniquename ~ '^FB(tr|pp)[0-9]{7}$'
   AND a.is_obsolete IS FALSE
   AND a.uniquename ~ '^FBal[0-9]{7}$'
   AND a.organism_id = 1
@@ -161,7 +161,7 @@ WHERE gp.is_obsolete IS FALSE
 
 - **Label:** PROMOTER_CHAR_GENE
 - **Description:** A transgenic non-Dmel allele has a Dmel gene's regulatory region.
-- **Chain:** `[gene_product (RA/PA name suffix, FBtr/FBpp uniquename)] -(associated_with)-> [allele (FBal uniquename, organism_id!=1)] -(has_reg_region)-> [gene (FBgn uniquename, organism_id=1)]`
+- **Chain:** `[gene_product (FBtr/FBpp uniquename)] -(associated_with)-> [allele (FBal uniquename, organism_id!=1)] -(has_reg_region)-> [gene (FBgn uniquename, organism_id=1)]`
 - **Scope:** 1.1K gene products, 7.9K annotations
 - **Examples:**
     - `Avic\GFP[EGFP.lbe.K]` (FBal0296331) has a regulatory region from `lbe` (FBgn0011278).
@@ -178,7 +178,6 @@ JOIN feature_relationship ag ON ag.subject_id = a.feature_id AND ag.type_id IN (
 JOIN feature g ON g.feature_id = ag.object_id
 WHERE gp.is_obsolete IS FALSE
   AND gp.uniquename ~ '^FB(tr|pp)[0-9]{7}$'
-  AND gp.name ~ '](R|P)A$'
   AND a.is_obsolete IS FALSE
   AND a.uniquename ~ '^FBal[0-9]{7}$'
   AND g.is_obsolete IS FALSE
@@ -191,7 +190,7 @@ WHERE gp.is_obsolete IS FALSE
 
 - **Label:** PROMOTER_CHAR_FBSF
 - **Description:** A transgenic non-Dmel allele has a Dmel regulatory region that is associated with a gene.
-- **Chain:** `[gene_product (RA/PA name suffix, FBtr/FBpp uniquename)] -(associated_with)-> [allele (FBal uniquename, organism_id!=1)] -(has_reg_region)-> [seqfeat (FBsf uniquename, organism_id=1] -(associated_with)-> [gene (FBgn uniquename, organism_id=1)]`
+- **Chain:** `[gene_product (FBtr/FBpp uniquename)] -(associated_with)-> [allele (FBal uniquename, organism_id!=1)] -(has_reg_region)-> [seqfeat (FBsf uniquename, organism_id=1] -(associated_with)-> [gene (FBgn uniquename, organism_id=1)]`
 - **Scope:** 10.8K gene products, 82.1K annotations
 - **Examples:**
     - `Avic\GFP[Hand.1054-1400]` (FBal0263675) has `Hand_HV-element` (FBsf0000435371), related to `Hand` (FBgn0032209).
@@ -210,7 +209,6 @@ JOIN feature_relationship sfg ON sfg.subject_id = sf.feature_id AND sfg.type_id 
 JOIN feature g ON g.feature_id = sfg.object_id
 WHERE gp.is_obsolete IS FALSE
   AND gp.uniquename ~ '^FB(tr|pp)[0-9]{7}$'
-  AND gp.name ~ '](R|P)A$'
   AND a.is_obsolete IS FALSE
   AND a.uniquename ~ '^FBal[0-9]{7}$'
   AND sf.is_obsolete IS FALSE
@@ -225,7 +223,7 @@ WHERE gp.is_obsolete IS FALSE
 
 - **Label:** INS_TRAP
 - **Description:** An insertion traps nearby regulatory elements. Expression annotated under the reporter (e.g., GFP gene), but there is an indirectly associated Dmel allele.
-- **Chain:** `[gene_product (RA/PA name suffix, FBtr/FBpp uniquename)] -(associated_with)-> [allele (FBal uniquename, organism_id!=1)] -(associated_with)-> [insertion (FBti uniquename, organism_id=1] <-(associated_with)- [allele, FBal uniquename, organism_id=1) -(alleleof)-> [gene (FBgn uniquename, organism_id=1)]`
+- **Chain:** `[gene_product (FBtr/FBpp uniquename)] -(associated_with)-> [allele (FBal uniquename, organism_id!=1)] -(associated_with)-> [insertion (FBti uniquename, organism_id=1] <-(associated_with)- [allele, FBal uniquename, organism_id=1) -(alleleof)-> [gene (FBgn uniquename, organism_id=1)]`
 - **Scope:** 2.9K gene products, 15.7K annotations
 - **Examples:**
     - `Avic\GFP::Ppyr\LUC[lola-226]` (FBal0387102), related to the same FBti insertion as `lola[226]` (FBal0179030).
@@ -246,7 +244,6 @@ JOIN feature_relationship a2g ON a2g.subject_id = a2.feature_id AND a2g.type_id 
 JOIN feature g ON g.feature_id = a2g.object_id
 WHERE gp.is_obsolete IS FALSE
   AND gp.uniquename ~ '^FB(tr|pp)[0-9]{7}$'
-  AND gp.name ~ '](R|P)A$'
   AND a.is_obsolete IS FALSE
   AND a.uniquename ~ '^FBal[0-9]{7}$'
   AND i.is_obsolete IS FALSE
@@ -265,7 +262,7 @@ WHERE gp.is_obsolete IS FALSE
 
 - **Label:** INS_TRAP_UNK
 - **Description:** An insertion traps nearby regulatory elements. Expression annotated under the reporter (e.g., GFP gene), but there is no known Dmel allele/gene.
-- **Chain:** `[gene_product (RA/PA name suffix, FBtr/FBpp uniquename)] -(associated_with)-> [allele (FBal uniquename, organism_id!=1)] -(associated_with)-> [insertion (FBti uniquename, organism_id=1]`
+- **Chain:** `[gene_product (FBtr/FBpp uniquename)] -(associated_with)-> [allele (FBal uniquename, organism_id!=1)] -(associated_with)-> [insertion (FBti uniquename, organism_id=1]`
 - **Scope:** 2.3K gene products, 11.3K annotations
 - **Examples:**
     - `Avic\GFP[Bacc-YC0022]` (FBal0230215); FBti is not localized to the genome
@@ -283,7 +280,6 @@ JOIN feature_relationship ai ON ai.subject_id = a.feature_id AND ai.type_id IN (
 JOIN feature i ON i.feature_id = ai.object_id
 WHERE gp.is_obsolete IS FALSE
   AND gp.uniquename ~ '^FB(tr|pp)[0-9]{7}$'
-  AND gp.name ~ '](R|P)A$'
   AND a.is_obsolete IS FALSE
   AND a.uniquename ~ '^FBal[0-9]{7}$'
   AND i.is_obsolete IS FALSE

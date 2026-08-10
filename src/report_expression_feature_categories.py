@@ -16,19 +16,24 @@ Notes:
     called a "gene product" here, and is assigned zero to many category labels
     that describe how (if at all) that gene product can be traced to a current
     Dmel gene. Categories are NOT mutually exclusive: a gene product having no
-    category gets the "UNK" label. The script writes two files:
+    category gets the "UNKNOWN" label. The script writes two files:
     1. A log file documenting the run and reporting bulk counts: counts of gene
        products and expression annotations per category, all pairwise category
        overlaps, gene products tracing to MANY genes, and gene products
        representing aberrant gene expression (the "ABERRANT" category).
     2. A TSV report file listing each gene product and its category labels.
-    The categorization SQL comes from queries drafted in "allele_xprn_thoughts.txt",
-    with three changes: 1) the "gene product has expression annotation" filter is
-    expressed as an EXISTS clause rather than a feature_expression join, which is
-    equivalent for this purpose but avoids row multiplication; 2) the CURATED
-    category has been added, complementing ABERRANT; 3) the ABERRANT query now also
-    requires that the gene be a current Dmel gene, as every other category does.
-    Change 3 should be a no-op: it is covered by a curation invariant check. Expression
+    The categorization SQL follows the category queries in
+    "docs/plans/2026-08-07-mapping_transgenic_xprn.md", with these differences:
+    1) each query returns gene product feature_ids and related gene uniquenames
+    instead of aggregate counts, so that category overlaps can be assessed;
+    2) the "gene product has expression annotation" filter is expressed as an
+    EXISTS clause rather than a feature_expression join, which is equivalent for
+    this purpose but avoids row multiplication; 3) the ABERRANT query also requires
+    that the gene be a Dmel gene, which a curation invariant check confirms to be a
+    no-op; 4) in the five categories whose gene product is "associated_with" an FBal
+    allele, the gene product is identified by its FBtr/FBpp uniquename alone, with no
+    "](R|P)A$" name restriction. The name restriction is retained for CURATED and
+    ABERRANT, where curation guarantees it holds anyway. Expression
     annotation counts are taken per gene product from a single feature_expression
     query, so annotation counts for any set of gene products (a category, or an
     intersection of categories) are just sums over the gene products in that set.
@@ -53,13 +58,14 @@ HEADER_LIST = [
     'uniquename',
     'name',
     'categories',
+    'n_categories',
     'n_expression_annotations',
     'n_dmel_genes',
     'dmel_genes',
 ]
 
 # The label given to gene products belonging to none of the categories below.
-UNK_LABEL = 'UNK'
+UNKNOWN_LABEL = 'UNKNOWN'
 
 # Categories of gene product having expression annotations.
 # Each category has a label, a description, and an SQL query returning two columns:
@@ -128,7 +134,7 @@ CATEGORIES = [
               AND ag.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'alleleof')
             JOIN feature g ON g.feature_id = ag.object_id
             WHERE gp.is_obsolete IS FALSE
-              AND gp.name ~ '](R|P)A$'
+              AND gp.uniquename ~ '^FB(tr|pp)[0-9]{7}$'
               AND a.is_obsolete IS FALSE
               AND a.uniquename ~ '^FBal[0-9]{7}$'
               AND a.organism_id = 1
@@ -151,7 +157,6 @@ CATEGORIES = [
             JOIN feature g ON g.feature_id = ag.object_id
             WHERE gp.is_obsolete IS FALSE
               AND gp.uniquename ~ '^FB(tr|pp)[0-9]{7}$'
-              AND gp.name ~ '](R|P)A$'
               AND a.is_obsolete IS FALSE
               AND a.uniquename ~ '^FBal[0-9]{7}$'
               AND a.organism_id != 1
@@ -178,7 +183,6 @@ CATEGORIES = [
             JOIN feature g ON g.feature_id = sfg.object_id
             WHERE gp.is_obsolete IS FALSE
               AND gp.uniquename ~ '^FB(tr|pp)[0-9]{7}$'
-              AND gp.name ~ '](R|P)A$'
               AND a.is_obsolete IS FALSE
               AND a.uniquename ~ '^FBal[0-9]{7}$'
               AND a.organism_id != 1
@@ -211,7 +215,6 @@ CATEGORIES = [
             JOIN feature g ON g.feature_id = a2g.object_id
             WHERE gp.is_obsolete IS FALSE
               AND gp.uniquename ~ '^FB(tr|pp)[0-9]{7}$'
-              AND gp.name ~ '](R|P)A$'
               AND a.is_obsolete IS FALSE
               AND a.uniquename ~ '^FBal[0-9]{7}$'
               AND a.organism_id != 1
@@ -241,7 +244,6 @@ CATEGORIES = [
             JOIN feature i ON i.feature_id = ai.object_id
             WHERE gp.is_obsolete IS FALSE
               AND gp.uniquename ~ '^FB(tr|pp)[0-9]{7}$'
-              AND gp.name ~ '](R|P)A$'
               AND a.is_obsolete IS FALSE
               AND a.uniquename ~ '^FBal[0-9]{7}$'
               AND a.organism_id != 1
@@ -348,7 +350,7 @@ INVARIANT_QUERIES = [
         """,
     },
     {
-        'invariant': 'Every gene "attributed_as_expression_of" by a gene product is a current Dmel gene',
+        'invariant': 'Every current gene "attributed_as_expression_of" by a gene product is a Dmel gene',
         'sql': """
             SELECT DISTINCT g.uniquename, g.name
             FROM feature gp
@@ -356,7 +358,9 @@ INVARIANT_QUERIES = [
               AND gpg.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'attributed_as_expression_of')
             JOIN feature g ON g.feature_id = gpg.object_id
             WHERE gp.is_obsolete IS FALSE
-              AND (g.is_obsolete IS TRUE OR g.uniquename !~ '^FBgn[0-9]{7}$' OR g.organism_id != 1)
+              AND g.is_obsolete IS FALSE
+              AND g.uniquename ~ '^FBgn[0-9]{7}$'
+              AND g.organism_id != 1
               AND EXISTS (SELECT 1 FROM feature_expression fe WHERE fe.feature_id = gp.feature_id);
         """,
     },
@@ -475,12 +479,12 @@ def get_category_members(gene_products):
             log.error('For category {}, found {} feature_ids absent from the set of current features having expression annotations.'
                       .format(label, len(unexpected_feature_ids)))
     # Gene products belonging to no category above get the catch-all label.
-    category_members[UNK_LABEL] = set()
+    category_members[UNKNOWN_LABEL] = set()
     for gene_product in gene_products.values():
         if not gene_product['categories']:
-            gene_product['categories'].append(UNK_LABEL)
-            category_members[UNK_LABEL].add(gene_product['feature_id'])
-    log.info('Found {} gene products of category {}.'.format(len(category_members[UNK_LABEL]), UNK_LABEL))
+            gene_product['categories'].append(UNKNOWN_LABEL)
+            category_members[UNKNOWN_LABEL].add(gene_product['feature_id'])
+    log.info('Found {} gene products of category {}.'.format(len(category_members[UNKNOWN_LABEL]), UNKNOWN_LABEL))
 
     return category_members
 
@@ -656,7 +660,7 @@ def get_report_notes():
     notes = ['Category labels in the "categories" column are not mutually exclusive.']
     for category in CATEGORIES:
         notes.append('{}: {}'.format(category['label'], category['description']))
-    notes.append('{}: The gene product fits none of the categories above.'.format(UNK_LABEL))
+    notes.append('{}: The gene product fits none of the categories above.'.format(UNKNOWN_LABEL))
 
     return notes
 
@@ -679,6 +683,7 @@ def process_gene_products(gene_products):
             'uniquename': gene_product['uniquename'],
             'name': gene_product['name'],
             'categories': ','.join(gene_product['categories']),
+            'n_categories': len(gene_product['categories']),
             'n_expression_annotations': gene_product['n_annotations'],
             'n_dmel_genes': len(gene_product['genes']),
             'dmel_genes': ','.join(sorted(gene_product['genes'])),
