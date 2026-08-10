@@ -1468,12 +1468,13 @@ class AberrationHandler(MetaAlleleHandler):
             3. type="associated_with", subject=FBab, object=FBal (proforma GA10g) -> "breakpoint_allele"
         """
         self.log.info('Synthesize aberration-to-allele associations.')
-        # Each entry is (entity_role of the aberration, chado rel type, related feature types, AGR relation).
-        # The partner feature_id is read from the side of the relationship that the aberration is NOT on.
+        # Each entry is (entity_role of the aberration, chado rel type, related feature types, AGR relation,
+        # proforma field). The partner feature_id is read from the side of the relationship that the aberration
+        # is NOT on. The proforma field is only reported in the cassette warning below.
         rel_specs = [
-            ('subject', 'associated_with', self.feature_subtypes['insertion'], 'carries'),
-            ('subject', 'associated_with', self.feature_subtypes['allele'], 'breakpoint_allele'),
-            ('object', 'carried_on', self.feature_subtypes['allele'], 'carries'),
+            ('subject', 'associated_with', self.feature_subtypes['insertion'], 'carries', 'A24a'),
+            ('subject', 'associated_with', self.feature_subtypes['allele'], 'breakpoint_allele', 'GA10g'),
+            ('object', 'carried_on', self.feature_subtypes['allele'], 'carries', 'A24b'),
         ]
         # When the aberration is the subject the partner is the object, and vice versa.
         partner_attr = {'subject': 'object_id', 'object': 'subject_id'}
@@ -1483,14 +1484,19 @@ class AberrationHandler(MetaAlleleHandler):
         rel_type_tally = {}
         for aberration in self.fb_data_entities.values():
             found_any = False
-            for entity_role, fb_rel_type, rel_entity_types, agr_rel_type in rel_specs:
+            for entity_role, fb_rel_type, rel_entity_types, agr_rel_type, proforma_field in rel_specs:
                 relevant_rels = aberration.recall_relationships(self.log, entity_role=entity_role, rel_types=fb_rel_type,
                                                                 rel_entity_types=rel_entity_types)
                 for feat_rel in relevant_rels:
                     partner_id = getattr(feat_rel.chado_obj, partner_attr[entity_role])
                     # Cassettes are FBal features sharing the "allele" cvterm, but they are never exported as alleles,
-                    # so an association pointing at one would dangle at the Alliance.
+                    # so an association pointing at one would dangle at the Alliance. Curators do not expect any of
+                    # these to exist in chado, so name each one so that the underlying data can be corrected.
                     if partner_id in self.cassette_ignore_list:
+                        partner = self.feature_lookup[partner_id]
+                        self.log.warning(f'CASSETTE FBal in an aberration-allele relationship, please check the data: '
+                                         f'{aberration} -- {fb_rel_type} --> '
+                                         f'{partner["name"]} ({partner["uniquename"]}) [proforma {proforma_field}]')
                         cassette_skipped += 1
                         continue
                     found_any = True
@@ -1509,7 +1515,11 @@ class AberrationHandler(MetaAlleleHandler):
         self.log.info(f'Found {allele_rel_counter} aberration-allele relationships for {aberration_counter} aberrations.')
         for agr_rel_type in sorted(rel_type_tally.keys()):
             self.log.info(f'Found {rel_type_tally[agr_rel_type]} aberration-allele relationships of type "{agr_rel_type}".')
-        self.log.info(f'Skipped {cassette_skipped} aberration-allele relationships to cassette FBal features.')
+        if cassette_skipped == 0:
+            self.log.info('Found no aberration-allele relationships pointing at a cassette FBal feature.')
+        else:
+            self.log.warning(f'Skipped {cassette_skipped} aberration-allele relationships to cassette FBal features '
+                             f'- see the "CASSETTE FBal" warnings above.')
         return
 
     # Elaborate on synthesize_info() for the AberrationHandler.
