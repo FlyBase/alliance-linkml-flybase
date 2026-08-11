@@ -37,8 +37,10 @@ REPORT_LABEL = 'cassette_curation'
 _CASSETTE_ASSOC_SECOND_FIELDS = {
     'cassette_transgenic_tool_association_ingest_set': 'transgenic_tool_identifier',
     'cassette_genomic_entity_association_ingest_set': 'genomic_entity_identifier',
+    'cassette_str_association_ingest_set': 'sequence_targeting_reagent_identifier',
 }
-# Extra TSV columns specific to cassette associations.
+# Extra TSV columns specific to cassette associations. Only genomic entity associations carry
+# component_type_curies; the others fall back to the empty default for that column.
 _CASSETTE_ASSOC_EXTRAS = [('Comp type curie', 'component_type_curies', '')]
 
 # Now proceed with generic setup.
@@ -159,7 +161,7 @@ def _export_associations(cassette_handler):
         'linkml_version': linkml_release,
         'alliance_member_release_version': database_release,
     }
-    for sub_type in ('transgenic_tool', 'genomic_entity'):
+    for sub_type in ('transgenic_tool', 'genomic_entity', 'str'):
         set_name = f"cassette_{sub_type}_association"
         ingest_name = f"{set_name}_ingest_set"
         association_export_dict[ingest_name] = []

@@ -61,10 +61,13 @@ class CassetteHandler(FeatureHandler):
         'FBal0239883': 'sd[RNAi.N.UAS]',
         'FBal0000531': 'Amy-p[IX]',
         'FBal0028742': 'Act88F[E334K]',
-        'FBal0045138': 'Sry-delta[SDL1.lacZ]',                 # linked to an FBsf so a str association.
-        'FBal0193109': r'Avic\GFP[EGFP.rho.PE.Tag:NLS(tra)]',  # linked to an FBsf so a str association.
-        'FBal0250846': r'Scer\GAL4[GMR24E03]',                 # linked to an FBsf so a str association.
-        'FBal0041313': r'Ecol\lacZ[eve.1.55] ',                # linked to an FBsf so a str association.
+        # These four are "has_reg_region" to a regulatory_region FBsf, NOT to an STR FBsf, so they
+        # stay CassetteComponentSlotAnnotationDTO free text (FTA-224). The STR cases are the
+        # "encodes_tool" ones noted further down.
+        'FBal0045138': 'Sry-delta[SDL1.lacZ]',                 # has_reg_region FBsf0000435464 (regulatory_region).
+        'FBal0193109': r'Avic\GFP[EGFP.rho.PE.Tag:NLS(tra)]',  # has_reg_region FBsf0000435293 (regulatory_region).
+        'FBal0250846': r'Scer\GAL4[GMR24E03]',                 # has_reg_region FBsf0000162916 (regulatory_region).
+        'FBal0041313': r'Ecol\lacZ[eve.1.55] ',                # has_reg_region FBsf0000921192 (regulatory_region).
         'FBal0083005': 'dlg1[DeltaSH3.UAS.Tag:FLAG]',  # two refs for same tagged_with (FBrf0099758, FBrf0130114),
                                                        # only one for has_reg_region (tool) (FBrf0099758)
         'FBal0137284': 'cic[Tag:HA]',  # single tagged_with (FBrf0144844, FBrf0180201), single has_reg_region (gene) (FBrf0144844, FBrf0180201)
@@ -88,11 +91,13 @@ class CassetteHandler(FeatureHandler):
         'FBal0032692': 'sev[S11.Tag:MYC]',     # associated_with FBtp0000326
         'FBal0392814': r'Scer\GAL4[lush.3]',     # associated_with FBtp0161516
         'FBal0250108': r'Scer\GAL4[GMR16C10]',     # associated_with FBtp0057873
-        'FBal0210886': 'wg[GD5007]',     # associated_with FBtp0032215
-        'FBal0209903': 'lbe[GD4157]',     # associated_with FBtp0031452
-        'FBal0365146': 'wg[TOE.GS00055]',     # associated_with FBtp0145396
-        'FBal0365030': 'Alp9[TKO.GS00469]',     # associated_with FBtp0145394
-        'FBal0365029': 'Alp10[TKO.GS00469]',     # associated_with FBtp0145394
+        # The "encodes_tool"-to-STR-FBsf cases: these are the ones that become a
+        # CassetteStrAssociationDTO rather than free text (FTA-227/FTA-228).
+        'FBal0210886': 'wg[GD5007]',     # associated_with FBtp0032215; encodes_tool FBsf0000074798 (RNAi_reagent).
+        'FBal0209903': 'lbe[GD4157]',     # associated_with FBtp0031452; encodes_tool FBsf0000074310 (RNAi_reagent).
+        'FBal0365146': 'wg[TOE.GS00055]',     # associated_with FBtp0145396; encodes_tool two sgRNA FBsf.
+        'FBal0365030': 'Alp9[TKO.GS00469]',     # associated_with FBtp0145394; encodes_tool FBsf0000910692 (sgRNA).
+        'FBal0365029': 'Alp10[TKO.GS00469]',     # associated_with FBtp0145394; encodes_tool FBsf0000910691 (sgRNA).
         'FBal0392014': r'Equa\eqFP578[TagRFP.UAS.Tag:TM(hPDGFRB)]',     # associated_with FBtp0161256
         'FBal0392013': r'Avic\GFP[G-CEPIA1.UAS.Tag:TM(hPDGFRB)]',     # associated_with FBtp0161256
         'FBal0343941': r'Scer\RCR1[UAS.Tag:MYC]',     # associated_with FBtp0131348
@@ -126,12 +131,36 @@ class CassetteHandler(FeatureHandler):
     # cassette_component_free_text_associations = []
     cassette_tool_associations = []
     cassette_genomic_entity_associations = []
+    cassette_str_associations = []
     cassette_cassette_rels = {}
     # Anonymous cassette data (populated via receive_anon_cassette_data).
     anon_cassette_data = []
     anon_cassettes = []
     anon_cassette_tool_associations = []
     anon_cassette_genomic_entity_associations = []
+    anon_cassette_str_associations = []
+
+    # FTA-224: the feature.type values that make an FBsf a sequence targeting reagent.
+    STR_SEQFEAT_TYPES = ('RNAi_reagent', 'sgRNA')
+
+    def _export_str_assocs(self):
+        """Whether cassette-STR components should be exported as CassetteStrAssociationDTOs.
+
+        Gated by ADD_CASS_TO_CONSTRUCT=YES like the rest of the cassette pipeline, so that
+        ungated runs keep emitting the pre-FTA-223 free-text components unchanged.
+        """
+        return getenv('ADD_CASS_TO_CONSTRUCT', None) == 'YES'
+
+    def _is_str_seqfeat(self, feature):
+        """Whether a feature_lookup entry is an STR FBsf (FTA-224).
+
+        Args:
+            feature (dict): A self.feature_lookup entry, which carries the feature.type
+                cvterm name under "type". All FBsf are in the lookup with their real type,
+                since feature_subtypes['seqfeat'] applies no type restriction.
+
+        """
+        return feature['uniquename'].startswith('FBsf') and feature['type'] in self.STR_SEQFEAT_TYPES
 
     def get_general_data(self, session):
         """Extend the method for the CassetteHandler."""
@@ -333,9 +362,14 @@ class CassetteHandler(FeatureHandler):
             assoc_type = 'tool_association'
 
         elif feature["uniquename"].startswith('FBsf'):  # cassette component is a seqfeat (FBid is a FBsf):
-            assoc_type = 'component_free_text'  # for now, will change to a CassetteGenomicEntityAssociationDTO
-            # once we start to submit FBsf features, so keep this loop in place for then even though at the
-            # moment it's not actually changing the type !
+            # Keep this default even though it is not changing the type: once we start submitting
+            # non-STR FBsf features these become a CassetteGenomicEntityAssociationDTO.
+            assoc_type = 'component_free_text'
+            # FTA-227: STR FBsf (feature.type of RNAi_reagent or sgRNA) are submitted as
+            # SequenceTargetingReagents, so their cassette components become a
+            # CassetteStrAssociationDTO instead of inline free text.
+            if self._is_str_seqfeat(feature) and self._export_str_assocs():
+                assoc_type = 'str_association'
 
         elif feature["uniquename"].startswith('FBgn'):  # cassette component is a gene (FBid is a FBgn):
             assoc_type = 'genomic_entity_association'
@@ -392,8 +426,8 @@ class CassetteHandler(FeatureHandler):
     def query_chado_and_export(self, session):
         """Elaborate on query_chado_and_export method for the CassetteHandler."""
         super().query_chado_and_export(session)
-        # self.generate_export_dict(self.cassette_component_free_text_associations,
-        #                           'cassette_str_association_ingest_set')
+        self.generate_export_dict(self.cassette_str_associations,
+                                  'cassette_str_association_ingest_set')
         self.generate_export_dict(self.cassette_genomic_entity_associations,
                                   'cassette_genomic_entity_association_ingest_set')
         self.generate_export_dict(self.cassette_tool_associations,
@@ -625,6 +659,17 @@ class CassetteHandler(FeatureHandler):
                     # first_feat_rel.linkmldto = rel_dto
                     cassette_rel.linkmldto = rel_dto
                     self.cassette_genomic_entity_associations.append(cassette_rel)
+                elif assoc_type == 'str_association':
+                    # CassetteStrAssociationDTO (FTA-228).
+                    if self.testing:
+                        mess = "map_cassette_associations: StrAssociation cass:"
+                        mess += f"{cassette_curie} comp:{component_curie} '{rel_type_name}'"
+                        self.log.debug(mess)
+                    rel_dto = agr_datatypes.CassetteStrAssociationDTO(
+                        cassette_curie, component_curie,
+                        pub_curies, False, rel_type_name)
+                    cassette_rel.linkmldto = rel_dto
+                    self.cassette_str_associations.append(cassette_rel)
             if cassette.is_obsolete is True or component['is_obsolete'] is True:
                 self.log.error(f"{cassette_curie} {component_curie} should never be obsolete??")
             counter += 1
@@ -732,14 +777,24 @@ class CassetteHandler(FeatureHandler):
                     fb_rel.linkmldto = rel_dto
                     self.anon_cassette_genomic_entity_associations.append(fb_rel)
                 elif component['uniquename'].startswith('FBsf'):
-                    symbol = component['symbol']
-                    organism_id = component['organism_id']
-                    taxon_text = self.organism_lookup[organism_id]['full_species_name']
-                    taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
-                    comp_dto = agr_datatypes.CassetteComponentSlotAnnotationDTO(
-                        alliance_rel, symbol, taxon_curie, taxon_text,
-                        pub_curies).dict_export()
-                    data['anon_cassette_dto'].cassette_component_dtos.append(comp_dto)
+                    # FTA-229: STR FBsf become a CassetteStrAssociationDTO. In fb_2026_02 no STR
+                    # FBsf reaches this method (every cassette-STR link is "encodes_tool", handled
+                    # in map_anon_cassette_encodes_tool), so this branch is defensive: it keeps the
+                    # two paths consistent if such a relationship is ever curated.
+                    if self._is_str_seqfeat(component) and self._export_str_assocs():
+                        fb_rel = fb_datatypes.FBExportEntity()
+                        fb_rel.linkmldto = agr_datatypes.CassetteStrAssociationDTO(
+                            cassette_id, component_curie, pub_curies, False, alliance_rel)
+                        self.anon_cassette_str_associations.append(fb_rel)
+                    else:
+                        symbol = component['symbol']
+                        organism_id = component['organism_id']
+                        taxon_text = self.organism_lookup[organism_id]['full_species_name']
+                        taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
+                        comp_dto = agr_datatypes.CassetteComponentSlotAnnotationDTO(
+                            alliance_rel, symbol, taxon_curie, taxon_text,
+                            pub_curies).dict_export()
+                        data['anon_cassette_dto'].cassette_component_dtos.append(comp_dto)
                 counter += 1
         self.log.info(f'Mapped {counter} simple component associations for anonymous cassettes.')
 
@@ -771,14 +826,23 @@ class CassetteHandler(FeatureHandler):
                     fb_rel.linkmldto = rel_dto
                     self.anon_cassette_genomic_entity_associations.append(fb_rel)
                 elif component['uniquename'].startswith('FBsf'):
-                    symbol = component['symbol']
-                    organism_id = component['organism_id']
-                    taxon_text = self.organism_lookup[organism_id]['full_species_name']
-                    taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
-                    comp_dto = agr_datatypes.CassetteComponentSlotAnnotationDTO(
-                        'expresses', symbol, taxon_curie, taxon_text,
-                        pub_curies).dict_export()
-                    data['anon_cassette_dto'].cassette_component_dtos.append(comp_dto)
+                    # FTA-229: STR FBsf are submitted as SequenceTargetingReagents, so their
+                    # cassette components become a CassetteStrAssociationDTO; non-STR FBsf keep
+                    # the inline free-text component slot annotation for now.
+                    if self._is_str_seqfeat(component) and self._export_str_assocs():
+                        fb_rel = fb_datatypes.FBExportEntity()
+                        fb_rel.linkmldto = agr_datatypes.CassetteStrAssociationDTO(
+                            cassette_id, component_curie, pub_curies, False, 'expresses')
+                        self.anon_cassette_str_associations.append(fb_rel)
+                    else:
+                        symbol = component['symbol']
+                        organism_id = component['organism_id']
+                        taxon_text = self.organism_lookup[organism_id]['full_species_name']
+                        taxon_curie = self.organism_lookup[organism_id]['taxon_curie']
+                        comp_dto = agr_datatypes.CassetteComponentSlotAnnotationDTO(
+                            'expresses', symbol, taxon_curie, taxon_text,
+                            pub_curies).dict_export()
+                        data['anon_cassette_dto'].cassette_component_dtos.append(comp_dto)
                 counter += 1
         self.log.info(f'Mapped {counter} encodes_tool associations for anonymous cassettes.')
 
@@ -848,6 +912,14 @@ class CassetteHandler(FeatureHandler):
             self.anon_cassette_genomic_entity_associations.append(fb_rel)
             return True
         if uname.startswith('FBsf'):
+            # FTA-231: STR FBsf become a CassetteStrAssociationDTO; non-STR FBsf keep the
+            # inline free-text component slot annotation for now.
+            if self._is_str_seqfeat(component) and self._export_str_assocs():
+                fb_rel = fb_datatypes.FBExportEntity()
+                fb_rel.linkmldto = agr_datatypes.CassetteStrAssociationDTO(
+                    cassette_id, component_curie, pub_curies, False, alliance_rel)
+                self.anon_cassette_str_associations.append(fb_rel)
+                return True
             organism_id = component['organism_id']
             comp_dto = agr_datatypes.CassetteComponentSlotAnnotationDTO(
                 alliance_rel, component['symbol'],
@@ -974,6 +1046,10 @@ class CassetteHandler(FeatureHandler):
         self.flag_unexportable_entities(
             self.anon_cassette_genomic_entity_associations,
             'cassette_genomic_entity_association_ingest_set')
+        self.flag_internal_fb_entities('anon_cassette_str_associations')
+        self.flag_unexportable_entities(
+            self.anon_cassette_str_associations,
+            'cassette_str_association_ingest_set')
         # Append exportable anon cassettes to the existing export dicts.
         anon_count = 0
         for entity in self.anon_cassettes:
@@ -996,6 +1072,13 @@ class CassetteHandler(FeatureHandler):
                     entity.linkmldto.dict_export())
                 ge_count += 1
         self.log.info(f'Appended {ge_count} anon cassette genomic entity associations.')
+        str_count = 0
+        for entity in self.anon_cassette_str_associations:
+            if entity.for_export is True:
+                self.export_data['cassette_str_association_ingest_set'].append(
+                    entity.linkmldto.dict_export())
+                str_count += 1
+        self.log.info(f'Appended {str_count} anon cassette STR associations.')
 
     def populate_anon_cassettes_from_constructs(self, session):
         """Run ConstructHandler, ingest anon-cassette data, map both batches, and export.
