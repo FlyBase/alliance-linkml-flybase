@@ -1065,7 +1065,8 @@ class PrimaryEntityHandler(DataHandler):
                 # Demote symbols inherited from a superseded entity: an FBal absorbed by its FBti brings its own
                 # current symbol along, which is not a current name of the insertion that absorbed it. The
                 # entity's own name is exempt in case the two entities share a symbol. Only symbols are demoted:
-                # ~195 insertions take their current full name from a merged allele, which is left as it was.
+                # ~195 insertions take their current full name from a merged allele, and per Gillian (FTA-234,
+                # 2026-08-11) they should keep it, since FBti have no full names of their own to overwrite.
                 is_merged_symbol = syno_id in fb_data_entity.merged_synonym_ids and syno_dict['name_type_name'] in symbol_type_names
                 if syno_dict['is_current'] is True and is_merged_symbol and syno_dict['format_text'] != fb_data_entity.name:
                     syno_dict['is_current'] = False
