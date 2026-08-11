@@ -7,10 +7,13 @@ AGR_data_retrieval_curation_construct.py (and which appear in similar form
 in the allele and transgenic_tool scripts).
 
 DTO field names are derived from a `datatype` string (e.g. "cassette",
-"construct"). All current scripts follow the regular convention
+"construct"). Most scripts follow the regular convention
 `{datatype}_full_name_dto`, `{datatype}_symbol_dto`,
-`{datatype}_synonym_dtos`, etc.; if a future script breaks that
-convention these helpers will need to be parameterized further.
+`{datatype}_synonym_dtos`, etc. A datatype that breaks the convention can
+pass `symbol_source`/`full_name_source`/`synonym_source` to
+write_primary_tsv(): STR does, because SequenceTargetingReagentDTO holds
+its symbol in a plain `name` string and its synonyms in a plain list of
+strings rather than in NameSlotAnnotationDTO slots.
 """
 
 import os
@@ -46,7 +49,8 @@ def _is_excluded(entity_dict):
     return entity_dict.get('internal') or entity_dict.get('obsolete')
 
 
-def write_primary_tsv(*, log, filename, entities, datatype, extra_fields=None):
+def write_primary_tsv(*, log, filename, entities, datatype, extra_fields=None,
+                      symbol_source=None, full_name_source=None, synonym_source=None):
     """Write the primary identifier TSV (used by every curation script).
 
     `extra_fields` appends datatype-specific columns after the shared ones. It is a list of
@@ -54,6 +58,12 @@ def write_primary_tsv(*, log, filename, entities, datatype, extra_fields=None):
     exported entity dict or a callable taking that dict and returning the cell value. List/tuple
     values are joined with EVIDENCE_DELIMITER; None and missing keys fall back to the default.
     Scripts that pass nothing get the historic six-column output unchanged.
+
+    `symbol_source`, `full_name_source` and `synonym_source` override where the symbol, full name
+    and synonym cells come from, for a datatype whose DTO does not use the
+    `{datatype}_symbol_dto`/`_full_name_dto`/`_synonym_dtos` convention. Each is a callable taking
+    the exported entity dict; the first two return a string (or None), the third a list of strings.
+    Left unset, the conventional DTO slots are read exactly as before.
     """
     skip = should_skip_obsolete()
     if skip:
@@ -73,11 +83,17 @@ def write_primary_tsv(*, log, filename, entities, datatype, extra_fields=None):
             name = ''
             secondary = []
             syns = []
-            if full_name_key in entity_dict:
+            if full_name_source is not None:
+                name = full_name_source(entity_dict) or ''
+            elif full_name_key in entity_dict:
                 name = entity_dict[full_name_key]["format_text"]
-            if symbol_key in entity_dict:
+            if symbol_source is not None:
+                symbol = symbol_source(entity_dict) or ''
+            elif symbol_key in entity_dict:
                 symbol = entity_dict[symbol_key]["format_text"]
-            if synonym_key in entity_dict:
+            if synonym_source is not None:
+                syns = list(synonym_source(entity_dict) or [])
+            elif synonym_key in entity_dict:
                 for synonym in entity_dict[synonym_key]:
                     syns.append(synonym["format_text"])
             if "secondary_identifiers" in entity_dict:

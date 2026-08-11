@@ -35,13 +35,21 @@ import curation_tsv
 # Data types handled by this script.
 REPORT_LABEL = 'str_curation'
 
-# SequenceTargetingReagentDTO holds "name" and "synonyms" as plain strings rather than in the
-# "{datatype}_symbol_dto"/"{datatype}_synonym_dtos" slots that write_primary_tsv() reads, so the
-# real names are added as extra columns and the shared symbol/full name/synonyms columns stay blank.
-_STR_TSV_EXTRAS = [
-    ('name', 'name', ''),
-    ('synonyms', 'synonyms', ''),
-]
+# SequenceTargetingReagentDTO holds its symbol in a plain "name" string and its synonyms in a plain
+# list of strings, not in the "{datatype}_symbol_dto"/"{datatype}_synonym_dtos" slots that
+# write_primary_tsv() reads by convention, so point it at the right keys. There is no full name
+# slot on this class at all, so that column is left empty.
+
+
+def _str_symbol(entity_dict):
+    """Return the STR symbol for the curator TSV."""
+    return entity_dict.get('name')
+
+
+def _str_synonyms(entity_dict):
+    """Return the STR synonym strings for the curator TSV."""
+    return entity_dict.get('synonyms', [])
+
 
 # Now proceed with generic setup.
 set_up_dict = set_up_db_reading(REPORT_LABEL)
@@ -139,7 +147,7 @@ def main():
     generate_export_file(export_dict, log, output_filename)
     curation_tsv.write_primary_tsv(
         log=log, filename=set_up_dict['output_filename'], entities=export_dict[set_name],
-        datatype='str', extra_fields=_STR_TSV_EXTRAS,
+        datatype='str', symbol_source=_str_symbol, synonym_source=_str_synonyms,
     )
 
     log.info('Ended main function.\n')
