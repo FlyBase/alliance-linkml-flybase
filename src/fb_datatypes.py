@@ -381,6 +381,18 @@ class FBTool(FBFeature):
         self.prop_data = {'tool_uses': []}    # list of dicts: name/type/pub/accession
 
 
+class FBStr(FBFeature):
+    """A FlyBase sequence targeting reagent (STR) entity with all its related data.
+
+    The STR subset of FBsf sequence features: those with a feature.type of "RNAi_reagent"
+    or "sgRNA" (FTA-224). The minimal Alliance submission needs no props, so prop_data
+    stays at the empty FBFeature default.
+    """
+    def __init__(self, chado_obj):
+        """Create the FBStr object."""
+        super().__init__(chado_obj)
+
+
 class FBStrain(FBDataEntity):
     """A FlyBase strain entity with all its related data."""
     def __init__(self, chado_obj):
