@@ -444,6 +444,10 @@ class AlleleHandler(MetaAlleleHandler):
         if self.testing:
             self.log.debug(f'Merge {allele} data into {insertion} data.')
         insertion.alt_fb_ids.append(f'FB:{allele.uniquename}')
+        # The allele has just been made obsolete, so its current symbol is no longer a current name of
+        # anything: record its synonym_ids so that synthesize_synonyms() demotes them to plain synonyms
+        # of the insertion instead of letting them rival the insertion's own current symbol.
+        insertion.merged_synonym_ids.update([i.synonym_id for i in allele.synonyms])
         lists_to_extend = [
             'dbxrefs',
             'export_warnings',

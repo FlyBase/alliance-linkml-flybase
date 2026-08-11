@@ -1031,6 +1031,8 @@ class PrimaryEntityHandler(DataHandler):
             'nickname': 'unspecified',
             'synonym': 'unspecified',
         }
+        # AGR name types that represent a symbol, as opposed to a full name or a plain synonym.
+        symbol_type_names = ['nomenclature_symbol', 'systematic_name']
         for fb_data_entity in self.fb_data_entities.values():
             # For each entity, gather synonym_id-keyed dict of synonym info.
             for feat_syno in fb_data_entity.synonyms:
@@ -1050,7 +1052,7 @@ class PrimaryEntityHandler(DataHandler):
                     }
                     fb_data_entity.synonym_dict[feat_syno.synonym_id] = syno_dict
             # Go back over each synonym and refine each
-            for syno_dict in fb_data_entity.synonym_dict.values():
+            for syno_id, syno_dict in fb_data_entity.synonym_dict.items():
                 # Then modify attributes as needed.
                 # Identify systematic names.
                 if (re.match(self.regex['systematic_name'], syno_dict['format_text']) and syno_dict['name_type_name'] == 'nomenclature_symbol'):
@@ -1059,6 +1061,14 @@ class PrimaryEntityHandler(DataHandler):
                 if True in syno_dict['is_current']:
                     syno_dict['is_current'] = True
                 else:
+                    syno_dict['is_current'] = False
+                # Demote symbols inherited from a superseded entity: an FBal absorbed by its FBti brings its own
+                # current symbol along, which is not a current name of the insertion that absorbed it. The
+                # entity's own name is exempt in case the two entities share a symbol. Only symbols are demoted:
+                # ~195 insertions take their current full name from a merged allele, and per Gillian (FTA-234,
+                # 2026-08-11) they should keep it, since FBti have no full names of their own to overwrite.
+                is_merged_symbol = syno_id in fb_data_entity.merged_synonym_ids and syno_dict['name_type_name'] in symbol_type_names
+                if syno_dict['is_current'] is True and is_merged_symbol and syno_dict['format_text'] != fb_data_entity.name:
                     syno_dict['is_current'] = False
                 # Classify is_internal (convert list of booleans into a single boolean).
                 if False in syno_dict['is_internal']:
@@ -1269,10 +1279,22 @@ class PrimaryEntityHandler(DataHandler):
                                                                          sub_sup_sgml_to_html(sub_sup_to_sgml(fb_data_entity.name)), []).dict_export()
                 setattr(fb_data_entity.linkmldto, linkml_synonym_slots['symbol_bin'], generic_symbol_dto)
             else:
-                setattr(fb_data_entity.linkmldto, linkml_synonym_slots['symbol_bin'], linkml_synonym_bins['symbol_bin'][0])
-                if len(linkml_synonym_bins['symbol_bin']) > 1:
-                    multi_symbols = ', '.join([i['format_text'] for i in linkml_synonym_bins['symbol_bin']])
-                    self.log.warning(f'Found many current symbols for {fb_data_entity}: {multi_symbols}')
+                # An entity should have one current symbol, but the data can give several. Prefer the one that is
+                # the entity's own name, and keep any others as synonyms rather than discarding them silently.
+                symbol_dtos = linkml_synonym_bins['symbol_bin']
+                chosen_index = 0
+                for i, name_dto in enumerate(symbol_dtos):
+                    if name_dto['format_text'] == fb_data_entity.name:
+                        chosen_index = i
+                        break
+                setattr(fb_data_entity.linkmldto, linkml_synonym_slots['symbol_bin'], symbol_dtos[chosen_index])
+                if len(symbol_dtos) > 1:
+                    chosen_symbol = symbol_dtos[chosen_index]['format_text']
+                    demoted_dtos = [i for n, i in enumerate(symbol_dtos) if n != chosen_index]
+                    linkml_synonym_bins['synonym_bin'].extend(demoted_dtos)
+                    multi_symbols = ', '.join([i['format_text'] for i in demoted_dtos])
+                    self.log.warning(f'Found many current symbols for {fb_data_entity}: exporting "{chosen_symbol}" '
+                                     f'and keeping these as synonyms: {multi_symbols}')
             # 2. Fullname.
             if len(linkml_synonym_bins['full_name_bin']) == 1:
                 setattr(fb_data_entity.linkmldto, linkml_synonym_slots['full_name_bin'], linkml_synonym_bins['full_name_bin'][0])
