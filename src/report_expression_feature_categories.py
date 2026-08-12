@@ -19,9 +19,15 @@ Notes:
     category gets the "UNKNOWN" label. The script writes two files:
     1. A log file documenting the run and reporting bulk counts: counts of gene
        products and expression annotations per category, all pairwise category
-       overlaps, gene products tracing to MANY genes, and gene products
-       representing aberrant gene expression (the "ABERRANT" category).
-    2. A TSV report file listing each gene product and its category labels.
+       overlaps, gene products tracing to MANY genes, gene products
+       representing aberrant gene expression (the "ABERRANT" category), and
+       counts of gene products per warning msg.
+    2. A TSV report file listing each gene product, its category labels, and any
+       warning msgs applying to it. Each gene product also has a "warnings"
+       bucket, reported in the final "warnings" column of the TSV file: a set of
+       zero to many msgs flagging aspects of that gene product that should be
+       treated with caution. Warnings are defined independently of the
+       categories, in the WARNINGS list.
     The categorization SQL follows the category queries in
     "docs/plans/2026-08-07-mapping_transgenic_xprn.md", with these differences:
     1) each query returns gene product feature_ids and related gene uniquenames
@@ -33,7 +39,10 @@ Notes:
     no-op; 4) in the five categories whose gene product is "associated_with" an FBal
     allele, the gene product is identified by its FBtr/FBpp uniquename alone, with no
     "](R|P)A$" name restriction. The name restriction is retained for CURATED and
-    ABERRANT, where curation guarantees it holds anyway. Expression
+    ABERRANT, where curation guarantees it holds anyway; 5) the TAGGED query also
+    requires that the gene be a Dmel gene. The plan doc's TAGGED chain specifies a
+    Dmel gene but its SQL omits the filter, so this makes every gene-reaching category
+    consistent and keeps non-Dmel genes out of the "dmel_genes" column. Expression
     annotation counts are taken per gene product from a single feature_expression
     query, so annotation counts for any set of gene products (a category, or an
     intersection of categories) are just sums over the gene products in that set.
@@ -62,6 +71,7 @@ HEADER_LIST = [
     'n_expression_annotations',
     'n_dmel_genes',
     'dmel_genes',
+    'warnings',
 ]
 
 # The label given to gene products belonging to none of the categories below.
@@ -140,6 +150,7 @@ CATEGORIES = [
               AND a.organism_id = 1
               AND g.is_obsolete IS FALSE
               AND g.uniquename ~ '^FBgn[0-9]{7}$'
+              AND g.organism_id = 1
               AND EXISTS (SELECT 1 FROM feature_expression fe WHERE fe.feature_id = gp.feature_id);
         """,
     },
@@ -312,6 +323,102 @@ CATEGORIES = [
     },
 ]
 
+# Warnings flagging gene products whose relationship to a Dmel gene should be treated with caution.
+# Each warning has a label (the msg reported in the "warnings" column), a description, and an
+# SQL query returning a single column: the feature_id of each gene product to be flagged.
+# Warnings are independent of one another and of the categories above: a gene product can get
+# zero to many warnings, and the "warnings" column is empty for gene products having none.
+WARNINGS = [
+    {
+        'label': 'many_fbti',
+        'description': 'The gene product is "associated_with" an allele that is in turn "associated_with" many (not just one)'
+                       ' current FBti insertions, so any gene traced through that insertion is ambiguous.',
+        'sql': """
+            SELECT DISTINCT gp.feature_id
+            FROM feature gp
+            JOIN feature_relationship gpa ON gpa.subject_id = gp.feature_id
+              AND gpa.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'associated_with')
+            JOIN feature a ON a.feature_id = gpa.object_id
+            WHERE gp.is_obsolete IS FALSE
+              AND a.is_obsolete IS FALSE
+              AND a.uniquename ~ '^FBal[0-9]{7}$'
+              AND EXISTS (SELECT 1 FROM feature_expression fe WHERE fe.feature_id = gp.feature_id)
+              AND
+              (
+                  SELECT COUNT(DISTINCT i.feature_id)
+                  FROM feature_relationship ai
+                  JOIN feature i ON i.feature_id = ai.object_id
+                  WHERE ai.subject_id = a.feature_id
+                    AND ai.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'associated_with')
+                    AND i.is_obsolete IS FALSE
+                    AND i.uniquename ~ '^FBti[0-9]{7}$'
+              ) > 1;
+        """,
+    },
+    {
+        'label': 'non_dmel_gene',
+        'description': 'The gene product traces to a current non-Dmel gene: it is the product of a foreign gene, so attributing'
+                       ' its expression to a Dmel gene may be inappropriate. Three gene-of-origin paths are checked, each requiring'
+                       ' the gene to be non-Dmel: gene product "associated_with" a gene (the ENDO path); gene product "isa" a gene'
+                       ' product that is "associated_with" a gene (the ENDO_ISO path); and gene product "associated_with" an allele'
+                       ' that is "alleleof" a gene (the TAGGED path, but with no Dmel restriction on the allele either).',
+        'sql': """
+            SELECT DISTINCT gp.feature_id
+            FROM feature gp
+            JOIN feature_relationship gpg ON gpg.subject_id = gp.feature_id
+              AND gpg.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'associated_with')
+            JOIN feature g ON g.feature_id = gpg.object_id
+            WHERE gp.is_obsolete IS FALSE
+              AND g.is_obsolete IS FALSE
+              AND g.uniquename ~ '^FBgn[0-9]{7}$'
+              AND g.organism_id != 1
+              AND EXISTS (SELECT 1 FROM feature_expression fe WHERE fe.feature_id = gp.feature_id)
+            UNION
+            SELECT DISTINCT gp.feature_id
+            FROM feature gp
+            JOIN feature_relationship gpgp2 ON gpgp2.subject_id = gp.feature_id
+              AND gpgp2.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'isa')
+            JOIN feature gp2 ON gp2.feature_id = gpgp2.object_id
+            JOIN feature_relationship gp2g ON gp2g.subject_id = gp2.feature_id
+              AND gp2g.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'associated_with')
+            JOIN feature g ON g.feature_id = gp2g.object_id
+            WHERE gp.is_obsolete IS FALSE
+              AND gp2.is_obsolete IS FALSE
+              AND g.is_obsolete IS FALSE
+              AND g.uniquename ~ '^FBgn[0-9]{7}$'
+              AND g.organism_id != 1
+              AND EXISTS (SELECT 1 FROM feature_expression fe WHERE fe.feature_id = gp.feature_id)
+            UNION
+            SELECT DISTINCT gp.feature_id
+            FROM feature gp
+            JOIN feature_relationship gpa ON gpa.subject_id = gp.feature_id
+              AND gpa.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'associated_with')
+            JOIN feature a ON a.feature_id = gpa.object_id
+            JOIN feature_relationship ag ON ag.subject_id = a.feature_id
+              AND ag.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'alleleof')
+            JOIN feature g ON g.feature_id = ag.object_id
+            WHERE gp.is_obsolete IS FALSE
+              AND a.is_obsolete IS FALSE
+              AND a.uniquename ~ '^FBal[0-9]{7}$'
+              AND g.is_obsolete IS FALSE
+              AND g.uniquename ~ '^FBgn[0-9]{7}$'
+              AND g.organism_id != 1
+              AND EXISTS (SELECT 1 FROM feature_expression fe WHERE fe.feature_id = gp.feature_id);
+        """,
+    },
+]
+
+# One further family of warning msgs is derived from the category queries above rather than from
+# its own SQL query: for each category, a gene product that the category's path alone relates to
+# many (not just one) current Dmel genes gets a "MANY_genes_from_<category_label>" warning msg.
+# This is a stricter signal than the "many genes" count reported by report_gene_mapping(), which
+# pools genes over all paths: a gene product can trace to many genes in total while every single
+# path traces to just one.
+MULTI_GENE_WARNING_TEMPLATE = 'MANY_genes_from_{}'
+MULTI_GENE_WARNING_NOTE = ('{}: The named category\'s path alone relates the gene product to many (not just one) current Dmel'
+                           ' genes, so the gene attributed to the gene product by that path is ambiguous.'
+                           .format(MULTI_GENE_WARNING_TEMPLATE.format('<CATEGORY>')))
+
 # Supplementary counts reported in the log only.
 COUNT_QUERIES = [
     {
@@ -404,10 +511,12 @@ def main():
     log.info('Assessing feature_expression annotations in database {} (release {}).'.format(DATABASE, DATABASE_RELEASE))
     gene_products = get_gene_products()
     category_members = get_category_members(gene_products)
+    warning_members = get_warning_members(gene_products)
     report_feature_types(gene_products)
     report_category_counts(gene_products, category_members)
     report_category_overlaps(gene_products, category_members)
     report_gene_mapping(gene_products, category_members)
+    report_warning_counts(gene_products, warning_members)
     report_supplementary_counts()
     report_invariants()
     data_to_export_as_tsv = generic_FB_tsv_dict(REPORT_TITLE, DATABASE)
@@ -439,6 +548,8 @@ def get_gene_products():
             'n_annotations': row[5],
             'categories': [],
             'genes': set(),
+            'genes_by_category': {},
+            'warnings': [],
         }
     n_annotations = count_annotations(gene_products, gene_products.keys())
     log.info('Found {} current features having {} expression annotations.'.format(len(gene_products), n_annotations))
@@ -474,6 +585,8 @@ def get_category_members(gene_products):
                 gene_products[feature_id]['categories'].append(label)
             if gene_uniquename is not None:
                 gene_products[feature_id]['genes'].add(gene_uniquename)
+                # Track genes per category as well as pooled, to detect a single path yielding many genes.
+                gene_products[feature_id]['genes_by_category'].setdefault(label, set()).add(gene_uniquename)
         log.info('Found {} gene products of category {}.'.format(len(category_members[label]), label))
         if unexpected_feature_ids:
             log.error('For category {}, found {} feature_ids absent from the set of current features having expression annotations.'
@@ -487,6 +600,69 @@ def get_category_members(gene_products):
     log.info('Found {} gene products of category {}.'.format(len(category_members[UNKNOWN_LABEL]), UNKNOWN_LABEL))
 
     return category_members
+
+
+def get_warning_members(gene_products):
+    """Assign warning msgs to gene products.
+
+    Must be run after get_category_members(), which supplies the per-category gene
+    sets that the "MANY_genes_from_<category_label>" warning msgs are derived from.
+
+    Args:
+        gene_products (dict): A dict of gene product dicts, keyed by feature_id.
+
+    Returns:
+        A dict of sets of gene product feature_ids, keyed by warning label.
+
+    """
+    warning_members = {}
+    for warning in WARNINGS:
+        label = warning['label']
+        log.info('Querying database for gene products to be flagged with the "{}" warning.'.format(label))
+        ret_warning_info = connect(warning['sql'], 'no_query', CONN)
+        warning_members[label] = set()
+        unexpected_feature_ids = set()
+        for row in ret_warning_info:
+            feature_id = row[0]
+            if feature_id not in gene_products.keys():
+                unexpected_feature_ids.add(feature_id)
+                continue
+            if feature_id not in warning_members[label]:
+                warning_members[label].add(feature_id)
+                gene_products[feature_id]['warnings'].append(label)
+        log.info('Flagged {} gene products with the "{}" warning.'.format(len(warning_members[label]), label))
+        if unexpected_feature_ids:
+            log.error('For warning {}, found {} feature_ids absent from the set of current features having expression annotations.'
+                      .format(label, len(unexpected_feature_ids)))
+    warning_members.update(get_multi_gene_warning_members(gene_products))
+
+    return warning_members
+
+
+def get_multi_gene_warning_members(gene_products):
+    """Assign a "MANY_genes_from_<category_label>" warning msg per category yielding many genes.
+
+    Args:
+        gene_products (dict): A dict of gene product dicts, keyed by feature_id, already
+            categorized by get_category_members().
+
+    Returns:
+        A dict of sets of gene product feature_ids, keyed by warning label.
+
+    """
+    log.info('Flagging gene products related to many current Dmel genes by a single category path.')
+    warning_members = {}
+    # Iterate over CATEGORIES, not over the genes found, so that msg order is the category order.
+    for category in CATEGORIES:
+        label = MULTI_GENE_WARNING_TEMPLATE.format(category['label'])
+        warning_members[label] = set()
+        for gene_product in gene_products.values():
+            if len(gene_product['genes_by_category'].get(category['label'], set())) > 1:
+                warning_members[label].add(gene_product['feature_id'])
+                gene_product['warnings'].append(label)
+        log.info('Flagged {} gene products with the "{}" warning.'.format(len(warning_members[label]), label))
+
+    return warning_members
 
 
 def count_annotations(gene_products, feature_ids):
@@ -626,6 +802,26 @@ def report_gene_mapping(gene_products, category_members):
     return
 
 
+def report_warning_counts(gene_products, warning_members):
+    """Log gene product and annotation counts per warning.
+
+    Args:
+        gene_products (dict): A dict of gene product dicts, keyed by feature_id.
+        warning_members (dict): A dict of sets of gene product feature_ids, keyed by warning label.
+
+    """
+    log.info('##### GENE PRODUCTS AND ANNOTATIONS PER WARNING #####')
+    log.info('Warnings are not mutually exclusive, and a gene product can have no warning at all.')
+    report_group_counts(gene_products, 'warning', warning_members)
+    flagged_ids = set()
+    for feature_ids in warning_members.values():
+        flagged_ids.update(feature_ids)
+    log.info('{} gene products having {} annotations carry at least one warning.'
+             .format(len(flagged_ids), count_annotations(gene_products, flagged_ids)))
+
+    return
+
+
 def report_supplementary_counts():
     """Log the results of supplementary count queries."""
     log.info('##### SUPPLEMENTARY COUNTS #####')
@@ -661,6 +857,10 @@ def get_report_notes():
     for category in CATEGORIES:
         notes.append('{}: {}'.format(category['label'], category['description']))
     notes.append('{}: The gene product fits none of the categories above.'.format(UNKNOWN_LABEL))
+    notes.append('Warning msgs in the "warnings" column are not mutually exclusive; the column is empty for gene products having no warning.')
+    for warning in WARNINGS:
+        notes.append('{}: {}'.format(warning['label'], warning['description']))
+    notes.append(MULTI_GENE_WARNING_NOTE)
 
     return notes
 
@@ -687,6 +887,7 @@ def process_gene_products(gene_products):
             'n_expression_annotations': gene_product['n_annotations'],
             'n_dmel_genes': len(gene_product['genes']),
             'dmel_genes': ','.join(sorted(gene_product['genes'])),
+            'warnings': ','.join(gene_product['warnings']),
         })
 
     return data_list
