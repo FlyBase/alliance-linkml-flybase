@@ -436,6 +436,23 @@ PROMOTER_CHAR_CONFLICT_NOTE = ('{}: The {} and {} paths both relate the gene pro
                                ' set of genes, so the gene attributed to the gene product by these paths is ambiguous.'
                                .format(PROMOTER_CHAR_CONFLICT_WARNING, *PROMOTER_CHAR_CONFLICT_CATEGORIES))
 
+# A third warning msg derived from the category queries above. A CURATED gene is a curator's direct
+# assertion, whereas the TAGGED, INS_TRAP_KNOWN and PROMOTER_CHAR paths derive the gene from the
+# allele/insertion/regulatory-region data instead. Where a gene product has both a curated gene and
+# at least one gene derived by those paths, the derived genes are expected to corroborate the
+# curated ones; a curated gene found by none of them gets an "Unvalidated_curated_gene" warning msg.
+# Both sides must reach a gene: a curated gene with nothing to check it against is not flagged.
+# ABERRANT is deliberately excluded from both sides, since it marks attributions that curators have
+# already flagged as not representing wild type expression.
+CURATED_VALIDATION_CATEGORY = 'CURATED'
+CURATED_VALIDATION_CATEGORIES = ('TAGGED', 'INS_TRAP_KNOWN', 'PROMOTER_CHAR_GENE', 'PROMOTER_CHAR_FBSF')
+UNVALIDATED_CURATED_GENE_WARNING = 'Unvalidated_curated_gene'
+UNVALIDATED_CURATED_GENE_NOTE = ('{}: The gene product has a {} gene that is related to it by none of the {} paths, even though at'
+                                 ' least one of those paths does relate the gene product to a current Dmel gene, so the curated'
+                                 ' gene is uncorroborated.'
+                                 .format(UNVALIDATED_CURATED_GENE_WARNING, CURATED_VALIDATION_CATEGORY,
+                                         '/'.join(CURATED_VALIDATION_CATEGORIES)))
+
 # Supplementary counts reported in the log only.
 COUNT_QUERIES = [
     {
@@ -622,9 +639,9 @@ def get_category_members(gene_products):
 def get_warning_members(gene_products):
     """Assign warning msgs to gene products.
 
-    Must be run after get_category_members(), which supplies the per-category gene
-    sets that the "MANY_genes_from_<category_label>" and "promoter_char_gene_conflict"
-    warning msgs are derived from.
+    Must be run after get_category_members(), which supplies the per-category gene sets
+    that the "MANY_genes_from_<category_label>", "promoter_char_gene_conflict" and
+    "Unvalidated_curated_gene" warning msgs are derived from.
 
     Args:
         gene_products (dict): A dict of gene product dicts, keyed by feature_id.
@@ -654,6 +671,7 @@ def get_warning_members(gene_products):
                       .format(label, len(unexpected_feature_ids)))
     warning_members.update(get_multi_gene_warning_members(gene_products))
     warning_members.update(get_promoter_char_conflict_warning_members(gene_products))
+    warning_members.update(get_unvalidated_curated_gene_warning_members(gene_products))
 
     return warning_members
 
@@ -710,6 +728,37 @@ def get_promoter_char_conflict_warning_members(gene_products):
             gene_product['warnings'].append(PROMOTER_CHAR_CONFLICT_WARNING)
     log.info('Flagged {} gene products with the "{}" warning.'
              .format(len(warning_members[PROMOTER_CHAR_CONFLICT_WARNING]), PROMOTER_CHAR_CONFLICT_WARNING))
+
+    return warning_members
+
+
+def get_unvalidated_curated_gene_warning_members(gene_products):
+    """Assign the "Unvalidated_curated_gene" warning msg to gene products having a curated gene that no derived path corroborates.
+
+    Args:
+        gene_products (dict): A dict of gene product dicts, keyed by feature_id, already
+            categorized by get_category_members().
+
+    Returns:
+        A dict of sets of gene product feature_ids, keyed by warning label.
+
+    """
+    log.info('Flagging gene products having a {} gene related to them by none of the {} paths.'
+             .format(CURATED_VALIDATION_CATEGORY, '/'.join(CURATED_VALIDATION_CATEGORIES)))
+    warning_members = {UNVALIDATED_CURATED_GENE_WARNING: set()}
+    for gene_product in gene_products.values():
+        curated_genes = gene_product['genes_by_category'].get(CURATED_VALIDATION_CATEGORY, set())
+        derived_genes = set()
+        for category_label in CURATED_VALIDATION_CATEGORIES:
+            derived_genes.update(gene_product['genes_by_category'].get(category_label, set()))
+        # Compare only where both sides reach a gene: a curated gene with nothing to check it against is no conflict.
+        if not curated_genes or not derived_genes:
+            continue
+        if curated_genes - derived_genes:
+            warning_members[UNVALIDATED_CURATED_GENE_WARNING].add(gene_product['feature_id'])
+            gene_product['warnings'].append(UNVALIDATED_CURATED_GENE_WARNING)
+    log.info('Flagged {} gene products with the "{}" warning.'
+             .format(len(warning_members[UNVALIDATED_CURATED_GENE_WARNING]), UNVALIDATED_CURATED_GENE_WARNING))
 
     return warning_members
 
@@ -911,6 +960,7 @@ def get_report_notes():
         notes.append('{}: {}'.format(warning['label'], warning['description']))
     notes.append(MULTI_GENE_WARNING_NOTE)
     notes.append(PROMOTER_CHAR_CONFLICT_NOTE)
+    notes.append(UNVALIDATED_CURATED_GENE_NOTE)
 
     return notes
 
