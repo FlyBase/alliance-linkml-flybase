@@ -453,6 +453,57 @@ UNVALIDATED_CURATED_GENE_NOTE = ('{}: The gene product has a {} gene that is rel
                                  .format(UNVALIDATED_CURATED_GENE_WARNING, CURATED_VALIDATION_CATEGORY,
                                          '/'.join(CURATED_VALIDATION_CATEGORIES)))
 
+# A further warning msg, built from its own SQL query but carrying data instead of a fixed label.
+# The INS_TRAP_KNOWN path sometimes reaches the white gene, because a transgenic insertion carries a
+# white marker allele alongside the Dmel allele whose gene the path is tracing, and each such case
+# needs review by hand. The msg therefore names both alleles: the one directly related to the gene
+# product, and the white allele reached through the same FBti insertion. A gene product can carry
+# many of these msgs, one per (allele, white allele) pair, and they are sorted within a gene product.
+WHITE_GENE_ID = 'FBgn0003996'
+WHITE_WARNING_CATEGORY = 'INS_TRAP_KNOWN'
+WHITE_WARNING_LABEL = 'WHITE'
+WHITE_WARNING_TEMPLATE = 'WHITE: {} | {} | {} | {}'
+WHITE_WARNING_NOTE = ('{}: The {} path relates the gene product to the white gene ({}). The msg reports, in order, the FBal ID and'
+                      ' name of the allele directly related to the gene product, then the FBal ID and name of the white allele'
+                      ' related to the same FBti insertion. A gene product can carry many of these msgs.'
+                      .format(WHITE_WARNING_TEMPLATE.format('<FBal>', '<allele name>', '<FBal>', '<white allele name>'),
+                              WHITE_WARNING_CATEGORY, WHITE_GENE_ID))
+
+# The INS_TRAP_KNOWN query above, restricted to the white gene and returning the two alleles behind
+# the trace instead of the gene. The gene ID here must match WHITE_GENE_ID.
+WHITE_WARNING_QUERY = """
+    SELECT DISTINCT gp.feature_id, a.uniquename, a.name, a2.uniquename, a2.name
+    FROM feature gp
+    JOIN feature_relationship gpa ON gpa.subject_id = gp.feature_id
+      AND gpa.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'associated_with')
+    JOIN feature a ON a.feature_id = gpa.object_id
+    JOIN feature_relationship ai ON ai.subject_id = a.feature_id
+      AND ai.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'associated_with')
+    JOIN feature i ON i.feature_id = ai.object_id
+    JOIN feature_relationship ia ON ia.object_id = i.feature_id
+      AND ia.subject_id != ai.subject_id
+      AND ia.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'associated_with')
+    JOIN feature a2 ON a2.feature_id = ia.subject_id AND a2.feature_id != a.feature_id
+    JOIN feature_relationship a2g ON a2g.subject_id = a2.feature_id
+      AND a2g.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'alleleof')
+    JOIN feature g ON g.feature_id = a2g.object_id
+    WHERE gp.is_obsolete IS FALSE
+      AND gp.uniquename ~ '^FB(tr|pp)[0-9]{7}$'
+      AND a.is_obsolete IS FALSE
+      AND a.uniquename ~ '^FBal[0-9]{7}$'
+      AND a.organism_id != 1
+      AND i.is_obsolete IS FALSE
+      AND i.uniquename ~ '^FBti[0-9]{7}$'
+      AND i.organism_id = 1
+      AND a2.is_obsolete IS FALSE
+      AND a2.uniquename ~ '^FBal[0-9]{7}$'
+      AND a2.organism_id = 1
+      AND g.is_obsolete IS FALSE
+      AND g.uniquename = 'FBgn0003996'
+      AND g.organism_id = 1
+      AND EXISTS (SELECT 1 FROM feature_expression fe WHERE fe.feature_id = gp.feature_id);
+"""
+
 # Supplementary counts reported in the log only.
 COUNT_QUERIES = [
     {
@@ -672,6 +723,7 @@ def get_warning_members(gene_products):
     warning_members.update(get_multi_gene_warning_members(gene_products))
     warning_members.update(get_promoter_char_conflict_warning_members(gene_products))
     warning_members.update(get_unvalidated_curated_gene_warning_members(gene_products))
+    warning_members.update(get_white_warning_members(gene_products))
 
     return warning_members
 
@@ -759,6 +811,45 @@ def get_unvalidated_curated_gene_warning_members(gene_products):
             gene_product['warnings'].append(UNVALIDATED_CURATED_GENE_WARNING)
     log.info('Flagged {} gene products with the "{}" warning.'
              .format(len(warning_members[UNVALIDATED_CURATED_GENE_WARNING]), UNVALIDATED_CURATED_GENE_WARNING))
+
+    return warning_members
+
+
+def get_white_warning_members(gene_products):
+    """Report, for each gene product whose INS_TRAP_KNOWN path reaches the white gene, the alleles behind that trace.
+
+    Unlike the other warnings, this one has no fixed msg: each msg carries the FBal IDs and names of
+    the two alleles involved, and a gene product can carry many of them.
+
+    Args:
+        gene_products (dict): A dict of gene product dicts, keyed by feature_id.
+
+    Returns:
+        A dict of one set of gene product feature_ids, keyed by the "WHITE" summary label.
+
+    """
+    log.info('Querying database for gene products whose {} path reaches the white gene ({}).'
+             .format(WHITE_WARNING_CATEGORY, WHITE_GENE_ID))
+    ret_white_info = connect(WHITE_WARNING_QUERY, 'no_query', CONN)
+    warning_members = {WHITE_WARNING_LABEL: set()}
+    white_msgs = {}
+    unexpected_feature_ids = set()
+    for row in ret_white_info:
+        (feature_id, allele_id, allele_name, white_allele_id, white_allele_name) = (row[0], row[1], row[2], row[3], row[4])
+        if feature_id not in gene_products.keys():
+            unexpected_feature_ids.add(feature_id)
+            continue
+        msg = WHITE_WARNING_TEMPLATE.format(allele_id, allele_name, white_allele_id, white_allele_name)
+        white_msgs.setdefault(feature_id, set()).add(msg)
+    # Sort the msgs within each gene product: the query can return its rows in any order.
+    for (feature_id, msgs) in white_msgs.items():
+        warning_members[WHITE_WARNING_LABEL].add(feature_id)
+        gene_products[feature_id]['warnings'].extend(sorted(msgs))
+    log.info('Flagged {} gene products with {} "{}" warning msgs.'
+             .format(len(warning_members[WHITE_WARNING_LABEL]), sum([len(i) for i in white_msgs.values()]), WHITE_WARNING_LABEL))
+    if unexpected_feature_ids:
+        log.error('For warning {}, found {} feature_ids absent from the set of current features having expression annotations.'
+                  .format(WHITE_WARNING_LABEL, len(unexpected_feature_ids)))
 
     return warning_members
 
@@ -961,6 +1052,7 @@ def get_report_notes():
     notes.append(MULTI_GENE_WARNING_NOTE)
     notes.append(PROMOTER_CHAR_CONFLICT_NOTE)
     notes.append(UNVALIDATED_CURATED_GENE_NOTE)
+    notes.append(WHITE_WARNING_NOTE)
 
     return notes
 
