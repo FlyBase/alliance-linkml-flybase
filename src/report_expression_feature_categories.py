@@ -360,8 +360,11 @@ WARNINGS = [
         'description': 'The gene product traces to a current non-Dmel gene: it is the product of a foreign gene, so attributing'
                        ' its expression to a Dmel gene may be inappropriate. Three gene-of-origin paths are checked, each requiring'
                        ' the gene to be non-Dmel: gene product "associated_with" a gene (the ENDO path); gene product "isa" a gene'
-                       ' product that is "associated_with" a gene (the ENDO_ISO path); and gene product "associated_with" an allele'
-                       ' that is "alleleof" a gene (the TAGGED path, but with no Dmel restriction on the allele either).',
+                       ' product that is "associated_with" a gene (the ENDO_ISO path); and gene product "associated_with" a Dmel'
+                       ' allele that is "alleleof" a gene (the TAGGED path). The TAGGED path keeps the Dmel restriction on the'
+                       ' allele: a non-Dmel allele is "alleleof" its own non-Dmel gene by construction, so dropping that'
+                       ' restriction would flag every gene product of a foreign allele - the whole INS_TRAP and PROMOTER_CHAR'
+                       ' population - without saying anything about it.',
         'sql': """
             SELECT DISTINCT gp.feature_id
             FROM feature gp
@@ -400,6 +403,7 @@ WARNINGS = [
             WHERE gp.is_obsolete IS FALSE
               AND a.is_obsolete IS FALSE
               AND a.uniquename ~ '^FBal[0-9]{7}$'
+              AND a.organism_id = 1
               AND g.is_obsolete IS FALSE
               AND g.uniquename ~ '^FBgn[0-9]{7}$'
               AND g.organism_id != 1
@@ -418,6 +422,19 @@ MULTI_GENE_WARNING_TEMPLATE = 'MANY_genes_from_{}'
 MULTI_GENE_WARNING_NOTE = ('{}: The named category\'s path alone relates the gene product to many (not just one) current Dmel'
                            ' genes, so the gene attributed to the gene product by that path is ambiguous.'
                            .format(MULTI_GENE_WARNING_TEMPLATE.format('<CATEGORY>')))
+
+# A second warning msg derived from the category queries above rather than from its own SQL query.
+# The PROMOTER_CHAR_GENE and PROMOTER_CHAR_FBSF paths are siblings off the same non-Dmel allele:
+# the allele's regulatory region is modeled either as the Dmel gene itself, or as an FBsf seq
+# feature that is in turn associated with a Dmel gene. Wherever both paths apply to the same gene
+# product they are expected to reach the same gene(s); where they do not, the gene product gets a
+# "promoter_char_gene_conflict" warning msg. A gene product reached by just one of the two paths
+# is not flagged: one path alone is no conflict.
+PROMOTER_CHAR_CONFLICT_CATEGORIES = ('PROMOTER_CHAR_GENE', 'PROMOTER_CHAR_FBSF')
+PROMOTER_CHAR_CONFLICT_WARNING = 'promoter_char_gene_conflict'
+PROMOTER_CHAR_CONFLICT_NOTE = ('{}: The {} and {} paths both relate the gene product to current Dmel genes, but not to the same'
+                               ' set of genes, so the gene attributed to the gene product by these paths is ambiguous.'
+                               .format(PROMOTER_CHAR_CONFLICT_WARNING, *PROMOTER_CHAR_CONFLICT_CATEGORIES))
 
 # Supplementary counts reported in the log only.
 COUNT_QUERIES = [
@@ -606,7 +623,8 @@ def get_warning_members(gene_products):
     """Assign warning msgs to gene products.
 
     Must be run after get_category_members(), which supplies the per-category gene
-    sets that the "MANY_genes_from_<category_label>" warning msgs are derived from.
+    sets that the "MANY_genes_from_<category_label>" and "promoter_char_gene_conflict"
+    warning msgs are derived from.
 
     Args:
         gene_products (dict): A dict of gene product dicts, keyed by feature_id.
@@ -635,6 +653,7 @@ def get_warning_members(gene_products):
             log.error('For warning {}, found {} feature_ids absent from the set of current features having expression annotations.'
                       .format(label, len(unexpected_feature_ids)))
     warning_members.update(get_multi_gene_warning_members(gene_products))
+    warning_members.update(get_promoter_char_conflict_warning_members(gene_products))
 
     return warning_members
 
@@ -661,6 +680,36 @@ def get_multi_gene_warning_members(gene_products):
                 warning_members[label].add(gene_product['feature_id'])
                 gene_product['warnings'].append(label)
         log.info('Flagged {} gene products with the "{}" warning.'.format(len(warning_members[label]), label))
+
+    return warning_members
+
+
+def get_promoter_char_conflict_warning_members(gene_products):
+    """Assign the "promoter_char_gene_conflict" warning msg to gene products whose two promoter characterization paths disagree.
+
+    Args:
+        gene_products (dict): A dict of gene product dicts, keyed by feature_id, already
+            categorized by get_category_members().
+
+    Returns:
+        A dict of sets of gene product feature_ids, keyed by warning label.
+
+    """
+    (gene_path, fbsf_path) = PROMOTER_CHAR_CONFLICT_CATEGORIES
+    log.info('Flagging gene products whose {} and {} paths relate them to different sets of current Dmel genes.'
+             .format(gene_path, fbsf_path))
+    warning_members = {PROMOTER_CHAR_CONFLICT_WARNING: set()}
+    for gene_product in gene_products.values():
+        gene_path_genes = gene_product['genes_by_category'].get(gene_path, set())
+        fbsf_path_genes = gene_product['genes_by_category'].get(fbsf_path, set())
+        # Compare only where both paths reach a gene: one path alone is no conflict.
+        if not gene_path_genes or not fbsf_path_genes:
+            continue
+        if gene_path_genes != fbsf_path_genes:
+            warning_members[PROMOTER_CHAR_CONFLICT_WARNING].add(gene_product['feature_id'])
+            gene_product['warnings'].append(PROMOTER_CHAR_CONFLICT_WARNING)
+    log.info('Flagged {} gene products with the "{}" warning.'
+             .format(len(warning_members[PROMOTER_CHAR_CONFLICT_WARNING]), PROMOTER_CHAR_CONFLICT_WARNING))
 
     return warning_members
 
@@ -861,6 +910,7 @@ def get_report_notes():
     for warning in WARNINGS:
         notes.append('{}: {}'.format(warning['label'], warning['description']))
     notes.append(MULTI_GENE_WARNING_NOTE)
+    notes.append(PROMOTER_CHAR_CONFLICT_NOTE)
 
     return notes
 
