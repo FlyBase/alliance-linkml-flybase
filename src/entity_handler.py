@@ -100,6 +100,7 @@ class PrimaryEntityHandler(DataHandler):
         'insertion': 'allele',
         'genotype': 'homepage',
         'grp': 'functional_gene_set',
+        'str': 'sequence_targeting_reagent',
     }
 
     # Mappings of main data types to chado tables with associated data

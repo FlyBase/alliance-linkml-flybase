@@ -205,6 +205,7 @@ class DataHandler(object):
         'polypeptide': r'^FBpp[0-9]{7}$',
         'seqfeat': r'^FBsf[0-9]{10}$',
         'split system combination': r'^FBco[0-9]{7}$',
+        'str': r'^FBsf[0-9]{10}$',    # FTA-224: the STR subset of seqfeats; distinguished by feature.type, not by ID.
         'transcript': r'^FBtr[0-9]{7}$',
         'transposon': r'^FBte[0-9]{7}$',
         'tool': r'^FBto[0-9]{7}$',
@@ -233,6 +234,7 @@ class DataHandler(object):
         'polypeptide': False,
         'seqfeat': False,
         'split system combination': False,
+        'str': True,    # FTA-225: the RNAi_reagent/sgRNA subset of FBsf, exported as SequenceTargetingReagentDTO.
         'tool': False,
         'transcript': False,
         'transposon': False,
@@ -252,6 +254,7 @@ class DataHandler(object):
         'insertion': ['insertion_site', 'transposable_element', 'transposable_element_insertion_site'],    # Excludes internal "match" (name=FBti ID).
         'polypeptide': None,
         'seqfeat': None,    # The list is too long, so for this case let the code be flexible.
+        'str': ['RNAi_reagent', 'sgRNA'],    # FTA-224: the FBsf types that are sequence targeting reagents.
         'tool': ['engineered_region'],
         'transcript': None,
         'transposon': ['natural_transposable_element'],
