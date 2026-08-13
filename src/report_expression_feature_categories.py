@@ -47,7 +47,14 @@ Notes:
     PROMOTER_CHAR_GENE_VIA_FBSF up to the FBsf regulatory region, but covers the case
     where no Dmel gene is reached, reporting the FBsf uniquenames in place of a gene.
     The two are mutually exclusive: a gene product reaching a Dmel gene by any FBsf route
-    is excluded from PROMOTER_CHAR_FBSF. Expression
+    is excluded from PROMOTER_CHAR_FBSF; 7) both INS_TRAP categories restrict the last leg
+    of the trap chain, from the FBti insertion to the Dmel allele, to relationships carrying
+    a "relative_position" feature_relationshipprop of value "outside": only an insertion
+    lying outside the Dmel allele's gene can trap that gene's regulatory elements. The
+    restriction applies to the INS_TRAP_KNOWN chain and, identically, to the subquery of
+    insertions that INS_TRAP_UNK excludes, so the two categories stay complementary. It also
+    applies to the WHITE warning query, which is the INS_TRAP_KNOWN chain restricted to the
+    white gene. Expression
     annotation counts are taken per gene product from a single feature_expression
     query, so annotation counts for any set of gene products (a category, or an
     intersection of categories) are just sums over the gene products in that set.
@@ -271,7 +278,10 @@ CATEGORIES = [
     },
     {
         'label': 'INS_TRAP_KNOWN',
-        'description': 'An insertion traps nearby regulatory elements; there is an indirectly associated Dmel allele and gene.',
+        'description': 'An insertion traps nearby regulatory elements; there is an indirectly associated Dmel allele and gene.'
+                       ' The Dmel allele must be related to the insertion by a relationship carrying a "relative_position"'
+                       ' feature_relationshipprop of value "outside", i.e. the insertion lies outside that allele\'s gene, which is'
+                       ' the arrangement in which the insertion can trap that gene\'s regulatory elements.',
         'sql': """
             SELECT DISTINCT gp.feature_id, g.uniquename
             FROM feature gp
@@ -284,6 +294,9 @@ CATEGORIES = [
             JOIN feature_relationship ia ON ia.object_id = i.feature_id
               AND ia.subject_id != ai.subject_id
               AND ia.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'associated_with')
+            JOIN feature_relationshipprop iarp ON iarp.feature_relationship_id = ia.feature_relationship_id
+              AND iarp.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'relative_position')
+              AND iarp.value = 'outside'
             JOIN feature a2 ON a2.feature_id = ia.subject_id AND a2.feature_id != a.feature_id
             JOIN feature_relationship a2g ON a2g.subject_id = a2.feature_id
               AND a2g.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'alleleof')
@@ -307,7 +320,10 @@ CATEGORIES = [
     },
     {
         'label': 'INS_TRAP_UNK',
-        'description': 'An insertion traps nearby regulatory elements, but there is no known Dmel allele/gene for that insertion.',
+        'description': 'An insertion traps nearby regulatory elements, but there is no known Dmel allele/gene for that insertion.'
+                       ' The excluded insertions are exactly those taken by INS_TRAP_KNOWN, so the Dmel allele that disqualifies an'
+                       ' insertion here must likewise be related to it by a relationship carrying a "relative_position"'
+                       ' feature_relationshipprop of value "outside".',
         'sql': """
             SELECT DISTINCT gp.feature_id, NULL::VARCHAR AS gene_uniquename
             FROM feature gp
@@ -332,6 +348,9 @@ CATEGORIES = [
                   FROM feature a2
                   JOIN feature_relationship a2i2 ON a2i2.subject_id = a2.feature_id
                     AND a2i2.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'associated_with')
+                  JOIN feature_relationshipprop a2i2rp ON a2i2rp.feature_relationship_id = a2i2.feature_relationship_id
+                    AND a2i2rp.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'relative_position')
+                    AND a2i2rp.value = 'outside'
                   JOIN feature i2 ON i2.feature_id = a2i2.object_id
                   WHERE a2.is_obsolete IS FALSE
                     AND a2.uniquename ~ '^FBal[0-9]{7}$'
@@ -547,6 +566,9 @@ WHITE_WARNING_QUERY = """
     JOIN feature_relationship ia ON ia.object_id = i.feature_id
       AND ia.subject_id != ai.subject_id
       AND ia.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'associated_with')
+    JOIN feature_relationshipprop iarp ON iarp.feature_relationship_id = ia.feature_relationship_id
+      AND iarp.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'relative_position')
+      AND iarp.value = 'outside'
     JOIN feature a2 ON a2.feature_id = ia.subject_id AND a2.feature_id != a.feature_id
     JOIN feature_relationship a2g ON a2g.subject_id = a2.feature_id
       AND a2g.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'alleleof')
