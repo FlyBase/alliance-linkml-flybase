@@ -1205,6 +1205,8 @@ class AberrationHandler(MetaAlleleHandler):
         'FBab0001546': 'Df(2L)Sco[rv10]',  # FTA-207 note props: complementation, internal_notes, misc, origin_comment.
         'FBab0004410': 'In(2L)Cy',              # FTA-218: all 3 mappings - 2 A24a FBti, 6 A24b FBal, 1 GA10g FBal.
         'FBab0045412': 'Df(3L)sina[SH]',        # FTA-218: all 3 mappings - 1 A24a FBti, 1 A24b FBal, 2 GA10g FBal.
+        'FBab0004786': 'In(2LR)CyO',            # FTA-235: carries the balancer "internal_notes" flag.
+        'FBab0003929': 'In(1)FM7a',             # FTA-235: carries the balancer "internal_notes" flag.
     }
 
     # Simple mapping of props to Alliance note types, for cases where it is one-to-one correspondence.
@@ -1223,13 +1225,15 @@ class AberrationHandler(MetaAlleleHandler):
     }
 
     # FTA-235: the balancer flag arrives as an "A15. Internal notes" featureprop on 37 FBab aberrations,
-    # added by curation record sm21867.edit (loaded 2026-08-13). The proforma line is:
-    #   ! A15.  Internal notes *K :FTA: Balancer - mark this aberration as 'balancer'.
-    # Whether the stored featureprop value keeps the proforma ":" separator is not knowable until the
-    # record is loaded, so tolerate a leading colon and match the "FTA:" marker plus its "Balancer"
-    # keyword case-insensitively. Anchored at the start of the value, so ordinary prose that merely
-    # mentions balancers (many FBab "misc" and "internal_notes" props do) cannot match.
-    balancer_flag_regex = re.compile(r'^\s*:?\s*FTA:\s*balancer\b', re.IGNORECASE)
+    # added by curation record sm21867.edit. Verified in production_chado: 37 "internal_notes" props, all on
+    # non-obsolete "chromosome_structure_variation" features, each holding exactly
+    #   FTA: Balancer - mark this aberration as 'balancer'.
+    # (the proforma ":" separator is not kept in the stored value; a leading colon is tolerated anyway).
+    # The instruction clause is part of the match on purpose: FBba balancers carry sibling flags that also
+    # begin "FTA: Balancer -" ("merge with parent ...", "use balancer symbol and fullname for parent ..."),
+    # 62 of them, and those mean something else. Anchoring also keeps ordinary prose that merely mentions
+    # balancers - which plenty of FBab "misc" and "internal_notes" props do - from matching.
+    balancer_flag_regex = re.compile(r'^\s*:?\s*FTA:\s*balancer\s*-\s*mark this aberration as\b', re.IGNORECASE)
     balancer_flag_expected_count = 37    # Per FTA-235; a mismatch means the flag text or the curation record changed.
 
     # Additional export sets.
