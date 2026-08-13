@@ -36,13 +36,18 @@ Notes:
     EXISTS clause rather than a feature_expression join, which is equivalent for
     this purpose but avoids row multiplication; 3) the ABERRANT query also requires
     that the gene be a Dmel gene, which a curation invariant check confirms to be a
-    no-op; 4) in the five categories whose gene product is "associated_with" an FBal
+    no-op; 4) in the six categories whose gene product is "associated_with" an FBal
     allele, the gene product is identified by its FBtr/FBpp uniquename alone, with no
     "](R|P)A$" name restriction. The name restriction is retained for CURATED and
     ABERRANT, where curation guarantees it holds anyway; 5) the TAGGED query also
     requires that the gene be a Dmel gene. The plan doc's TAGGED chain specifies a
     Dmel gene but its SQL omits the filter, so this makes every gene-reaching category
-    consistent and keeps non-Dmel genes out of the "dmel_genes" column. Expression
+    consistent and keeps non-Dmel genes out of the "dmel_genome_features" column;
+    6) PROMOTER_CHAR_FBSF has no counterpart in the plan doc. It takes the same chain as
+    PROMOTER_CHAR_GENE_VIA_FBSF up to the FBsf regulatory region, but covers the case
+    where no Dmel gene is reached, reporting the FBsf uniquenames in place of a gene.
+    The two are mutually exclusive: a gene product reaching a Dmel gene by any FBsf route
+    is excluded from PROMOTER_CHAR_FBSF. Expression
     annotation counts are taken per gene product from a single feature_expression
     query, so annotation counts for any set of gene products (a category, or an
     intersection of categories) are just sums over the gene products in that set.
@@ -69,8 +74,8 @@ HEADER_LIST = [
     'categories',
     'n_categories',
     'n_expression_annotations',
-    'n_dmel_genes',
-    'dmel_genes',
+    'n_dmel_genome_features',
+    'dmel_genome_features',
     'warnings',
 ]
 
@@ -80,7 +85,9 @@ UNKNOWN_LABEL = 'UNKNOWN'
 # Categories of gene product having expression annotations.
 # Each category has a label, a description, and an SQL query returning two columns:
 # 1. the gene product's feature_id;
-# 2. the uniquename of the current Dmel gene reached by that category's path (NULL if the path reaches no gene).
+# 2. the uniquename of the current Dmel genome feature reached by that category's path (NULL if the
+#    path reaches none). That genome feature is a gene (FBgn) for every category but PROMOTER_CHAR_FBSF,
+#    whose path reaches no gene and so reports the FBsf features themselves.
 CATEGORIES = [
     {
         'label': 'SPLIT_COMBO',
@@ -178,7 +185,7 @@ CATEGORIES = [
         """,
     },
     {
-        'label': 'PROMOTER_CHAR_FBSF',
+        'label': 'PROMOTER_CHAR_GENE_VIA_FBSF',
         'description': 'A transgenic non-Dmel allele has a Dmel regulatory region that is associated with a gene.',
         'sql': """
             SELECT DISTINCT gp.feature_id, g.uniquename
@@ -203,6 +210,63 @@ CATEGORIES = [
               AND g.uniquename ~ '^FBgn[0-9]{7}$'
               AND g.organism_id = 1
               AND EXISTS (SELECT 1 FROM feature_expression fe WHERE fe.feature_id = gp.feature_id);
+        """,
+    },
+    {
+        'label': 'PROMOTER_CHAR_FBSF',
+        'description': 'A transgenic non-Dmel allele has a Dmel regulatory region that is associated with no Dmel gene, so the'
+                       ' FBsf genome features are reported in place of a gene. Mutually exclusive with PROMOTER_CHAR_GENE_VIA_FBSF:'
+                       ' a gene product whose regulatory regions reach a Dmel gene by any route belongs to that category instead.',
+        'sql': """
+            SELECT DISTINCT gp.feature_id, sf.uniquename
+            FROM feature gp
+            JOIN feature_relationship gpa ON gpa.subject_id = gp.feature_id
+              AND gpa.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'associated_with')
+            JOIN feature a ON a.feature_id = gpa.object_id
+            JOIN feature_relationship asf ON asf.subject_id = a.feature_id
+              AND asf.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'has_reg_region')
+            JOIN feature sf ON sf.feature_id = asf.object_id
+            WHERE gp.is_obsolete IS FALSE
+              AND gp.uniquename ~ '^FB(tr|pp)[0-9]{7}$'
+              AND a.is_obsolete IS FALSE
+              AND a.uniquename ~ '^FBal[0-9]{7}$'
+              AND a.organism_id != 1
+              AND sf.is_obsolete IS FALSE
+              AND sf.uniquename ~ '^FBsf[0-9]{10}$'
+              AND EXISTS (SELECT 1 FROM feature_expression fe WHERE fe.feature_id = gp.feature_id)
+              AND NOT EXISTS
+              (
+                  SELECT 1
+                  FROM feature_relationship sfg
+                  JOIN feature g ON g.feature_id = sfg.object_id
+                  WHERE sfg.subject_id = sf.feature_id
+                    AND sfg.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'associated_with')
+                    AND g.is_obsolete IS FALSE
+                    AND g.uniquename ~ '^FBgn[0-9]{7}$'
+                    AND g.organism_id = 1
+              )
+              AND NOT EXISTS
+              (
+                  SELECT 1
+                  FROM feature_relationship gpa2
+                  JOIN feature a2 ON a2.feature_id = gpa2.object_id
+                  JOIN feature_relationship a2sf2 ON a2sf2.subject_id = a2.feature_id
+                    AND a2sf2.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'has_reg_region')
+                  JOIN feature sf2 ON sf2.feature_id = a2sf2.object_id
+                  JOIN feature_relationship sf2g ON sf2g.subject_id = sf2.feature_id
+                    AND sf2g.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'associated_with')
+                  JOIN feature g2 ON g2.feature_id = sf2g.object_id
+                  WHERE gpa2.subject_id = gp.feature_id
+                    AND gpa2.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'associated_with')
+                    AND a2.is_obsolete IS FALSE
+                    AND a2.uniquename ~ '^FBal[0-9]{7}$'
+                    AND a2.organism_id != 1
+                    AND sf2.is_obsolete IS FALSE
+                    AND sf2.uniquename ~ '^FBsf[0-9]{10}$'
+                    AND g2.is_obsolete IS FALSE
+                    AND g2.uniquename ~ '^FBgn[0-9]{7}$'
+                    AND g2.organism_id = 1
+              );
         """,
     },
     {
@@ -414,23 +478,23 @@ WARNINGS = [
 
 # One further family of warning msgs is derived from the category queries above rather than from
 # its own SQL query: for each category, a gene product that the category's path alone relates to
-# many (not just one) current Dmel genes gets a "MANY_genes_from_<category_label>" warning msg.
-# This is a stricter signal than the "many genes" count reported by report_gene_mapping(), which
-# pools genes over all paths: a gene product can trace to many genes in total while every single
-# path traces to just one.
+# many (not just one) current Dmel genome features gets a "MANY_genes_from_<category_label>" warning
+# msg. This is a stricter signal than the "many genome features" count reported by
+# report_gene_mapping(), which pools genome features over all paths: a gene product can trace to many
+# in total while every single path traces to just one.
 MULTI_GENE_WARNING_TEMPLATE = 'MANY_genes_from_{}'
 MULTI_GENE_WARNING_NOTE = ('{}: The named category\'s path alone relates the gene product to many (not just one) current Dmel'
-                           ' genes, so the gene attributed to the gene product by that path is ambiguous.'
+                           ' genome features, so the genome feature attributed to the gene product by that path is ambiguous.'
                            .format(MULTI_GENE_WARNING_TEMPLATE.format('<CATEGORY>')))
 
 # A second warning msg derived from the category queries above rather than from its own SQL query.
-# The PROMOTER_CHAR_GENE and PROMOTER_CHAR_FBSF paths are siblings off the same non-Dmel allele:
+# The PROMOTER_CHAR_GENE and PROMOTER_CHAR_GENE_VIA_FBSF paths are siblings off the same non-Dmel allele:
 # the allele's regulatory region is modeled either as the Dmel gene itself, or as an FBsf seq
 # feature that is in turn associated with a Dmel gene. Wherever both paths apply to the same gene
 # product they are expected to reach the same gene(s); where they do not, the gene product gets a
 # "promoter_char_gene_conflict" warning msg. A gene product reached by just one of the two paths
 # is not flagged: one path alone is no conflict.
-PROMOTER_CHAR_CONFLICT_CATEGORIES = ('PROMOTER_CHAR_GENE', 'PROMOTER_CHAR_FBSF')
+PROMOTER_CHAR_CONFLICT_CATEGORIES = ('PROMOTER_CHAR_GENE', 'PROMOTER_CHAR_GENE_VIA_FBSF')
 PROMOTER_CHAR_CONFLICT_WARNING = 'promoter_char_gene_conflict'
 PROMOTER_CHAR_CONFLICT_NOTE = ('{}: The {} and {} paths both relate the gene product to current Dmel genes, but not to the same'
                                ' set of genes, so the gene attributed to the gene product by these paths is ambiguous.'
@@ -445,7 +509,7 @@ PROMOTER_CHAR_CONFLICT_NOTE = ('{}: The {} and {} paths both relate the gene pro
 # ABERRANT is deliberately excluded from both sides, since it marks attributions that curators have
 # already flagged as not representing wild type expression.
 CURATED_VALIDATION_CATEGORY = 'CURATED'
-CURATED_VALIDATION_CATEGORIES = ('TAGGED', 'INS_TRAP_KNOWN', 'PROMOTER_CHAR_GENE', 'PROMOTER_CHAR_FBSF')
+CURATED_VALIDATION_CATEGORIES = ('TAGGED', 'INS_TRAP_KNOWN', 'PROMOTER_CHAR_GENE', 'PROMOTER_CHAR_GENE_VIA_FBSF')
 UNVALIDATED_CURATED_GENE_WARNING = 'Unvalidated_curated_gene'
 UNVALIDATED_CURATED_GENE_NOTE = ('{}: The gene product has a {} gene that is related to it by none of the {} paths, even though at'
                                  ' least one of those paths does relate the gene product to a current Dmel gene, so the curated'
@@ -960,30 +1024,30 @@ def report_category_overlaps(gene_products, category_members):
 
 
 def report_gene_mapping(gene_products, category_members):
-    """Log counts of gene products by the number of Dmel genes to which they map.
+    """Log counts of gene products by the number of Dmel genome features to which they map.
 
     Args:
         gene_products (dict): A dict of gene product dicts, keyed by feature_id.
         category_members (dict): A dict of sets of gene product feature_ids, keyed by category label.
 
     """
-    log.info('##### GENE PRODUCT MAPPING TO CURRENT DMEL GENES #####')
-    groups = {'no gene': set(), 'one gene': set(), 'many genes': set()}
+    log.info('##### GENE PRODUCT MAPPING TO CURRENT DMEL GENOME FEATURES #####')
+    groups = {'no genome feature': set(), 'one genome feature': set(), 'many genome features': set()}
     max_genes = 0
     for gene_product in gene_products.values():
         n_genes = len(gene_product['genes'])
         if n_genes == 0:
-            group_label = 'no gene'
+            group_label = 'no genome feature'
         elif n_genes == 1:
-            group_label = 'one gene'
+            group_label = 'one genome feature'
         else:
-            group_label = 'many genes'
+            group_label = 'many genome features'
         groups[group_label].add(gene_product['feature_id'])
         max_genes = max(max_genes, n_genes)
-    report_group_counts(gene_products, 'gene products by number of related genes', groups)
-    log.info('The largest number of current Dmel genes related to a single gene product is {}.'.format(max_genes))
-    log.info('{} gene products having {} annotations map to MANY current Dmel genes.'
-             .format(len(groups['many genes']), count_annotations(gene_products, groups['many genes'])))
+    report_group_counts(gene_products, 'gene products by number of related genome features', groups)
+    log.info('The largest number of current Dmel genome features related to a single gene product is {}.'.format(max_genes))
+    log.info('{} gene products having {} annotations map to MANY current Dmel genome features.'
+             .format(len(groups['many genome features']), count_annotations(gene_products, groups['many genome features'])))
     aberrant_ids = category_members['ABERRANT']
     log.info('{} gene products having {} annotations represent aberrant expression of a current Dmel gene.'
              .format(len(aberrant_ids), count_annotations(gene_products, aberrant_ids)))
@@ -1077,8 +1141,8 @@ def process_gene_products(gene_products):
             'categories': ','.join(gene_product['categories']),
             'n_categories': len(gene_product['categories']),
             'n_expression_annotations': gene_product['n_annotations'],
-            'n_dmel_genes': len(gene_product['genes']),
-            'dmel_genes': ','.join(sorted(gene_product['genes'])),
+            'n_dmel_genome_features': len(gene_product['genes']),
+            'dmel_genome_features': ','.join(sorted(gene_product['genes'])),
             'warnings': ','.join(gene_product['warnings']),
         })
 
