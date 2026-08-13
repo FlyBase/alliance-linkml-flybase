@@ -39,6 +39,18 @@ class SequenceTargetingReagentHandler(FeatureHandler):
         'FBsf0000910691': 'sgRNA-GS00469.1',    # sgRNA, "encodes_tool" component of cassette FBal0365029.
         'FBsf0000910692': 'sgRNA-GS00469.2',    # sgRNA, "encodes_tool" component of cassette FBal0365030.
         'FBsf0000910567': 'sgRNA-GS00055.1',    # sgRNA, one of two components of cassette FBal0365146.
+        # FTA-240: note-bearing entities.
+        'FBsf0000032837': 'DRSC37925',          # "comment": reagent no longer exists at the DRSC.
+        'FBsf0000407135': 'BKN28870',           # "comment" carrying both an SGML entity (&ggr;) and @symbol@ markup.
+        'FBsf0000077885': 'dsRNA-GD8893',       # "internalnotes": must export as an internal_note.
+    }
+
+    # FTA-240: FlyBase props exported as Alliance notes. Same two chado prop types, and the same
+    # Alliance note types, as construct_prop_to_note_mapping - "internalnotes" is in
+    # convert_prop_to_note()'s internal_note_types, so those notes are flagged internal for us.
+    str_prop_to_note_mapping = {
+        'comment': ('comment', 'note_dtos'),               # SF6
+        'internalnotes': ('internal_note', 'note_dtos'),   # SF8 (marked internal automatically)
     }
 
     # Add methods to be run by get_general_data() below.
@@ -57,6 +69,7 @@ class SequenceTargetingReagentHandler(FeatureHandler):
         """Extend the method for the SequenceTargetingReagentHandler."""
         super().get_datatype_data(session)
         self.get_entities(session)
+        self.get_entityprops(session)    # FTA-240: "comment" and "internalnotes" props become notes.
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
         self.get_entity_fb_xrefs(session)
@@ -86,6 +99,7 @@ class SequenceTargetingReagentHandler(FeatureHandler):
         self.map_data_provider_dto()
         self.map_xrefs()
         self.map_secondary_ids('secondary_identifiers')
+        self.map_entity_props_to_notes('str_prop_to_note_mapping')
         # Cascade chado-obsolete -> internal=True (matches every other handler).
         self.flag_internal_fb_entities('fb_data_entities')
         return

@@ -145,9 +145,19 @@ def main():
         log.error(f'The "{set_name}" is unexpectedly empty.')
         raise ValueError(f'The "{set_name}" is unexpectedly empty.')
     generate_export_file(export_dict, log, output_filename)
+    tsv_filename = set_up_dict['output_filename']
     curation_tsv.write_primary_tsv(
-        log=log, filename=set_up_dict['output_filename'], entities=export_dict[set_name],
+        log=log, filename=tsv_filename, entities=export_dict[set_name],
         datatype='str', symbol_source=_str_symbol, synonym_source=_str_synonyms,
+    )
+    # FTA-240: the notes themselves, plus the diagnostic report of note text that
+    # clean_free_text() could not handle, so curators can find the rows to fix.
+    curation_tsv.write_notes_tsv(
+        filename=tsv_filename.replace('.tsv', '_notes.tsv'), entities=export_dict[set_name],
+    )
+    curation_tsv.write_note_clean_failures_tsv(
+        filename=tsv_filename.replace('.tsv', '_internal_note_clean_failures.tsv'),
+        failures=str_handler.internal_note_clean_failures,
     )
 
     log.info('Ended main function.\n')
