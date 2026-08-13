@@ -184,9 +184,14 @@ class CassetteStrAssociationDTO(AuditedObjectDTO):
         super().__init__()
         self.cassette_identifier = cassette_association_subject
         self.sequence_targeting_reagent_identifier = cassette_association_object
-        self.evidence = pub_curies
+        # NB - "evidence_curies", not "evidence": CassetteStrAssociationDTO is_a
+        # EvidenceAssociationDTO, and the schema declares no "evidence" slot at all.
+        self.evidence_curies = pub_curies
         self.obsolete = obsolete
         self.relation_name = relation
+        self.note_dtos = []    # Inherited slot; nothing populates it yet.
+        self.required_fields.extend(['cassette_identifier', 'relation_name',
+                                     'sequence_targeting_reagent_identifier'])
 
 
 class SlotAnnotationDTO(AuditedObjectDTO):

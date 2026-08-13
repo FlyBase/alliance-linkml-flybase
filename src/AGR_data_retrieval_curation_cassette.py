@@ -37,8 +37,10 @@ REPORT_LABEL = 'cassette_curation'
 _CASSETTE_ASSOC_SECOND_FIELDS = {
     'cassette_transgenic_tool_association_ingest_set': 'transgenic_tool_identifier',
     'cassette_genomic_entity_association_ingest_set': 'genomic_entity_identifier',
+    'cassette_str_association_ingest_set': 'sequence_targeting_reagent_identifier',
 }
-# Extra TSV columns specific to cassette associations.
+# Extra TSV columns specific to cassette associations. Only genomic entity associations carry
+# component_type_curies; the others fall back to the empty default for that column.
 _CASSETTE_ASSOC_EXTRAS = [('Comp type curie', 'component_type_curies', '')]
 
 # Now proceed with generic setup.
@@ -159,7 +161,7 @@ def _export_associations(cassette_handler):
         'linkml_version': linkml_release,
         'alliance_member_release_version': database_release,
     }
-    for sub_type in ('transgenic_tool', 'genomic_entity'):
+    for sub_type in ('transgenic_tool', 'genomic_entity', 'str'):
         set_name = f"cassette_{sub_type}_association"
         ingest_name = f"{set_name}_ingest_set"
         association_export_dict[ingest_name] = []
@@ -167,6 +169,11 @@ def _export_associations(cassette_handler):
         if len(association_export_dict[ingest_name]) == 0:
             if os.getenv('ADD_CASS_TO_CONSTRUCT') == 'YES':
                 raise ValueError(f'The "{set_name}" is unexpectedly empty.')
+            # Drop the key rather than emitting an empty ingest set, so that an ungated run
+            # produces the same JSON as it did before the STR set existed. Leaving it in put a
+            # bare "cassette_str_association_ingest_set": [] into production output for a
+            # feature that is meant to be dormant until the gate is turned on.
+            del association_export_dict[ingest_name]
             log.info(
                 f'The "{set_name}" is empty (ADD_CASS_TO_CONSTRUCT not set to YES); skipping.'
             )
