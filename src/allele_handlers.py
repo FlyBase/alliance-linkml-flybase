@@ -9,6 +9,7 @@ Author(s):
 
 """
 
+import re
 from logging import Logger
 from os import getenv
 from sqlalchemy.orm import aliased
@@ -1221,6 +1222,16 @@ class AberrationHandler(MetaAlleleHandler):
         'complementation': ('complementation', 'note_dtos'),     # FBab
     }
 
+    # FTA-235: the balancer flag arrives as an "A15. Internal notes" featureprop on 37 FBab aberrations,
+    # added by curation record sm21867.edit (loaded 2026-08-13). The proforma line is:
+    #   ! A15.  Internal notes *K :FTA: Balancer - mark this aberration as 'balancer'.
+    # Whether the stored featureprop value keeps the proforma ":" separator is not knowable until the
+    # record is loaded, so tolerate a leading colon and match the "FTA:" marker plus its "Balancer"
+    # keyword case-insensitively. Anchored at the start of the value, so ordinary prose that merely
+    # mentions balancers (many FBab "misc" and "internal_notes" props do) cannot match.
+    balancer_flag_regex = re.compile(r'^\s*:?\s*FTA:\s*balancer\b', re.IGNORECASE)
+    balancer_flag_expected_count = 37    # Per FTA-235; a mismatch means the flag text or the curation record changed.
+
     # Additional export sets.
     aberration_gene_rels = {}            # Will be (FBab feature_id, FBgn feature_id, AGR_rel_type, ECO) tuples keying lists of FBRelationships.
     aberration_gene_associations = []    # Will be the final list of gene-aberration FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
@@ -1228,6 +1239,7 @@ class AberrationHandler(MetaAlleleHandler):
     aberration_allele_rels = {}          # Will be (FBab feature_id, FBal/FBti feature_id, AGR_rel_type) tuples keying lists of FBRelationships.
     aberration_allele_associations = []  # Will be the final list of aberration-allele FBRelationships (AlleleAlleleAssociationDTO under linkmldto attr).
     cassette_ignore_list = set()         # FTA-218: FBal feature_ids that are construct cassettes, and so are never exported as alleles.
+    balancer_ids = set()                 # FTA-235: FB curies of FBab aberrations flagged as balancers; filled regardless of the export gate.
 
     # Additional reference info.
     chr_str_var_terms = []    # A list of cvterm_ids for child terms of "chromosome_structure_variation" (SO:0000240).
@@ -1620,6 +1632,40 @@ class AberrationHandler(MetaAlleleHandler):
         self.log.info(f'Flagged {counter} aberrations with is_aberration=True.')
         return
 
+    def map_balancer_flag(self):
+        """Flag FBab entities carrying the curated balancer internal note with "is_balancer" (FTA-235).
+
+        The "is_balancer" slot came from the same agr_curation_schema PR (#327) as "is_aberration", so it
+        shares the ADD_IS_ABERRATION gate: both slots reach the Alliance in the same LinkML release, and
+        emitting either before then would fail schema validation for the whole allele file.
+        The FBab IDs are always collected into self.balancer_ids, gate or no gate, so the curator TSV can
+        report the flag while the JSON export stays clean (mirrors _is_aberration_cell() in the script).
+        Per FTA-235 these aberrations get both is_balancer=True and is_aberration=True.
+        """
+        self.log.info('Flag aberrations carrying the curated balancer internal note with the "is_balancer" boolean.')
+        add_flag = getenv('ADD_IS_ABERRATION', None) == 'YES'
+        if not add_flag:
+            self.log.info('ADD_IS_ABERRATION not set to "YES"; detecting balancers for the TSV, but not exporting '
+                          'the "is_balancer" flag.')
+        for aberration in self.fb_data_entities.values():
+            if aberration.linkmldto is None:
+                continue
+            for fb_prop in aberration.props_by_type.get('internal_notes', []):
+                prop_value = fb_prop.chado_obj.value
+                if not prop_value or not self.balancer_flag_regex.match(prop_value):
+                    continue
+                self.balancer_ids.add(f'FB:{aberration.uniquename}')
+                self.log.debug(f'Balancer flag found for {aberration}: "{prop_value}"')
+                if add_flag:
+                    aberration.linkmldto.is_balancer = True
+                break
+        self.log.info(f'Found {len(self.balancer_ids)} aberrations carrying the curated balancer internal note.')
+        # In testing mode only a handful of FBab entities are fetched, so the expected count cannot be met.
+        if self.testing is False and len(self.balancer_ids) != self.balancer_flag_expected_count:
+            self.log.warning(f'Expected {self.balancer_flag_expected_count} balancer-flagged aberrations per FTA-235, '
+                             f'but found {len(self.balancer_ids)}. Check the "internal_notes" flag text in chado.')
+        return
+
     def map_aberration_allele_associations(self):
         """Map aberration-allele associations to Alliance object (FTA-218)."""
         self.log.info('Map aberration-allele associations to Alliance object.')
@@ -1660,6 +1706,7 @@ class AberrationHandler(MetaAlleleHandler):
         super().map_fb_data_to_alliance()
         self.map_metaallele_basic()
         self.map_aberration_flag()
+        self.map_balancer_flag()
         self.map_metaallele_database_status()
         self.map_internal_metaallele_status()
         self.map_aberration_mutation_types()

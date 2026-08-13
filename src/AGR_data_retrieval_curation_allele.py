@@ -52,7 +52,20 @@ def _is_aberration_cell(entity_dict):
     return 'true' if entity_dict.get('primary_external_id', '').startswith('FB:FBab') else ''
 
 
-# Allele primary TSV carries the FTA-217 aberration flag for curator review.
+def _make_is_balancer_cell(balancer_ids):
+    """Return a TSV cell function reporting 'true' for balancer-flagged FBab aberrations (FTA-235).
+
+    Reads the AberrationHandler's detected ID set rather than the exported 'is_balancer' key, so the
+    curator TSV is populated even when ADD_IS_ABERRATION is unset. That env var gates the JSON only, to
+    protect Alliance schema validation; it says nothing about which aberrations are balancers.
+    """
+    def _is_balancer_cell(entity_dict):
+        return 'true' if entity_dict.get('primary_external_id', '') in balancer_ids else ''
+    return _is_balancer_cell
+
+
+# Allele primary TSV carries the FTA-217 aberration flag for curator review; the FTA-235 balancer flag is
+# appended in main(), where the AberrationHandler that detected the balancers is available.
 _ALLELE_PRIMARY_EXTRAS = [
     ('is_aberration', _is_aberration_cell, ''),
 ]
@@ -85,8 +98,10 @@ Environment variables:
   ADD_ALLELE_ALLELE_ASSOC   Set to 'YES' to emit the FTA-218 'allele_allele_association_ingest_set' (aberration
                             'carries'/'breakpoint_allele' relations). Off by default: the Alliance schema has no
                             such ingest set and lacks the two CV terms, so the data cannot yet be loaded.
-  ADD_IS_ABERRATION         Set to 'YES' to emit the 'is_aberration' boolean for FBab entities.
-                            Requires a LinkML release containing the slot (absent from v2.17.0).
+  ADD_IS_ABERRATION         Set to 'YES' to emit the 'is_aberration' boolean for FBab entities, and the
+                            'is_balancer' boolean for those FBab entities flagged as balancers (FTA-235).
+                            Both slots come from the same schema PR (#327), so one gate covers them.
+                            Requires a LinkML release containing the slots (absent from v2.17.0).
 """,
     formatter_class=argparse.RawDescriptionHelpFormatter
 )
@@ -156,9 +171,12 @@ def main():
         generate_export_file(export_dict, log, output_filename)
         tsv_filename = set_up_dict['output_filename']
         entities = export_dict['allele_ingest_set']
+        primary_extras = _ALLELE_PRIMARY_EXTRAS + [
+            ('is_balancer', _make_is_balancer_cell(aberration_handler.balancer_ids), ''),
+        ]
         curation_tsv.write_primary_tsv(
             log=log, filename=tsv_filename, entities=entities, datatype='allele',
-            extra_fields=_ALLELE_PRIMARY_EXTRAS,
+            extra_fields=primary_extras,
         )
         curation_tsv.write_notes_tsv(
             filename=tsv_filename.replace('.tsv', '_notes.tsv'), entities=entities,
