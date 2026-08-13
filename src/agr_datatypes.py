@@ -125,6 +125,24 @@ class AlleleDTO(GenomicEntityDTO):
         self.required_fields.extend(['allele_symbol_dto', 'primary_external_id'])
 
 
+class SequenceTargetingReagentDTO(GenomicEntityDTO):
+    """SequenceTargetingReagentDTO class."""
+    def __init__(self):
+        """Create SequenceTargetingReagentDTO for FlyBase object.
+
+        FTA-225/FTA-226. Note that "name" and "synonyms" are plain strings in the LinkML model
+        (not NameSlotAnnotationDTOs), so this DTO cannot carry per-name attribution or
+        current/non-current status, and PrimaryEntityHandler.map_synonyms() does not apply to it.
+        """
+        super().__init__()
+        self.name = None                    # Plain string: the current symbol of the FBsf.
+        self.synonyms = []                  # Plain strings: all other synonyms, unattributed.
+        self.secondary_identifiers = []     # Will be list of 2o FB curies (strings).
+        self.reference_curies = []          # Will be a list of reference curies.
+        self.note_dtos = []                 # Will be NoteDTO objects (inherited slot; unused for now).
+        self.required_fields.extend(['primary_external_id', 'name'])
+
+
 class CassetteTransgenicToolAssociationDTO(AuditedObjectDTO):
     """CassetteTransgenicToolAssociationDTO class."""
     def __init__(self, cassette_association_subject, cassette_association_object,
