@@ -102,6 +102,13 @@ Environment variables:
                             'is_balancer' boolean for those FBab entities flagged as balancers (FTA-235).
                             Both slots come from the same schema PR (#327), so one gate covers them.
                             Requires a LinkML release containing the slots (absent from v2.17.0).
+
+Notes:
+  FTA-237: 24 aberrations are exported under their balancer's symbol and full name, driven by curated
+  "FTA: Balancer - use balancer symbol and fullname for parent ..." internal notes, plus In(2LR)SM6
+  (FBab0004818), which is renamed to "SM6" / "Second Multiple 6" from a hard-coded table because no
+  flag exists for it. The aberration's own names are kept as synonyms. Not gated: the slots involved
+  are long-released. See the *_balancer_renames.tsv output for the full list.
 """,
     formatter_class=argparse.RawDescriptionHelpFormatter
 )
@@ -181,6 +188,26 @@ def main():
         curation_tsv.write_notes_tsv(
             filename=tsv_filename.replace('.tsv', '_notes.tsv'), entities=entities,
         )
+        # FTA-237: one row per renamed aberration, so curators can check the 24 flag-driven renames and
+        # the hard-coded In(2LR)SM6 case against their spreadsheet. write_association_tsv() is reused
+        # rather than adding another writer; it needs a 'relation_name' cell, hence the constant below,
+        # and no_pubs_sentinel is blanked because a rename carries no evidence of its own.
+        renames_filename = tsv_filename.replace('.tsv', '_balancer_renames.tsv')
+        curation_tsv.write_association_tsv(
+            filename=renames_filename,
+            rows=[dict(row, relation_name='renamed_after_balancer') for row in aberration_handler.balancer_rename_report],
+            first_field='fbab_id',
+            second_field='fbba_id',
+            extra_fields=[
+                ('source', 'source', ''),
+                ('new_symbol', 'new_symbol', ''),
+                ('old_symbol', 'old_symbol', ''),
+                ('new_full_name', 'new_full_name', ''),
+                ('old_full_name', 'old_full_name', ''),
+            ],
+            no_pubs_sentinel='',
+        )
+        log.info(f'Generated TSV: {renames_filename} ({len(aberration_handler.balancer_rename_report)} renames)')
         # FTA-221: diagnostic TSV of note props whose text could not be cleaned (NULL, blank, or bad
         # SGML), so curators can find and fix the offending rows. Mirrors the construct/cassette
         # scripts. Combined across both handlers, since each collects its own failures.

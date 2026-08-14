@@ -855,7 +855,14 @@ git commit -m "feat(FTA-236): move balancer carried alleles and insertions to pa
 - [ ] **Step 1: Check whether an existing writer fits**
 
 Run: `grep -n "def write_" src/curation_tsv.py`
-`write_association_tsv()` takes `first_field`/`second_field`/`extra_fields` over a list of exported-DTO dicts. The merge report is a flat list of dicts with fixed keys, so it fits: `first_field='fbab_id'`, `second_field='fbba_id'`, and the counts as `extra_fields`. Reuse it — do not add a new writer.
+`write_association_tsv()` takes `first_field`/`second_field`/`extra_fields` over a list of dicts, so it fits: `first_field='fbab_id'`, `second_field='fbba_id'`, and the counts as `extra_fields`. Reuse it — do not add a new writer.
+
+**But it reads `entity_dict['relation_name']` unconditionally**, so a report row without that key raises `KeyError` (found while implementing FTA-237, which hit exactly this). Pass a constant relation and blank the evidence sentinel:
+
+```python
+            rows=[dict(row, relation_name='merged_from_balancer') for row in aberration_handler.balancer_merge_report],
+            no_pubs_sentinel='',
+```
 
 - [ ] **Step 2: Emit the TSV**
 
@@ -868,7 +875,7 @@ In `main()`, inside the `else` branch that writes the other TSVs, after the `wri
         merges_filename = tsv_filename.replace('.tsv', '_balancer_merges.tsv')
         curation_tsv.write_association_tsv(
             filename=merges_filename,
-            rows=aberration_handler.balancer_merge_report,
+            rows=[dict(row, relation_name='merged_from_balancer') for row in aberration_handler.balancer_merge_report],
             first_field='fbab_id',
             second_field='fbba_id',
             extra_fields=[
@@ -881,6 +888,7 @@ In `main()`, inside the `else` branch that writes the other TSVs, after the `wri
                 ('carries_alleles', 'carries_alleles', 0),
                 ('carries_excluded', 'carries_excluded', 0),
             ],
+            no_pubs_sentinel='',
         )
         log.info(f'Generated TSV: {merges_filename} ({len(aberration_handler.balancer_merge_report)} balancer merges)')
 ```

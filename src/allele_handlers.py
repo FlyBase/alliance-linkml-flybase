@@ -19,11 +19,14 @@ from fb_datatypes import (
     FBAberration, FBAllele, FBBalancer
 )
 from feature_handler import FeatureHandler
+from harvdev_utils.char_conversions import sub_sup_sgml_to_html, sub_sup_to_sgml
 from harvdev_utils.reporting import (
     Cvterm, Feature, FeatureCvterm, FeatureGenotype, FeatureRelationship,
     Featureprop, Genotype, Phenotype, PhenotypeCvterm, Phenstatement, Pub
 )
 from utils import export_chado_data
+
+BALANCER_RENAME_EXPECTED = 24    # FTA-237: curated "use balancer symbol and fullname" flags in chado as of 2026-08-14.
 
 
 class MetaAlleleHandler(FeatureHandler):
@@ -1236,6 +1239,25 @@ class AberrationHandler(MetaAlleleHandler):
     balancer_flag_regex = re.compile(r'^\s*:?\s*FTA:\s*balancer\s*-\s*mark this aberration as\b', re.IGNORECASE)
     balancer_flag_expected_count = 37    # Per FTA-235; a mismatch means the flag text or the curation record changed.
 
+    # FTA-237: this flag says the parent FBab should be exported under the balancer's current symbol
+    # and full name, e.g.
+    #   FTA: Balancer - use balancer symbol and fullname for parent In(1)Basc (FBab0004219).
+    # 24 of these exist, one per parent, all naming a current non-obsolete FBab. As in FTA-235 the
+    # match runs through the instruction clause, since all three flag families open "FTA: Balancer -".
+    balancer_rename_regex = re.compile(
+        r'^\s*:?\s*FTA:\s*balancer\s*-\s*use balancer symbol and fullname for parent'
+        r'\s+(?P<symbol>.+?)\s*\((?P<fbab>FBab[0-9]+)\)\s*\.?\s*$',
+        re.IGNORECASE)
+    # FTA-237: one aberration is renamed without a curated flag. Per the ticket, In(2LR)SM6 takes the
+    # symbol "SM6" and full name "Second Multiple 6", because its two balancers SM6a (FBba0000039) and
+    # SM6b (FBba0000040) share it as a parent and neither of their names should win. Neither balancer
+    # carries a rename flag, so nothing in chado can drive this: "SM6" exists only as a non-current
+    # synonym of the aberration, and "Second Multiple 6" does not exist in chado at all. Keyed by FBab
+    # uniquename; the values are (symbol, full_name).
+    balancer_hardcoded_renames = {
+        'FBab0004818': ('SM6', 'Second Multiple 6'),
+    }
+
     # Additional export sets.
     aberration_gene_rels = {}            # Will be (FBab feature_id, FBgn feature_id, AGR_rel_type, ECO) tuples keying lists of FBRelationships.
     aberration_gene_associations = []    # Will be the final list of gene-aberration FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
@@ -1244,6 +1266,9 @@ class AberrationHandler(MetaAlleleHandler):
     aberration_allele_associations = []  # Will be the final list of aberration-allele FBRelationships (AlleleAlleleAssociationDTO under linkmldto attr).
     cassette_ignore_list = set()         # FTA-218: FBal feature_ids that are construct cassettes, and so are never exported as alleles.
     balancer_ids = set()                 # FTA-235: FB curies of FBab aberrations flagged as balancers; filled regardless of the export gate.
+    fbba_entities = {}                   # FTA-236/237: feature_id-keyed FBBalancer objects from the nested BalancerHandler.
+    balancer_rename_map = {}             # FTA-237: {FBba feature_id: parent FBab feature_id} for resolved rename flags.
+    balancer_rename_report = []          # FTA-237: dicts of old/new names per renamed aberration, for the curator TSV.
 
     # Additional reference info.
     chr_str_var_terms = []    # A list of cvterm_ids for child terms of "chromosome_structure_variation" (SO:0000240).
@@ -1353,6 +1378,24 @@ class AberrationHandler(MetaAlleleHandler):
         self.get_entity_xrefs(session)
         self.get_entity_timestamps(session)
         self.get_direct_reagent_collections(session)
+        self.get_balancer_entities(session)
+        return
+
+    def get_balancer_entities(self, session):
+        """Have the AberrationHandler run the BalancerHandler to get FBba data (FTA-237).
+
+        Mirrors AlleleHandler.get_insertion_entities(): the nested handler does its own full retrieval,
+        and only its fb_data_entities are kept. Nothing it maps or exports is used directly, so FBba
+        balancers still do not appear in the allele_ingest_set. What is used is each FBba's finished
+        AlleleDTO, whose allele_symbol_dto and allele_full_name_dto the rename step copies onto the
+        parent aberration.
+        """
+        separator = 80 * '#'
+        self.log.info(f'Have the AberrationHandler run the BalancerHandler.\n{separator}')
+        balancer_handler = BalancerHandler(self.log, self.testing)
+        export_chado_data(session, self.log, balancer_handler)
+        self.fbba_entities = balancer_handler.fb_data_entities
+        self.log.info(f'The AberrationHandler obtained {len(self.fbba_entities)} FBba balancers from chado.\n{separator}')
         return
 
     # Additional sub-methods to be run by synthesize_info() below.
@@ -1548,6 +1591,7 @@ class AberrationHandler(MetaAlleleHandler):
         super().synthesize_info()
         self.flag_new_additions_and_obsoletes()
         self.adjust_aberration_organism()
+        self.synthesize_balancer_rename_map()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
@@ -1636,6 +1680,47 @@ class AberrationHandler(MetaAlleleHandler):
         self.log.info(f'Flagged {counter} aberrations with is_aberration=True.')
         return
 
+    def _resolve_parent_feature_id(self, fbab_uniquename):
+        """Return the feature_id of an exportable parent FBab, or None (FTA-237).
+
+        Only aberrations in self.fb_data_entities can be renamed: that dict holds the current,
+        non-obsolete FBab features this handler exports. An obsolete or unrecognised ID gets no
+        fallback on purpose. All 24 FTA-237 parents are current, so this never fires for the rename
+        flags; it exists so that a future curation change is reported rather than silently redirected.
+        """
+        for aberration in self.fb_data_entities.values():
+            if aberration.uniquename == fbab_uniquename:
+                return aberration.db_primary_id
+        return None
+
+    def synthesize_balancer_rename_map(self):
+        """Map each rename-flagged FBba balancer to the parent FBab it renames (FTA-237)."""
+        self.log.info('Map rename-flagged FBba balancers to their parent FBab aberrations.')
+        flag_counter = 0
+        for balancer in self.fbba_entities.values():
+            for fb_prop in balancer.props_by_type.get('internal_notes', []):
+                prop_value = fb_prop.chado_obj.value
+                if not prop_value:
+                    continue
+                match = self.balancer_rename_regex.match(prop_value)
+                if match is None:
+                    continue
+                flag_counter += 1
+                fbab_uniquename = match.group('fbab')
+                parent_feature_id = self._resolve_parent_feature_id(fbab_uniquename)
+                if parent_feature_id is None:
+                    self.log.error(f'FTA-237: balancer {balancer} would rename parent {fbab_uniquename} '
+                                   f'("{match.group("symbol")}"), which is not an exportable aberration '
+                                   f'(obsolete or unknown). No rename applied; please fix the internal note.')
+                    break
+                self.balancer_rename_map[balancer.db_primary_id] = parent_feature_id
+                break
+        self.log.info(f'Found {flag_counter} balancer rename flags; resolved {len(self.balancer_rename_map)} renames.')
+        if self.testing is False and flag_counter != BALANCER_RENAME_EXPECTED:
+            self.log.warning(f'Expected {BALANCER_RENAME_EXPECTED} balancer rename flags per FTA-237, but found '
+                             f'{flag_counter}. Check the "internal_notes" flag text in chado.')
+        return
+
     def map_balancer_flag(self):
         """Flag FBab entities carrying the curated balancer internal note with "is_balancer" (FTA-235).
 
@@ -1668,6 +1753,124 @@ class AberrationHandler(MetaAlleleHandler):
         if self.testing is False and len(self.balancer_ids) != self.balancer_flag_expected_count:
             self.log.warning(f'Expected {self.balancer_flag_expected_count} balancer-flagged aberrations per FTA-235, '
                              f'but found {len(self.balancer_ids)}. Check the "internal_notes" flag text in chado.')
+        return
+
+    def map_balancer_renames(self):
+        """Export a rename-flagged aberration under its balancer's symbol and full name (FTA-237).
+
+        The nested BalancerHandler has already built a full AlleleDTO for every FBba, so the balancer's
+        allele_symbol_dto and allele_full_name_dto are correct - right display_text conversion, right
+        evidence curies - and are simply copied into the parent's slots. The aberration's own names
+        move to allele_synonym_dtos, as the ticket asks.
+
+        Must run after map_synonyms(), which is what populates the parent's name slots in the first
+        place. Any synonym matching a newly promoted name is dropped, so a name grafted by FTA-236
+        does not appear twice.
+        """
+        self.log.info('Rename flagged aberrations to use their balancer symbol and full name.')
+        renamed = 0
+        for fbba_feature_id, fbab_feature_id in self.balancer_rename_map.items():
+            balancer = self.fbba_entities[fbba_feature_id]
+            aberration = self.fb_data_entities[fbab_feature_id]
+            if aberration.linkmldto is None:
+                self.log.warning(f'FTA-237: {aberration} has no LinkML object to rename; skipping.')
+                continue
+            report = {
+                'fbab_id': aberration.uniquename,
+                'fbba_id': balancer.uniquename,
+                'source': 'flag',
+                'new_symbol': '',
+                'old_symbol': '',
+                'new_full_name': '',
+                'old_full_name': '',
+            }
+            new_dtos = {
+                'allele_symbol_dto': getattr(balancer.linkmldto, 'allele_symbol_dto', None),
+                'allele_full_name_dto': getattr(balancer.linkmldto, 'allele_full_name_dto', None),
+            }
+            self.apply_rename(aberration, new_dtos, report)
+            self.balancer_rename_report.append(report)
+            renamed += 1
+            self.log.debug(f'FTA-237: renamed {aberration} to "{report["new_symbol"]}" '
+                           f'("{report["new_full_name"]}") after balancer {balancer}.')
+        self.map_hardcoded_balancer_renames()
+        self.log.info(f'Renamed {renamed} aberrations from curated flags, plus '
+                      f'{len(self.balancer_rename_report) - renamed} hard-coded; '
+                      f'{len(self.balancer_rename_report)} in total.')
+        return
+
+    def apply_rename(self, aberration, new_dtos, report):
+        """Move an aberration's own names to synonyms and install the new ones (FTA-237).
+
+        Args:
+            aberration (FBAberration): the aberration being renamed.
+            new_dtos (dict): {slot_name: NameSlotAnnotationDTO dict or None} for the new names.
+            report (dict): the report row to fill in, mutated in place.
+
+        """
+        NAME_SLOT_LABELS = {'allele_symbol_dto': 'symbol', 'allele_full_name_dto': 'full_name'}
+        for slot_name, label in NAME_SLOT_LABELS.items():
+            new_dto = new_dtos.get(slot_name)
+            if new_dto is None:
+                continue
+            old_dto = getattr(aberration.linkmldto, slot_name)
+            report[f'new_{label}'] = new_dto['format_text']
+            if old_dto is not None:
+                report[f'old_{label}'] = old_dto['format_text']
+                aberration.linkmldto.allele_synonym_dtos.append(old_dto)
+            # Copy, so later edits to either DTO cannot bleed into the other entity's export.
+            setattr(aberration.linkmldto, slot_name, dict(new_dto))
+            self.drop_duplicate_synonyms(aberration, new_dto)
+        return
+
+    def map_hardcoded_balancer_renames(self):
+        """Apply the FTA-237 renames that no curated flag can drive (currently only In(2LR)SM6)."""
+        for fbab_uniquename, names in self.balancer_hardcoded_renames.items():
+            new_symbol, new_full_name = names
+            parent_feature_id = self._resolve_parent_feature_id(fbab_uniquename)
+            if parent_feature_id is None:
+                self.log.error(f'FTA-237: hard-coded rename target {fbab_uniquename} ("{new_symbol}") is not an '
+                               f'exportable aberration; rename not applied.')
+                continue
+            aberration = self.fb_data_entities[parent_feature_id]
+            if aberration.linkmldto is None:
+                self.log.warning(f'FTA-237: {aberration} has no LinkML object to rename; skipping.')
+                continue
+            new_dtos = {
+                'allele_symbol_dto': agr_datatypes.NameSlotAnnotationDTO(
+                    'nomenclature_symbol', new_symbol, sub_sup_sgml_to_html(sub_sup_to_sgml(new_symbol)), []).dict_export(),
+                'allele_full_name_dto': agr_datatypes.NameSlotAnnotationDTO(
+                    'full_name', new_full_name, sub_sup_sgml_to_html(sub_sup_to_sgml(new_full_name)), []).dict_export(),
+            }
+            report = {
+                'fbab_id': aberration.uniquename,
+                'fbba_id': 'n/a',
+                'source': 'hard-coded',
+                'new_symbol': '',
+                'old_symbol': '',
+                'new_full_name': '',
+                'old_full_name': '',
+            }
+            self.apply_rename(aberration, new_dtos, report)
+            self.balancer_rename_report.append(report)
+            self.log.info(f'FTA-237: applied the hard-coded rename of {aberration} to '
+                          f'"{new_symbol}" ("{new_full_name}").')
+        return
+
+    def drop_duplicate_synonyms(self, aberration, promoted_dto):
+        """Remove synonyms that duplicate a name just promoted into a name slot (FTA-237).
+
+        FTA-236 grafts the balancer's names onto the parent as synonyms; once one of them becomes the
+        parent's symbol or full name, the synonym entry is redundant. Matching is on name type plus
+        format_text, so a same-text synonym of a different type is left alone.
+        """
+        keep = []
+        for synonym_dto in aberration.linkmldto.allele_synonym_dtos:
+            is_duplicate = synonym_dto['format_text'] == promoted_dto['format_text']
+            if is_duplicate and synonym_dto['name_type_name'] == promoted_dto['name_type_name']:
+                continue
+            keep.append(synonym_dto)
+        aberration.linkmldto.allele_synonym_dtos = keep
         return
 
     def map_aberration_allele_associations(self):
@@ -1716,6 +1919,7 @@ class AberrationHandler(MetaAlleleHandler):
         self.map_aberration_mutation_types()
         self.map_aberration_gene_associations()
         self.map_synonyms()
+        self.map_balancer_renames()
         self.map_data_provider_dto()
         self.map_xrefs()
         self.map_entity_props_to_notes('aberration_prop_to_note_mapping')

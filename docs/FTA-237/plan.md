@@ -286,9 +286,15 @@ In `class AberrationHandler`, below the FTA-236 attributes:
     #   FTA: Balancer - use balancer symbol and fullname for parent In(1)Basc (FBab0004219).
     # 24 of these exist, one per parent. As in FTA-235/236 the match runs through the instruction
     # clause, since all three flag families open with "FTA: Balancer -".
-    balancer_rename_regex = re.compile(r'^\s*:?\s*FTA:\s*balancer\s*-\s*use balancer symbol and fullname for parent\s+(?P<symbol>.+?)\s*\((?P<fbab>FBab[0-9]+)\)\s*\.?\s*$',
-                                       re.IGNORECASE)
+    balancer_rename_regex = re.compile(
+        r'^\s*:?\s*FTA:\s*balancer\s*-\s*use balancer symbol and fullname for parent'
+        r'\s+(?P<symbol>.+?)\s*\((?P<fbab>FBab[0-9]+)\)\s*\.?\s*$',
+        re.IGNORECASE)
 ```
+
+(The pattern is split with implicit string concatenation because a single line runs to 172 characters,
+over the 160-char `.flake8` limit. Concatenation avoids the W503/W504 trap that a boolean-operator
+break would hit.)
 
 - [ ] **Step 4: Add the rename-map method**
 
@@ -762,7 +768,16 @@ git commit -m "feat(FTA-237): hard-code the In(2LR)SM6 rename to SM6 / Second Mu
 - Consumes: `aberration_handler.balancer_rename_report`.
 - Produces: `<output>_balancer_renames.tsv` beside the other allele TSVs.
 
-- [ ] **Step 1: Emit the TSV**
+- [ ] **Step 1: Check the writer's required keys**
+
+Run: `grep -n "def write_association_tsv" -A 35 src/curation_tsv.py`
+
+It reads `entity_dict['relation_name']` **unconditionally** — a report row without that key raises
+`KeyError`. Reuse the writer anyway (no new writer is warranted), supplying a constant relation and
+blanking the evidence sentinel, since a rename carries no evidence of its own. The same applies to
+FTA-236's merge TSV.
+
+- [ ] **Step 3: Emit the TSV**
 
 In `main()`, after the `write_notes_tsv(...)` call (and after FTA-236's merge TSV if that has landed):
 
@@ -772,7 +787,7 @@ In `main()`, after the `write_notes_tsv(...)` call (and after FTA-236's merge TS
         renames_filename = tsv_filename.replace('.tsv', '_balancer_renames.tsv')
         curation_tsv.write_association_tsv(
             filename=renames_filename,
-            rows=aberration_handler.balancer_rename_report,
+            rows=[dict(row, relation_name='renamed_after_balancer') for row in aberration_handler.balancer_rename_report],
             first_field='fbab_id',
             second_field='fbba_id',
             extra_fields=[
@@ -782,6 +797,7 @@ In `main()`, after the `write_notes_tsv(...)` call (and after FTA-236's merge TS
                 ('new_full_name', 'new_full_name', ''),
                 ('old_full_name', 'old_full_name', ''),
             ],
+            no_pubs_sentinel='',
         )
         log.info(f'Generated TSV: {renames_filename} ({len(aberration_handler.balancer_rename_report)} renames)')
 ```
@@ -799,7 +815,7 @@ Notes:
   are long-released. See the *_balancer_renames.tsv output for the full list.
 ```
 
-- [ ] **Step 3: Compile check both files**
+- [ ] **Step 4: Compile check both files**
 
 Run:
 ```bash
@@ -808,7 +824,7 @@ awk 'length > 160 {print FILENAME": "FNR": "length}' src/allele_handlers.py src/
 ```
 Expected: `COMPILE OK` and no `awk` output.
 
-- [ ] **Step 4: Write the run-verification script**
+- [ ] **Step 5: Write the run-verification script**
 
 Create `docs/FTA-237/verify_run.sh`:
 
@@ -839,7 +855,7 @@ done
 echo '--- done ---'
 ```
 
-- [ ] **Step 5: Ask Ian to run the export, then verify**
+- [ ] **Step 6: Ask Ian to run the export, then verify**
 
 The run cannot happen on this machine. Ask Ian for an allele run against `production_chado` into `PERSISTENT_main_FTA-237_balancer_rename`, then:
 
@@ -849,7 +865,7 @@ ssh flysql26 "bash -s" < docs/FTA-237/verify_run.sh /data/alliance/PERSISTENT_ma
 
 Expected: 24 rename flags, 25 renamed aberrations, 25 TSV rows, 0 errors, **0** `many current symbols` / `many current full_names` lines, `FB:FBab0004219` exporting as `Basc`, `FB:FBab0004818` as `SM6`, and no `MISSING old symbol synonym` lines.
 
-- [ ] **Step 6: Diff the whole rename list against chado**
+- [ ] **Step 7: Diff the whole rename list against chado**
 
 ```bash
 ssh flysql26 "PGPASSWORD=ilongdenpgsql psql -h flysql24 -U ilongden -d production_chado -f /tmp/expected_renames.sql" > /tmp/chado_renames.txt
@@ -857,7 +873,7 @@ ssh flysql26 "PGPASSWORD=ilongdenpgsql psql -h flysql24 -U ilongden -d productio
 ```
 Expected: the 24 flag rows match `docs/FTA-237/expected_renames.sql` exactly; the only `source=hard-coded` row is `FBab0004818`.
 
-- [ ] **Step 7: Commit (only when Ian asks)**
+- [ ] **Step 8: Commit (only when Ian asks)**
 
 ```bash
 git add src/AGR_data_retrieval_curation_allele.py docs/FTA-237/verify_run.sh
