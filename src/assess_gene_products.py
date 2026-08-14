@@ -493,6 +493,44 @@ WARNINGS = [
               AND EXISTS (SELECT 1 FROM feature_expression fe WHERE fe.feature_id = gp.feature_id);
         """,
     },
+    {
+        'label': 'has_reg_region_gene_but_no_fbsf',
+        'description': 'The gene product is "associated_with" a transgenic non-Dmel allele that "has_reg_region" a current Dmel gene'
+                       ' (the PROMOTER_CHAR_GENE path) but that "has_reg_region" no current FBsf regulatory region at all, so the'
+                       ' regulatory region behind the gene attribution is not modeled as a sequence feature and the attribution'
+                       ' cannot be checked against one. Only the allele\'s own "has_reg_region" relationships are considered: an'
+                       ' allele reaching a gene directly and reaching an FBsf feature by a separate "has_reg_region" relationship is'
+                       ' not flagged, whatever that FBsf feature is itself related to.',
+        'sql': """
+            SELECT DISTINCT gp.feature_id
+            FROM feature gp
+            JOIN feature_relationship gpa ON gpa.subject_id = gp.feature_id
+              AND gpa.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'associated_with')
+            JOIN feature a ON a.feature_id = gpa.object_id
+            JOIN feature_relationship ag ON ag.subject_id = a.feature_id
+              AND ag.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'has_reg_region')
+            JOIN feature g ON g.feature_id = ag.object_id
+            WHERE gp.is_obsolete IS FALSE
+              AND gp.uniquename ~ '^FB(tr|pp)[0-9]{7}$'
+              AND a.is_obsolete IS FALSE
+              AND a.uniquename ~ '^FBal[0-9]{7}$'
+              AND a.organism_id != 1
+              AND g.is_obsolete IS FALSE
+              AND g.uniquename ~ '^FBgn[0-9]{7}$'
+              AND g.organism_id = 1
+              AND EXISTS (SELECT 1 FROM feature_expression fe WHERE fe.feature_id = gp.feature_id)
+              AND NOT EXISTS
+              (
+                  SELECT 1
+                  FROM feature_relationship asf
+                  JOIN feature sf ON sf.feature_id = asf.object_id
+                  WHERE asf.subject_id = a.feature_id
+                    AND asf.type_id IN (SELECT DISTINCT cvterm_id FROM cvterm WHERE name = 'has_reg_region')
+                    AND sf.is_obsolete IS FALSE
+                    AND sf.uniquename ~ '^FBsf[0-9]{10}$'
+              );
+        """,
+    },
 ]
 
 # One further family of warning msgs is derived from the category queries above rather than from
