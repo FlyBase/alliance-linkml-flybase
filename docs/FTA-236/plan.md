@@ -18,14 +18,33 @@
 - **Never commit without explicit permission from Ian.** Each task's commit step is prepared, but only run when he asks.
 - **Conventional Commits**, scope `FTA-236`, and `git add <specific paths>` only.
 
-## Open dependency — resolve before Task 2 lands
+## Resolved dependency (was blocking Task 2)
 
-`FBba0000688`'s note names `FBab0007127`, which is **obsolete** (a non-current secondary ID of `FBab0049550`, the current T(2;3)A1-W and the aberration that carries the FTA-235 `is_balancer` flag). Asked on FTA-236 (comment 43812, 2026-08-14):
+`FBba0000688` (AM1) named `FBab0007127`, which is **obsolete** — a non-current secondary ID of
+`FBab0049550`, the current T(2;3)A1-W and the aberration carrying the FTA-235 `is_balancer` flag.
 
-- **Option 1 (preferred, assumed by this plan):** Steven fixes the note; the code treats an obsolete/unknown parent as a reported error and skips the merge. Task 1 implements this.
-- **Option 2:** the code resolves parent IDs through `feature_dbxref` to the current feature. If Steven picks this, Task 1's `_resolve_parent_feature_id()` gains a secondary-ID fallback — the hook is called out in that task, so the change is one method, not a redesign.
+**Steven's answer (FTA-236 comment 43813, 2026-08-14): Option 1.** The intended target is the current
+`FBab0049550`, and he has made a curation record, **loading the week of 2026-08-17**, that corrects the
+note to:
 
-Until Steven answers, expect **37 of 38** merges to succeed and one logged error naming `FBba0000688`.
+```
+FTA: Balancer - merge with parent T(2;3)A1-W (FBab0049550).
+```
+
+So `_resolve_parent_feature_id()` stays as Task 1 specifies: an obsolete or unknown parent is a
+reported error, never silently redirected. Do **not** add a `feature_dbxref` fallback.
+
+Consequence for run expectations, which depend on when the export runs:
+
+- **Before that load:** 38 flags, **37** merges, and exactly one `ERROR` line naming `FBba0000688`.
+  That error is expected, not a regression.
+- **After it:** 38 flags, 38 merges onto 37 parents, and `FBab0049550` receives AM1's data. The
+  FTA-235 cross-check then reads 37 of 37 parents flagged `is_balancer`, closing the mismatch between
+  the two tickets. `expected_counts.sql` query 4 returns 0 rows once the load has happened — that is
+  the cheapest way to tell which side of the load a given chado snapshot is on.
+
+Note AM1 is merge-flagged only; T(2;3)A1-W is not among FTA-237's 24 renames, so it keeps its own
+symbol and full name.
 
 ---
 

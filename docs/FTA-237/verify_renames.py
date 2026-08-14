@@ -19,11 +19,13 @@ class FakeNameSlotAnnotationDTO:
     """Stand-in for agr_datatypes.NameSlotAnnotationDTO (Task 3's hard-coded path builds these)."""
 
     def __init__(self, name_type_name, format_text, display_text, evidence_curies):
+        """Build the stand-in with the same four positional args as the real DTO."""
         self.dto = {'name_type_name': name_type_name, 'format_text': format_text,
                     'display_text': display_text, 'synonym_scope_name': 'exact',
                     'evidence_curies': list(evidence_curies), 'internal': False, 'obsolete': False}
 
     def dict_export(self):
+        """Return the DTO as a plain dict, as the real class does."""
         return dict(self.dto)
 
 
@@ -51,24 +53,34 @@ for node in tree.body:
 
 
 class FakeLog:
+    """Collects log calls by level, so the checks can assert on what was reported."""
+
     def __init__(self):
+        """Start with empty lists for each level the handler methods use."""
         self.info_lines, self.warnings, self.errors = [], [], []
 
     def info(self, msg):
+        """Record an info line."""
         self.info_lines.append(msg)
 
     def debug(self, msg):
+        """Discard debug output; the checks never assert on it."""
         pass
 
     def warning(self, msg):
+        """Record a warning."""
         self.warnings.append(msg)
 
     def error(self, msg):
+        """Record an error."""
         self.errors.append(msg)
 
 
 class FakeProp:
+    """Stand-in for an FBProp: only .chado_obj.value is read by the code under test."""
+
     def __init__(self, value):
+        """Wrap a featureprop value the way FBProp exposes it."""
         self.chado_obj = type('O', (), {'value': value})()
 
 
@@ -78,14 +90,20 @@ def name_dto(name_type, text):
 
 
 class FakeDTO:
+    """Stand-in for AlleleDTO, holding just the three name slots the rename touches."""
+
     def __init__(self, symbol=None, full_name=None, synonyms=None):
+        """Set the symbol and full-name slots, and copy the synonym list."""
         self.allele_symbol_dto = symbol
         self.allele_full_name_dto = full_name
         self.allele_synonym_dtos = list(synonyms or [])
 
 
 class FakeEntity:
+    """Stand-in for an FBAberration or FBBalancer entity."""
+
     def __init__(self, feature_id, uniquename, name='', internal_notes=(), dto=None):
+        """Build an entity with optional internal_notes props and an optional LinkML DTO."""
         self.db_primary_id = feature_id
         self.uniquename = uniquename
         self.name = name
@@ -94,10 +112,13 @@ class FakeEntity:
         self.linkmldto = dto
 
     def __str__(self):
+        """Match FBDataEntity's "name (uniquename)" form, which log messages rely on."""
         return f'{self.name} ({self.uniquename})'
 
 
 class FakeHandler:
+    """Minimal AberrationHandler: the real methods, bound to duck-typed state."""
+
     balancer_rename_regex = ns['balancer_rename_regex']
     balancer_hardcoded_renames = ns.get('balancer_hardcoded_renames', {})
     synthesize_balancer_rename_map = ns['synthesize_balancer_rename_map']
@@ -107,6 +128,7 @@ class FakeHandler:
     map_hardcoded_balancer_renames = ns.get('map_hardcoded_balancer_renames')
 
     def __init__(self, aberrations, balancers, testing=False):
+        """Key the given aberrations and balancers by feature_id, as the handler does."""
         self.log = FakeLog()
         self.testing = testing
         self.fb_data_entities = {a.db_primary_id: a for a in aberrations}
@@ -115,6 +137,7 @@ class FakeHandler:
         self.balancer_rename_report = []
 
     def _resolve_parent_feature_id(self, fbab_uniquename):
+        """Mirror the real helper: find an exportable parent by uniquename, else None."""
         for aberration in self.fb_data_entities.values():
             if aberration.uniquename == fbab_uniquename:
                 return aberration.db_primary_id
