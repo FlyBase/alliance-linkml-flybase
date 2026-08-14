@@ -579,11 +579,21 @@ In `src/entity_handler.py`, in `synthesize_synonyms()`, immediately after the ex
 ```python
                 # FTA-236: a balancer's names must never rival the parent aberration's own. Unlike
                 # merged_synonym_ids this covers full names too: map_synonyms() sets no
-                # allele_full_name_dto at all when it finds two current full names, so an
-                # undemoted balancer full name would delete the aberration's own from the export.
-                if syno_id in fb_data_entity.demoted_synonym_ids:
+                # allele_full_name_dto at all when it finds two current full names, so an undemoted
+                # balancer full name would delete the aberration's own from the export. The entity's
+                # own name is exempt for the same reason as above - a synonym_id can be shared by both
+                # features, and the entity must never lose its own name.
+                is_demoted = syno_id in fb_data_entity.demoted_synonym_ids
+                if syno_dict['is_current'] is True and is_demoted and syno_dict['format_text'] != fb_data_entity.name:
                     syno_dict['is_current'] = False
 ```
+
+The `format_text != fb_data_entity.name` exemption mirrors the `merged_synonym_ids` guard just above it.
+Checked in production_chado: no balancer/parent pair currently shares a `synonym_id` that is current on
+both sides, and no balancer's current name equals its parent's `feature.name`, so the exemption never
+fires today. It is there because `synonym` rows are global and shared through `feature_synonym` - 24 of
+the grafted `synonym_id`s already exist (non-current) on their parent - so if a future curation change
+made one of those the parent's own current name, an unconditional demotion would delete it.
 
 - [ ] **Step 4: Add the prop whitelist attribute**
 

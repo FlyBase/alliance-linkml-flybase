@@ -26,6 +26,7 @@ from harvdev_utils.reporting import (
 )
 from utils import export_chado_data
 
+BALANCER_MERGE_EXPECTED = 38     # FTA-236: curated "merge with parent" flags in chado as of 2026-08-14.
 BALANCER_RENAME_EXPECTED = 24    # FTA-237: curated "use balancer symbol and fullname" flags in chado as of 2026-08-14.
 
 
@@ -1239,6 +1240,26 @@ class AberrationHandler(MetaAlleleHandler):
     balancer_flag_regex = re.compile(r'^\s*:?\s*FTA:\s*balancer\s*-\s*mark this aberration as\b', re.IGNORECASE)
     balancer_flag_expected_count = 37    # Per FTA-235; a mismatch means the flag text or the curation record changed.
 
+    # FTA-236: the merge flag on an FBba balancer names its parent FBab aberration, e.g.
+    #   FTA: Balancer - merge with parent In(1)Basc (FBab0004219).
+    # 38 of these exist, naming 37 parents (In(2LR)SM6 takes both SM6a and SM6b). The instruction
+    # clause is part of the match because the FTA-237 rename flag opens the same way.
+    balancer_merge_regex = re.compile(
+        r'^\s*:?\s*FTA:\s*balancer\s*-\s*merge with parent'
+        r'\s+(?P<symbol>.+?)\s*\((?P<fbab>FBab[0-9]+)\)\s*\.?\s*$',
+        re.IGNORECASE)
+    # FTA-236: 'carries alleles' must NOT move for these balancers (curator decision, reasons not given).
+    balancer_carries_exclusions = {
+        'FBba0000011',    # FM1 -> In(1)FM1 (FBab0010486); 15 alleles held back.
+        'FBba0000039',    # SM6a -> In(2LR)SM6 (FBab0004818); 20 alleles held back.
+        'FBba0000040',    # SM6b -> In(2LR)SM6 (FBab0004818); 18 alleles held back.
+    }
+    # FTA-236: only these FBba prop types move to the parent aberration. A blanket props_by_type merge
+    # (as add_fbal_to_fbti does) would also carry 'availability' and 'derived_stock*' props, which
+    # map_extinction_info() reads to set is_extinct - a balancer's stock status is not the
+    # aberration's. The Alliance note type for each comes from aberration_prop_to_note_mapping.
+    balancer_graft_prop_types = ('misc', 'internal_notes')
+
     # FTA-237: this flag says the parent FBab should be exported under the balancer's current symbol
     # and full name, e.g.
     #   FTA: Balancer - use balancer symbol and fullname for parent In(1)Basc (FBab0004219).
@@ -1267,6 +1288,8 @@ class AberrationHandler(MetaAlleleHandler):
     cassette_ignore_list = set()         # FTA-218: FBal feature_ids that are construct cassettes, and so are never exported as alleles.
     balancer_ids = set()                 # FTA-235: FB curies of FBab aberrations flagged as balancers; filled regardless of the export gate.
     fbba_entities = {}                   # FTA-236/237: feature_id-keyed FBBalancer objects from the nested BalancerHandler.
+    balancer_merge_map = {}              # FTA-236: {FBba feature_id: parent FBab feature_id} for resolved merge flags.
+    balancer_merge_report = []            # FTA-236: dicts of what moved per balancer, for the curator TSV.
     balancer_rename_map = {}             # FTA-237: {FBba feature_id: parent FBab feature_id} for resolved rename flags.
     balancer_rename_report = []          # FTA-237: dicts of old/new names per renamed aberration, for the curator TSV.
 
@@ -1349,6 +1372,8 @@ class AberrationHandler(MetaAlleleHandler):
         # FTA-218: aberration-allele associations need FBal and FBti features in the feature_lookup, both so that
         # get_entity_relationships() can bucket relationships by related feature type, and so that the map step can
         # look up partner uniquenames. Gated so that production runs make no extra queries until the Alliance is ready.
+        # FTA-236 relies on the same lookup: the alleles and insertions a balancer carries are moved to its parent
+        # aberration as "carries" associations, and map_aberration_allele_associations() resolves those partners here.
         if getenv('ADD_ALLELE_ALLELE_ASSOC', None) == 'YES':
             self.build_feature_lookup(session, feature_types=['gene', 'allele', 'insertion'])
             self.cassette_ignore_list = self.get_cassette_allele_ids(session)
@@ -1591,6 +1616,8 @@ class AberrationHandler(MetaAlleleHandler):
         super().synthesize_info()
         self.flag_new_additions_and_obsoletes()
         self.adjust_aberration_organism()
+        self.synthesize_balancer_merge_map()
+        self.merge_balancers_into_aberrations()
         self.synthesize_balancer_rename_map()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
@@ -1602,6 +1629,9 @@ class AberrationHandler(MetaAlleleHandler):
         # "carries"/"breakpoint_allele" CV terms.
         if getenv('ADD_ALLELE_ALLELE_ASSOC', None) == 'YES':
             self.synthesize_aberration_allele_associations()
+            # FTA-236: the alleles and insertions a flagged balancer carries become "carries"
+            # associations of its parent aberration, so they join the same gated ingest set.
+            self.synthesize_balancer_carries_associations()
         else:
             self.log.info('ADD_ALLELE_ALLELE_ASSOC not set to "YES"; skipping aberration-allele association synthesis.')
         self.qc_aberration_mutation_types()
@@ -1681,17 +1711,169 @@ class AberrationHandler(MetaAlleleHandler):
         return
 
     def _resolve_parent_feature_id(self, fbab_uniquename):
-        """Return the feature_id of an exportable parent FBab, or None (FTA-237).
+        """Return the feature_id of an exportable parent FBab, or None (FTA-236/237).
 
-        Only aberrations in self.fb_data_entities can be renamed: that dict holds the current,
-        non-obsolete FBab features this handler exports. An obsolete or unrecognised ID gets no
-        fallback on purpose. All 24 FTA-237 parents are current, so this never fires for the rename
-        flags; it exists so that a future curation change is reported rather than silently redirected.
+        Only aberrations in self.fb_data_entities can receive merged data or be renamed: that dict
+        holds the current, non-obsolete FBab features this handler exports. An obsolete or unrecognised
+        ID gets no fallback, by curator decision - Steven chose this over resolving stale IDs through
+        feature_dbxref (FTA-236 comment 43813, 2026-08-14), so that a note pointing at the wrong place
+        is reported rather than silently redirected. Do not add a secondary-ID fallback here.
+
+        All 24 FTA-237 rename parents are current. One FTA-236 merge flag, on AM1 (FBba0000688), names
+        the obsolete FBab0007127; a curation record loading the week of 2026-08-17 corrects it to
+        FBab0049550, so until then that one balancer is reported and skipped.
         """
         for aberration in self.fb_data_entities.values():
             if aberration.uniquename == fbab_uniquename:
                 return aberration.db_primary_id
         return None
+
+    def synthesize_balancer_merge_map(self):
+        """Map each merge-flagged FBba balancer to its parent FBab aberration (FTA-236)."""
+        self.log.info('Map flagged FBba balancers to their parent FBab aberrations.')
+        flag_counter = 0
+        for balancer in self.fbba_entities.values():
+            for fb_prop in balancer.props_by_type.get('internal_notes', []):
+                prop_value = fb_prop.chado_obj.value
+                if not prop_value:
+                    continue
+                match = self.balancer_merge_regex.match(prop_value)
+                if match is None:
+                    continue
+                flag_counter += 1
+                fbab_uniquename = match.group('fbab')
+                parent_feature_id = self._resolve_parent_feature_id(fbab_uniquename)
+                if parent_feature_id is None:
+                    self.log.error(f'FTA-236: balancer {balancer} names parent {fbab_uniquename} '
+                                   f'("{match.group("symbol")}"), which is not an exportable aberration '
+                                   f'(obsolete or unknown). No data merged; please fix the internal note.')
+                    break
+                self.balancer_merge_map[balancer.db_primary_id] = parent_feature_id
+                self.log.debug(f'FTA-236: {balancer} merges into {self.fb_data_entities[parent_feature_id]}.')
+                break
+        parents = set(self.balancer_merge_map.values())
+        self.log.info(f'Found {flag_counter} balancer merge flags; resolved {len(self.balancer_merge_map)} '
+                      f'balancers onto {len(parents)} parent aberrations.')
+        if self.testing is False and flag_counter != BALANCER_MERGE_EXPECTED:
+            self.log.warning(f'Expected {BALANCER_MERGE_EXPECTED} balancer merge flags per FTA-236, but found '
+                             f'{flag_counter}. Check the "internal_notes" flag text in chado.')
+        return
+
+    def add_fbba_to_fbab(self, balancer, aberration):
+        """Graft one FBba balancer's data onto its parent FBab aberration (FTA-236).
+
+        Follows add_fbal_to_fbti(): extend the parent's source-data lists before synthesize_* runs, so
+        every existing mapping method produces the merged output unchanged. Only whitelisted prop types
+        move (see balancer_graft_prop_types), and relationships are handled separately by
+        synthesize_balancer_carries_associations() so they cannot reach aberration-gene synthesis.
+        """
+        report = {
+            'fbba_id': balancer.uniquename,
+            'fbba_symbol': balancer.name,
+            'fbab_id': aberration.uniquename,
+            'synonyms': len(balancer.synonyms),
+            'secondary_ids': 1 + len(balancer.fb_sec_dbxrefs),
+            'comments': len(balancer.props_by_type.get('misc', [])),
+            'internal_notes': len(balancer.props_by_type.get('internal_notes', [])),
+            'references': len(balancer.pub_associations),
+            'carries_alleles': 0,
+            'carries_excluded': 0,
+        }
+        # Names. Per the ticket, the balancer's symbols and full names become synonyms of the parent;
+        # neither may rival the parent's own. merged_synonym_ids covers symbols (a rival current symbol
+        # makes map_synonyms() pick one arbitrarily and log "Found many current symbols");
+        # demoted_synonym_ids also covers full names, where a rival is worse - map_synonyms() sets no
+        # allele_full_name_dto at all and the aberration's own full name vanishes from the export.
+        # FTA-237 deliberately renames 24 of these aberrations to the balancer symbol/full name; it
+        # does that by setting the slots in map_balancer_renames(), not by skipping this demotion.
+        aberration.synonyms.extend(balancer.synonyms)
+        balancer_synonym_ids = [i.synonym_id for i in balancer.synonyms]
+        aberration.merged_synonym_ids.update(balancer_synonym_ids)
+        aberration.demoted_synonym_ids.update(balancer_synonym_ids)
+        # Identifiers: the balancer's current ID plus any of its own secondary IDs.
+        aberration.alt_fb_ids.append(f'FB:{balancer.uniquename}')
+        aberration.fb_sec_dbxrefs.extend(balancer.fb_sec_dbxrefs)
+        # Notes (whitelisted prop types only).
+        for prop_type in self.balancer_graft_prop_types:
+            balancer_props = balancer.props_by_type.get(prop_type, [])
+            if not balancer_props:
+                continue
+            try:
+                aberration.props_by_type[prop_type].extend(balancer_props)
+            except KeyError:
+                aberration.props_by_type[prop_type] = list(balancer_props)
+        # References: synthesize_pubs() reads pub_associations, so graft before it runs.
+        aberration.pub_associations.extend(balancer.pub_associations)
+        self.balancer_merge_report.append(report)
+        return report
+
+    def merge_balancers_into_aberrations(self):
+        """Graft every flagged FBba balancer onto its parent FBab aberration (FTA-236)."""
+        self.log.info('Merge flagged FBba balancer data into parent FBab aberrations.')
+        totals = {'synonyms': 0, 'secondary_ids': 0, 'comments': 0, 'internal_notes': 0, 'references': 0}
+        for fbba_feature_id, fbab_feature_id in self.balancer_merge_map.items():
+            balancer = self.fbba_entities[fbba_feature_id]
+            aberration = self.fb_data_entities[fbab_feature_id]
+            report = self.add_fbba_to_fbab(balancer, aberration)
+            for key in totals.keys():
+                totals[key] += report[key]
+        parents = set(self.balancer_merge_map.values())
+        self.log.info(f'Merged {len(self.balancer_merge_map)} balancers into {len(parents)} aberrations.')
+        for key in sorted(totals.keys()):
+            self.log.info(f'Moved {totals[key]} {key} from balancers to aberrations.')
+        return
+
+    def synthesize_balancer_carries_associations(self):
+        """Move a flagged balancer's carried alleles and insertions onto its parent (FTA-236).
+
+        In chado the two sources are:
+            1. type="carried_on",      subject=FBal, object=FBba (proforma AB5b) -> "carries"
+            2. type="associated_with", subject=FBba, object=FBti (proforma AB5a) -> "carries"
+        Both become Alliance "carries" associations from the parent FBab to the partner, so the keys
+        built here match synthesize_aberration_allele_associations() exactly and the existing
+        map_aberration_allele_associations() emits them with no changes.
+
+        These relationships are deliberately NOT grafted onto the parent entity: the parent's own
+        relationships also drive aberration-GENE association synthesis, and a balancer's links would
+        show up there as phantom gene associations.
+
+        Gated with the rest of the allele-allele associations (FTA-218): the Alliance has no
+        "allele_allele_association_ingest_set" yet.
+        """
+        self.log.info('Move balancer carried alleles and insertions onto parent aberrations.')
+        rel_specs = [
+            ('object', 'carried_on', self.feature_subtypes['allele'], 'AB5b'),
+            ('subject', 'associated_with', self.feature_subtypes['insertion'], 'AB5a'),
+        ]
+        partner_attr = {'subject': 'object_id', 'object': 'subject_id'}
+        moved = 0
+        excluded = 0
+        for fbba_feature_id, fbab_feature_id in self.balancer_merge_map.items():
+            balancer = self.fbba_entities[fbba_feature_id]
+            report_rows = [i for i in self.balancer_merge_report if i['fbba_id'] == balancer.uniquename]
+            is_excluded = balancer.uniquename in self.balancer_carries_exclusions
+            for entity_role, fb_rel_type, rel_entity_types, proforma_field in rel_specs:
+                relevant_rels = balancer.recall_relationships(self.log, entity_role=entity_role, rel_types=fb_rel_type,
+                                                              rel_entity_types=rel_entity_types)
+                for feat_rel in relevant_rels:
+                    partner_id = getattr(feat_rel.chado_obj, partner_attr[entity_role])
+                    if is_excluded:
+                        excluded += 1
+                        for row in report_rows:
+                            row['carries_excluded'] += 1
+                        continue
+                    rel_key = (fbab_feature_id, partner_id, 'carries')
+                    try:
+                        self.aberration_allele_rels[rel_key].append(feat_rel)
+                    except KeyError:
+                        self.aberration_allele_rels[rel_key] = [feat_rel]
+                        moved += 1
+                        for row in report_rows:
+                            row['carries_alleles'] += 1
+        self.log.info(f'Moved {moved} balancer "carries" associations onto parent aberrations.')
+        self.log.info(f'Held back {excluded} associations for the {len(self.balancer_carries_exclusions)} '
+                      f'balancers excluded by FTA-236.')
+        return
 
     def synthesize_balancer_rename_map(self):
         """Map each rename-flagged FBba balancer to the parent FBab it renames (FTA-237)."""

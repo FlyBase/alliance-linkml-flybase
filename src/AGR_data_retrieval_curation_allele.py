@@ -96,14 +96,23 @@ Environment variables:
   DATABASE                  Database name (e.g. production_chado)
   ADD_OBSOLETE              Set to 'NO' to exclude obsolete/internal rows from the TSVs only; JSON output is unaffected
   ADD_ALLELE_ALLELE_ASSOC   Set to 'YES' to emit the FTA-218 'allele_allele_association_ingest_set' (aberration
-                            'carries'/'breakpoint_allele' relations). Off by default: the Alliance schema has no
-                            such ingest set and lacks the two CV terms, so the data cannot yet be loaded.
+                            'carries'/'breakpoint_allele' relations, plus the FTA-236 alleles and insertions
+                            carried by a balancer and moved to its parent aberration). Off by default: the
+                            Alliance schema has no such ingest set and lacks the two CV terms, so the data
+                            cannot yet be loaded.
   ADD_IS_ABERRATION         Set to 'YES' to emit the 'is_aberration' boolean for FBab entities, and the
                             'is_balancer' boolean for those FBab entities flagged as balancers (FTA-235).
                             Both slots come from the same schema PR (#327), so one gate covers them.
                             Requires a LinkML release containing the slots (absent from v2.17.0).
 
 Notes:
+  FTA-236: the 38 FBba balancers carrying a "FTA: Balancer - merge with parent ..." internal note have
+  their synonyms, secondary IDs, comments, internal notes and references folded into the parent FBab
+  aberration. Those parts are NOT gated (the slots are long-released); only the carried alleles and
+  insertions wait on ADD_ALLELE_ALLELE_ASSOC. Three balancers are excluded from the 'carries' move by
+  curator decision: FM1 (FBba0000011), SM6a (FBba0000039) and SM6b (FBba0000040). See the
+  *_balancer_merges.tsv output for what moved.
+
   FTA-237: 24 aberrations are exported under their balancer's symbol and full name, driven by curated
   "FTA: Balancer - use balancer symbol and fullname for parent ..." internal notes, plus In(2LR)SM6
   (FBab0004818), which is renamed to "SM6" / "Second Multiple 6" from a hard-coded table because no
@@ -188,6 +197,30 @@ def main():
         curation_tsv.write_notes_tsv(
             filename=tsv_filename.replace('.tsv', '_notes.tsv'), entities=entities,
         )
+        # FTA-236: one row per FBba balancer merged into a parent FBab aberration, so curators can check
+        # what moved. Written unconditionally; the 'carries' counts stay 0 unless ADD_ALLELE_ALLELE_ASSOC
+        # is 'YES', since that gate controls the association export. write_association_tsv() needs a
+        # 'relation_name' cell, hence the constant, and the evidence sentinel is blanked because a merge
+        # carries no evidence of its own.
+        merges_filename = tsv_filename.replace('.tsv', '_balancer_merges.tsv')
+        curation_tsv.write_association_tsv(
+            filename=merges_filename,
+            rows=[dict(row, relation_name='merged_from_balancer') for row in aberration_handler.balancer_merge_report],
+            first_field='fbab_id',
+            second_field='fbba_id',
+            extra_fields=[
+                ('fbba_symbol', 'fbba_symbol', ''),
+                ('synonyms', 'synonyms', 0),
+                ('secondary_ids', 'secondary_ids', 0),
+                ('comments', 'comments', 0),
+                ('internal_notes', 'internal_notes', 0),
+                ('references', 'references', 0),
+                ('carries_alleles', 'carries_alleles', 0),
+                ('carries_excluded', 'carries_excluded', 0),
+            ],
+            no_pubs_sentinel='',
+        )
+        log.info(f'Generated TSV: {merges_filename} ({len(aberration_handler.balancer_merge_report)} balancer merges)')
         # FTA-237: one row per renamed aberration, so curators can check the 24 flag-driven renames and
         # the hard-coded In(2LR)SM6 case against their spreadsheet. write_association_tsv() is reused
         # rather than adding another writer; it needs a 'relation_name' cell, hence the constant below,
