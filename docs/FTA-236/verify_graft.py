@@ -98,7 +98,15 @@ class FakeEntity:
         self._rels = rels or {}
 
     def recall_relationships(self, log, **kwargs):
-        """Return relationships keyed by (entity_role, rel_types), as the real method filters them."""
+        """Return relationships keyed by (entity_role, rel_types).
+
+        Deliberately ignores rel_entity_types, and records whether it was passed: the nested
+        BalancerHandler has no feature_lookup, so its by-related-feature-type buckets are empty and
+        that filter would silently match nothing (the 2026-08-14 run moved 0 associations because of
+        it). The caller must filter partners against the AberrationHandler's own lookup instead.
+        """
+        if 'rel_entity_types' in kwargs:
+            RECALL_MISUSE.append(kwargs['rel_entity_types'])
         return self._rels.get((kwargs.get('entity_role'), kwargs.get('rel_types')), [])
 
     def __str__(self):
@@ -125,9 +133,21 @@ class FakeHandler:
         self.balancer_merge_report = []
         self.aberration_allele_rels = {}
         self.feature_subtypes = {'allele': ['allele'], 'insertion': ['insertion']}
+        # The nested BalancerHandler builds no feature_lookup, so partner types must be resolved
+        # against THIS handler's lookup (the one FTA-218 builds under the same gate).
+        self.feature_lookup = {
+            5001: {'type': 'allele', 'name': 'Bar[1]', 'uniquename': 'FBal0000817'},
+            5002: {'type': 'allele', 'name': 'sc[8]', 'uniquename': 'FBal0015197'},
+            5003: {'type': 'allele', 'name': 'held-back', 'uniquename': 'FBal0000003'},
+            5004: {'type': 'allele', 'name': 'cassette', 'uniquename': 'FBal0009999'},
+            5005: {'type': 'gene', 'name': 'wrong-type', 'uniquename': 'FBgn0000001'},
+            6001: {'type': 'insertion', 'name': 'P{x}1', 'uniquename': 'FBti0000001'},
+        }
+        self.cassette_ignore_list = {5004}
 
 
 results = []
+RECALL_MISUSE = []
 
 
 def check(name, condition):
@@ -188,7 +208,10 @@ check('two report rows written', len(h2.balancer_merge_report) == 2)
 
 print('--- carries associations: injected under the parent, exclusions honoured ---')
 basc = FakeEntity(101, 'FBba0000014', 'Basc', rels={
-    ('object', 'carried_on'): [FakeRel(1, 5001, 101), FakeRel(2, 5002, 101)],
+    ('object', 'carried_on'): [FakeRel(1, 5001, 101), FakeRel(2, 5002, 101),
+                               FakeRel(5, 5004, 101),    # cassette FBal: must be skipped with a warning
+                               FakeRel(6, 5005, 101),    # wrong partner type: must be skipped
+                               FakeRel(7, 5999, 101)],   # not in feature_lookup at all: must be skipped
     ('subject', 'associated_with'): [FakeRel(3, 101, 6001)],
 })
 fm1 = FakeEntity(111, 'FBba0000011', 'FM1', rels={
@@ -210,11 +233,17 @@ check('nothing keyed under the balancer itself', not any(k[0] in (101, 111) for 
 basc_row = next(r for r in h3.balancer_merge_report if r['fbba_id'] == 'FBba0000014')
 fm1_row = next(r for r in h3.balancer_merge_report if r['fbba_id'] == 'FBba0000011')
 check('report counts moved associations', basc_row['carries_alleles'] == 3)
+check('cassette partner skipped with a warning', any('cassette' in w.lower() for w in h3.log.warnings))
+check('wrong-type partner not moved', (1, 5005, 'carries') not in keys)
+check('partner missing from feature_lookup not moved', (1, 5999, 'carries') not in keys)
 check('report counts excluded associations', fm1_row['carries_excluded'] == 1)
 check('excluded balancer moved nothing', fm1_row['carries_alleles'] == 0)
 
 print('--- the relationship objects themselves are kept, for evidence lookup ---')
 rel_list = h3.aberration_allele_rels[(1, 5001, 'carries')]
 check('rel_key maps to the FBRelationship list', rel_list[0].rel_id == 1)
+
+check('rel_entity_types not passed to recall_relationships (empty buckets in the nested handler)',
+      RECALL_MISUSE == [])
 
 print(f'\n{sum(1 for _, ok in results if ok)}/{len(results)} checks PASSED')

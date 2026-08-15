@@ -17,8 +17,8 @@ MERGES=$(ls "$DIR"/*_balancer_merges.tsv)
 echo '--- FBba retrieval and merge tallies ---'
 grep -E 'obtained [0-9]+ FBba balancers|balancer merge flags|Merged .* balancers into|Moved [0-9]+ (synonyms|secondary_ids|comments|internal_notes|references)' "$LOG"
 
-echo '--- carries move (only present when ADD_ALLELE_ALLELE_ASSOC=YES) ---'
-grep -E 'balancer "carries" associations|Held back' "$LOG" || echo '(gate off: no carries lines)'
+echo '--- carries move (gate on: expect 273 moved, 53 held back, 0 skipped-unknown surprises) ---'
+grep -E 'balancer "carries" associations|Held back|balancer relationships whose partner' "$LOG" || echo '(gate off: no carries lines)'
 
 echo '--- errors: expect 0, or exactly 1 naming FBba0000688 before the note correction loads ---'
 grep -c ' ERROR ' "$LOG" || true
@@ -50,18 +50,14 @@ grep -m1 'FB:FBab0004219' "$TSV"
 echo '--- the N[opa33b] comment must have moved to the aberration ---'
 grep -c 'FBab0004219.*opa33b' "$DIR"/allele_curation_*_notes.tsv || echo '(not found - check the notes TSV)'
 
-echo '--- every merged parent must carry the balancer ID as a secondary ID ---'
-missing=0
-while IFS=$'\t' read -r fbab fbba; do
-  line=$(grep -m1 "^FB:$fbab" "$TSV" || true)
-  if [ -z "$line" ]; then
-    echo "NOT IN PRIMARY TSV: $fbab"
-    missing=$((missing + 1))
-  elif ! printf '%s' "$line" | grep -qF "$fbba"; then
-    echo "MISSING secondary ID: $fbab should list $fbba"
-    missing=$((missing + 1))
-  fi
-done < <(awk -F'\t' 'NR>1 {print $1"\t"$3}' "$MERGES" | sed 's/^FB://')
-echo "secondary-ID problems: $missing"
+echo '--- every merged balancer must appear as a secondary ID in the JSON ---'
+# NB check the JSON, not the primary TSV: write_primary_tsv() reads a "secondary_identifiers" key that
+# AlleleDTO does not have (it uses allele_secondary_id_dtos), so that column is empty for every allele
+# in every run - pre-existing, unrelated to this ticket.
+JSON=$(ls "$DIR"/allele_curation_*.json)
+grep -o '"secondary_id": "FB:FBba[0-9]*"' "$JSON" | grep -o 'FBba[0-9]*' | sort -u > /tmp/fta236_json_fbba.txt
+awk -F'\t' 'NR>1 {print $3}' "$MERGES" | grep '^FBba' | sort -u > /tmp/fta236_tsv_fbba.txt
+comm -23 /tmp/fta236_tsv_fbba.txt /tmp/fta236_json_fbba.txt | sed 's/^/MISSING secondary ID in JSON: /'
+echo "merged balancers: $(wc -l < /tmp/fta236_tsv_fbba.txt), present as secondary IDs: $(wc -l < /tmp/fta236_json_fbba.txt)"
 
 echo '--- done ---'

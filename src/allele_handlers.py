@@ -1711,21 +1711,29 @@ class AberrationHandler(MetaAlleleHandler):
         return
 
     def _resolve_parent_feature_id(self, fbab_uniquename):
-        """Return the feature_id of an exportable parent FBab, or None (FTA-236/237).
+        """Return the feature_id of a current parent FBab, or None (FTA-236/237).
 
-        Only aberrations in self.fb_data_entities can receive merged data or be renamed: that dict
-        holds the current, non-obsolete FBab features this handler exports. An obsolete or unrecognised
-        ID gets no fallback, by curator decision - Steven chose this over resolving stale IDs through
-        feature_dbxref (FTA-236 comment 43813, 2026-08-14), so that a note pointing at the wrong place
-        is reported rather than silently redirected. Do not add a secondary-ID fallback here.
+        NB - self.fb_data_entities holds obsolete aberrations as well as current ones: they are
+        exported as internal/obsolete rather than dropped. So membership of that dict is NOT enough,
+        and is_obsolete has to be checked explicitly. The 2026-08-14 run proved it: AM1 (FBba0000688)
+        named the obsolete FBab0007127, and without this check its data merged into that obsolete
+        entry instead of being reported.
 
-        All 24 FTA-237 rename parents are current. One FTA-236 merge flag, on AM1 (FBba0000688), names
-        the obsolete FBab0007127; a curation record loading the week of 2026-08-17 corrects it to
-        FBab0049550, so until then that one balancer is reported and skipped.
+        An obsolete or unrecognised ID gets no fallback, by curator decision - Steven chose this over
+        resolving stale IDs through feature_dbxref (FTA-236 comment 43813, 2026-08-14), so that a note
+        pointing at the wrong place is reported rather than silently redirected. Do not add a
+        secondary-ID fallback here.
+
+        All 24 FTA-237 rename parents are current. The one FTA-236 merge flag naming an obsolete
+        parent is AM1's; a curation record loading the week of 2026-08-17 corrects it to FBab0049550,
+        so until then that balancer is reported and skipped.
         """
         for aberration in self.fb_data_entities.values():
-            if aberration.uniquename == fbab_uniquename:
-                return aberration.db_primary_id
+            if aberration.uniquename != fbab_uniquename:
+                continue
+            if aberration.is_obsolete is True:
+                return None
+            return aberration.db_primary_id
         return None
 
     def synthesize_balancer_merge_map(self):
@@ -1839,6 +1847,13 @@ class AberrationHandler(MetaAlleleHandler):
 
         Gated with the rest of the allele-allele associations (FTA-218): the Alliance has no
         "allele_allele_association_ingest_set" yet.
+
+        NB - the partner type is checked against this handler's own feature_lookup rather than passed
+        to recall_relationships() as rel_entity_types. The nested BalancerHandler never calls
+        build_feature_lookup(), so get_entity_relationships() cannot fill its by-related-feature-type
+        buckets and that filter silently matches nothing - which is exactly what the 2026-08-14 run
+        showed, moving 0 associations while the relationships were plainly there. The lookup used here
+        is the one FTA-218 already builds under the same gate.
         """
         self.log.info('Move balancer carried alleles and insertions onto parent aberrations.')
         rel_specs = [
@@ -1848,15 +1863,27 @@ class AberrationHandler(MetaAlleleHandler):
         partner_attr = {'subject': 'object_id', 'object': 'subject_id'}
         moved = 0
         excluded = 0
+        skipped_unknown = 0
+        cassette_skipped = 0
         for fbba_feature_id, fbab_feature_id in self.balancer_merge_map.items():
             balancer = self.fbba_entities[fbba_feature_id]
             report_rows = [i for i in self.balancer_merge_report if i['fbba_id'] == balancer.uniquename]
             is_excluded = balancer.uniquename in self.balancer_carries_exclusions
             for entity_role, fb_rel_type, rel_entity_types, proforma_field in rel_specs:
-                relevant_rels = balancer.recall_relationships(self.log, entity_role=entity_role, rel_types=fb_rel_type,
-                                                              rel_entity_types=rel_entity_types)
+                relevant_rels = balancer.recall_relationships(self.log, entity_role=entity_role, rel_types=fb_rel_type)
                 for feat_rel in relevant_rels:
                     partner_id = getattr(feat_rel.chado_obj, partner_attr[entity_role])
+                    partner = self.feature_lookup.get(partner_id)
+                    if partner is None or partner['type'] not in rel_entity_types:
+                        skipped_unknown += 1
+                        continue
+                    # Cassette FBal features are never exported as alleles, so an association pointing
+                    # at one would dangle at the Alliance. Mirrors the FTA-218 check.
+                    if partner_id in self.cassette_ignore_list:
+                        self.log.warning(f'FTA-236: cassette FBal carried by balancer {balancer}, please check the '
+                                         f'data: {partner["name"]} ({partner["uniquename"]}) [proforma {proforma_field}]')
+                        cassette_skipped += 1
+                        continue
                     if is_excluded:
                         excluded += 1
                         for row in report_rows:
@@ -1873,6 +1900,10 @@ class AberrationHandler(MetaAlleleHandler):
         self.log.info(f'Moved {moved} balancer "carries" associations onto parent aberrations.')
         self.log.info(f'Held back {excluded} associations for the {len(self.balancer_carries_exclusions)} '
                       f'balancers excluded by FTA-236.')
+        self.log.info(f'Skipped {skipped_unknown} balancer relationships whose partner is not an exportable '
+                      f'allele or insertion.')
+        if cassette_skipped:
+            self.log.warning(f'Skipped {cassette_skipped} balancer relationships pointing at a cassette FBal feature.')
         return
 
     def synthesize_balancer_rename_map(self):

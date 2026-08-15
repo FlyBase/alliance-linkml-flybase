@@ -62,12 +62,12 @@ class FakeProp:
 class FakeEntity:
     """Stand-in for an FBAberration or FBBalancer entity."""
 
-    def __init__(self, feature_id, uniquename, name='', internal_notes=()):
-        """Build an entity with optional internal_notes props."""
+    def __init__(self, feature_id, uniquename, name='', internal_notes=(), is_obsolete=False):
+        """Build an entity with optional internal_notes props; obsolete entities are exported too."""
         self.db_primary_id = feature_id
         self.uniquename = uniquename
         self.name = name
-        self.is_obsolete = False
+        self.is_obsolete = is_obsolete
         self.props_by_type = {'internal_notes': [FakeProp(v) for v in internal_notes]} if internal_notes else {}
 
     def __str__(self):
@@ -138,6 +138,17 @@ check('obsolete/absent parent not merged', h.balancer_merge_map == {})
 check('error names the balancer', any('FBba0000688' in e for e in h.log.errors))
 check('error names the stale parent ID', any('FBab0007127' in e for e in h.log.errors))
 check('current T(2;3)A1-W is NOT silently substituted', 3 not in h.balancer_merge_map.values())
+
+print('--- obsolete parent PRESENT in fb_data_entities is still an error (2026-08-14 run bug) ---')
+# fb_data_entities holds obsolete aberrations too - they export as internal/obsolete - so membership
+# alone is not enough. Before the fix, AM1's data merged into the obsolete FBab0007127.
+h = FakeHandler([FakeEntity(7, 'FBab0007127', 'T(2;3)A1-W', is_obsolete=True),
+                 FakeEntity(3, 'FBab0049550', 'T(2;3)A1-W')],
+                [FakeEntity(105, 'FBba0000688', 'AM1', [FLAG_OBSOLETE])])
+h.synthesize_balancer_merge_map()
+check('obsolete parent in fb_data_entities is rejected', h.balancer_merge_map == {})
+check('error raised for the obsolete parent', any('FBab0007127' in e for e in h.log.errors))
+check('current same-named aberration not substituted', 3 not in h.balancer_merge_map.values())
 
 print('--- unknown parent ID is an error ---')
 h = FakeHandler([FakeEntity(1, 'FBab0004219', 'In(1)Basc')],
