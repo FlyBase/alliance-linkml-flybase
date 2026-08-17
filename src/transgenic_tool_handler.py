@@ -12,6 +12,7 @@ Author(s):
 # import csv
 # import re
 from logging import Logger
+from os import getenv
 import agr_datatypes
 import fb_datatypes
 from feature_handler import FeatureHandler
@@ -26,6 +27,9 @@ class ExperimentalToolHandler(FeatureHandler):
         self.fb_export_type = fb_datatypes.FBTool
         self.agr_export_type = agr_datatypes.TransgenicToolDTO
         self.primary_export_set = 'transgenic_tool_ingest_set'
+        # "tool_uses" slot annotations keyed by primary external ID, collected whether or not
+        # ADD_TOOL_USES is set so the curator TSV can report them (see map_tool_uses()).
+        self.tool_use_dtos_by_id = {}
 
     test_set = {
         'FBto0000001': 'C-Cerulean',  # First one
@@ -113,8 +117,20 @@ class ExperimentalToolHandler(FeatureHandler):
 
         Create one TransgenicToolUseSlotAnnotationDTO per FBcv term, carrying only the
         pubs that give evidence for that specific term.
+
+        The "transgenic_tool_use_dtos" slot exists only on agr_curation_schema "main": the latest
+        LinkML release (v2.17.0) still calls the slot "use_curies" and has no
+        TransgenicToolUseSlotAnnotationDTO class, so emitting it fails schema validation for the
+        whole transgenic tool file. The export is therefore gated behind ADD_TOOL_USES until a
+        LinkML release containing the slot is available (FTA-222). The annotations are always
+        collected into self.tool_use_dtos_by_id, gate or no gate, so the curator TSV reports them
+        while the JSON export stays clean (mirrors the ADD_IS_ABERRATION gate for alleles).
         """
         self.log.info('Map tool uses to Alliance object.')
+        add_uses = getenv('ADD_TOOL_USES', None) == 'YES'
+        if not add_uses:
+            self.log.info('ADD_TOOL_USES not set to "YES"; collecting tool uses for the TSV, but not '
+                          'exporting the "transgenic_tool_use_dtos" slot.')
         data_key = 'tool_uses'
         counter = 0
         for tool in self.fb_data_entities.values():
@@ -133,12 +149,20 @@ class ExperimentalToolHandler(FeatureHandler):
                     accession_to_pubs[accession] = set()
                 accession_to_pubs[accession].add(pub_curie)
             # Create one DTO per FBcv term.
+            slot_dtos = []
             for accession, pub_curies in accession_to_pubs.items():
                 slot_dto = agr_datatypes.TransgenicToolUseSlotAnnotationDTO(
                     sorted(pub_curies), [f'FBcv:{accession}']).dict_export()
-                tool.linkmldto.transgenic_tool_use_dtos.append(slot_dto)
+                slot_dtos.append(slot_dto)
                 counter += 1
+            if not slot_dtos:
+                continue
+            self.tool_use_dtos_by_id[tool.linkmldto.primary_external_id] = slot_dtos
+            if add_uses:
+                tool.linkmldto.transgenic_tool_use_dtos.extend(slot_dtos)
         self.log.info(f'Generated {counter} transgenic tool use slot annotations.')
+        if not add_uses:
+            self.log.info(f'Withheld tool uses for {len(self.tool_use_dtos_by_id)} tools from the JSON export.')
         return
 
     def synthesize_tool_associations(self):

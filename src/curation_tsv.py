@@ -228,17 +228,31 @@ def write_components_tsv(*, filename, entities, datatype):
                 )
 
 
-def write_tool_uses_tsv(*, filename, entities, datatype, no_pubs_sentinel=NO_PUBS_SENTINEL):
-    """Write the tool-uses TSV (`{datatype}_use_dtos`)."""
+def write_tool_uses_tsv(
+    *,
+    filename,
+    entities,
+    datatype,
+    no_pubs_sentinel=NO_PUBS_SENTINEL,
+    use_dtos_by_id=None,
+):
+    """Write the tool-uses TSV (`{datatype}_use_dtos`).
+
+    `use_dtos_by_id` supplies slot annotations, keyed by primary external ID, for entities whose
+    exported dict carries no `{datatype}_use_dtos` key. The transgenic tool script passes the
+    handler's collected annotations so this TSV stays populated while ADD_TOOL_USES keeps the slot
+    out of the JSON; the cassette script omits it and reads the exported dicts as before.
+    """
     skip = should_skip_obsolete()
     use_key = f'{datatype}_use_dtos'
+    fallback = use_dtos_by_id or {}
     with open(filename, 'w') as outfile:
         outfile.write(TOOL_USES_TSV_HEADER)
         for entity_dict in entities:
             if skip and _is_excluded(entity_dict):
                 continue
             primary = entity_dict["primary_external_id"]
-            for comp in entity_dict.get(use_key, []):
+            for comp in entity_dict.get(use_key) or fallback.get(primary, []):
                 if 'evidence_curies' in comp:
                     evidence = EVIDENCE_DELIMITER.join(comp['evidence_curies'])
                 else:
