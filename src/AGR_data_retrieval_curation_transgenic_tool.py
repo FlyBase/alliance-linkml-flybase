@@ -52,6 +52,11 @@ Environment variables:
   SERVER              Database server (e.g. flysql25)
   DATABASE            Database name (e.g. production_chado)
   ADD_OBSOLETE        Set to 'NO' to exclude obsolete/internal rows from the TSVs only; JSON output is unaffected
+  ADD_TOOL_USES       Set to 'YES' to emit the 'transgenic_tool_use_dtos' slot (TO4 'tool_uses' FBcv annotations).
+                      Off by default: the slot is only on agr_curation_schema 'main', where LinkML v2.17.0 still
+                      calls it 'use_curies' and has no TransgenicToolUseSlotAnnotationDTO class, so emitting it
+                      fails validation for the whole file. Requires a LinkML release containing the slot. The
+                      *_tool_uses.tsv is written either way, so this gates the JSON only. See FTA-222.
 """,
     formatter_class=argparse.RawDescriptionHelpFormatter
 )
@@ -122,7 +127,7 @@ def main():
         )
         curation_tsv.write_tool_uses_tsv(
             filename=tsv_filename.replace('.tsv', '_tool_uses.tsv'), entities=entities,
-            datatype='transgenic_tool',
+            datatype='transgenic_tool', use_dtos_by_id=tool_handler.tool_use_dtos_by_id,
         )
 
     if not reference_session:
