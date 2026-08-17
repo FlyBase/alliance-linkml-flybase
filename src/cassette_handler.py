@@ -259,7 +259,7 @@ class CassetteHandler(FeatureHandler):
         self.map_tool_uses()
         self.map_data_provider_dto()
         self.map_entity_props_to_notes('cassette_prop_to_note_mapping')
-        # self.map_xrefs()
+        # self.map_xrefs()    # CassetteDTO lacks cross_reference_dtos attribute (as ConstructDTO does).
         self.map_secondary_ids('secondary_identifiers')
         self.map_cassette_associations()
         self.map_cassette_internal_notes_fallback()
@@ -351,6 +351,9 @@ class CassetteHandler(FeatureHandler):
         self.get_entity_cvterms(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
+        # FB (non-current) xrefs only: these supply alt_fb_ids for the "secondary_identifiers" export.
+        # get_entity_xrefs() is deliberately not called - external xrefs would have nowhere to go, since
+        # CassetteDTO has no cross_reference_dtos attribute (see the commented map_xrefs above).
         self.get_entity_fb_xrefs(session)
         self.get_entity_relationships(session, 'subject')
 
