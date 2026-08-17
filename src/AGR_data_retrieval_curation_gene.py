@@ -53,6 +53,13 @@ Environment variables:
   SERVER              Database server (e.g. flysql25)
   DATABASE            Database name (e.g. production_chado)
   ADD_OBSOLETE        Set to 'NO' to exclude obsolete/internal rows from the TSVs only; JSON output is unaffected
+  ADD_GENE_CHANGE_EVENTS
+                      Set to 'YES' to emit the 'gene_change_event_dtos' slot ('Nomenclature History',
+                      FTA-192/FTA-193). Off by default, but note this gate is precautionary, not a fix: the
+                      slot IS in LinkML v2.17.0 so the file validates either way, and the curation app
+                      ignores unknown properties rather than rejecting them. It is gated because the app has
+                      no GeneDTO field for it, so the data is silently dropped on ingest. The
+                      *_gene_change_events.tsv is written either way, so this gates the JSON only. See FTA-222.
 """,
     formatter_class=argparse.RawDescriptionHelpFormatter
 )
@@ -121,6 +128,7 @@ def main():
         )
         curation_tsv.write_gene_change_events_tsv(
             filename=tsv_filename.replace('.tsv', '_gene_change_events.tsv'), entities=entities,
+            events_by_id=gene_handler.gene_change_event_dtos_by_id,
         )
         curation_tsv.write_skipped_identity_source_tsv(
             filename=tsv_filename.replace('.tsv', '_skipped_identity_source.tsv'),
