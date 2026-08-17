@@ -144,21 +144,27 @@ def write_notes_tsv(*, filename, entities):
                 outfile.write(f"{primary}\t{note['note_type_name']}\t{free_text}\t{evidence}\n")
 
 
-def write_gene_change_events_tsv(*, filename, entities):
+def write_gene_change_events_tsv(*, filename, entities, events_by_id=None):
     """Write the gene change events TSV (`gene_change_event_dtos` slot).
 
     One row per change event. Rename events (from 'identity_source') fill the
     symbol columns; nomenclature comment events fill the note column with the
     inner note's free_text. Evidence curies are pipe-joined.
+
+    `events_by_id` supplies the change events, keyed by primary external ID, for genes whose
+    exported dict carries no `gene_change_event_dtos` key. The gene script passes the handler's
+    collected events so this TSV stays populated while ADD_GENE_CHANGE_EVENTS keeps the slot out
+    of the JSON.
     """
     skip = should_skip_obsolete()
+    fallback = events_by_id or {}
     with open(filename, 'w') as outfile:
         outfile.write(GENE_CHANGE_EVENTS_TSV_HEADER)
         for entity_dict in entities:
             if skip and _is_excluded(entity_dict):
                 continue
             primary = entity_dict["primary_external_id"]
-            for event in entity_dict.get("gene_change_event_dtos", []):
+            for event in entity_dict.get("gene_change_event_dtos") or fallback.get(primary, []):
                 event_type = event.get("event_type_name", "")
                 renamed_from = event.get("symbol_renamed_from", "")
                 renamed_to = event.get("symbol_renamed_to", "")

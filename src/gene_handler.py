@@ -12,6 +12,7 @@ Author(s):
 import csv
 import re
 from logging import Logger
+from os import getenv
 from harvdev_utils.char_conversions import clean_free_text
 import agr_datatypes
 import fb_datatypes
@@ -42,6 +43,9 @@ class GeneHandler(FeatureHandler):
         self.agr_export_type = agr_datatypes.GeneDTO
         self.primary_export_set = 'gene_ingest_set'
         self.skipped_identity_source = []    # Multi-token "identity_source" props skipped during change event mapping.
+        # Change events keyed by primary external ID, collected whether or not ADD_GENE_CHANGE_EVENTS
+        # is set so the curator TSV can report them (see map_gene_change_events()).
+        self.gene_change_event_dtos_by_id = {}
 
     test_set = {
         'FBgn0284084': 'wg',                  # Current annotated nuclear protein_coding gene.
@@ -305,8 +309,21 @@ class GeneHandler(FeatureHandler):
         (confirmed by Steven, FTA-193); event_status_name and current_version are omitted (made
         optional in schema PR #326, no FlyBase data to import).
 
+        The JSON export is gated behind ADD_GENE_CHANGE_EVENTS. Unlike the other export gates this
+        one is precautionary rather than a fix: "gene_change_event_dtos" IS in the released LinkML
+        v2.17.0, so the gene file validates either way, and the curation app sets Jackson's
+        FAIL_ON_UNKNOWN_PROPERTIES to false, so it silently drops the slot instead of rejecting the
+        file. But the app has no GeneDTO field for it (no "changeEvent" anywhere in agr_curation),
+        so the data goes nowhere on ingest; the gate makes that explicit and protects us if the
+        Alliance ever starts rejecting unknown properties (FTA-222).
+        The events are always collected into self.gene_change_event_dtos_by_id, gate or no gate, so
+        the curator TSV reports them while the JSON stays clean (as ADD_TOOL_USES does for tools).
         """
         self.log.info('Map gene "Nomenclature History" props to Alliance gene change events.')
+        add_events = getenv('ADD_GENE_CHANGE_EVENTS', None) == 'YES'
+        if not add_events:
+            self.log.info('ADD_GENE_CHANGE_EVENTS not set to "YES"; collecting change events for the '
+                          'TSV, but not exporting the "gene_change_event_dtos" slot.')
         nomen_comment_counter = 0
         identity_source_counter = 0
         skipped_identity_source_counter = 0
@@ -314,6 +331,7 @@ class GeneHandler(FeatureHandler):
             if gene.linkmldto is None:
                 continue
             gene_id = gene.linkmldto.primary_external_id
+            events = []
             # 'gene_nomenclature_comment' -> one change event per comment, comment held as inner note.
             nomen_notes = self.convert_prop_to_note(gene, 'gene_nomenclature_comment', 'gene_nomenclature_note')
             for note in nomen_notes:
@@ -323,7 +341,7 @@ class GeneHandler(FeatureHandler):
                     note.get('evidence_curies', []),
                 )
                 change_event.note_dtos = [note]
-                gene.linkmldto.gene_change_event_dtos.append(change_event.dict_export())
+                events.append(change_event.dict_export())
                 nomen_comment_counter += 1
             # 'identity_source' -> symbol_renamed_to (new, first) and symbol_renamed_from (old, second).
             for fb_prop in gene.props_by_type.get('identity_source', []):
@@ -351,11 +369,19 @@ class GeneHandler(FeatureHandler):
                 )
                 change_event.symbol_renamed_to = symbols[0]
                 change_event.symbol_renamed_from = symbols[1]
-                gene.linkmldto.gene_change_event_dtos.append(change_event.dict_export())
+                events.append(change_event.dict_export())
                 identity_source_counter += 1
+            if not events:
+                continue
+            self.gene_change_event_dtos_by_id[gene_id] = events
+            if add_events:
+                gene.linkmldto.gene_change_event_dtos.extend(events)
         self.log.info(f'Mapped {nomen_comment_counter} "gene_nomenclature_comment" change events.')
         self.log.info(f'Mapped {identity_source_counter} "identity_source" change events '
                       f'({skipped_identity_source_counter} skipped due to unexpected value format).')
+        if not add_events:
+            self.log.info(f'Withheld change events for {len(self.gene_change_event_dtos_by_id)} genes '
+                          f'from the JSON export.')
         return
 
     # Elaborate on query_chado_and_export() for the GeneHandler.
