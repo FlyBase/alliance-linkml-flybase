@@ -216,7 +216,12 @@ class DataHandler(object):
         'cell_line': r'^FBtc[0-9]{7}$',
         'clone': r'^FBcl[0-9]{7}$',
         'panther': r'PTHR[0-9]{5}',
-        'systematic_name': r'^(D[a-z]{3}\\|)(CG|CR|G[A-Z])[0-9]{4,5}',
+        # FTA-238: anchored at both ends, so an allele symbol that merely starts with an annotation
+        # ID (CG17836[142]) is no longer retyped as a systematic name. The optional -(R|P)[A-Z]*
+        # tail keeps annotated transcript/polypeptide forms (CG12345-RA, CR3456-PB) matching, at
+        # Gil's request, for if FBtr/FBpp are ever exported. The | inside the first group is what
+        # makes the species prefix optional; it is not part of the defect.
+        'systematic_name': r'^(D[a-z]{3}\\|)(CG|CR|G[A-Z])[0-9]{4,5}(-(R|P)[A-Z]*)?$',
     }
 
     # Feature sub-types that are considered their own data class.

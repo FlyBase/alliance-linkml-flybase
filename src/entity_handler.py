@@ -1034,6 +1034,14 @@ class PrimaryEntityHandler(DataHandler):
         }
         # AGR name types that represent a symbol, as opposed to a full name or a plain synonym.
         symbol_type_names = ['nomenclature_symbol', 'systematic_name']
+        # FTA-238: only genes may carry a systematic name. Steven, Gillian and Gil all confirmed
+        # (FTA-238, 2026-08-11) that "systematic" is a gene concept and that the Alliance slot is
+        # gene_systematic_name, scoped to genes, so no other data class may retype a symbol this way.
+        # Previously every caller of this method did, which mistyped 46,315 of 47,953 exported
+        # systematic_name DTOs - almost all of them allele symbols of unnamed genes. Applying FBti
+        # lineIDs or FBsn stock IDs as systematic names would need a chado flag, not a string pattern,
+        # and is deliberately out of scope here.
+        retype_systematic_names = self.datatype == 'gene'
         for fb_data_entity in self.fb_data_entities.values():
             # For each entity, gather synonym_id-keyed dict of synonym info.
             for feat_syno in fb_data_entity.synonyms:
@@ -1055,8 +1063,9 @@ class PrimaryEntityHandler(DataHandler):
             # Go back over each synonym and refine each
             for syno_id, syno_dict in fb_data_entity.synonym_dict.items():
                 # Then modify attributes as needed.
-                # Identify systematic names.
-                if (re.match(self.regex['systematic_name'], syno_dict['format_text']) and syno_dict['name_type_name'] == 'nomenclature_symbol'):
+                # Identify systematic names (genes only - see retype_systematic_names above).
+                is_nomenclature_symbol = syno_dict['name_type_name'] == 'nomenclature_symbol'
+                if retype_systematic_names and is_nomenclature_symbol and re.match(self.regex['systematic_name'], syno_dict['format_text']):
                     syno_dict['name_type_name'] = 'systematic_name'
                 # Classify is_current (convert list of booleans into a single boolean).
                 if True in syno_dict['is_current']:
