@@ -28,6 +28,13 @@ from utils import export_chado_data
 
 BALANCER_MERGE_EXPECTED = 38     # FTA-236: curated "merge with parent" flags in chado as of 2026-08-14.
 BALANCER_RENAME_EXPECTED = 24    # FTA-237: curated "use balancer symbol and fullname" flags in chado as of 2026-08-14.
+# FTA-236: chado synonym types NOT grafted from a balancer onto its parent aberration. Steven's
+# decision (FTA-236 comment, 2026-08-19): exclude "nickname" from the balancer export. Filtering is
+# on the chado type deliberately - synthesize_synonyms() maps both "nickname" and "synonym" to the
+# LinkML name type "unspecified", so filtering on that would also drop every ordinary chado synonym
+# (162,999 rows against 482 nicknames). Whether nicknames should go from the export generally is
+# FTA-244; this constant is scoped to the graft only.
+BALANCER_EXCLUDED_SYNONYM_TYPES = ('nickname',)
 
 
 class MetaAlleleHandler(FeatureHandler):
@@ -1774,12 +1781,20 @@ class AberrationHandler(MetaAlleleHandler):
         every existing mapping method produces the merged output unchanged. Only whitelisted prop types
         move (see balancer_graft_prop_types), and relationships are handled separately by
         synthesize_balancer_carries_associations() so they cannot reach aberration-gene synthesis.
+
+        Synonyms of a chado type in BALANCER_EXCLUDED_SYNONYM_TYPES ("nickname") are not grafted, per
+        Steven's decision on FTA-236. That also removes two artifacts seen in UAT: a synonym identical
+        to the aberration's newly promoted symbol (Basc, TM3) and the duplicate SM6a/SM6b pair, which
+        arose because chado holds those names as both a nickname and a symbol. The "synonyms" count in
+        the merge report counts what is actually grafted, so it no longer includes skipped nicknames.
         """
+        grafted_synonyms = [s for s in balancer.synonyms
+                            if s.synonym.type.name not in BALANCER_EXCLUDED_SYNONYM_TYPES]
         report = {
             'fbba_id': balancer.uniquename,
             'fbba_symbol': balancer.name,
             'fbab_id': aberration.uniquename,
-            'synonyms': len(balancer.synonyms),
+            'synonyms': len(grafted_synonyms),
             'secondary_ids': 1 + len(balancer.fb_sec_dbxrefs),
             'comments': len(balancer.props_by_type.get('misc', [])),
             'internal_notes': len(balancer.props_by_type.get('internal_notes', [])),
@@ -1794,8 +1809,8 @@ class AberrationHandler(MetaAlleleHandler):
         # allele_full_name_dto at all and the aberration's own full name vanishes from the export.
         # FTA-237 deliberately renames 24 of these aberrations to the balancer symbol/full name; it
         # does that by setting the slots in map_balancer_renames(), not by skipping this demotion.
-        aberration.synonyms.extend(balancer.synonyms)
-        balancer_synonym_ids = [i.synonym_id for i in balancer.synonyms]
+        aberration.synonyms.extend(grafted_synonyms)
+        balancer_synonym_ids = [i.synonym_id for i in grafted_synonyms]
         aberration.merged_synonym_ids.update(balancer_synonym_ids)
         aberration.demoted_synonym_ids.update(balancer_synonym_ids)
         # Identifiers: the balancer's current ID plus any of its own secondary IDs.
