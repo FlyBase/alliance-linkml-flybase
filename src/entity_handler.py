@@ -1071,6 +1071,15 @@ class PrimaryEntityHandler(DataHandler):
                 is_merged_symbol = syno_id in fb_data_entity.merged_synonym_ids and syno_dict['name_type_name'] in symbol_type_names
                 if syno_dict['is_current'] is True and is_merged_symbol and syno_dict['format_text'] != fb_data_entity.name:
                     syno_dict['is_current'] = False
+                # FTA-236: a balancer's names must never rival the parent aberration's own. Unlike
+                # merged_synonym_ids this covers full names too: map_synonyms() sets no
+                # allele_full_name_dto at all when it finds two current full names, so an undemoted
+                # balancer full name would delete the aberration's own from the export. The entity's
+                # own name is exempt for the same reason as above - a synonym_id can be shared by both
+                # features, and the entity must never lose its own name.
+                is_demoted = syno_id in fb_data_entity.demoted_synonym_ids
+                if syno_dict['is_current'] is True and is_demoted and syno_dict['format_text'] != fb_data_entity.name:
+                    syno_dict['is_current'] = False
                 # Classify is_internal (convert list of booleans into a single boolean).
                 if False in syno_dict['is_internal']:
                     syno_dict['is_internal'] = False

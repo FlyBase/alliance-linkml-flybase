@@ -93,6 +93,7 @@ class FBDataEntity(FBExportEntity):
         self.pub_associations = []        # Pub associations: e.g., FeaturePub, StrainPub.
         self.synonyms = []                # Synonym associations: e.g., FeatureSynonym.
         self.merged_synonym_ids = set()   # synonym_ids merged in from a superseded entity; never current symbols here.
+        self.demoted_synonym_ids = set()  # synonym_ids to force non-current for ALL name types (FTA-236 balancer merges).
         self.fb_sec_dbxrefs = []          # 2o/non-current FlyBase xref objects: e.g., FeatureDbxref.
         self.dbxrefs = []                 # Current xref objects: e.g., FeatureDbxref.
         self.props_by_type = {}           # Lists of FBProp objects keyed by prop type name.
