@@ -500,7 +500,9 @@ class CassetteHandler(FeatureHandler):
         if data_key in entity.prop_data.keys():
             for item in entity.prop_data[data_key]:
                 pubs.add(item['pub'])
-        pub_curies = ['FB:' + item for item in list(pubs)]
+        # FTA-232: sorted so the warning below reads the same across runs; comparing two runs' logs
+        # otherwise needs the pub lists normalised before they match.
+        pub_curies = ['FB:' + item for item in sorted(pubs)]
         if len(pub_curies) == 1:  # 1
             return pub_curies
         if len(pub_curies) > 1:  # 1 a

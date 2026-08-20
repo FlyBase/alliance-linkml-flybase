@@ -1019,7 +1019,10 @@ class PrimaryEntityHandler(DataHandler):
             secondary_ids = []
             for xref in fb_data_entity.fb_sec_dbxrefs:
                 secondary_ids.append(f'FB:{xref.dbxref.accession}')
-            fb_data_entity.alt_fb_ids = list(set(fb_data_entity.alt_fb_ids).union(set(secondary_ids)))
+            # FTA-232: sorted, not list(set(...)) - these are strings, and Python randomises string
+            # hashing per process, so an unsorted set made two exports of identical chado data differ
+            # in the exported secondary_identifiers order.
+            fb_data_entity.alt_fb_ids = sorted(set(fb_data_entity.alt_fb_ids).union(set(secondary_ids)))
         return
 
     def synthesize_synonyms(self):
@@ -1116,6 +1119,9 @@ class PrimaryEntityHandler(DataHandler):
             for prop_list in fb_data_entity.props_by_type.values():
                 for prop in prop_list:
                     fb_data_entity.all_pubs.extend(prop.pubs)
+            # FTA-232: deliberately NOT sorted. These are pub_ids, and hash(int) == int, so set
+            # iteration is already stable across processes. reference_curies is built from this list
+            # below, so sorting would reorder every entity's references for no determinism gain.
             fb_data_entity.all_pubs = list(set(fb_data_entity.all_pubs))
         return
 
