@@ -344,6 +344,8 @@ class DataHandler(object):
             pub_id_list = [pub_id_list]
         pub_curie_list = []
         # First, try to get curies for each pub_id.
+        # FTA-232: deliberately NOT sorted - pub_ids are ints, so this iteration is already stable
+        # across processes, and sorting would reorder exported evidence lists for no gain.
         for pub_id in set(pub_id_list):
             try:
                 pub_curie_list.append(self.bibliography[pub_id])

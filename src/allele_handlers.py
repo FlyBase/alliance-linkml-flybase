@@ -110,7 +110,11 @@ class MetaAlleleHandler(FeatureHandler):
             elif metaallele.sf_reagent_colls:
                 collections.extend(metaallele.sf_reagent_colls)
             if collections:
-                collections = list(set(collections))
+                # FTA-232: sort by name before picking. These are Library ORM objects, whose hash is
+                # object identity, so the order varies per run regardless of PYTHONHASHSEED - and since
+                # collections[0].name is exported, the value itself could differ between runs, not just
+                # an order. Alphabetical is a stable tie-break, not a curation rule.
+                collections = sorted(set(collections), key=lambda coll: coll.name)
                 metaallele.linkmldto.in_collection_name = collections[0].name
                 if len(collections) > 1:
                     self.log.warning(f'{metaallele} has many relevant collections: {[i.name for i in collections]}')

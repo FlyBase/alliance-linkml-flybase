@@ -571,7 +571,8 @@ class AGMDiseaseHandler(DataHandler):
                 # self.log.debug(f'Many ECOs for model_key={ukey}: {uniqued_list}')
                 many_counter += 1
         self.log.info(f'Have {zero_counter} keys in lookup with NO ECO; {one_counter} keys with ONE ECO; {many_counter} keys with MANY ECOS.')
-        self.log.info(f'Have these distinct ECO codes: {set(distinct_ecos)}')
+        # FTA-232: sorted so this line is stable across runs.
+        self.log.info(f'Have these distinct ECO codes: {sorted(set(distinct_ecos))}')
         return
 
     def lookup_eco_codes_for_modifier_annotations(self):
