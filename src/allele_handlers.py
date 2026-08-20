@@ -148,6 +148,15 @@ class AlleleHandler(MetaAlleleHandler):
         self.transgenic_fbal_fbti_dict = {}    # Will be FBal-feature_id-keyed dict of FBti feature_id lists (via FBtp to unspecified FBti).
         self.fbti_entities = {}                # Will be feature_id-keyed FBAllele objects generated from FBti insertions.
         self.generic_ti_fbtp_ids = set()       # FTA-180 Part B: set of FBtp feature_ids flagged 'FTA: generic TI construct'.
+        # Additional export sets.
+        self.allele_gene_rels = {}                 # Will be (allele feature_id, gene feature_id) tuples keying lists of FBRelationships.
+        # Final list of gene-allele FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
+        self.allele_gene_associations = []
+        self.allele_construct_rels = {}            # Will be (allele feature_id, construct feature_id) tuples keying lists of FBRelationships.
+        self.allele_construct_associations = []    # Will be the final list of construct-allele FBRelationships to export (AlleleConstructAssociationDTO).
+        # Additional reference info.
+        self.allele_class_terms = []          # A list of cvterm_ids for child terms of "allele_class" (FBcv:0000286).
+        self.allele_mutant_type_terms = []    # A list of cvterm_ids for child terms of chromosome_structure_variation or sequence_alteration.
 
     test_set = {
         'FBal0386858': 'SppL[CR70402-TG4.1]',   # Insertion allele superceded by FBti0226866 (superseded_by_at_locus_insertion).
@@ -203,12 +212,6 @@ class AlleleHandler(MetaAlleleHandler):
         'FBal0064059': 'ebi[k16213]',   # FTA-207 note props: internal_notes, misc, origin_comment, origin_type.
     }
 
-    # Additional export sets.
-    allele_gene_rels = {}                 # Will be (allele feature_id, gene feature_id) tuples keying lists of FBRelationships.
-    allele_gene_associations = []         # Will be the final list of gene-allele FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
-    allele_construct_rels = {}            # Will be (allele feature_id, construct feature_id) tuples keying lists of FBRelationships.
-    allele_construct_associations = []    # Will be the final list of construct-allele FBRelationships to export (AlleleConstructAssociationDTO).
-
     # Simple mapping of props to Alliance note types, for cases where it is one-to-one correspondence.
     # The key is the cvterm.name for the FlyBase prop type.
     # The value is a tuple representing the Alliance note type, and where to append the note: (Alliance note type name, Alliance slot name).
@@ -226,9 +229,6 @@ class AlleleHandler(MetaAlleleHandler):
         'origin_comment': ('notes_on_origin', 'note_dtos'),    # FBal
     }
 
-    # Additional reference info.
-    allele_class_terms = []          # A list of cvterm_ids for child terms of "allele_class" (FBcv:0000286).
-    allele_mutant_type_terms = []    # A list of cvterm_ids for child terms of chromosome_structure_variation or sequence_alteration.
     inheritance_mode_terms = {
         'recessive': 'recessive',
         'dominant': 'dominant',
@@ -1199,6 +1199,24 @@ class AberrationHandler(MetaAlleleHandler):
         super().__init__(log, testing)
         self.datatype = 'aberration'
         self.fb_export_type = FBAberration
+        # Additional export sets.
+        self.aberration_gene_rels = {}            # Will be (FBab feature_id, FBgn feature_id, AGR_rel_type, ECO) tuples keying lists of FBRelationships.
+        # Final list of gene-aberration FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
+        self.aberration_gene_associations = []
+        # FTA-218: aberration-to-allele associations ("carries" and "breakpoint_allele").
+        self.aberration_allele_rels = {}          # Will be (FBab feature_id, FBal/FBti feature_id, AGR_rel_type) tuples keying lists of FBRelationships.
+        # Final list of aberration-allele FBRelationships (AlleleAlleleAssociationDTO under linkmldto attr).
+        self.aberration_allele_associations = []
+        self.balancer_ids = set()                 # FTA-235: FB curies of FBab aberrations flagged as balancers; filled regardless of the export gate.
+        self.balancer_merge_map = {}              # FTA-236: {FBba feature_id: parent FBab feature_id} for resolved merge flags.
+        self.balancer_merge_report = []            # FTA-236: dicts of what moved per balancer, for the curator TSV.
+        self.balancer_rename_map = {}             # FTA-237: {FBba feature_id: parent FBab feature_id} for resolved rename flags.
+        self.balancer_rename_report = []          # FTA-237: dicts of old/new names per renamed aberration, for the curator TSV.
+        # Additional reference info.
+        self.chr_str_var_terms = []    # A list of cvterm_ids for child terms of "chromosome_structure_variation" (SO:0000240).
+        self.seq_alt_terms = []        # A list of cvterm_ids for child terms of "sequence_alteration" (SO:0001059).
+        self.str_var_terms = []        # A list of cvterm_ids for child terms of "structural_variant" (SO:0001537).
+        self.chr_del_terms = []        # A list of cvterm_ids for child terms of "chromosomal_deletion" (SO:1000029).
 
     test_set = {
         'FBab0000001': 'Df(2R)03072',           # Random selection.
@@ -1286,25 +1304,8 @@ class AberrationHandler(MetaAlleleHandler):
         'FBab0004818': ('SM6', 'Second Multiple 6'),
     }
 
-    # Additional export sets.
-    aberration_gene_rels = {}            # Will be (FBab feature_id, FBgn feature_id, AGR_rel_type, ECO) tuples keying lists of FBRelationships.
-    aberration_gene_associations = []    # Will be the final list of gene-aberration FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
-    # FTA-218: aberration-to-allele associations ("carries" and "breakpoint_allele").
-    aberration_allele_rels = {}          # Will be (FBab feature_id, FBal/FBti feature_id, AGR_rel_type) tuples keying lists of FBRelationships.
-    aberration_allele_associations = []  # Will be the final list of aberration-allele FBRelationships (AlleleAlleleAssociationDTO under linkmldto attr).
     cassette_ignore_list = set()         # FTA-218: FBal feature_ids that are construct cassettes, and so are never exported as alleles.
-    balancer_ids = set()                 # FTA-235: FB curies of FBab aberrations flagged as balancers; filled regardless of the export gate.
     fbba_entities = {}                   # FTA-236/237: feature_id-keyed FBBalancer objects from the nested BalancerHandler.
-    balancer_merge_map = {}              # FTA-236: {FBba feature_id: parent FBab feature_id} for resolved merge flags.
-    balancer_merge_report = []            # FTA-236: dicts of what moved per balancer, for the curator TSV.
-    balancer_rename_map = {}             # FTA-237: {FBba feature_id: parent FBab feature_id} for resolved rename flags.
-    balancer_rename_report = []          # FTA-237: dicts of old/new names per renamed aberration, for the curator TSV.
-
-    # Additional reference info.
-    chr_str_var_terms = []    # A list of cvterm_ids for child terms of "chromosome_structure_variation" (SO:0000240).
-    seq_alt_terms = []        # A list of cvterm_ids for child terms of "sequence_alteration" (SO:0001059).
-    str_var_terms = []        # A list of cvterm_ids for child terms of "structural_variant" (SO:0001537).
-    chr_del_terms = []        # A list of cvterm_ids for child terms of "chromosomal_deletion" (SO:1000029).
 
     # Additional sub-methods for get_general_data().
     def get_cassette_allele_ids(self, session):

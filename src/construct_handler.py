@@ -40,6 +40,11 @@ class ConstructHandler(FeatureHandler):
         self.fbal_tool_uses = {}              # {fbal_fid: [{cvterm_name, accession, pub_id}, ...]}
         # FTA-182 v3: pubs on the producedby rel (FBti subject -> generic-TI FBtp object).
         self.ti_producedby_pubs = {}          # {ti_fid: [pub_id, ...]}
+        # Additional sets for export added to the handler.
+        # Will be a list of FBExportEntity objects (rels), map to ConstructGenomicEntityAssociationDTO.
+        self.construct_associations = []
+        # Will be a list of FBExportEntity objects, map to ConstructCassetteAssociationDTO.
+        self.construct_cassette_associations = []
 
     # FBals whose marked_with relationship maps to 'has_transcriptional_unit'
     # instead of the default 'has_selectable_marker' (FTA-139, reused by FTA-183).
@@ -140,10 +145,6 @@ class ConstructHandler(FeatureHandler):
     }
 
     # Additional set for export added to the handler.
-    # Will be a list of FBExportEntity objects (rels), map to ConstructGenomicEntityAssociationDTO.
-    construct_associations = []
-    # Will be a list of FBExportEntity objects, map to ConstructCassetteAssociationDTO.
-    construct_cassette_associations = []
     # Anonymous cassette data.
 
     # Elaborate on get_general_data() for the ConstructHandler.

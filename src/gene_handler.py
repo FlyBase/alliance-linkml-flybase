@@ -46,6 +46,8 @@ class GeneHandler(FeatureHandler):
         # Change events keyed by primary external ID, collected whether or not ADD_GENE_CHANGE_EVENTS
         # is set so the curator TSV can report them (see map_gene_change_events()).
         self.gene_change_event_dtos_by_id = {}
+        # Additional reference info.
+        self.pthr_dict = {}                  # Will be an 1:1 FBgn_ID-PTHR xref dict.
 
     test_set = {
         'FBgn0284084': 'wg',                  # Current annotated nuclear protein_coding gene.
@@ -70,9 +72,6 @@ class GeneHandler(FeatureHandler):
         'FBgn0026367': 'Scer_GAL80',          # Current yeast gene, SGD:S000004515.
         'FBgn0287889': 'SARS-CoV-2_ORF3a',    # Current SARS-CoV2 gene, REFSEQ:YP_009724391.
     }
-
-    # Additional reference info.
-    pthr_dict = {}                   # Will be an 1:1 FBgn_ID-PTHR xref dict.
 
     gene_prop_to_note_mapping = {
         'misc': ('comment', 'note_dtos'),

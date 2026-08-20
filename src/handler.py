@@ -63,6 +63,7 @@ class DataHandler(object):
         self.cvterm_lookup = {}                     # A cvterm_id-keyed dict of dicts with these keys: 'name', 'cv_name', 'db_name', 'curie'.
         self.organism_lookup = {}                   # An organism_id-keyed dict of organism info.
         self.chr_dict = {}                          # Will be a feature_id-keyed dict of chr scaffold uniquenames.
+        self.mod_official_dbs = {}                  # FTA-216: organism-abbreviation-keyed dict of MOD official db names.
         self.feature_lookup = {}                    # feature_id-keyed dicts {uniquename, curie, is_obsolete, type, organism_id, name, symbol, exported}.
         self.uname_feature_lookup = {}              # FB uniquename-keyed dicts of self.feature_lookup.values().
         self.allele_gene_lookup = {}                # allele feature_id-keyed dict of related gene feature_id (current features only).
@@ -83,9 +84,8 @@ class DataHandler(object):
     # Sample set for faster testing: use uniquename-keyed names of objects, tailored for each handler.
     test_set = {}
 
-    # Alliance organism abbreviations and official dbs.
+    # Alliance organism abbreviations.
     alliance_organisms = ['Scer', 'Cele', 'Dmel', 'Drer', 'Xlae', 'Xtro', 'Mmus', 'Rnor', 'Hsap', 'SARS-CoV-2']
-    mod_official_dbs = {}
 
     # Alliance db names should correspond to the contents of this file:
     # https://github.com/alliance-genome/agr_schemas/blob/master/resourceDescriptors.yaml
