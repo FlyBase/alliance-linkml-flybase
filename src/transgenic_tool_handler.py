@@ -30,6 +30,8 @@ class ExperimentalToolHandler(FeatureHandler):
         # "tool_uses" slot annotations keyed by primary external ID, collected whether or not
         # ADD_TOOL_USES is set so the curator TSV can report them (see map_tool_uses()).
         self.tool_use_dtos_by_id = {}
+        self.tool_associations = []
+        self.tool_tool_rels = {}
 
     test_set = {
         'FBto0000001': 'C-Cerulean',  # First one
@@ -47,8 +49,6 @@ class ExperimentalToolHandler(FeatureHandler):
         # At the moment, just for code development. (line below)
         # 'internal_notes': ('internal_note', 'note_dtos'),
     }
-    tool_associations = []
-    tool_tool_rels = {}
 
     def get_general_data(self, session):
         """Extend the method for the AlleleHandler."""

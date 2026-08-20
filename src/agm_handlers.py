@@ -155,6 +155,13 @@ class GenotypeHandler(PrimaryEntityHandler):
         self.fb_export_type = fb_datatypes.FBGenotype
         self.agr_export_type = agr_datatypes.AffectedGenomicModelDTO
         self.primary_export_set = 'agm_ingest_set'
+        # Additional export sets.
+        self.agm_component_associations = []    # A list of AgmAlleleAssociationDTOs.
+        # Additional reference info.
+        self.dmel_insertion_allele_ids = []    # feature_ids for alleles related to FBti insertions (associated_with/progenitor).
+        self.transgenic_allele_ids = []        # feature_ids for alleles related to FBtp constructs.
+        self.in_vitro_allele_ids = []          # feature_ids for alleles having "in vitro construct" CV term annotations.
+        self.introgressed_aberr_ids = []       # feature_ids for aberrations of type "introgressed_chromosome".
 
     test_set = {
         2: 'Ab(1)ZWD16 | FBab0027942',                             # The first genotype in the table.
@@ -192,15 +199,6 @@ class GenotypeHandler(PrimaryEntityHandler):
 
         # 525357: 'w[*]; betaTub60D[2] Kr[If-1]|CyO',                              # Genotype from stock; genotype_id here is for FB2024_06 only.
     }
-
-    # Additional export sets.
-    agm_component_associations = []    # A list of AgmAlleleAssociationDTOs.
-
-    # Additional reference info.
-    dmel_insertion_allele_ids = []    # feature_ids for alleles related to FBti insertions (associated_with/progenitor).
-    transgenic_allele_ids = []        # feature_ids for alleles related to FBtp constructs.
-    in_vitro_allele_ids = []          # feature_ids for alleles having "in vitro construct" CV term annotations.
-    introgressed_aberr_ids = []       # feature_ids for aberrations of type "introgressed_chromosome".
 
     # Elaborate on get_general_data() for the GenotypeHandler.
     def get_general_data(self, session):

@@ -1601,10 +1601,9 @@ class AlleleDiseaseHandler(DataHandler):
         self.fb_export_type = fb_datatypes.FBAlleleDiseaseAnnotation
         self.agr_export_type = agr_datatypes.AlleleDiseaseAnnotationDTO
         self.primary_export_set = 'disease_allele_ingest_set'
-
-    # A dict of unique disease annotation attributes.
-    # This will be used after initial data pull to filter out redundant disease annotations.
-    uniq_dis_dict = {}
+        # A dict of unique disease annotation attributes.
+        # This will be used after initial data pull to filter out redundant disease annotations.
+        self.uniq_dis_dict = {}
 
     # Key disease annotation term sets and look ups.
     relevant_qualifiers = [

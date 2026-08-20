@@ -27,6 +27,17 @@ class CassetteHandler(FeatureHandler):
         self.agr_export_type = agr_datatypes.CassetteDTO
         self.primary_export_set = 'cassette_ingest_set'
         self.incremental_update = False
+        # Additional export sets.
+        self.cassette_tool_associations = []
+        self.cassette_genomic_entity_associations = []
+        self.cassette_str_associations = []
+        self.cassette_cassette_rels = {}
+        # Anonymous cassette export sets. The source list, anon_cassette_data, stays a class
+        # attribute: receive_anon_cassette_data() rebinds it wholesale, so it is not shared state.
+        self.anon_cassettes = []
+        self.anon_cassette_tool_associations = []
+        self.anon_cassette_genomic_entity_associations = []
+        self.anon_cassette_str_associations = []
         # NOTE: We have general alleles in here too so we can check we only get the casssettes here.
     #       Also Cassettes are in the Allele code to check we only get these once.
     test_set = {
@@ -129,16 +140,8 @@ class CassetteHandler(FeatureHandler):
     }
     cassette_associations = []  # Should delete this one later
     # cassette_component_free_text_associations = []
-    cassette_tool_associations = []
-    cassette_genomic_entity_associations = []
-    cassette_str_associations = []
-    cassette_cassette_rels = {}
     # Anonymous cassette data (populated via receive_anon_cassette_data).
     anon_cassette_data = []
-    anon_cassettes = []
-    anon_cassette_tool_associations = []
-    anon_cassette_genomic_entity_associations = []
-    anon_cassette_str_associations = []
 
     # FTA-224: the feature.type values that make an FBsf a sequence targeting reagent.
     STR_SEQFEAT_TYPES = ('RNAi_reagent', 'sgRNA')
