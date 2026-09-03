@@ -28,6 +28,7 @@ from harvdev_utils.psycopg_functions import set_up_db_reading
 from agm_handlers import (
     StrainHandler, GenotypeHandler
 )
+from split_system_combination_handler import SplitSystemCombinationHandler
 from utils import export_chado_data, generate_export_file
 
 # Data types handled by this script.
@@ -48,7 +49,7 @@ testing = set_up_dict['testing']
 
 # Process additional input parameters not handled by the set_up_db_reading() function above.
 parser = argparse.ArgumentParser(
-    description='Export FlyBase AGM (strain/genotype) data to Alliance LinkML JSON.',
+    description='Export FlyBase AGM (strain/genotype/split system combination) data to Alliance LinkML JSON.',
     epilog="""
 Environment variables:
   SERVER              Database server (e.g. flysql25)
@@ -94,12 +95,15 @@ def main():
     # Get the data and process it.
     genotype_handler = GenotypeHandler(log, testing)
     strain_handler = StrainHandler(log, testing)
+    ssc_handler = SplitSystemCombinationHandler(log, testing)
     if reference_session:
         export_chado_data(session, log, genotype_handler, reference_session=reference_session)
         export_chado_data(session, log, strain_handler, reference_session=reference_session)
+        export_chado_data(session, log, ssc_handler, reference_session=reference_session)
     else:
         export_chado_data(session, log, genotype_handler)
         export_chado_data(session, log, strain_handler)
+        export_chado_data(session, log, ssc_handler)
 
     # Export the data.
     export_dict = {
@@ -109,6 +113,7 @@ def main():
     export_dict['agm_ingest_set'] = []
     export_dict['agm_ingest_set'].extend(genotype_handler.export_data[genotype_handler.primary_export_set])
     export_dict['agm_ingest_set'].extend(strain_handler.export_data[strain_handler.primary_export_set])
+    export_dict['agm_ingest_set'].extend(ssc_handler.export_data[ssc_handler.primary_export_set])
     if len(export_dict['agm_ingest_set']) == 0:
         if reference_session:
             log.info('No updates to report.')
@@ -127,6 +132,7 @@ def main():
         }
         association_export_dict['agm_allele_association_ingest_set'] = []
         association_export_dict['agm_allele_association_ingest_set'].extend(genotype_handler.export_data['agm_allele_association_ingest_set'])
+        association_export_dict['agm_allele_association_ingest_set'].extend(ssc_handler.export_data['agm_allele_association_ingest_set'])
         if len(association_export_dict['agm_allele_association_ingest_set']) == 0:
             log.error('The "agm_allele_association_ingest_set" is unexpectedly empty.')
             raise ValueError('The "agm_allele_association_ingest_set" is unexpectedly empty.')

@@ -232,7 +232,7 @@ class DataHandler(object):
         'insertion': True,
         'polypeptide': False,
         'seqfeat': False,
-        'split system combination': False,
+        'split system combination': True,
         'tool': False,
         'transcript': False,
         'transposon': False,
@@ -252,6 +252,7 @@ class DataHandler(object):
         'insertion': ['insertion_site', 'transposable_element', 'transposable_element_insertion_site'],    # Excludes internal "match" (name=FBti ID).
         'polypeptide': None,
         'seqfeat': None,    # The list is too long, so for this case let the code be flexible.
+        'split system combination': ['split system combination'],
         'tool': ['engineered_region'],
         'transcript': None,
         'transposon': ['natural_transposable_element'],

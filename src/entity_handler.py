@@ -57,6 +57,7 @@ class PrimaryEntityHandler(DataHandler):
         'balancer': 'allele',
         'insertion': 'allele',
         'genotype': 'homepage',
+        'split system combination': 'homepage',
         'grp': 'functional_gene_set',
     }
 
