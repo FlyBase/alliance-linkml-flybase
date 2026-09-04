@@ -9,6 +9,7 @@ Author(s):
 
 """
 
+import re
 from logging import Logger
 from os import getenv
 from sqlalchemy.orm import aliased
@@ -18,11 +19,22 @@ from fb_datatypes import (
     FBAberration, FBAllele, FBBalancer
 )
 from feature_handler import FeatureHandler
+from harvdev_utils.char_conversions import sub_sup_sgml_to_html, sub_sup_to_sgml
 from harvdev_utils.reporting import (
-    Cvterm, Feature, FeatureGenotype, FeatureRelationship,
+    Cvterm, Feature, FeatureCvterm, FeatureGenotype, FeatureRelationship,
     Featureprop, Genotype, Phenotype, PhenotypeCvterm, Phenstatement, Pub
 )
 from utils import export_chado_data
+
+BALANCER_MERGE_EXPECTED = 38     # FTA-236: curated "merge with parent" flags in chado as of 2026-08-14.
+BALANCER_RENAME_EXPECTED = 24    # FTA-237: curated "use balancer symbol and fullname" flags in chado as of 2026-08-14.
+# FTA-236: chado synonym types NOT grafted from a balancer onto its parent aberration. Steven's
+# decision (FTA-236 comment, 2026-08-19): exclude "nickname" from the balancer export. Filtering is
+# on the chado type deliberately - synthesize_synonyms() maps both "nickname" and "synonym" to the
+# LinkML name type "unspecified", so filtering on that would also drop every ordinary chado synonym
+# (162,999 rows against 482 nicknames). Whether nicknames should go from the export generally is
+# FTA-244; this constant is scoped to the graft only.
+BALANCER_EXCLUDED_SYNONYM_TYPES = ('nickname',)
 
 
 class MetaAlleleHandler(FeatureHandler):
@@ -98,7 +110,11 @@ class MetaAlleleHandler(FeatureHandler):
             elif metaallele.sf_reagent_colls:
                 collections.extend(metaallele.sf_reagent_colls)
             if collections:
-                collections = list(set(collections))
+                # FTA-232: sort by name before picking. These are Library ORM objects, whose hash is
+                # object identity, so the order varies per run regardless of PYTHONHASHSEED - and since
+                # collections[0].name is exported, the value itself could differ between runs, not just
+                # an order. Alphabetical is a stable tie-break, not a curation rule.
+                collections = sorted(set(collections), key=lambda coll: coll.name)
                 metaallele.linkmldto.in_collection_name = collections[0].name
                 if len(collections) > 1:
                     self.log.warning(f'{metaallele} has many relevant collections: {[i.name for i in collections]}')
@@ -136,6 +152,15 @@ class AlleleHandler(MetaAlleleHandler):
         self.transgenic_fbal_fbti_dict = {}    # Will be FBal-feature_id-keyed dict of FBti feature_id lists (via FBtp to unspecified FBti).
         self.fbti_entities = {}                # Will be feature_id-keyed FBAllele objects generated from FBti insertions.
         self.generic_ti_fbtp_ids = set()       # FTA-180 Part B: set of FBtp feature_ids flagged 'FTA: generic TI construct'.
+        # Additional export sets.
+        self.allele_gene_rels = {}                 # Will be (allele feature_id, gene feature_id) tuples keying lists of FBRelationships.
+        # Final list of gene-allele FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
+        self.allele_gene_associations = []
+        self.allele_construct_rels = {}            # Will be (allele feature_id, construct feature_id) tuples keying lists of FBRelationships.
+        self.allele_construct_associations = []    # Will be the final list of construct-allele FBRelationships to export (AlleleConstructAssociationDTO).
+        # Additional reference info.
+        self.allele_class_terms = []          # A list of cvterm_ids for child terms of "allele_class" (FBcv:0000286).
+        self.allele_mutant_type_terms = []    # A list of cvterm_ids for child terms of chromosome_structure_variation or sequence_alteration.
 
     test_set = {
         'FBal0386858': 'SppL[CR70402-TG4.1]',   # Insertion allele superceded by FBti0226866 (superseded_by_at_locus_insertion).
@@ -191,12 +216,6 @@ class AlleleHandler(MetaAlleleHandler):
         'FBal0064059': 'ebi[k16213]',   # FTA-207 note props: internal_notes, misc, origin_comment, origin_type.
     }
 
-    # Additional export sets.
-    allele_gene_rels = {}                 # Will be (allele feature_id, gene feature_id) tuples keying lists of FBRelationships.
-    allele_gene_associations = []         # Will be the final list of gene-allele FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
-    allele_construct_rels = {}            # Will be (allele feature_id, construct feature_id) tuples keying lists of FBRelationships.
-    allele_construct_associations = []    # Will be the final list of construct-allele FBRelationships to export (AlleleConstructAssociationDTO).
-
     # Simple mapping of props to Alliance note types, for cases where it is one-to-one correspondence.
     # The key is the cvterm.name for the FlyBase prop type.
     # The value is a tuple representing the Alliance note type, and where to append the note: (Alliance note type name, Alliance slot name).
@@ -214,9 +233,6 @@ class AlleleHandler(MetaAlleleHandler):
         'origin_comment': ('notes_on_origin', 'note_dtos'),    # FBal
     }
 
-    # Additional reference info.
-    allele_class_terms = []          # A list of cvterm_ids for child terms of "allele_class" (FBcv:0000286).
-    allele_mutant_type_terms = []    # A list of cvterm_ids for child terms of chromosome_structure_variation or sequence_alteration.
     inheritance_mode_terms = {
         'recessive': 'recessive',
         'dominant': 'dominant',
@@ -332,9 +348,14 @@ class AlleleHandler(MetaAlleleHandler):
             filter(*filters).\
             distinct()
         for result in results:
-            allele_str = f'{result.allele.name} ({result.allele.uniquename})'
-            insertion_str = f'{result.insertion.name} ({result.insertion.uniquename})'
-            self.log.debug(f'The transgenic allele {allele_str} is related to the generic insertion {insertion_str}.')
+            # Only log the per-row detail for the test set. Unlike get_entities(), the query above
+            # is NOT narrowed by test_set, so it returns every FBal-FBti pair in the database in a
+            # testing run too (~168k rows): "self.testing" alone would swamp the debug log and build
+            # the strings needlessly. Check test_set membership as well.
+            if self.testing and result.allele.uniquename in self.test_set:
+                allele_str = f'{result.allele.name} ({result.allele.uniquename})'
+                insertion_str = f'{result.insertion.name} ({result.insertion.uniquename})'
+                self.log.debug(f'The transgenic allele {allele_str} is related to the generic insertion {insertion_str}.')
             try:
                 self.transgenic_fbal_fbti_dict[result.allele.feature_id].append(result.insertion.feature_id)
             except KeyError:
@@ -434,8 +455,15 @@ class AlleleHandler(MetaAlleleHandler):
         except KeyError:
             self.log.warning(f'Could not find insertion feature_id={allele.superseded_by_at_locus_insertion}')
             return
-        self.log.debug(f'Merge {allele} data into {insertion} data.')
+        # Per-allele/per-attribute detail below is only logged for the test set: in a full run this is
+        # ~14 lines per superseded allele, which swamps the debug log.
+        if self.testing:
+            self.log.debug(f'Merge {allele} data into {insertion} data.')
         insertion.alt_fb_ids.append(f'FB:{allele.uniquename}')
+        # The allele has just been made obsolete, so its current symbol is no longer a current name of
+        # anything: record its synonym_ids so that synthesize_synonyms() demotes them to plain synonyms
+        # of the insertion instead of letting them rival the insertion's own current symbol.
+        insertion.merged_synonym_ids.update([i.synonym_id for i in allele.synonyms])
         lists_to_extend = [
             'dbxrefs',
             'export_warnings',
@@ -469,30 +497,36 @@ class AlleleHandler(MetaAlleleHandler):
         for attr_name in lists_to_extend:
             allele_list = getattr(allele, attr_name)
             insertion_list = getattr(insertion, attr_name)
-            self.log.debug(f'For {attr_name}, add {len(allele_list)} elements from the allele to {len(insertion_list)} elements from the insertion.')
+            if self.testing:
+                self.log.debug(f'For {attr_name}, add {len(allele_list)} elements from the allele to {len(insertion_list)} elements from the insertion.')
             insertion_list.extend(allele_list)
-            self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_list)} elements.')
+            if self.testing:
+                self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_list)} elements.')
         # Add to ID-keyed dict of single chado annotations (key is unique for FBCVtermAnnotation or FBRelationship).
         for attr_name in dicts_of_elements_to_add:
             allele_dict = getattr(allele, attr_name)
             insertion_dict = getattr(insertion, attr_name)
-            self.log.debug(f'For {attr_name}, add {len(allele_dict)} elements from the allele to {len(insertion_dict)} elements from the insertion.')
+            if self.testing:
+                self.log.debug(f'For {attr_name}, add {len(allele_dict)} elements from the allele to {len(insertion_dict)} elements from the insertion.')
             for k, v in allele_dict.items():
                 if k not in insertion_dict.keys():
                     insertion_dict[k] = v
-            self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_dict)} elements.')
+            if self.testing:
+                self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_dict)} elements.')
         # Combine lists of annotations.
         for attr_name in dicts_of_lists_to_add:
             allele_dict = getattr(allele, attr_name)
             insertion_dict = getattr(insertion, attr_name)
-            self.log.debug(f'For {attr_name}, add {len(allele_dict)} lists from the allele to {len(insertion_dict)} lists from the insertion.')
+            if self.testing:
+                self.log.debug(f'For {attr_name}, add {len(allele_dict)} lists from the allele to {len(insertion_dict)} lists from the insertion.')
             for k, v in allele_dict.items():
                 try:
                     insertion_dict[k].extend(v)
                 except KeyError:
                     insertion_dict[k] = []
                     insertion_dict[k].extend(v)
-            self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_dict)} lists.')
+            if self.testing:
+                self.log.debug(f'For {attr_name}, the insertion now has {len(insertion_dict)} lists.')
         return
 
     def merge_fbti_fbal(self):
@@ -505,17 +539,22 @@ class AlleleHandler(MetaAlleleHandler):
         classical_counter = 0
         fbti_counter = 0
         for allele in self.fb_data_entities.values():
-            self.log.debug(f'Assess FBti replacement for allele {allele}')
+            # Per-allele detail only for the test set: this loop covers every allele in the database.
+            # NB - the log.error() below is deliberately left ungated; it reports a real data problem.
+            if self.testing:
+                self.log.debug(f'Assess FBti replacement for allele {allele}')
             if allele.db_primary_id in self.at_locus_fbal_fbti_dict.keys() and allele.db_primary_id in self.transgenic_fbal_fbti_dict.keys():
                 self.log.error(f'Allele {allele} unexpectedly has both at-locus and transgenic unspecified FBti insertions.')
                 prob_counter += 1
             elif allele.db_primary_id in self.at_locus_fbal_fbti_dict.keys():
-                self.log.debug(f'Allele {allele} is superseded by an at-locus FBti insertion.')
+                if self.testing:
+                    self.log.debug(f'Allele {allele} is superseded by an at-locus FBti insertion.')
                 allele.superseded_by_at_locus_insertion = self.at_locus_fbal_fbti_dict[allele.db_primary_id][0]
                 self.add_fbal_to_fbti(allele)
                 at_locus_counter += 1
             elif allele.db_primary_id in self.transgenic_fbal_fbti_dict.keys():
-                self.log.debug(f'Allele {allele} is superseded by unspecified FBti insertion(s).')
+                if self.testing:
+                    self.log.debug(f'Allele {allele} is superseded by unspecified FBti insertion(s).')
                 allele.superseded_by_transgnc_insertions = self.transgenic_fbal_fbti_dict[allele.db_primary_id]
                 self.add_fbal_to_fbti(allele)
                 unspecified_ins_counter += len(allele.superseded_by_transgnc_insertions)
@@ -540,7 +579,9 @@ class AlleleHandler(MetaAlleleHandler):
         has_dmel_insertion_counter = 0
         has_non_dmel_insertion_counter = 0
         for allele in self.fb_data_entities.values():
-            self.log.debug(f'Assess {allele}, feature_id={allele.db_primary_id}')
+            # Per-allele detail only for the test set: this loop covers every allele in the database.
+            if self.testing:
+                self.log.debug(f'Assess {allele}, feature_id={allele.db_primary_id}')
             # Assess relationships to ARGs.
             relevant_rels = allele.recall_relationships(self.log, entity_role='object', rel_types='partof', rel_entity_types=self.feature_subtypes['variation'])
             # self.log.debug(f'For {allele}, found {len(relevant_rels)} partof relationships to ARGs.')
@@ -554,7 +595,8 @@ class AlleleHandler(MetaAlleleHandler):
             # Assess relationships to current constructs.
             relevant_cons_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types=['derived_tp_assoc_alleles', 'producedby'],
                                                              rel_entity_types=self.feature_subtypes['construct'])
-            self.log.debug(f'For {allele}, found {len(relevant_cons_rels)} cons rels to review.')
+            if self.testing:
+                self.log.debug(f'For {allele}, found {len(relevant_cons_rels)} cons rels to review.')
             for cons_rel in relevant_cons_rels:
                 construct = self.feature_lookup[cons_rel.chado_obj.object_id]
                 if construct['is_obsolete'] is False and construct['uniquename'].startswith('FBtp'):
@@ -595,7 +637,8 @@ class AlleleHandler(MetaAlleleHandler):
             # self.log.debug(f'Have these f_r sbj types: {allele.sbj_rel_ids_by_type.keys()}')
             # self.log.debug(f'Have these f_r obj types: {allele.obj_rel_ids_by_type.keys()}')
             relevant_rels = allele.recall_relationships(self.log, entity_role='subject', rel_types='alleleof', rel_entity_types='gene')
-            self.log.debug(f'For {allele}, found {len(relevant_rels)} alleleof relationships to genes.')
+            if self.testing:
+                self.log.debug(f'For {allele}, found {len(relevant_rels)} alleleof relationships to genes.')
             for allele_gene_rel in relevant_rels:
                 parent_gene = self.feature_lookup[allele_gene_rel.chado_obj.object_id]
                 if parent_gene['is_obsolete'] is False:
@@ -654,8 +697,9 @@ class AlleleHandler(MetaAlleleHandler):
             # For truly non-Dmel alleles, revert organism_id to that of the related allele chado object.
             if is_non_dmel_classical is True:
                 allele.organism_id = allele.chado_obj.organism_id
-                adj_org_abbr = self.organism_lookup[allele.organism_id]['abbreviation']
-                self.log.debug(f'Non-Dmel allele: id={allele.uniquename}, name={allele.name}, org_abbr={adj_org_abbr}')
+                if self.testing:
+                    adj_org_abbr = self.organism_lookup[allele.organism_id]['abbreviation']
+                    self.log.debug(f'Non-Dmel allele: id={allele.uniquename}, name={allele.name}, org_abbr={adj_org_abbr}')
                 counter += 1
         self.log.info(f'Adjusted organism to be "non-Dmel" for {counter} alleles.')
         return
@@ -1159,6 +1203,24 @@ class AberrationHandler(MetaAlleleHandler):
         super().__init__(log, testing)
         self.datatype = 'aberration'
         self.fb_export_type = FBAberration
+        # Additional export sets.
+        self.aberration_gene_rels = {}            # Will be (FBab feature_id, FBgn feature_id, AGR_rel_type, ECO) tuples keying lists of FBRelationships.
+        # Final list of gene-aberration FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
+        self.aberration_gene_associations = []
+        # FTA-218: aberration-to-allele associations ("carries" and "breakpoint_allele").
+        self.aberration_allele_rels = {}          # Will be (FBab feature_id, FBal/FBti feature_id, AGR_rel_type) tuples keying lists of FBRelationships.
+        # Final list of aberration-allele FBRelationships (AlleleAlleleAssociationDTO under linkmldto attr).
+        self.aberration_allele_associations = []
+        self.balancer_ids = set()                 # FTA-235: FB curies of FBab aberrations flagged as balancers; filled regardless of the export gate.
+        self.balancer_merge_map = {}              # FTA-236: {FBba feature_id: parent FBab feature_id} for resolved merge flags.
+        self.balancer_merge_report = []            # FTA-236: dicts of what moved per balancer, for the curator TSV.
+        self.balancer_rename_map = {}             # FTA-237: {FBba feature_id: parent FBab feature_id} for resolved rename flags.
+        self.balancer_rename_report = []          # FTA-237: dicts of old/new names per renamed aberration, for the curator TSV.
+        # Additional reference info.
+        self.chr_str_var_terms = []    # A list of cvterm_ids for child terms of "chromosome_structure_variation" (SO:0000240).
+        self.seq_alt_terms = []        # A list of cvterm_ids for child terms of "sequence_alteration" (SO:0001059).
+        self.str_var_terms = []        # A list of cvterm_ids for child terms of "structural_variant" (SO:0001537).
+        self.chr_del_terms = []        # A list of cvterm_ids for child terms of "chromosomal_deletion" (SO:1000029).
 
     test_set = {
         'FBab0000001': 'Df(2R)03072',           # Random selection.
@@ -1174,6 +1236,10 @@ class AberrationHandler(MetaAlleleHandler):
         'FBab0010504': 'T(2;3)G16DTE35B-3P',    # Unusual annotation: assortment_derived_deficiency_plus_duplication (SO:0000801).
         'FBab0004789': 'In(2LR)Px[4]',          # FTA-207 note props: internal_notes, misc, new_order, origin_comment.
         'FBab0001546': 'Df(2L)Sco[rv10]',  # FTA-207 note props: complementation, internal_notes, misc, origin_comment.
+        'FBab0004410': 'In(2L)Cy',              # FTA-218: all 3 mappings - 2 A24a FBti, 6 A24b FBal, 1 GA10g FBal.
+        'FBab0045412': 'Df(3L)sina[SH]',        # FTA-218: all 3 mappings - 1 A24a FBti, 1 A24b FBal, 2 GA10g FBal.
+        'FBab0004786': 'In(2LR)CyO',            # FTA-235: carries the balancer "internal_notes" flag.
+        'FBab0003929': 'In(1)FM7a',             # FTA-235: carries the balancer "internal_notes" flag.
     }
 
     # Simple mapping of props to Alliance note types, for cases where it is one-to-one correspondence.
@@ -1191,17 +1257,114 @@ class AberrationHandler(MetaAlleleHandler):
         'complementation': ('complementation', 'note_dtos'),     # FBab
     }
 
-    # Additional export sets.
-    aberration_gene_rels = {}            # Will be (FBab feature_id, FBgn feature_id, AGR_rel_type, ECO) tuples keying lists of FBRelationships.
-    aberration_gene_associations = []    # Will be the final list of gene-aberration FBRelationships to export (AlleleGeneAssociationDTO under linkmldto attr).
+    # FTA-235: the balancer flag arrives as an "A15. Internal notes" featureprop on 37 FBab aberrations,
+    # added by curation record sm21867.edit. Verified in production_chado: 37 "internal_notes" props, all on
+    # non-obsolete "chromosome_structure_variation" features, each holding exactly
+    #   FTA: Balancer - mark this aberration as 'balancer'.
+    # (the proforma ":" separator is not kept in the stored value; a leading colon is tolerated anyway).
+    # The instruction clause is part of the match on purpose: FBba balancers carry sibling flags that also
+    # begin "FTA: Balancer -" ("merge with parent ...", "use balancer symbol and fullname for parent ..."),
+    # 62 of them, and those mean something else. Anchoring also keeps ordinary prose that merely mentions
+    # balancers - which plenty of FBab "misc" and "internal_notes" props do - from matching.
+    balancer_flag_regex = re.compile(r'^\s*:?\s*FTA:\s*balancer\s*-\s*mark this aberration as\b', re.IGNORECASE)
+    balancer_flag_expected_count = 37    # Per FTA-235; a mismatch means the flag text or the curation record changed.
 
-    # Additional reference info.
-    chr_str_var_terms = []    # A list of cvterm_ids for child terms of "chromosome_structure_variation" (SO:0000240).
-    seq_alt_terms = []        # A list of cvterm_ids for child terms of "sequence_alteration" (SO:0001059).
-    str_var_terms = []        # A list of cvterm_ids for child terms of "structural_variant" (SO:0001537).
-    chr_del_terms = []        # A list of cvterm_ids for child terms of "chromosomal_deletion" (SO:1000029).
+    # FTA-236: the merge flag on an FBba balancer names its parent FBab aberration, e.g.
+    #   FTA: Balancer - merge with parent In(1)Basc (FBab0004219).
+    # 38 of these exist, naming 37 parents (In(2LR)SM6 takes both SM6a and SM6b). The instruction
+    # clause is part of the match because the FTA-237 rename flag opens the same way.
+    balancer_merge_regex = re.compile(
+        r'^\s*:?\s*FTA:\s*balancer\s*-\s*merge with parent'
+        r'\s+(?P<symbol>.+?)\s*\((?P<fbab>FBab[0-9]+)\)\s*\.?\s*$',
+        re.IGNORECASE)
+    # FTA-236: 'carries alleles' must NOT move for these balancers (curator decision, reasons not given).
+    balancer_carries_exclusions = {
+        'FBba0000011',    # FM1 -> In(1)FM1 (FBab0010486); 15 alleles held back.
+        'FBba0000039',    # SM6a -> In(2LR)SM6 (FBab0004818); 20 alleles held back.
+        'FBba0000040',    # SM6b -> In(2LR)SM6 (FBab0004818); 18 alleles held back.
+    }
+    # FTA-236: only these FBba prop types move to the parent aberration. A blanket props_by_type merge
+    # (as add_fbal_to_fbti does) would also carry 'availability' and 'derived_stock*' props, which
+    # map_extinction_info() reads to set is_extinct - a balancer's stock status is not the
+    # aberration's. The Alliance note type for each comes from aberration_prop_to_note_mapping.
+    balancer_graft_prop_types = ('misc', 'internal_notes')
+
+    # FTA-237: this flag says the parent FBab should be exported under the balancer's current symbol
+    # and full name, e.g.
+    #   FTA: Balancer - use balancer symbol and fullname for parent In(1)Basc (FBab0004219).
+    # 24 of these exist, one per parent, all naming a current non-obsolete FBab. As in FTA-235 the
+    # match runs through the instruction clause, since all three flag families open "FTA: Balancer -".
+    balancer_rename_regex = re.compile(
+        r'^\s*:?\s*FTA:\s*balancer\s*-\s*use balancer symbol and fullname for parent'
+        r'\s+(?P<symbol>.+?)\s*\((?P<fbab>FBab[0-9]+)\)\s*\.?\s*$',
+        re.IGNORECASE)
+    # FTA-237: one aberration is renamed without a curated flag. Per the ticket, In(2LR)SM6 takes the
+    # symbol "SM6" and full name "Second Multiple 6", because its two balancers SM6a (FBba0000039) and
+    # SM6b (FBba0000040) share it as a parent and neither of their names should win. Neither balancer
+    # carries a rename flag, so nothing in chado can drive this: "SM6" exists only as a non-current
+    # synonym of the aberration, and "Second Multiple 6" does not exist in chado at all. Keyed by FBab
+    # uniquename; the values are (symbol, full_name).
+    balancer_hardcoded_renames = {
+        'FBab0004818': ('SM6', 'Second Multiple 6'),
+    }
+
+    cassette_ignore_list = set()         # FTA-218: FBal feature_ids that are construct cassettes, and so are never exported as alleles.
+    fbba_entities = {}                   # FTA-236/237: feature_id-keyed FBBalancer objects from the nested BalancerHandler.
 
     # Additional sub-methods for get_general_data().
+    def get_cassette_allele_ids(self, session):
+        """Get feature_ids of FBal alleles that are construct cassettes (FTA-218).
+
+        Cassette FBal features share the "allele" cvterm but are excluded from the allele export by the
+        AlleleHandler (see its self.ignore_list), so aberration-allele associations must not point at them.
+        NB - FeatureHandler.cassette_feature_ids() cannot be reused here: it resolves self.regex[self.datatype]
+        and self.feature_subtypes[self.datatype], which for this handler are the aberration values, so it would
+        return FBab features rather than cassette FBal features. It also restricts to self.test_set in testing
+        mode, which for this handler is a set of FBab IDs. This lookup is deliberately never limited to the
+        test set, since it is reference data used to validate partners, like the feature_lookup.
+        """
+        self.log.info('Get feature_ids of FBal alleles that are construct cassettes.')
+        cassette_ids = set()
+        # First, cassettes flagged with the "in vitro construct" CV term.
+        in_vitro_filters = (
+            Feature.is_obsolete.is_(False),
+            Feature.uniquename.op('~')(self.regex['allele']),
+            Cvterm.name == 'in vitro construct',
+        )
+        in_vitro_results = session.query(Feature.feature_id).\
+            select_from(Feature).\
+            join(FeatureCvterm, (FeatureCvterm.feature_id == Feature.feature_id)).\
+            join(Cvterm, (Cvterm.cvterm_id == FeatureCvterm.cvterm_id)).\
+            filter(*in_vitro_filters).\
+            distinct()
+        for result in in_vitro_results:
+            cassette_ids.add(result.feature_id)
+        self.log.info(f'Found {len(cassette_ids)} "in vitro construct" cassette FBal alleles.')
+        # Second, cassettes related to an FBtp construct.
+        construct = aliased(Feature, name='cassette_construct')
+        rel_type = aliased(Cvterm, name='cassette_rel_type')
+        feat_type = aliased(Cvterm, name='cassette_feat_type')
+        main_filters = (
+            Feature.is_obsolete.is_(False),
+            Feature.uniquename.op('~')(self.regex['allele']),
+            feat_type.name.in_((self.feature_subtypes['allele'])),
+            construct.is_obsolete.is_(False),
+            construct.uniquename.op('~')(self.regex['construct']),
+            rel_type.name == 'associated_with',
+        )
+        main_results = session.query(Feature.feature_id).\
+            select_from(Feature).\
+            join(feat_type, (feat_type.cvterm_id == Feature.type_id)).\
+            join(FeatureRelationship, (FeatureRelationship.subject_id == Feature.feature_id)).\
+            join(construct, (construct.feature_id == FeatureRelationship.object_id)).\
+            join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
+            filter(*main_filters).\
+            distinct()
+        for result in main_results:
+            cassette_ids.add(result.feature_id)
+        self.log.info(f'Found {len(cassette_ids)} cassette FBal alleles in total.')
+        return cassette_ids
+
     def get_key_cvterm_sets_for_aberrations(self, session):
         """Get key CV term sets for aberrations from chado."""
         self.log.info('Get key CV term sets for aberrations from chado.')
@@ -1218,7 +1381,18 @@ class AberrationHandler(MetaAlleleHandler):
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
         self.build_organism_lookup(session)
-        self.build_feature_lookup(session, feature_types=['gene'])
+        # FTA-218: aberration-allele associations need FBal and FBti features in the feature_lookup, both so that
+        # get_entity_relationships() can bucket relationships by related feature type, and so that the map step can
+        # look up partner uniquenames. Gated so that production runs make no extra queries until the Alliance is ready.
+        # FTA-236 relies on the same lookup: the alleles and insertions a balancer carries are moved to its parent
+        # aberration as "carries" associations, and map_aberration_allele_associations() resolves those partners here.
+        if getenv('ADD_ALLELE_ALLELE_ASSOC', None) == 'YES':
+            self.build_feature_lookup(session, feature_types=['gene', 'allele', 'insertion'])
+            self.cassette_ignore_list = self.get_cassette_allele_ids(session)
+        else:
+            self.build_feature_lookup(session, feature_types=['gene'])
+            self.log.info('ADD_ALLELE_ALLELE_ASSOC not set to "YES"; not adding allele/insertion features to the '
+                          'feature_lookup (no aberration-allele associations will be emitted).')
         self.build_allele_gene_lookup(session)
         self.get_key_cvterm_sets_for_aberrations(session)
         return
@@ -1241,6 +1415,24 @@ class AberrationHandler(MetaAlleleHandler):
         self.get_entity_xrefs(session)
         self.get_entity_timestamps(session)
         self.get_direct_reagent_collections(session)
+        self.get_balancer_entities(session)
+        return
+
+    def get_balancer_entities(self, session):
+        """Have the AberrationHandler run the BalancerHandler to get FBba data (FTA-237).
+
+        Mirrors AlleleHandler.get_insertion_entities(): the nested handler does its own full retrieval,
+        and only its fb_data_entities are kept. Nothing it maps or exports is used directly, so FBba
+        balancers still do not appear in the allele_ingest_set. What is used is each FBba's finished
+        AlleleDTO, whose allele_symbol_dto and allele_full_name_dto the rename step copies onto the
+        parent aberration.
+        """
+        separator = 80 * '#'
+        self.log.info(f'Have the AberrationHandler run the BalancerHandler.\n{separator}')
+        balancer_handler = BalancerHandler(self.log, self.testing)
+        export_chado_data(session, self.log, balancer_handler)
+        self.fbba_entities = balancer_handler.fb_data_entities
+        self.log.info(f'The AberrationHandler obtained {len(self.fbba_entities)} FBba balancers from chado.\n{separator}')
         return
 
     # Additional sub-methods to be run by synthesize_info() below.
@@ -1365,18 +1557,95 @@ class AberrationHandler(MetaAlleleHandler):
         self.log.info(f'Found {gene_rel_counter} aberration-gene relationships for {aberration_counter} aberrations.')
         return
 
+    def synthesize_aberration_allele_associations(self):
+        """Synthesize aberration-to-allele associations (FTA-218).
+
+        Three chado feature_relationships map onto two Alliance allele-allele association relations. In every case the
+        Alliance direction is FBab (subject) -> FBti/FBal (object), so the "carried_on" relationship below has to be
+        flipped relative to how it is stored in chado.
+            1. type="associated_with", subject=FBab, object=FBti (proforma A24a) -> "carries"
+            2. type="carried_on",      subject=FBal, object=FBab (proforma A24b) -> "carries"
+            3. type="associated_with", subject=FBab, object=FBal (proforma GA10g) -> "breakpoint_allele"
+        """
+        self.log.info('Synthesize aberration-to-allele associations.')
+        # Each entry is (entity_role of the aberration, chado rel type, related feature types, AGR relation,
+        # proforma field). The partner feature_id is read from the side of the relationship that the aberration
+        # is NOT on. The proforma field is only reported in the cassette warning below.
+        rel_specs = [
+            ('subject', 'associated_with', self.feature_subtypes['insertion'], 'carries', 'A24a'),
+            ('subject', 'associated_with', self.feature_subtypes['allele'], 'breakpoint_allele', 'GA10g'),
+            ('object', 'carried_on', self.feature_subtypes['allele'], 'carries', 'A24b'),
+        ]
+        # When the aberration is the subject the partner is the object, and vice versa.
+        partner_attr = {'subject': 'object_id', 'object': 'subject_id'}
+        aberration_counter = 0
+        allele_rel_counter = 0
+        cassette_skipped = 0
+        rel_type_tally = {}
+        for aberration in self.fb_data_entities.values():
+            found_any = False
+            for entity_role, fb_rel_type, rel_entity_types, agr_rel_type, proforma_field in rel_specs:
+                relevant_rels = aberration.recall_relationships(self.log, entity_role=entity_role, rel_types=fb_rel_type,
+                                                                rel_entity_types=rel_entity_types)
+                for feat_rel in relevant_rels:
+                    partner_id = getattr(feat_rel.chado_obj, partner_attr[entity_role])
+                    # Cassettes are FBal features sharing the "allele" cvterm, but they are never exported as alleles,
+                    # so an association pointing at one would dangle at the Alliance. Curators do not expect any of
+                    # these to exist in chado, so name each one so that the underlying data can be corrected.
+                    if partner_id in self.cassette_ignore_list:
+                        partner = self.feature_lookup[partner_id]
+                        self.log.warning(f'CASSETTE FBal in an aberration-allele relationship, please check the data: '
+                                         f'{aberration} -- {fb_rel_type} --> '
+                                         f'{partner["name"]} ({partner["uniquename"]}) [proforma {proforma_field}]')
+                        cassette_skipped += 1
+                        continue
+                    found_any = True
+                    rel_key = (aberration.db_primary_id, partner_id, agr_rel_type)
+                    try:
+                        self.aberration_allele_rels[rel_key].append(feat_rel)
+                    except KeyError:
+                        self.aberration_allele_rels[rel_key] = [feat_rel]
+                        allele_rel_counter += 1
+                        try:
+                            rel_type_tally[agr_rel_type] += 1
+                        except KeyError:
+                            rel_type_tally[agr_rel_type] = 1
+            if found_any:
+                aberration_counter += 1
+        self.log.info(f'Found {allele_rel_counter} aberration-allele relationships for {aberration_counter} aberrations.')
+        for agr_rel_type in sorted(rel_type_tally.keys()):
+            self.log.info(f'Found {rel_type_tally[agr_rel_type]} aberration-allele relationships of type "{agr_rel_type}".')
+        if cassette_skipped == 0:
+            self.log.info('Found no aberration-allele relationships pointing at a cassette FBal feature.')
+        else:
+            self.log.warning(f'Skipped {cassette_skipped} aberration-allele relationships to cassette FBal features '
+                             f'- see the "CASSETTE FBal" warnings above.')
+        return
+
     # Elaborate on synthesize_info() for the AberrationHandler.
     def synthesize_info(self):
         """Extend the method for the AberrationHandler."""
         super().synthesize_info()
         self.flag_new_additions_and_obsoletes()
         self.adjust_aberration_organism()
+        self.synthesize_balancer_merge_map()
+        self.merge_balancers_into_aberrations()
+        self.synthesize_balancer_rename_map()
         self.synthesize_secondary_ids()
         self.synthesize_synonyms()
         self.synthesize_pubs()
         self.synthesize_ncbi_taxon_id()
         self.flag_deletions()
         self.synthesize_aberration_gene_associations()
+        # FTA-218: gated until the Alliance schema has an "allele_allele_association_ingest_set" and the
+        # "carries"/"breakpoint_allele" CV terms.
+        if getenv('ADD_ALLELE_ALLELE_ASSOC', None) == 'YES':
+            self.synthesize_aberration_allele_associations()
+            # FTA-236: the alleles and insertions a flagged balancer carries become "carries"
+            # associations of its parent aberration, so they join the same gated ingest set.
+            self.synthesize_balancer_carries_associations()
+        else:
+            self.log.info('ADD_ALLELE_ALLELE_ASSOC not set to "YES"; skipping aberration-allele association synthesis.')
         self.qc_aberration_mutation_types()
         return
 
@@ -1434,16 +1703,456 @@ class AberrationHandler(MetaAlleleHandler):
         self.log.info(f'Generated {counter} aberration-gene unique associations.')
         return
 
+    def map_aberration_flag(self):
+        """Flag FBab entities with the LinkML "is_aberration" boolean (FTA-217).
+
+        The slot was added to the Alliance schema by agr_curation_schema PR #327, which is merged to
+        "main" but absent from the latest LinkML release (v2.17.0). Emitting it would fail schema
+        validation for the whole allele file, so the mapping is gated behind ADD_IS_ABERRATION until
+        a LinkML release containing the slot is available.
+        """
+        if getenv('ADD_IS_ABERRATION', None) != 'YES':
+            self.log.info('ADD_IS_ABERRATION not set to "YES"; skipping the "is_aberration" flag.')
+            return
+        self.log.info('Flag aberrations with the "is_aberration" boolean.')
+        counter = 0
+        for aberration in self.fb_data_entities.values():
+            aberration.linkmldto.is_aberration = True
+            counter += 1
+        self.log.info(f'Flagged {counter} aberrations with is_aberration=True.')
+        return
+
+    def _resolve_parent_feature_id(self, fbab_uniquename):
+        """Return the feature_id of a current parent FBab, or None (FTA-236/237).
+
+        NB - self.fb_data_entities holds obsolete aberrations as well as current ones: they are
+        exported as internal/obsolete rather than dropped. So membership of that dict is NOT enough,
+        and is_obsolete has to be checked explicitly. The 2026-08-14 run proved it: AM1 (FBba0000688)
+        named the obsolete FBab0007127, and without this check its data merged into that obsolete
+        entry instead of being reported.
+
+        An obsolete or unrecognised ID gets no fallback, by curator decision - Steven chose this over
+        resolving stale IDs through feature_dbxref (FTA-236 comment 43813, 2026-08-14), so that a note
+        pointing at the wrong place is reported rather than silently redirected. Do not add a
+        secondary-ID fallback here.
+
+        All 24 FTA-237 rename parents are current. The one FTA-236 merge flag naming an obsolete
+        parent is AM1's; a curation record loading the week of 2026-08-17 corrects it to FBab0049550,
+        so until then that balancer is reported and skipped.
+        """
+        for aberration in self.fb_data_entities.values():
+            if aberration.uniquename != fbab_uniquename:
+                continue
+            if aberration.is_obsolete is True:
+                return None
+            return aberration.db_primary_id
+        return None
+
+    def synthesize_balancer_merge_map(self):
+        """Map each merge-flagged FBba balancer to its parent FBab aberration (FTA-236)."""
+        self.log.info('Map flagged FBba balancers to their parent FBab aberrations.')
+        flag_counter = 0
+        for balancer in self.fbba_entities.values():
+            for fb_prop in balancer.props_by_type.get('internal_notes', []):
+                prop_value = fb_prop.chado_obj.value
+                if not prop_value:
+                    continue
+                match = self.balancer_merge_regex.match(prop_value)
+                if match is None:
+                    continue
+                flag_counter += 1
+                fbab_uniquename = match.group('fbab')
+                parent_feature_id = self._resolve_parent_feature_id(fbab_uniquename)
+                if parent_feature_id is None:
+                    self.log.error(f'FTA-236: balancer {balancer} names parent {fbab_uniquename} '
+                                   f'("{match.group("symbol")}"), which is not an exportable aberration '
+                                   f'(obsolete or unknown). No data merged; please fix the internal note.')
+                    break
+                self.balancer_merge_map[balancer.db_primary_id] = parent_feature_id
+                self.log.debug(f'FTA-236: {balancer} merges into {self.fb_data_entities[parent_feature_id]}.')
+                break
+        parents = set(self.balancer_merge_map.values())
+        self.log.info(f'Found {flag_counter} balancer merge flags; resolved {len(self.balancer_merge_map)} '
+                      f'balancers onto {len(parents)} parent aberrations.')
+        if self.testing is False and flag_counter != BALANCER_MERGE_EXPECTED:
+            self.log.warning(f'Expected {BALANCER_MERGE_EXPECTED} balancer merge flags per FTA-236, but found '
+                             f'{flag_counter}. Check the "internal_notes" flag text in chado.')
+        return
+
+    def add_fbba_to_fbab(self, balancer, aberration):
+        """Graft one FBba balancer's data onto its parent FBab aberration (FTA-236).
+
+        Follows add_fbal_to_fbti(): extend the parent's source-data lists before synthesize_* runs, so
+        every existing mapping method produces the merged output unchanged. Only whitelisted prop types
+        move (see balancer_graft_prop_types), and relationships are handled separately by
+        synthesize_balancer_carries_associations() so they cannot reach aberration-gene synthesis.
+
+        Synonyms of a chado type in BALANCER_EXCLUDED_SYNONYM_TYPES ("nickname") are not grafted, per
+        Steven's decision on FTA-236. That also removes two artifacts seen in UAT: a synonym identical
+        to the aberration's newly promoted symbol (Basc, TM3) and the duplicate SM6a/SM6b pair, which
+        arose because chado holds those names as both a nickname and a symbol. The "synonyms" count in
+        the merge report counts what is actually grafted, so it no longer includes skipped nicknames.
+        """
+        grafted_synonyms = [s for s in balancer.synonyms
+                            if s.synonym.type.name not in BALANCER_EXCLUDED_SYNONYM_TYPES]
+        report = {
+            'fbba_id': balancer.uniquename,
+            'fbba_symbol': balancer.name,
+            'fbab_id': aberration.uniquename,
+            'synonyms': len(grafted_synonyms),
+            'secondary_ids': 1 + len(balancer.fb_sec_dbxrefs),
+            'comments': len(balancer.props_by_type.get('misc', [])),
+            'internal_notes': len(balancer.props_by_type.get('internal_notes', [])),
+            'references': len(balancer.pub_associations),
+            'carries_alleles': 0,
+            'carries_excluded': 0,
+        }
+        # Names. Per the ticket, the balancer's symbols and full names become synonyms of the parent;
+        # neither may rival the parent's own. merged_synonym_ids covers symbols (a rival current symbol
+        # makes map_synonyms() pick one arbitrarily and log "Found many current symbols");
+        # demoted_synonym_ids also covers full names, where a rival is worse - map_synonyms() sets no
+        # allele_full_name_dto at all and the aberration's own full name vanishes from the export.
+        # FTA-237 deliberately renames 24 of these aberrations to the balancer symbol/full name; it
+        # does that by setting the slots in map_balancer_renames(), not by skipping this demotion.
+        aberration.synonyms.extend(grafted_synonyms)
+        balancer_synonym_ids = [i.synonym_id for i in grafted_synonyms]
+        aberration.merged_synonym_ids.update(balancer_synonym_ids)
+        aberration.demoted_synonym_ids.update(balancer_synonym_ids)
+        # Identifiers: the balancer's current ID plus any of its own secondary IDs.
+        aberration.alt_fb_ids.append(f'FB:{balancer.uniquename}')
+        aberration.fb_sec_dbxrefs.extend(balancer.fb_sec_dbxrefs)
+        # Notes (whitelisted prop types only).
+        for prop_type in self.balancer_graft_prop_types:
+            balancer_props = balancer.props_by_type.get(prop_type, [])
+            if not balancer_props:
+                continue
+            try:
+                aberration.props_by_type[prop_type].extend(balancer_props)
+            except KeyError:
+                aberration.props_by_type[prop_type] = list(balancer_props)
+        # References: synthesize_pubs() reads pub_associations, so graft before it runs.
+        aberration.pub_associations.extend(balancer.pub_associations)
+        self.balancer_merge_report.append(report)
+        return report
+
+    def merge_balancers_into_aberrations(self):
+        """Graft every flagged FBba balancer onto its parent FBab aberration (FTA-236)."""
+        self.log.info('Merge flagged FBba balancer data into parent FBab aberrations.')
+        totals = {'synonyms': 0, 'secondary_ids': 0, 'comments': 0, 'internal_notes': 0, 'references': 0}
+        for fbba_feature_id, fbab_feature_id in self.balancer_merge_map.items():
+            balancer = self.fbba_entities[fbba_feature_id]
+            aberration = self.fb_data_entities[fbab_feature_id]
+            report = self.add_fbba_to_fbab(balancer, aberration)
+            for key in totals.keys():
+                totals[key] += report[key]
+        parents = set(self.balancer_merge_map.values())
+        self.log.info(f'Merged {len(self.balancer_merge_map)} balancers into {len(parents)} aberrations.')
+        for key in sorted(totals.keys()):
+            self.log.info(f'Moved {totals[key]} {key} from balancers to aberrations.')
+        return
+
+    def synthesize_balancer_carries_associations(self):
+        """Move a flagged balancer's carried alleles and insertions onto its parent (FTA-236).
+
+        In chado the two sources are:
+            1. type="carried_on",      subject=FBal, object=FBba (proforma AB5b) -> "carries"
+            2. type="associated_with", subject=FBba, object=FBti (proforma AB5a) -> "carries"
+        Both become Alliance "carries" associations from the parent FBab to the partner, so the keys
+        built here match synthesize_aberration_allele_associations() exactly and the existing
+        map_aberration_allele_associations() emits them with no changes.
+
+        These relationships are deliberately NOT grafted onto the parent entity: the parent's own
+        relationships also drive aberration-GENE association synthesis, and a balancer's links would
+        show up there as phantom gene associations.
+
+        Gated with the rest of the allele-allele associations (FTA-218): the Alliance has no
+        "allele_allele_association_ingest_set" yet.
+
+        NB - the partner type is checked against this handler's own feature_lookup rather than passed
+        to recall_relationships() as rel_entity_types. The nested BalancerHandler never calls
+        build_feature_lookup(), so get_entity_relationships() cannot fill its by-related-feature-type
+        buckets and that filter silently matches nothing - which is exactly what the 2026-08-14 run
+        showed, moving 0 associations while the relationships were plainly there. The lookup used here
+        is the one FTA-218 already builds under the same gate.
+        """
+        self.log.info('Move balancer carried alleles and insertions onto parent aberrations.')
+        rel_specs = [
+            ('object', 'carried_on', self.feature_subtypes['allele'], 'AB5b'),
+            ('subject', 'associated_with', self.feature_subtypes['insertion'], 'AB5a'),
+        ]
+        partner_attr = {'subject': 'object_id', 'object': 'subject_id'}
+        moved = 0
+        excluded = 0
+        skipped_unknown = 0
+        cassette_skipped = 0
+        for fbba_feature_id, fbab_feature_id in self.balancer_merge_map.items():
+            balancer = self.fbba_entities[fbba_feature_id]
+            report_rows = [i for i in self.balancer_merge_report if i['fbba_id'] == balancer.uniquename]
+            is_excluded = balancer.uniquename in self.balancer_carries_exclusions
+            for entity_role, fb_rel_type, rel_entity_types, proforma_field in rel_specs:
+                relevant_rels = balancer.recall_relationships(self.log, entity_role=entity_role, rel_types=fb_rel_type)
+                for feat_rel in relevant_rels:
+                    partner_id = getattr(feat_rel.chado_obj, partner_attr[entity_role])
+                    partner = self.feature_lookup.get(partner_id)
+                    if partner is None or partner['type'] not in rel_entity_types:
+                        skipped_unknown += 1
+                        continue
+                    # Cassette FBal features are never exported as alleles, so an association pointing
+                    # at one would dangle at the Alliance. Mirrors the FTA-218 check.
+                    if partner_id in self.cassette_ignore_list:
+                        self.log.warning(f'FTA-236: cassette FBal carried by balancer {balancer}, please check the '
+                                         f'data: {partner["name"]} ({partner["uniquename"]}) [proforma {proforma_field}]')
+                        cassette_skipped += 1
+                        continue
+                    if is_excluded:
+                        excluded += 1
+                        for row in report_rows:
+                            row['carries_excluded'] += 1
+                        continue
+                    rel_key = (fbab_feature_id, partner_id, 'carries')
+                    try:
+                        self.aberration_allele_rels[rel_key].append(feat_rel)
+                    except KeyError:
+                        self.aberration_allele_rels[rel_key] = [feat_rel]
+                        moved += 1
+                        for row in report_rows:
+                            row['carries_alleles'] += 1
+        self.log.info(f'Moved {moved} balancer "carries" associations onto parent aberrations.')
+        self.log.info(f'Held back {excluded} associations for the {len(self.balancer_carries_exclusions)} '
+                      f'balancers excluded by FTA-236.')
+        self.log.info(f'Skipped {skipped_unknown} balancer relationships whose partner is not an exportable '
+                      f'allele or insertion.')
+        if cassette_skipped:
+            self.log.warning(f'Skipped {cassette_skipped} balancer relationships pointing at a cassette FBal feature.')
+        return
+
+    def synthesize_balancer_rename_map(self):
+        """Map each rename-flagged FBba balancer to the parent FBab it renames (FTA-237)."""
+        self.log.info('Map rename-flagged FBba balancers to their parent FBab aberrations.')
+        flag_counter = 0
+        for balancer in self.fbba_entities.values():
+            for fb_prop in balancer.props_by_type.get('internal_notes', []):
+                prop_value = fb_prop.chado_obj.value
+                if not prop_value:
+                    continue
+                match = self.balancer_rename_regex.match(prop_value)
+                if match is None:
+                    continue
+                flag_counter += 1
+                fbab_uniquename = match.group('fbab')
+                parent_feature_id = self._resolve_parent_feature_id(fbab_uniquename)
+                if parent_feature_id is None:
+                    self.log.error(f'FTA-237: balancer {balancer} would rename parent {fbab_uniquename} '
+                                   f'("{match.group("symbol")}"), which is not an exportable aberration '
+                                   f'(obsolete or unknown). No rename applied; please fix the internal note.')
+                    break
+                self.balancer_rename_map[balancer.db_primary_id] = parent_feature_id
+                break
+        self.log.info(f'Found {flag_counter} balancer rename flags; resolved {len(self.balancer_rename_map)} renames.')
+        if self.testing is False and flag_counter != BALANCER_RENAME_EXPECTED:
+            self.log.warning(f'Expected {BALANCER_RENAME_EXPECTED} balancer rename flags per FTA-237, but found '
+                             f'{flag_counter}. Check the "internal_notes" flag text in chado.')
+        return
+
+    def map_balancer_flag(self):
+        """Flag FBab entities carrying the curated balancer internal note with "is_balancer" (FTA-235).
+
+        The "is_balancer" slot came from the same agr_curation_schema PR (#327) as "is_aberration", so it
+        shares the ADD_IS_ABERRATION gate: both slots reach the Alliance in the same LinkML release, and
+        emitting either before then would fail schema validation for the whole allele file.
+        The FBab IDs are always collected into self.balancer_ids, gate or no gate, so the curator TSV can
+        report the flag while the JSON export stays clean (mirrors _is_aberration_cell() in the script).
+        Per FTA-235 these aberrations get both is_balancer=True and is_aberration=True.
+        """
+        self.log.info('Flag aberrations carrying the curated balancer internal note with the "is_balancer" boolean.')
+        add_flag = getenv('ADD_IS_ABERRATION', None) == 'YES'
+        if not add_flag:
+            self.log.info('ADD_IS_ABERRATION not set to "YES"; detecting balancers for the TSV, but not exporting '
+                          'the "is_balancer" flag.')
+        for aberration in self.fb_data_entities.values():
+            if aberration.linkmldto is None:
+                continue
+            for fb_prop in aberration.props_by_type.get('internal_notes', []):
+                prop_value = fb_prop.chado_obj.value
+                if not prop_value or not self.balancer_flag_regex.match(prop_value):
+                    continue
+                self.balancer_ids.add(f'FB:{aberration.uniquename}')
+                self.log.debug(f'Balancer flag found for {aberration}: "{prop_value}"')
+                if add_flag:
+                    aberration.linkmldto.is_balancer = True
+                break
+        self.log.info(f'Found {len(self.balancer_ids)} aberrations carrying the curated balancer internal note.')
+        # In testing mode only a handful of FBab entities are fetched, so the expected count cannot be met.
+        if self.testing is False and len(self.balancer_ids) != self.balancer_flag_expected_count:
+            self.log.warning(f'Expected {self.balancer_flag_expected_count} balancer-flagged aberrations per FTA-235, '
+                             f'but found {len(self.balancer_ids)}. Check the "internal_notes" flag text in chado.')
+        return
+
+    def map_balancer_renames(self):
+        """Export a rename-flagged aberration under its balancer's symbol and full name (FTA-237).
+
+        The nested BalancerHandler has already built a full AlleleDTO for every FBba, so the balancer's
+        allele_symbol_dto and allele_full_name_dto are correct - right display_text conversion, right
+        evidence curies - and are simply copied into the parent's slots. The aberration's own names
+        move to allele_synonym_dtos, as the ticket asks.
+
+        Must run after map_synonyms(), which is what populates the parent's name slots in the first
+        place. Any synonym matching a newly promoted name is dropped, so a name grafted by FTA-236
+        does not appear twice.
+        """
+        self.log.info('Rename flagged aberrations to use their balancer symbol and full name.')
+        renamed = 0
+        for fbba_feature_id, fbab_feature_id in self.balancer_rename_map.items():
+            balancer = self.fbba_entities[fbba_feature_id]
+            aberration = self.fb_data_entities[fbab_feature_id]
+            if aberration.linkmldto is None:
+                self.log.warning(f'FTA-237: {aberration} has no LinkML object to rename; skipping.')
+                continue
+            report = {
+                'fbab_id': aberration.uniquename,
+                'fbba_id': balancer.uniquename,
+                'source': 'flag',
+                'new_symbol': '',
+                'old_symbol': '',
+                'new_full_name': '',
+                'old_full_name': '',
+            }
+            new_dtos = {
+                'allele_symbol_dto': getattr(balancer.linkmldto, 'allele_symbol_dto', None),
+                'allele_full_name_dto': getattr(balancer.linkmldto, 'allele_full_name_dto', None),
+            }
+            self.apply_rename(aberration, new_dtos, report)
+            self.balancer_rename_report.append(report)
+            renamed += 1
+            self.log.debug(f'FTA-237: renamed {aberration} to "{report["new_symbol"]}" '
+                           f'("{report["new_full_name"]}") after balancer {balancer}.')
+        self.map_hardcoded_balancer_renames()
+        self.log.info(f'Renamed {renamed} aberrations from curated flags, plus '
+                      f'{len(self.balancer_rename_report) - renamed} hard-coded; '
+                      f'{len(self.balancer_rename_report)} in total.')
+        return
+
+    def apply_rename(self, aberration, new_dtos, report):
+        """Move an aberration's own names to synonyms and install the new ones (FTA-237).
+
+        Args:
+            aberration (FBAberration): the aberration being renamed.
+            new_dtos (dict): {slot_name: NameSlotAnnotationDTO dict or None} for the new names.
+            report (dict): the report row to fill in, mutated in place.
+
+        """
+        NAME_SLOT_LABELS = {'allele_symbol_dto': 'symbol', 'allele_full_name_dto': 'full_name'}
+        for slot_name, label in NAME_SLOT_LABELS.items():
+            new_dto = new_dtos.get(slot_name)
+            if new_dto is None:
+                continue
+            old_dto = getattr(aberration.linkmldto, slot_name)
+            report[f'new_{label}'] = new_dto['format_text']
+            if old_dto is not None:
+                report[f'old_{label}'] = old_dto['format_text']
+                aberration.linkmldto.allele_synonym_dtos.append(old_dto)
+            # Copy, so later edits to either DTO cannot bleed into the other entity's export.
+            setattr(aberration.linkmldto, slot_name, dict(new_dto))
+            self.drop_duplicate_synonyms(aberration, new_dto)
+        return
+
+    def map_hardcoded_balancer_renames(self):
+        """Apply the FTA-237 renames that no curated flag can drive (currently only In(2LR)SM6)."""
+        for fbab_uniquename, names in self.balancer_hardcoded_renames.items():
+            new_symbol, new_full_name = names
+            parent_feature_id = self._resolve_parent_feature_id(fbab_uniquename)
+            if parent_feature_id is None:
+                self.log.error(f'FTA-237: hard-coded rename target {fbab_uniquename} ("{new_symbol}") is not an '
+                               f'exportable aberration; rename not applied.')
+                continue
+            aberration = self.fb_data_entities[parent_feature_id]
+            if aberration.linkmldto is None:
+                self.log.warning(f'FTA-237: {aberration} has no LinkML object to rename; skipping.')
+                continue
+            new_dtos = {
+                'allele_symbol_dto': agr_datatypes.NameSlotAnnotationDTO(
+                    'nomenclature_symbol', new_symbol, sub_sup_sgml_to_html(sub_sup_to_sgml(new_symbol)), []).dict_export(),
+                'allele_full_name_dto': agr_datatypes.NameSlotAnnotationDTO(
+                    'full_name', new_full_name, sub_sup_sgml_to_html(sub_sup_to_sgml(new_full_name)), []).dict_export(),
+            }
+            report = {
+                'fbab_id': aberration.uniquename,
+                'fbba_id': 'n/a',
+                'source': 'hard-coded',
+                'new_symbol': '',
+                'old_symbol': '',
+                'new_full_name': '',
+                'old_full_name': '',
+            }
+            self.apply_rename(aberration, new_dtos, report)
+            self.balancer_rename_report.append(report)
+            self.log.info(f'FTA-237: applied the hard-coded rename of {aberration} to '
+                          f'"{new_symbol}" ("{new_full_name}").')
+        return
+
+    def drop_duplicate_synonyms(self, aberration, promoted_dto):
+        """Remove synonyms that duplicate a name just promoted into a name slot (FTA-237).
+
+        FTA-236 grafts the balancer's names onto the parent as synonyms; once one of them becomes the
+        parent's symbol or full name, the synonym entry is redundant. Matching is on name type plus
+        format_text, so a same-text synonym of a different type is left alone.
+        """
+        keep = []
+        for synonym_dto in aberration.linkmldto.allele_synonym_dtos:
+            is_duplicate = synonym_dto['format_text'] == promoted_dto['format_text']
+            if is_duplicate and synonym_dto['name_type_name'] == promoted_dto['name_type_name']:
+                continue
+            keep.append(synonym_dto)
+        aberration.linkmldto.allele_synonym_dtos = keep
+        return
+
+    def map_aberration_allele_associations(self):
+        """Map aberration-allele associations to Alliance object (FTA-218)."""
+        self.log.info('Map aberration-allele associations to Alliance object.')
+        ABERRATION_ID = 0
+        PARTNER_ID = 1
+        REL_TYPE_NAME = 2
+        counter = 0
+        obsolete_counter = 0
+        for rel_key, aberration_allele_rels in self.aberration_allele_rels.items():
+            aberration = self.fb_data_entities[rel_key[ABERRATION_ID]]
+            aberration_curie = f'FB:{aberration.uniquename}'
+            partner = self.feature_lookup[rel_key[PARTNER_ID]]
+            partner_curie = f'FB:{partner["uniquename"]}'
+            agr_rel_type_name = rel_key[REL_TYPE_NAME]
+            all_pub_ids = []
+            for aberration_allele_rel in aberration_allele_rels:
+                all_pub_ids.extend(aberration_allele_rel.pubs)
+            pub_curies = self.lookup_pub_curies(all_pub_ids)
+            rel_dto = agr_datatypes.AlleleAlleleAssociationDTO(aberration_curie, agr_rel_type_name, partner_curie, pub_curies)
+            # An FBal superseded by an FBti insertion is marked obsolete by the AlleleHandler's merge_fbti_fbal(), so
+            # some partners here are obsolete alleles. Follow the aberration-gene precedent and report these as internal.
+            if aberration.is_obsolete is True or partner['is_obsolete'] is True:
+                rel_dto.obsolete = True
+                rel_dto.internal = True
+                obsolete_counter += 1
+            first_feat_rel = aberration_allele_rels[0]
+            first_feat_rel.pubs = all_pub_ids
+            first_feat_rel.linkmldto = rel_dto
+            self.aberration_allele_associations.append(first_feat_rel)
+            counter += 1
+        self.log.info(f'Generated {counter} aberration-allele unique associations.')
+        self.log.info(f'Of these, {obsolete_counter} involve an obsolete aberration or allele, and are flagged internal.')
+        return
+
     # Elaborate on map_fb_data_to_alliance() for the AberrationHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the AberrationHandler."""
         super().map_fb_data_to_alliance()
         self.map_metaallele_basic()
+        self.map_aberration_flag()
+        self.map_balancer_flag()
         self.map_metaallele_database_status()
         self.map_internal_metaallele_status()
         self.map_aberration_mutation_types()
         self.map_aberration_gene_associations()
         self.map_synonyms()
+        self.map_balancer_renames()
         self.map_data_provider_dto()
         self.map_xrefs()
         self.map_entity_props_to_notes('aberration_prop_to_note_mapping')
@@ -1454,6 +2163,13 @@ class AberrationHandler(MetaAlleleHandler):
         self.map_secondary_ids('allele_secondary_id_dtos')
         self.flag_internal_fb_entities('fb_data_entities')
         # self.flag_internal_fb_entities('aberration_gene_associations')
+        # FTA-218: gated until the Alliance schema has an "allele_allele_association_ingest_set" and the
+        # "carries"/"breakpoint_allele" CV terms.
+        if getenv('ADD_ALLELE_ALLELE_ASSOC', None) == 'YES':
+            self.map_aberration_allele_associations()
+            self.flag_internal_fb_entities('aberration_allele_associations')
+        else:
+            self.log.info('ADD_ALLELE_ALLELE_ASSOC not set to "YES"; skipping aberration-allele association mapping.')
         return
 
     # Elaborate on query_chado_and_export() for the AberrationHandler.
@@ -1462,6 +2178,14 @@ class AberrationHandler(MetaAlleleHandler):
         super().query_chado_and_export(session)
         self.flag_unexportable_entities(self.aberration_gene_associations, 'allele_gene_association_ingest_set')
         self.generate_export_dict(self.aberration_gene_associations, 'allele_gene_association_ingest_set')
+        # FTA-218: gated until the Alliance schema has an "allele_allele_association_ingest_set" and the
+        # "carries"/"breakpoint_allele" CV terms. When the gate is off, no such key is added to self.export_data.
+        if getenv('ADD_ALLELE_ALLELE_ASSOC', None) == 'YES':
+            self.flag_unexportable_entities(self.aberration_allele_associations, 'allele_allele_association_ingest_set')
+            self.generate_export_dict(self.aberration_allele_associations, 'allele_allele_association_ingest_set')
+        else:
+            self.log.info('ADD_ALLELE_ALLELE_ASSOC not set to "YES"; not exporting an '
+                          '"allele_allele_association_ingest_set".')
         return
 
 

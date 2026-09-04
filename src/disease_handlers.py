@@ -571,7 +571,8 @@ class AGMDiseaseHandler(DataHandler):
                 # self.log.debug(f'Many ECOs for model_key={ukey}: {uniqued_list}')
                 many_counter += 1
         self.log.info(f'Have {zero_counter} keys in lookup with NO ECO; {one_counter} keys with ONE ECO; {many_counter} keys with MANY ECOS.')
-        self.log.info(f'Have these distinct ECO codes: {set(distinct_ecos)}')
+        # FTA-232: sorted so this line is stable across runs.
+        self.log.info(f'Have these distinct ECO codes: {sorted(set(distinct_ecos))}')
         return
 
     def lookup_eco_codes_for_modifier_annotations(self):
@@ -1601,10 +1602,9 @@ class AlleleDiseaseHandler(DataHandler):
         self.fb_export_type = fb_datatypes.FBAlleleDiseaseAnnotation
         self.agr_export_type = agr_datatypes.AlleleDiseaseAnnotationDTO
         self.primary_export_set = 'disease_allele_ingest_set'
-
-    # A dict of unique disease annotation attributes.
-    # This will be used after initial data pull to filter out redundant disease annotations.
-    uniq_dis_dict = {}
+        # A dict of unique disease annotation attributes.
+        # This will be used after initial data pull to filter out redundant disease annotations.
+        self.uniq_dis_dict = {}
 
     # Key disease annotation term sets and look ups.
     relevant_qualifiers = [

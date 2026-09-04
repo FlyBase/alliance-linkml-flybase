@@ -63,6 +63,7 @@ class DataHandler(object):
         self.cvterm_lookup = {}                     # A cvterm_id-keyed dict of dicts with these keys: 'name', 'cv_name', 'db_name', 'curie'.
         self.organism_lookup = {}                   # An organism_id-keyed dict of organism info.
         self.chr_dict = {}                          # Will be a feature_id-keyed dict of chr scaffold uniquenames.
+        self.mod_official_dbs = {}                  # FTA-216: organism-abbreviation-keyed dict of MOD official db names.
         self.feature_lookup = {}                    # feature_id-keyed dicts {uniquename, curie, is_obsolete, type, organism_id, name, symbol, exported}.
         self.uname_feature_lookup = {}              # FB uniquename-keyed dicts of self.feature_lookup.values().
         self.allele_gene_lookup = {}                # allele feature_id-keyed dict of related gene feature_id (current features only).
@@ -83,9 +84,8 @@ class DataHandler(object):
     # Sample set for faster testing: use uniquename-keyed names of objects, tailored for each handler.
     test_set = {}
 
-    # Alliance organism abbreviations and official dbs.
+    # Alliance organism abbreviations.
     alliance_organisms = ['Scer', 'Cele', 'Dmel', 'Drer', 'Xlae', 'Xtro', 'Mmus', 'Rnor', 'Hsap', 'SARS-CoV-2']
-    mod_official_dbs = {}
 
     # Alliance db names should correspond to the contents of this file:
     # https://github.com/alliance-genome/agr_schemas/blob/master/resourceDescriptors.yaml
@@ -205,6 +205,7 @@ class DataHandler(object):
         'polypeptide': r'^FBpp[0-9]{7}$',
         'seqfeat': r'^FBsf[0-9]{10}$',
         'split system combination': r'^FBco[0-9]{7}$',
+        'str': r'^FBsf[0-9]{10}$',    # FTA-224: the STR subset of seqfeats; distinguished by feature.type, not by ID.
         'transcript': r'^FBtr[0-9]{7}$',
         'transposon': r'^FBte[0-9]{7}$',
         'tool': r'^FBto[0-9]{7}$',
@@ -215,7 +216,12 @@ class DataHandler(object):
         'cell_line': r'^FBtc[0-9]{7}$',
         'clone': r'^FBcl[0-9]{7}$',
         'panther': r'PTHR[0-9]{5}',
-        'systematic_name': r'^(D[a-z]{3}\\|)(CG|CR|G[A-Z])[0-9]{4,5}',
+        # FTA-238: anchored at both ends, so an allele symbol that merely starts with an annotation
+        # ID (CG17836[142]) is no longer retyped as a systematic name. The optional -(R|P)[A-Z]*
+        # tail keeps annotated transcript/polypeptide forms (CG12345-RA, CR3456-PB) matching, at
+        # Gil's request, for if FBtr/FBpp are ever exported. The | inside the first group is what
+        # makes the species prefix optional; it is not part of the defect.
+        'systematic_name': r'^(D[a-z]{3}\\|)(CG|CR|G[A-Z])[0-9]{4,5}(-(R|P)[A-Z]*)?$',
     }
 
     # Feature sub-types that are considered their own data class.
@@ -233,6 +239,7 @@ class DataHandler(object):
         'polypeptide': False,
         'seqfeat': False,
         'split system combination': True,
+        'str': True,    # FTA-225: the RNAi_reagent/sgRNA subset of FBsf, exported as SequenceTargetingReagentDTO.
         'tool': False,
         'transcript': False,
         'transposon': False,
@@ -253,6 +260,7 @@ class DataHandler(object):
         'polypeptide': None,
         'seqfeat': None,    # The list is too long, so for this case let the code be flexible.
         'split system combination': ['split system combination'],
+        'str': ['RNAi_reagent', 'sgRNA'],    # FTA-224: the FBsf types that are sequence targeting reagents.
         'tool': ['engineered_region'],
         'transcript': None,
         'transposon': ['natural_transposable_element'],
@@ -337,6 +345,8 @@ class DataHandler(object):
             pub_id_list = [pub_id_list]
         pub_curie_list = []
         # First, try to get curies for each pub_id.
+        # FTA-232: deliberately NOT sorted - pub_ids are ints, so this iteration is already stable
+        # across processes, and sorting would reorder exported evidence lists for no gain.
         for pub_id in set(pub_id_list):
             try:
                 pub_curie_list.append(self.bibliography[pub_id])
@@ -352,23 +362,40 @@ class DataHandler(object):
     def build_cvterm_lookup(self, session):
         """Create a cvterm_id-keyed lookup of Cvterm objects."""
         self.log.info('Create a cvterm_id-keyed dict of Cvterms.')
-        # First get all current pubs having an FBrf uniquename.
         filters = (
             Cvterm.is_obsolete == 0,
         )
-        results = session.query(Cvterm).filter(*filters).distinct()
+        # Select only the columns used below, joining cv/dbxref/db explicitly. Reading these off the
+        # ORM object instead lazy-loads dbxref once per row - cv and db are few enough to stay cached
+        # in the identity map, but dbxref is 1:1 with cvterm - which is ~87K extra round trips, i.e.
+        # over an hour on a remote connection versus under a second here (FTA-220).
+        # No DISTINCT: cvterm.cv_id and cvterm.dbxref_id are NOT NULL 1:1 FKs, so the joins can
+        # neither multiply nor drop rows, and the row set already carries a primary key.
+        results = session.query(Cvterm.cvterm_id, Cvterm.name, Cv.name,
+                                Db.name, Dbxref.accession).\
+            select_from(Cvterm).\
+            join(Cv, (Cv.cv_id == Cvterm.cv_id)).\
+            join(Dbxref, (Dbxref.dbxref_id == Cvterm.dbxref_id)).\
+            join(Db, (Db.db_id == Dbxref.db_id)).\
+            filter(*filters)
+        # Cvterm.name, Cv.name and Db.name all label as "name", so index positionally.
+        CVTERM_ID = 0
+        NAME = 1
+        CV_NAME = 2
+        DB_NAME = 3
+        ACCESSION = 4
         cvterm_counter = 0
         for result in results:
             cvterm_dict = {
-                'cvterm_id': result.cvterm_id,
-                'name': result.name,
-                'cv_name': result.cv.name,
-                'db_name': result.dbxref.db.name,
-                'curie': f'{result.dbxref.db.name}:{result.dbxref.accession}',
-                'name_plus_curie': f'{result.name} ({result.dbxref.db.name}:{result.dbxref.accession})',
+                'cvterm_id': result[CVTERM_ID],
+                'name': result[NAME],
+                'cv_name': result[CV_NAME],
+                'db_name': result[DB_NAME],
+                'curie': f'{result[DB_NAME]}:{result[ACCESSION]}',
+                'name_plus_curie': f'{result[NAME]} ({result[DB_NAME]}:{result[ACCESSION]})',
                 'slim_term_cvterm_ids': [],
             }
-            self.cvterm_lookup[result.cvterm_id] = cvterm_dict
+            self.cvterm_lookup[result[CVTERM_ID]] = cvterm_dict
             cvterm_counter += 1
         self.log.info(f'Found {cvterm_counter} current CV terms in chado.')
         return

@@ -7,10 +7,13 @@ AGR_data_retrieval_curation_construct.py (and which appear in similar form
 in the allele and transgenic_tool scripts).
 
 DTO field names are derived from a `datatype` string (e.g. "cassette",
-"construct"). All current scripts follow the regular convention
+"construct"). Most scripts follow the regular convention
 `{datatype}_full_name_dto`, `{datatype}_symbol_dto`,
-`{datatype}_synonym_dtos`, etc.; if a future script breaks that
-convention these helpers will need to be parameterized further.
+`{datatype}_synonym_dtos`, etc. A datatype that breaks the convention can
+pass `symbol_source`/`full_name_source`/`synonym_source` to
+write_primary_tsv(): STR does, because SequenceTargetingReagentDTO holds
+its symbol in a plain `name` string and its synonyms in a plain list of
+strings rather than in NameSlotAnnotationDTO slots.
 """
 
 import os
@@ -29,11 +32,12 @@ GENE_CHANGE_EVENTS_TSV_HEADER = (
 SKIPPED_IDENTITY_SOURCE_TSV_HEADER = (
     "# Primary FBid\traw_value\ttoken_count\tinternal\tobsolete\n"
 )
-NOTE_CLEAN_FAILURES_TSV_HEADER = "# Primary FBid\traw_value\terror\n"
+NOTE_CLEAN_FAILURES_TSV_HEADER = "# Primary FBid\tprop_type\tprop_id\traw_value\terror\n"
 COMPONENTS_TSV_HEADER = "# Primary FBid\tsymbol\trelation\ttaxon\tevidence\n"
-# NB: existing tool_uses TSVs write rows as primary, tools, evidence; the
-# header preserves that historic column order verbatim.
-TOOL_USES_TSV_HEADER = "# Primary FBid\tevidence\ttool_uses\n"
+# NB: rows are written as primary, tool_uses, evidence. The header previously
+# listed the last two the other way round, mislabelling both columns; only the
+# labels are corrected here, so the data columns are unchanged.
+TOOL_USES_TSV_HEADER = "# Primary FBid\ttool_uses\tevidence\n"
 
 
 def should_skip_obsolete():
@@ -45,16 +49,32 @@ def _is_excluded(entity_dict):
     return entity_dict.get('internal') or entity_dict.get('obsolete')
 
 
-def write_primary_tsv(*, log, filename, entities, datatype):
-    """Write the primary identifier TSV (used by every curation script)."""
+def write_primary_tsv(*, log, filename, entities, datatype, extra_fields=None,
+                      symbol_source=None, full_name_source=None, synonym_source=None):
+    """Write the primary identifier TSV (used by every curation script).
+
+    `extra_fields` appends datatype-specific columns after the shared ones. It is a list of
+    `(header_label, source, default_when_missing)` tuples, where `source` is either a key into the
+    exported entity dict or a callable taking that dict and returning the cell value. List/tuple
+    values are joined with EVIDENCE_DELIMITER; None and missing keys fall back to the default.
+    Scripts that pass nothing get the historic six-column output unchanged.
+
+    `symbol_source`, `full_name_source` and `synonym_source` override where the symbol, full name
+    and synonym cells come from, for a datatype whose DTO does not use the
+    `{datatype}_symbol_dto`/`_full_name_dto`/`_synonym_dtos` convention. Each is a callable taking
+    the exported entity dict; the first two return a string (or None), the third a list of strings.
+    Left unset, the conventional DTO slots are read exactly as before.
+    """
     skip = should_skip_obsolete()
     if skip:
         log.info(f'ADD_OBSOLETE=NO: excluding obsolete/internal {datatype}s from TSV.')
     full_name_key = f'{datatype}_full_name_dto'
     symbol_key = f'{datatype}_symbol_dto'
     synonym_key = f'{datatype}_synonym_dtos'
+    extras = extra_fields or []
+    extra_headers = "".join(f"\t{label}" for label, _, _ in extras)
     with open(filename, 'w') as outfile:
-        outfile.write(PRIMARY_TSV_HEADER)
+        outfile.write(PRIMARY_TSV_HEADER.rstrip('\n') + extra_headers + '\n')
         for entity_dict in entities:
             if skip and _is_excluded(entity_dict):
                 continue
@@ -63,11 +83,17 @@ def write_primary_tsv(*, log, filename, entities, datatype):
             name = ''
             secondary = []
             syns = []
-            if full_name_key in entity_dict:
+            if full_name_source is not None:
+                name = full_name_source(entity_dict) or ''
+            elif full_name_key in entity_dict:
                 name = entity_dict[full_name_key]["format_text"]
-            if symbol_key in entity_dict:
+            if symbol_source is not None:
+                symbol = symbol_source(entity_dict) or ''
+            elif symbol_key in entity_dict:
                 symbol = entity_dict[symbol_key]["format_text"]
-            if synonym_key in entity_dict:
+            if synonym_source is not None:
+                syns = list(synonym_source(entity_dict) or [])
+            elif synonym_key in entity_dict:
                 for synonym in entity_dict[synonym_key]:
                     syns.append(synonym["format_text"])
             if "secondary_identifiers" in entity_dict:
@@ -75,9 +101,19 @@ def write_primary_tsv(*, log, filename, entities, datatype):
             internal = entity_dict.get("internal", False)
             secondary_str = EVIDENCE_DELIMITER.join(secondary)
             syns_str = EVIDENCE_DELIMITER.join(syns)
+            extra_parts = []
+            for _label, source, default in extras:
+                value = source(entity_dict) if callable(source) else entity_dict.get(source)
+                if value is None:
+                    extra_parts.append(default)
+                elif isinstance(value, (list, tuple)):
+                    extra_parts.append(EVIDENCE_DELIMITER.join(value))
+                else:
+                    extra_parts.append(str(value))
+            extras_str = "".join(f"\t{p}" for p in extra_parts)
             try:
                 outfile.write(
-                    f"{primary}\t{symbol}\t{name}\t{secondary_str}\t{syns_str}\t{internal}\n"
+                    f"{primary}\t{symbol}\t{name}\t{secondary_str}\t{syns_str}\t{internal}{extras_str}\n"
                 )
             except TypeError:
                 log.error(f"entity_dict: {entity_dict}")
@@ -87,6 +123,7 @@ def write_primary_tsv(*, log, filename, entities, datatype):
                 log.error(f"name: {name}")
                 log.error(f"syns: {syns}")
                 log.error(f"internal: {internal}")
+                log.error(f"extras: {extra_parts}")
                 raise
 
 
@@ -107,21 +144,27 @@ def write_notes_tsv(*, filename, entities):
                 outfile.write(f"{primary}\t{note['note_type_name']}\t{free_text}\t{evidence}\n")
 
 
-def write_gene_change_events_tsv(*, filename, entities):
+def write_gene_change_events_tsv(*, filename, entities, events_by_id=None):
     """Write the gene change events TSV (`gene_change_event_dtos` slot).
 
     One row per change event. Rename events (from 'identity_source') fill the
     symbol columns; nomenclature comment events fill the note column with the
     inner note's free_text. Evidence curies are pipe-joined.
+
+    `events_by_id` supplies the change events, keyed by primary external ID, for genes whose
+    exported dict carries no `gene_change_event_dtos` key. The gene script passes the handler's
+    collected events so this TSV stays populated while ADD_GENE_CHANGE_EVENTS keeps the slot out
+    of the JSON.
     """
     skip = should_skip_obsolete()
+    fallback = events_by_id or {}
     with open(filename, 'w') as outfile:
         outfile.write(GENE_CHANGE_EVENTS_TSV_HEADER)
         for entity_dict in entities:
             if skip and _is_excluded(entity_dict):
                 continue
             primary = entity_dict["primary_external_id"]
-            for event in entity_dict.get("gene_change_event_dtos", []):
+            for event in entity_dict.get("gene_change_event_dtos") or fallback.get(primary, []):
                 event_type = event.get("event_type_name", "")
                 renamed_from = event.get("symbol_renamed_from", "")
                 renamed_to = event.get("symbol_renamed_to", "")
@@ -153,17 +196,21 @@ def write_skipped_identity_source_tsv(*, filename, skipped):
 
 
 def write_note_clean_failures_tsv(*, filename, failures):
-    """Write the diagnostic TSV of internal_notes whose text failed clean_free_text (FTA-211).
+    """Write the diagnostic TSV of note props whose text could not be cleaned (FTA-211, FTA-221).
 
-    One row per failed note: the raw featureprop value (tabs/newlines flattened) and the
-    exception, so curators can see the offending characters (e.g. an unknown SGML entity
-    like "&3;"). Not filtered by should_skip_obsolete().
+    One row per failed note: the prop type and prop table primary key that identify the offending
+    row, the raw value (tabs/newlines flattened), and the reason. The prop type tells a curator
+    which field to fix; the prop_id pins down which row when the value is NULL or blank and there
+    is therefore no text to recognise it by. Not filtered by should_skip_obsolete().
+
+    NB - prop_type/prop_id are read with .get() because callers that predate FTA-221
+    (construct_handler, cassette_handler) do not supply them.
     """
     with open(filename, 'w') as outfile:
         outfile.write(NOTE_CLEAN_FAILURES_TSV_HEADER)
         for item in failures:
-            raw = item['raw_value'].replace('\t', ' ').replace('\n', ' ')
-            outfile.write(f"{item['fb_id']}\t{raw}\t{item['error']}\n")
+            raw = str(item.get('raw_value', '')).replace('\t', ' ').replace('\n', ' ')
+            outfile.write(f"{item['fb_id']}\t{item.get('prop_type', '')}\t{item.get('prop_id', '')}\t{raw}\t{item['error']}\n")
 
 
 def write_components_tsv(*, filename, entities, datatype):
@@ -187,17 +234,31 @@ def write_components_tsv(*, filename, entities, datatype):
                 )
 
 
-def write_tool_uses_tsv(*, filename, entities, datatype, no_pubs_sentinel=NO_PUBS_SENTINEL):
-    """Write the tool-uses TSV (`{datatype}_use_dtos`)."""
+def write_tool_uses_tsv(
+    *,
+    filename,
+    entities,
+    datatype,
+    no_pubs_sentinel=NO_PUBS_SENTINEL,
+    use_dtos_by_id=None,
+):
+    """Write the tool-uses TSV (`{datatype}_use_dtos`).
+
+    `use_dtos_by_id` supplies slot annotations, keyed by primary external ID, for entities whose
+    exported dict carries no `{datatype}_use_dtos` key. The transgenic tool script passes the
+    handler's collected annotations so this TSV stays populated while ADD_TOOL_USES keeps the slot
+    out of the JSON; the cassette script omits it and reads the exported dicts as before.
+    """
     skip = should_skip_obsolete()
     use_key = f'{datatype}_use_dtos'
+    fallback = use_dtos_by_id or {}
     with open(filename, 'w') as outfile:
         outfile.write(TOOL_USES_TSV_HEADER)
         for entity_dict in entities:
             if skip and _is_excluded(entity_dict):
                 continue
             primary = entity_dict["primary_external_id"]
-            for comp in entity_dict.get(use_key, []):
+            for comp in entity_dict.get(use_key) or fallback.get(primary, []):
                 if 'evidence_curies' in comp:
                     evidence = EVIDENCE_DELIMITER.join(comp['evidence_curies'])
                 else:

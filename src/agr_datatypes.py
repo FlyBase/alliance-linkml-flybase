@@ -106,6 +106,8 @@ class AlleleDTO(GenomicEntityDTO):
         self.allele_synonym_dtos = []                          # Many NameSlotAnnotationDTO objects.
         self.in_collection_name = None                         # Will be the name of a FlyBase library/collection.
         self.is_extinct = None                                 # Make True if extinction reported; make False is stock exists; leave as None otherwise.
+        self.is_aberration = None                              # Make True only for FBab aberrations; leave as None otherwise (FTA-217).
+        self.is_balancer = None                                # Make True only for FBab aberrations flagged as balancers; leave as None otherwise (FTA-235).
         self.allele_mutation_type_dtos = []                    # AlleleMutationTypeSlotAnnotationDTOs.
         self.allele_inheritance_mode_dtos = []                 # AlleleInheritanceModeSlotAnnotationDTOs.
         self.allele_database_status_dto = None                 # AlleleDatabaseStatusSlotAnnotationDTOs.
@@ -122,6 +124,24 @@ class AlleleDTO(GenomicEntityDTO):
         self.is_integrated = None                              # N/A (WB).
         self.laboratory_of_origin_curie = None                 # N/A (WB).
         self.required_fields.extend(['allele_symbol_dto', 'primary_external_id'])
+
+
+class SequenceTargetingReagentDTO(GenomicEntityDTO):
+    """SequenceTargetingReagentDTO class."""
+    def __init__(self):
+        """Create SequenceTargetingReagentDTO for FlyBase object.
+
+        FTA-225/FTA-226. Note that "name" and "synonyms" are plain strings in the LinkML model
+        (not NameSlotAnnotationDTOs), so this DTO cannot carry per-name attribution or
+        current/non-current status, and PrimaryEntityHandler.map_synonyms() does not apply to it.
+        """
+        super().__init__()
+        self.name = None                    # Plain string: the current symbol of the FBsf.
+        self.synonyms = []                  # Plain strings: all other synonyms, unattributed.
+        self.secondary_identifiers = []     # Will be list of 2o FB curies (strings).
+        self.reference_curies = []          # Will be a list of reference curies.
+        self.note_dtos = []                 # Will be NoteDTO objects (inherited slot; unused for now).
+        self.required_fields.extend(['primary_external_id', 'name'])
 
 
 class CassetteTransgenicToolAssociationDTO(AuditedObjectDTO):
@@ -165,9 +185,14 @@ class CassetteStrAssociationDTO(AuditedObjectDTO):
         super().__init__()
         self.cassette_identifier = cassette_association_subject
         self.sequence_targeting_reagent_identifier = cassette_association_object
-        self.evidence = pub_curies
+        # NB - "evidence_curies", not "evidence": CassetteStrAssociationDTO is_a
+        # EvidenceAssociationDTO, and the schema declares no "evidence" slot at all.
+        self.evidence_curies = pub_curies
         self.obsolete = obsolete
         self.relation_name = relation
+        self.note_dtos = []    # Inherited slot; nothing populates it yet.
+        self.required_fields.extend(['cassette_identifier', 'relation_name',
+                                     'sequence_targeting_reagent_identifier'])
 
 
 class SlotAnnotationDTO(AuditedObjectDTO):
@@ -191,6 +216,14 @@ class CassetteUseSlotAnnotationDTO(SlotAnnotationDTO):
         self.use_curies = cvterm
 
 
+class TransgenicToolUseSlotAnnotationDTO(SlotAnnotationDTO):
+    """TransgenicToolUseSlotAnnotationDTO class."""
+    def __init__(self, pub_curies, cvterm):
+        """Create TransgenicToolUseSlotAnnotationDTO for FlyBase object."""
+        super().__init__(pub_curies)
+        self.use_curies = cvterm
+
+
 class GeneDTO(GenomicEntityDTO):
     """GeneDTO class."""
     def __init__(self):
@@ -204,7 +237,7 @@ class GeneDTO(GenomicEntityDTO):
         self.gene_secondary_id_dtos = []        # Annotation IDs and 2o FlyBase IDs.
         # self.reference_curies = []              # Not yet part of LinkML, so not exported - should be added to LinkML model?
         self.note_dtos = []                     # Will be NoteDTO objects.
-        self.gene_change_event_dtos = []        # Will be GeneChangeEventSlotAnnotationDTO objects.
+        self.gene_change_event_dtos = []        # GeneChangeEventSlotAnnotationDTOs; gated by ADD_GENE_CHANGE_EVENTS (app has no field for it).
         self.gcrp_cross_reference_dto = None    # Will be a single CrossReferenceDTO object for UniProt/GCRP xref, if any.
         self.required_fields.extend(['gene_symbol_dto'])
 
@@ -241,6 +274,7 @@ class TransgenicToolDTO(ReagentDTO):
         self.transgenic_tool_symbol_dto = None      # One NameSlotAnnotationDTO.
         self.transgenic_tool_full_name_dto = None   # One NameSlotAnnotationDTO.
         self.transgenic_tool_synonym_dtos = []      # Many NameSlotAnnotationDTO objects.
+        self.transgenic_tool_use_dtos = []          # TransgenicToolUseSlotAnnotationDTOs; gated by ADD_TOOL_USES (slot is agr_curation_schema main only).
         self.note_dtos = []                         # Will be NoteDTO objects.
         self.cross_reference_dtos = []
         self.required_fields.extend(['transgenic_tool_symbol_dto'])
@@ -397,6 +431,26 @@ class AlleleGeneAssociationDTO(AlleleGenomicEntityAssociationDTO):
         self.gene_identifier = gene_id
         self.evidence_curies = evidence_curies
         self.required_fields.extend(['gene_identifier'])
+
+
+class AlleleAlleleAssociationDTO(AlleleGenomicEntityAssociationDTO):
+    """AlleleAlleleAssociationDTO class."""
+    def __init__(self, allele_id: str, rel_type: str, object_allele_id: str, evidence_curies: list):
+        """Create AlleleAlleleAssociationDTO for FlyBase object.
+
+        Args:
+            allele_id (str): The FB:FBab curie for the aberration subject.
+            rel_type (str): A CV term: "carries" or "breakpoint_allele".
+            object_allele_id (str): The FB:FBal or FB:FBti curie for the allele object.
+            evidence_curies (list): A list of FB:FBrf or PMID:### curies.
+
+        """
+        super().__init__(evidence_curies)
+        self.allele_identifier = allele_id
+        self.relation_name = rel_type
+        self.object_allele_identifier = object_allele_id
+        self.evidence_curies = evidence_curies
+        self.required_fields.extend(['object_allele_identifier'])
 
 
 class ConstructGenomicEntityAssociationDTO(EvidenceAssociationDTO):
