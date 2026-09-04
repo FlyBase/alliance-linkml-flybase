@@ -92,6 +92,8 @@ class FBDataEntity(FBExportEntity):
         # These attributes apply to various FlyBase entities: e.g., gene, strain, genotype, gene group, etc.
         self.pub_associations = []        # Pub associations: e.g., FeaturePub, StrainPub.
         self.synonyms = []                # Synonym associations: e.g., FeatureSynonym.
+        self.merged_synonym_ids = set()   # synonym_ids merged in from a superseded entity; never current symbols here.
+        self.demoted_synonym_ids = set()  # synonym_ids to force non-current for ALL name types (FTA-236 balancer merges).
         self.fb_sec_dbxrefs = []          # 2o/non-current FlyBase xref objects: e.g., FeatureDbxref.
         self.dbxrefs = []                 # Current xref objects: e.g., FeatureDbxref.
         self.props_by_type = {}           # Lists of FBProp objects keyed by prop type name.
@@ -388,6 +390,19 @@ class FBTool(FBFeature):
         """Create the FBTool object."""
         super().__init__(chado_obj)
         # Processed FB data.
+        self.prop_data = {'tool_uses': []}    # list of dicts: name/type/pub/accession
+
+
+class FBStr(FBFeature):
+    """A FlyBase sequence targeting reagent (STR) entity with all its related data.
+
+    The STR subset of FBsf sequence features: those with a feature.type of "RNAi_reagent"
+    or "sgRNA" (FTA-224). The minimal Alliance submission needs no props, so prop_data
+    stays at the empty FBFeature default.
+    """
+    def __init__(self, chado_obj):
+        """Create the FBStr object."""
+        super().__init__(chado_obj)
 
 
 class FBStrain(FBDataEntity):

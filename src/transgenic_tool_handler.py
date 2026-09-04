@@ -12,6 +12,7 @@ Author(s):
 # import csv
 # import re
 from logging import Logger
+from os import getenv
 import agr_datatypes
 import fb_datatypes
 from feature_handler import FeatureHandler
@@ -26,6 +27,11 @@ class ExperimentalToolHandler(FeatureHandler):
         self.fb_export_type = fb_datatypes.FBTool
         self.agr_export_type = agr_datatypes.TransgenicToolDTO
         self.primary_export_set = 'transgenic_tool_ingest_set'
+        # "tool_uses" slot annotations keyed by primary external ID, collected whether or not
+        # ADD_TOOL_USES is set so the curator TSV can report them (see map_tool_uses()).
+        self.tool_use_dtos_by_id = {}
+        self.tool_associations = []
+        self.tool_tool_rels = {}
 
     test_set = {
         'FBto0000001': 'C-Cerulean',  # First one
@@ -33,6 +39,8 @@ class ExperimentalToolHandler(FeatureHandler):
         'FBto0000417': 'sgGFP',
         'FBto0000921': 'Sapphire',
         'FBto0000606': 'AflIII',    # Has UniProtKB:E3VX96
+        'FBto0001044': 'cytoFLARE1.0::lexA::VP16',    # Three "tool_uses" terms.
+        'FBto0000859': 'CanlonicSF',                  # Two "tool_uses" terms, and the only tool citing FBrf0199194.
     }
 
     transgenic_tool_prop_to_note_mapping = {
@@ -41,13 +49,12 @@ class ExperimentalToolHandler(FeatureHandler):
         # At the moment, just for code development. (line below)
         # 'internal_notes': ('internal_note', 'note_dtos'),
     }
-    tool_associations = []
-    tool_tool_rels = {}
 
     def get_general_data(self, session):
         """Extend the method for the AlleleHandler."""
         super().get_general_data(session)
         self.build_bibliography(session)
+        self.build_cvterm_lookup(session)
         self.build_feature_lookup(session, feature_types=['tool'])
         return
 
@@ -56,6 +63,7 @@ class ExperimentalToolHandler(FeatureHandler):
         super().get_datatype_data(session)
         self.get_entities(session)
         self.get_entityprops(session)
+        self.get_entity_cvterms(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
         self.get_entity_fb_xrefs(session)
@@ -84,6 +92,7 @@ class ExperimentalToolHandler(FeatureHandler):
         super().map_fb_data_to_alliance()
         self.map_tool_basic()
         self.map_synonyms()
+        self.map_tool_uses()
         self.map_data_provider_dto()
         self.map_xrefs()
         self.map_entity_props_to_notes('transgenic_tool_prop_to_note_mapping')
@@ -101,6 +110,59 @@ class ExperimentalToolHandler(FeatureHandler):
             agr_tool.obsolete = tool.chado_obj.is_obsolete
             agr_tool.primary_external_id = f'FB:{tool.uniquename}'
             tool.linkmldto = agr_tool
+        return
+
+    def map_tool_uses(self):
+        """Map "tool_uses" FBcv annotations (TO4 proforma field) to the Alliance LinkML object.
+
+        Create one TransgenicToolUseSlotAnnotationDTO per FBcv term, carrying only the
+        pubs that give evidence for that specific term.
+
+        The "transgenic_tool_use_dtos" slot exists only on agr_curation_schema "main": the latest
+        LinkML release (v2.17.0) still calls the slot "use_curies" and has no
+        TransgenicToolUseSlotAnnotationDTO class, so emitting it fails schema validation for the
+        whole transgenic tool file. The export is therefore gated behind ADD_TOOL_USES until a
+        LinkML release containing the slot is available (FTA-222). The annotations are always
+        collected into self.tool_use_dtos_by_id, gate or no gate, so the curator TSV reports them
+        while the JSON export stays clean (mirrors the ADD_IS_ABERRATION gate for alleles).
+        """
+        self.log.info('Map tool uses to Alliance object.')
+        add_uses = getenv('ADD_TOOL_USES', None) == 'YES'
+        if not add_uses:
+            self.log.info('ADD_TOOL_USES not set to "YES"; collecting tool uses for the TSV, but not '
+                          'exporting the "transgenic_tool_use_dtos" slot.')
+        data_key = 'tool_uses'
+        counter = 0
+        for tool in self.fb_data_entities.values():
+            if tool.linkmldto is None:
+                continue
+            if not tool.prop_data.get(data_key):
+                continue
+            # Group pubs by FBcv accession.
+            accession_to_pubs = {}
+            for prop in tool.prop_data[data_key]:
+                if prop['type'] != 'FlyBase miscellaneous CV':
+                    self.log.warning(f"Unexpected CV '{prop['type']}' for a {data_key} term on {tool.uniquename}: {prop['name']}.")
+                accession = prop['accession']
+                pub_curie = f"FB:{prop['pub']}"
+                if accession not in accession_to_pubs:
+                    accession_to_pubs[accession] = set()
+                accession_to_pubs[accession].add(pub_curie)
+            # Create one DTO per FBcv term.
+            slot_dtos = []
+            for accession, pub_curies in accession_to_pubs.items():
+                slot_dto = agr_datatypes.TransgenicToolUseSlotAnnotationDTO(
+                    sorted(pub_curies), [f'FBcv:{accession}']).dict_export()
+                slot_dtos.append(slot_dto)
+                counter += 1
+            if not slot_dtos:
+                continue
+            self.tool_use_dtos_by_id[tool.linkmldto.primary_external_id] = slot_dtos
+            if add_uses:
+                tool.linkmldto.transgenic_tool_use_dtos.extend(slot_dtos)
+        self.log.info(f'Generated {counter} transgenic tool use slot annotations.')
+        if not add_uses:
+            self.log.info(f'Withheld tool uses for {len(self.tool_use_dtos_by_id)} tools from the JSON export.')
         return
 
     def synthesize_tool_associations(self):

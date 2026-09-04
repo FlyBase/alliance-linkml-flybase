@@ -53,6 +53,48 @@ class PrimaryEntityHandler(DataHandler):
         # Will be an FBal-feature_id-keyed dict of the feature_id of the feature that
         # represents that allele at the Alliance; see build_allele_replacement_lookup().
         self.allele_replacement_lookup = {}
+        self.internal_note_clean_failures = []    # FTA-211/FTA-221: note props whose text could not be cleaned.
+
+    def clean_note_free_text(self, fb_id, raw_value, prop_type=None, prop_id=None):
+        """Clean note free text, tolerating NULL values and unknown SGML entities (FTA-211, FTA-221).
+
+        Two ways the raw featureprop value breaks clean_free_text():
+          - FTA-221: chado allows featureprop.value to be NULL, and clean_free_text() calls
+            .replace() on it, raising AttributeError on None.
+          - FTA-211: clean_free_text() raises KeyError on any &word; token not in harvdev_utils'
+            Greek dict (e.g. the junk "&3;").
+        Either way, record the offender for the diagnostic report rather than aborting the export.
+        Returns None for a value with no usable text, so callers can skip it.
+
+        Args:
+            fb_id (str): The FB curie of the entity owning the prop, e.g. "FB:FBal0050505".
+            raw_value: The raw prop value, which may be None.
+            prop_type (str): The cvterm.name of the prop, so curators know which field to fix.
+            prop_id (int): The prop table primary key, to pin down which row when the value is
+                blank and there is therefore no text to identify it by.
+
+        NB - raw_value is coerced to a string in the failure record, because
+        curation_tsv.write_note_clean_failures_tsv() calls .replace() on it.
+        """
+        def record(raw, error):
+            self.internal_note_clean_failures.append({
+                'fb_id': fb_id,
+                'prop_type': prop_type if prop_type is not None else '',
+                'prop_id': prop_id if prop_id is not None else '',
+                'raw_value': raw,
+                'error': error,
+            })
+        if raw_value is None:
+            record('', 'prop value is NULL; note skipped')
+            return None
+        if not str(raw_value).strip():
+            record('', 'prop value is blank/whitespace-only; note skipped')
+            return None
+        try:
+            return clean_free_text(raw_value)
+        except Exception as error:
+            record(str(raw_value), str(error))
+            return raw_value
 
     # Conversion of FB datatype to "page_area".
     page_area_conversion = {
@@ -62,6 +104,7 @@ class PrimaryEntityHandler(DataHandler):
         'genotype': 'homepage',
         'split system combination': 'homepage',
         'grp': 'functional_gene_set',
+        'str': 'sequence_targeting_reagent',
     }
 
     # Mappings of main data types to chado tables with associated data
@@ -1036,7 +1079,10 @@ class PrimaryEntityHandler(DataHandler):
             secondary_ids = []
             for xref in fb_data_entity.fb_sec_dbxrefs:
                 secondary_ids.append(f'FB:{xref.dbxref.accession}')
-            fb_data_entity.alt_fb_ids = list(set(fb_data_entity.alt_fb_ids).union(set(secondary_ids)))
+            # FTA-232: sorted, not list(set(...)) - these are strings, and Python randomises string
+            # hashing per process, so an unsorted set made two exports of identical chado data differ
+            # in the exported secondary_identifiers order.
+            fb_data_entity.alt_fb_ids = sorted(set(fb_data_entity.alt_fb_ids).union(set(secondary_ids)))
         return
 
     def synthesize_synonyms(self):
@@ -1049,6 +1095,16 @@ class PrimaryEntityHandler(DataHandler):
             'nickname': 'unspecified',
             'synonym': 'unspecified',
         }
+        # AGR name types that represent a symbol, as opposed to a full name or a plain synonym.
+        symbol_type_names = ['nomenclature_symbol', 'systematic_name']
+        # FTA-238: only genes may carry a systematic name. Steven, Gillian and Gil all confirmed
+        # (FTA-238, 2026-08-11) that "systematic" is a gene concept and that the Alliance slot is
+        # gene_systematic_name, scoped to genes, so no other data class may retype a symbol this way.
+        # Previously every caller of this method did, which mistyped 46,315 of 47,953 exported
+        # systematic_name DTOs - almost all of them allele symbols of unnamed genes. Applying FBti
+        # lineIDs or FBsn stock IDs as systematic names would need a chado flag, not a string pattern,
+        # and is deliberately out of scope here.
+        retype_systematic_names = self.datatype == 'gene'
         for fb_data_entity in self.fb_data_entities.values():
             # For each entity, gather synonym_id-keyed dict of synonym info.
             for feat_syno in fb_data_entity.synonyms:
@@ -1068,15 +1124,33 @@ class PrimaryEntityHandler(DataHandler):
                     }
                     fb_data_entity.synonym_dict[feat_syno.synonym_id] = syno_dict
             # Go back over each synonym and refine each
-            for syno_dict in fb_data_entity.synonym_dict.values():
+            for syno_id, syno_dict in fb_data_entity.synonym_dict.items():
                 # Then modify attributes as needed.
-                # Identify systematic names.
-                if (re.match(self.regex['systematic_name'], syno_dict['format_text']) and syno_dict['name_type_name'] == 'nomenclature_symbol'):
+                # Identify systematic names (genes only - see retype_systematic_names above).
+                is_nomenclature_symbol = syno_dict['name_type_name'] == 'nomenclature_symbol'
+                if retype_systematic_names and is_nomenclature_symbol and re.match(self.regex['systematic_name'], syno_dict['format_text']):
                     syno_dict['name_type_name'] = 'systematic_name'
                 # Classify is_current (convert list of booleans into a single boolean).
                 if True in syno_dict['is_current']:
                     syno_dict['is_current'] = True
                 else:
+                    syno_dict['is_current'] = False
+                # Demote symbols inherited from a superseded entity: an FBal absorbed by its FBti brings its own
+                # current symbol along, which is not a current name of the insertion that absorbed it. The
+                # entity's own name is exempt in case the two entities share a symbol. Only symbols are demoted:
+                # ~195 insertions take their current full name from a merged allele, and per Gillian (FTA-234,
+                # 2026-08-11) they should keep it, since FBti have no full names of their own to overwrite.
+                is_merged_symbol = syno_id in fb_data_entity.merged_synonym_ids and syno_dict['name_type_name'] in symbol_type_names
+                if syno_dict['is_current'] is True and is_merged_symbol and syno_dict['format_text'] != fb_data_entity.name:
+                    syno_dict['is_current'] = False
+                # FTA-236: a balancer's names must never rival the parent aberration's own. Unlike
+                # merged_synonym_ids this covers full names too: map_synonyms() sets no
+                # allele_full_name_dto at all when it finds two current full names, so an undemoted
+                # balancer full name would delete the aberration's own from the export. The entity's
+                # own name is exempt for the same reason as above - a synonym_id can be shared by both
+                # features, and the entity must never lose its own name.
+                is_demoted = syno_id in fb_data_entity.demoted_synonym_ids
+                if syno_dict['is_current'] is True and is_demoted and syno_dict['format_text'] != fb_data_entity.name:
                     syno_dict['is_current'] = False
                 # Classify is_internal (convert list of booleans into a single boolean).
                 if False in syno_dict['is_internal']:
@@ -1105,6 +1179,9 @@ class PrimaryEntityHandler(DataHandler):
             for prop_list in fb_data_entity.props_by_type.values():
                 for prop in prop_list:
                     fb_data_entity.all_pubs.extend(prop.pubs)
+            # FTA-232: deliberately NOT sorted. These are pub_ids, and hash(int) == int, so set
+            # iteration is already stable across processes. reference_curies is built from this list
+            # below, so sorting would reorder every entity's references for no determinism gain.
             fb_data_entity.all_pubs = list(set(fb_data_entity.all_pubs))
         return
 
@@ -1287,10 +1364,22 @@ class PrimaryEntityHandler(DataHandler):
                                                                          sub_sup_sgml_to_html(sub_sup_to_sgml(fb_data_entity.name)), []).dict_export()
                 setattr(fb_data_entity.linkmldto, linkml_synonym_slots['symbol_bin'], generic_symbol_dto)
             else:
-                setattr(fb_data_entity.linkmldto, linkml_synonym_slots['symbol_bin'], linkml_synonym_bins['symbol_bin'][0])
-                if len(linkml_synonym_bins['symbol_bin']) > 1:
-                    multi_symbols = ', '.join([i['format_text'] for i in linkml_synonym_bins['symbol_bin']])
-                    self.log.warning(f'Found many current symbols for {fb_data_entity}: {multi_symbols}')
+                # An entity should have one current symbol, but the data can give several. Prefer the one that is
+                # the entity's own name, and keep any others as synonyms rather than discarding them silently.
+                symbol_dtos = linkml_synonym_bins['symbol_bin']
+                chosen_index = 0
+                for i, name_dto in enumerate(symbol_dtos):
+                    if name_dto['format_text'] == fb_data_entity.name:
+                        chosen_index = i
+                        break
+                setattr(fb_data_entity.linkmldto, linkml_synonym_slots['symbol_bin'], symbol_dtos[chosen_index])
+                if len(symbol_dtos) > 1:
+                    chosen_symbol = symbol_dtos[chosen_index]['format_text']
+                    demoted_dtos = [i for n, i in enumerate(symbol_dtos) if n != chosen_index]
+                    linkml_synonym_bins['synonym_bin'].extend(demoted_dtos)
+                    multi_symbols = ', '.join([i['format_text'] for i in demoted_dtos])
+                    self.log.warning(f'Found many current symbols for {fb_data_entity}: exporting "{chosen_symbol}" '
+                                     f'and keeping these as synonyms: {multi_symbols}')
             # 2. Fullname.
             if len(linkml_synonym_bins['full_name_bin']) == 1:
                 setattr(fb_data_entity.linkmldto, linkml_synonym_slots['full_name_bin'], linkml_synonym_bins['full_name_bin'][0])
@@ -1345,7 +1434,17 @@ class PrimaryEntityHandler(DataHandler):
             return note_dtos
         prop_list = fb_entity.props_by_type[fb_prop_type]
         for fb_prop in prop_list:
-            free_text = clean_free_text(fb_prop.chado_obj.value)
+            # FTA-221: tolerate NULL/blank and uncleanable values instead of aborting the whole export.
+            # A prop with no usable text yields no note, so skip it. Report the prop type and the prop
+            # table primary key, so a curator can find the exact row to fix; a blank value has no text
+            # to identify it by. props_by_type can hold Featureprop, Strainprop, Genotypeprop, etc., so
+            # derive the pkey attribute from the mapped table name (as FBRelationship does).
+            prop_table = getattr(type(fb_prop.chado_obj), '__tablename__', None)
+            prop_id = getattr(fb_prop.chado_obj, f'{prop_table}_id', None) if prop_table else None
+            free_text = self.clean_note_free_text(f'FB:{fb_entity.uniquename}', fb_prop.chado_obj.value,
+                                                  prop_type=fb_prop_type, prop_id=prop_id)
+            if free_text is None:
+                continue
             if free_text not in text_keyed_props.keys():
                 text_keyed_props[free_text] = []
             text_keyed_props[free_text].extend(fb_prop.pubs)
@@ -1364,6 +1463,7 @@ class PrimaryEntityHandler(DataHandler):
         NOTE_TYPE_NAME = 0
         NOTE_SLOT_NAME = 1
         mapping_dict = getattr(self, mapping_dict_name)
+        failures_before = len(self.internal_note_clean_failures)
         for fb_prop_type, note_specs in mapping_dict.items():
             entity_counter = 0
             prop_counter = 0
@@ -1380,4 +1480,20 @@ class PrimaryEntityHandler(DataHandler):
                     entity_counter += 1
                 prop_counter += len(agr_notes)
             self.log.info(f'For "{fb_prop_type}", mapped {prop_counter} props for {entity_counter} {self.datatype}s.')
+        # FTA-221: surface uncleanable note props in the log. Without this the failures are collected
+        # and never reported, since only the construct and cassette scripts emit the diagnostic TSV.
+        new_failures = self.internal_note_clean_failures[failures_before:]
+        if new_failures:
+            self.log.warning(f'Skipped or kept unmodified {len(new_failures)} "{self.datatype}" note props that could not be cleaned.')
+            type_tally = {}
+            for failure in new_failures:
+                key = f'{failure["prop_type"]}: {failure["error"]}'
+                type_tally[key] = type_tally.get(key, 0) + 1
+            for key in sorted(type_tally.keys()):
+                self.log.warning(f'Uncleanable note props - {key} ({type_tally[key]} of them).')
+            for failure in new_failures[:20]:
+                self.log.warning(f'Uncleanable note prop: fb_id={failure["fb_id"]}, '
+                                 f'prop_type={failure["prop_type"]}, prop_id={failure["prop_id"]}, error={failure["error"]}')
+            if len(new_failures) > 20:
+                self.log.warning(f'...and {len(new_failures) - 20} more; see the *_internal_note_clean_failures.tsv for the full list.')
         return
