@@ -238,7 +238,7 @@ class DataHandler(object):
         'insertion': True,
         'polypeptide': False,
         'seqfeat': False,
-        'split system combination': False,
+        'split system combination': True,
         'str': True,    # FTA-225: the RNAi_reagent/sgRNA subset of FBsf, exported as SequenceTargetingReagentDTO.
         'tool': False,
         'transcript': False,
@@ -259,6 +259,7 @@ class DataHandler(object):
         'insertion': ['insertion_site', 'transposable_element', 'transposable_element_insertion_site'],    # Excludes internal "match" (name=FBti ID).
         'polypeptide': None,
         'seqfeat': None,    # The list is too long, so for this case let the code be flexible.
+        'split system combination': ['split system combination'],
         'str': ['RNAi_reagent', 'sgRNA'],    # FTA-224: the FBsf types that are sequence targeting reagents.
         'tool': ['engineered_region'],
         'transcript': None,

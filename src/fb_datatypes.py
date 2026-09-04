@@ -373,6 +373,17 @@ class FBGene(FBFeature):
         self.gene_type_id = 'SO:0000704'    # Update this default gene ID to SO term ID from "promoted_gene_type" Featureprop, if available.
 
 
+class FBSplitSystemCombination(FBFeature):
+    """A FlyBase split system combination entity with all its related data."""
+    def __init__(self, chado_obj):
+        """Create the FBSplitSystemCombination object."""
+        super().__init__(chado_obj)
+        # Processed FB data.
+        # Will be feature_ids of the FBal alleles that make up the combination, or, for
+        # those alleles represented at the Alliance by another feature, of that feature.
+        self.component_features = []
+
+
 class FBTool(FBFeature):
     """A FlyBase experimental tool entity with all its related data."""
     def __init__(self, chado_obj):
