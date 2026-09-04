@@ -377,7 +377,9 @@ class FBSplitSystemCombination(FBFeature):
         """Create the FBSplitSystemCombination object."""
         super().__init__(chado_obj)
         # Processed FB data.
-        self.component_features = []    # Will be feature_ids of the FBal alleles that make up the combination.
+        # Will be feature_ids of the FBal alleles that make up the combination, or, for
+        # those alleles represented at the Alliance by another feature, of that feature.
+        self.component_features = []
 
 
 class FBTool(FBFeature):

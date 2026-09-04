@@ -50,6 +50,9 @@ class PrimaryEntityHandler(DataHandler):
         """Create the generic PrimaryEntityHandler object."""
         super().__init__(log, testing)
         self.ignore_list = []
+        # Will be an FBal-feature_id-keyed dict of the feature_id of the feature that
+        # represents that allele at the Alliance; see build_allele_replacement_lookup().
+        self.allele_replacement_lookup = {}
 
     # Conversion of FB datatype to "page_area".
     page_area_conversion = {
@@ -157,7 +160,63 @@ class PrimaryEntityHandler(DataHandler):
     }
 
     # Add methods to be run by get_general_data() below.
-    # Placeholder.
+    def build_allele_replacement_lookup(self, session):
+        """Build a lookup of features that represent alleles at the Alliance in place of the alleles themselves.
+
+        Some FBal alleles are represented at the Alliance by a related FBti insertion rather than
+        by the allele itself: the allele handler merges such an allele into the insertion, exporting
+        the insertion in its place (with the FBal ID as one of its secondary IDs). Handlers that
+        report associations to alleles should report the representing feature in place of any such
+        allele, using this lookup.
+        Note - depends on prior construction of self.feature_lookup, including insertions.
+
+        Args:
+            session (Session): SQLAlchemy session for the query.
+
+        """
+        self.log.info('Build a lookup of features that represent alleles at the Alliance.')
+        allele_type = aliased(Cvterm, name='allele_type')
+        rel_type = aliased(Cvterm, name='rel_type')
+        filters = (
+            Feature.uniquename.op('~')(self.regex['allele']),
+            allele_type.name.in_((self.feature_subtypes['allele'])),
+            rel_type.name == 'is_represented_at_alliance_as',
+        )
+        results = session.query(FeatureRelationship.subject_id, FeatureRelationship.object_id).\
+            select_from(FeatureRelationship).\
+            join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
+            join(Feature, (Feature.feature_id == FeatureRelationship.subject_id)).\
+            join(allele_type, (allele_type.cvterm_id == Feature.type_id)).\
+            filter(*filters).\
+            distinct()
+        unknown_counter = 0
+        obsolete_counter = 0
+        many_counter = 0
+        # An allele lacking an entry in this lookup is simply reported as itself, so any allele
+        # skipped below keeps the current behavior; it is flagged as an error all the same.
+        for allele_feature_id, replacement_feature_id in results:
+            if allele_feature_id in self.allele_replacement_lookup.keys():
+                self.log.error(f'The allele (feature_id={allele_feature_id}) has many features representing it at the Alliance, '
+                               'but expected a one-to-one relationship; keeping only the first one found.')
+                many_counter += 1
+                continue
+            if replacement_feature_id not in self.feature_lookup.keys():
+                self.log.error(f'The allele (feature_id={allele_feature_id}) is represented at the Alliance by a feature '
+                               f'(feature_id={replacement_feature_id}) missing from the feature_lookup; ignoring it.')
+                unknown_counter += 1
+                continue
+            if self.feature_lookup[replacement_feature_id]['is_obsolete'] is True:
+                obs_curie = self.feature_lookup[replacement_feature_id]['curie']
+                self.log.error(f'The allele (feature_id={allele_feature_id}) is represented at the Alliance by an obsolete '
+                               f'feature, {obs_curie}; ignoring it.')
+                obsolete_counter += 1
+                continue
+            self.allele_replacement_lookup[allele_feature_id] = replacement_feature_id
+        self.log.info(f'Found {len(self.allele_replacement_lookup)} alleles that are represented at the Alliance by another feature.')
+        self.log.info(f'Ignored {unknown_counter} representing features not found in the feature_lookup.')
+        self.log.info(f'Ignored {obsolete_counter} obsolete representing features.')
+        self.log.info(f'Ignored {many_counter} extra representing features for alleles having many of them.')
+        return
 
     # Add methods to be run by get_datatype_data() below.
     def get_entities(self, session, **kwargs):

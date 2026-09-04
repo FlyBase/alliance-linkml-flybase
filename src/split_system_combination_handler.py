@@ -51,7 +51,10 @@ class SplitSystemCombinationHandler(FeatureHandler):
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
         self.build_organism_lookup(session)
-        self.build_feature_lookup(session, feature_types=['allele'])
+        # Insertions are included because a component allele may be represented at the
+        # Alliance by an insertion instead of by the allele itself.
+        self.build_feature_lookup(session, feature_types=['allele', 'insertion'])
+        self.build_allele_replacement_lookup(session)
         return
 
     # Elaborate on get_datatype_data() for the SplitSystemCombinationHandler.
@@ -71,11 +74,13 @@ class SplitSystemCombinationHandler(FeatureHandler):
 
     # Additional sub-methods for synthesize_info().
     def synthesize_ssc_components(self):
-        """Determine the allele components of each split system combination."""
-        self.log.info('Determine the allele components of each split system combination.')
+        """Determine the components of each split system combination to report."""
+        self.log.info('Determine the components of each split system combination to report.')
         component_counter = 0
         obsolete_component_counter = 0
         unknown_component_counter = 0
+        replaced_component_counter = 0
+        redundant_component_counter = 0
         for ssc in self.fb_data_entities.values():
             rels = ssc.recall_relationships(self.log, entity_role='subject', rel_types='partially_produced_by',
                                             rel_entity_types='allele')
@@ -91,11 +96,26 @@ class SplitSystemCombinationHandler(FeatureHandler):
                     self.log.warning(f'{ssc} has an obsolete component, {obs_curie}; skipping it.')
                     obsolete_component_counter += 1
                     continue
+                # Report the feature that represents a component allele at the Alliance, if there is one.
+                if feature_id in self.allele_replacement_lookup.keys():
+                    allele_curie = self.feature_lookup[feature_id]['curie']
+                    feature_id = self.allele_replacement_lookup[feature_id]
+                    replacement_curie = self.feature_lookup[feature_id]['curie']
+                    self.log.debug(f'{ssc} has a component, {allele_curie}, to be reported as {replacement_curie}.')
+                    replaced_component_counter += 1
+                # Distinct component alleles can share the same Alliance representative, so guard against duplicates.
+                if feature_id in ssc.component_features:
+                    dupe_curie = self.feature_lookup[feature_id]['curie']
+                    self.log.warning(f'{ssc} has many components reported as {dupe_curie}; reporting it only once.')
+                    redundant_component_counter += 1
+                    continue
                 ssc.component_features.append(feature_id)
                 component_counter += 1
-        self.log.info(f'Found {component_counter} allele components for {len(self.fb_data_entities)} split system combinations.')
-        self.log.info(f'Skipped {obsolete_component_counter} obsolete allele components.')
-        self.log.info(f'Skipped {unknown_component_counter} allele components not found in the feature_lookup.')
+        self.log.info(f'Found {component_counter} components for {len(self.fb_data_entities)} split system combinations.')
+        self.log.info(f'Reported {replaced_component_counter} allele components as the other feature that represents them at the Alliance.')
+        self.log.info(f'Skipped {obsolete_component_counter} obsolete components.')
+        self.log.info(f'Skipped {unknown_component_counter} components not found in the feature_lookup.')
+        self.log.info(f'Skipped {redundant_component_counter} components made redundant by these substitutions.')
         return
 
     # Elaborate on synthesize_info() for the SplitSystemCombinationHandler.
