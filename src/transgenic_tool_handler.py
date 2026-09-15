@@ -118,13 +118,16 @@ class ExperimentalToolHandler(FeatureHandler):
         Create one TransgenicToolUseSlotAnnotationDTO per FBcv term, carrying only the
         pubs that give evidence for that specific term.
 
-        The "transgenic_tool_use_dtos" slot exists only on agr_curation_schema "main": the latest
-        LinkML release (v2.17.0) still calls the slot "use_curies" and has no
-        TransgenicToolUseSlotAnnotationDTO class, so emitting it fails schema validation for the
-        whole transgenic tool file. The export is therefore gated behind ADD_TOOL_USES until a
-        LinkML release containing the slot is available (FTA-222). The annotations are always
-        collected into self.tool_use_dtos_by_id, gate or no gate, so the curator TSV reports them
-        while the JSON export stays clean (mirrors the ADD_IS_ABERRATION gate for alleles).
+        The "transgenic_tool_use_dtos" slot shipped in agr_curation_schema v2.18.0 (published
+        2026-09-11), which renamed "use_curies" and added the TransgenicToolUseSlotAnnotationDTO
+        class; v2.17.0 and earlier have neither, and emitting the slot against those fails schema
+        validation for the whole transgenic tool file. The export stays gated behind ADD_TOOL_USES
+        because the app pins a schema version per branch in LinkMLSchemaConstants.LATEST_RELEASE and
+        production is still on 2.16.0 - and because the app has no TransgenicTool entity, ingest set
+        or load type at all, so the whole export is unloadable regardless of this slot (FTA-222).
+        The annotations are always collected into self.tool_use_dtos_by_id, gate or no gate, so the
+        curator TSV reports them while the JSON export stays clean (mirrors the ADD_IS_ABERRATION
+        gate for alleles).
         """
         self.log.info('Map tool uses to Alliance object.')
         add_uses = getenv('ADD_TOOL_USES', None) == 'YES'

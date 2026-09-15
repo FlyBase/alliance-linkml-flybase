@@ -1706,10 +1706,13 @@ class AberrationHandler(MetaAlleleHandler):
     def map_aberration_flag(self):
         """Flag FBab entities with the LinkML "is_aberration" boolean (FTA-217).
 
-        The slot was added to the Alliance schema by agr_curation_schema PR #327, which is merged to
-        "main" but absent from the latest LinkML release (v2.17.0). Emitting it would fail schema
-        validation for the whole allele file, so the mapping is gated behind ADD_IS_ABERRATION until
-        a LinkML release containing the slot is available.
+        The slot was added to the Alliance schema by agr_curation_schema PR #327 and shipped in
+        v2.18.0 (published 2026-09-11), on both "Allele" and "AlleleDTO", so the allele file now
+        validates with the flag emitted. The gate stays closed because validation is only half the
+        story: the curation app has no aberration or balancer field on its AlleleDTO or Allele entity
+        on either alpha or production (only "isExtinct"), so the flag has nowhere to land, and
+        production still pins LinkML 2.16.0 in LinkMLSchemaConstants.LATEST_RELEASE, where the slot
+        does not exist at all. Flip ADD_IS_ABERRATION once the app persists it (FTA-222).
         """
         if getenv('ADD_IS_ABERRATION', None) != 'YES':
             self.log.info('ADD_IS_ABERRATION not set to "YES"; skipping the "is_aberration" flag.')
@@ -1958,8 +1961,9 @@ class AberrationHandler(MetaAlleleHandler):
         """Flag FBab entities carrying the curated balancer internal note with "is_balancer" (FTA-235).
 
         The "is_balancer" slot came from the same agr_curation_schema PR (#327) as "is_aberration", so it
-        shares the ADD_IS_ABERRATION gate: both slots reach the Alliance in the same LinkML release, and
-        emitting either before then would fail schema validation for the whole allele file.
+        shares the ADD_IS_ABERRATION gate: both shipped in LinkML v2.18.0 and both are still unsupported
+        by the curation app, which has neither field on its AlleleDTO or Allele entity (see
+        map_aberration_flag() for the full picture).
         The FBab IDs are always collected into self.balancer_ids, gate or no gate, so the curator TSV can
         report the flag while the JSON export stays clean (mirrors _is_aberration_cell() in the script).
         Per FTA-235 these aberrations get both is_balancer=True and is_aberration=True.
