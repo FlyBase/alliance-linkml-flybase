@@ -53,10 +53,11 @@ Environment variables:
   DATABASE            Database name (e.g. production_chado)
   ADD_OBSOLETE        Set to 'NO' to exclude obsolete/internal rows from the TSVs only; JSON output is unaffected
   ADD_TOOL_USES       Set to 'YES' to emit the 'transgenic_tool_use_dtos' slot (TO4 'tool_uses' FBcv annotations).
-                      Off by default: the slot is only on agr_curation_schema 'main', where LinkML v2.17.0 still
-                      calls it 'use_curies' and has no TransgenicToolUseSlotAnnotationDTO class, so emitting it
-                      fails validation for the whole file. Requires a LinkML release containing the slot. The
-                      *_tool_uses.tsv is written either way, so this gates the JSON only. See FTA-222.
+                      Off by default: the slot shipped in LinkML v2.18.0, but v2.17.0 and earlier still call it
+                      'use_curies' with no TransgenicToolUseSlotAnnotationDTO class, and production pins 2.16.0,
+                      so emitting it there fails validation for the whole file. The app also has no TransgenicTool
+                      entity, so the export is unloadable either way. The *_tool_uses.tsv is written whatever the
+                      gate, so this gates the JSON only. See FTA-222.
 """,
     formatter_class=argparse.RawDescriptionHelpFormatter
 )

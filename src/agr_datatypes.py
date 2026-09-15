@@ -274,7 +274,7 @@ class TransgenicToolDTO(ReagentDTO):
         self.transgenic_tool_symbol_dto = None      # One NameSlotAnnotationDTO.
         self.transgenic_tool_full_name_dto = None   # One NameSlotAnnotationDTO.
         self.transgenic_tool_synonym_dtos = []      # Many NameSlotAnnotationDTO objects.
-        self.transgenic_tool_use_dtos = []          # TransgenicToolUseSlotAnnotationDTOs; gated by ADD_TOOL_USES (slot is agr_curation_schema main only).
+        self.transgenic_tool_use_dtos = []          # TransgenicToolUseSlotAnnotationDTOs; gated by ADD_TOOL_USES (slot shipped in LinkML v2.18.0).
         self.note_dtos = []                         # Will be NoteDTO objects.
         self.cross_reference_dtos = []
         self.required_fields.extend(['transgenic_tool_symbol_dto'])
