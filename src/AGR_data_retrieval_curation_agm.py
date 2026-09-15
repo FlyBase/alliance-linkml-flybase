@@ -132,7 +132,8 @@ def main():
         }
         association_export_dict['agm_allele_association_ingest_set'] = []
         association_export_dict['agm_allele_association_ingest_set'].extend(genotype_handler.export_data['agm_allele_association_ingest_set'])
-        association_export_dict['agm_allele_association_ingest_set'].extend(ssc_handler.export_data['agm_allele_association_ingest_set'])
+        # Mapping of FBco allele components can yield many FBti (e.g., P and PBac insertions). Needs more thought before exporting.
+        # association_export_dict['agm_allele_association_ingest_set'].extend(ssc_handler.export_data['agm_allele_association_ingest_set'])
         if len(association_export_dict['agm_allele_association_ingest_set']) == 0:
             log.error('The "agm_allele_association_ingest_set" is unexpectedly empty.')
             raise ValueError('The "agm_allele_association_ingest_set" is unexpectedly empty.')
