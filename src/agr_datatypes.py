@@ -287,7 +287,8 @@ class AntibodyDTO(ReagentDTO):
         super().__init__()
         self.name = None                            # The publicly displayed (FB-generated) name of the antibody.
         self.clonality_name = None                  # "monoclonal" or "polyclonal" (from the Antibody Clonality CV).
-        self.antigen_taxon_curie = None             # The NCBITaxon curie of the antibody's target gene organism.
+        self.antigen_taxon_curie = None             # Pre-v2.18.0 name of the antigen taxon slot; NCBITaxon curie of the target gene organism.
+        self.antigen_taxon_term_name = None         # v2.18.0 rename of 'antigen_taxon_curie'; same curie, now an "Antibody antigen taxon" vocab term name.
         self.antibody_target_gene_identifiers = []  # FB:FBgn curie(s) of the antibody's target gene(s).
         self.reference_curies = []                  # Supporting reference curies (FB:FBrf or PMID).
         self.original_reference_curie = None        # Reference describing the antibody's original generation.

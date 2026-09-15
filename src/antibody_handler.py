@@ -16,6 +16,7 @@ Author(s):
 """
 
 from logging import Logger
+from os import getenv
 from sqlalchemy import func
 from sqlalchemy.orm import aliased
 from harvdev_utils.reporting import (
@@ -215,13 +216,35 @@ class AntibodyHandler(DataHandler):
 
     # Add methods to be run by map_fb_data_to_alliance() below.
     def map_antibody_basic(self):
-        """Map basic FlyBase antibody data to the Alliance LinkML object."""
+        """Map basic FlyBase antibody data to the Alliance LinkML object.
+
+        The antigen taxon slot was renamed by agr_curation_schema v2.18.0 (SCRUM-6496):
+        "antigen_taxon_curie" (range NCBITaxonTerm) became "antigen_taxon_term_name" (range
+        VocabularyTerm, from the "Antibody antigen taxon" CV). The exported value is unchanged -
+        "NCBITaxon:7227" is a term name in that CV - so only the key differs. Which key is correct
+        depends on the target environment, not on the newest tag: the app pins a schema version per
+        branch in LinkMLSchemaConstants.LATEST_RELEASE, and as of 2026-09-15 production is at 2.16.0
+        (its AntibodyDTO still reads "antigen_taxon_curie") while alpha is at 2.18.0 (its AntibodyDTO
+        has min = "2.18.0" and reads only "antigen_taxon_term_name"). The new name is therefore gated
+        behind USE_ANTIBODY_TAXON_TERM_NAME, so the default export keeps loading into production and
+        the gate can be flipped for alpha, or once production upgrades.
+        """
         self.log.info('Map basic antibody info to the Alliance object.')
+        use_term_name = getenv('USE_ANTIBODY_TAXON_TERM_NAME', None) == 'YES'
+        if use_term_name:
+            self.log.info('USE_ANTIBODY_TAXON_TERM_NAME set to "YES"; exporting the antigen taxon in the '
+                          'v2.18.0 "antigen_taxon_term_name" slot.')
+        else:
+            self.log.info('USE_ANTIBODY_TAXON_TERM_NAME not set to "YES"; exporting the antigen taxon in the '
+                          'pre-v2.18.0 "antigen_taxon_curie" slot.')
         for antibody in self.fb_data_entities.values():
             agr_antibody = self.agr_export_type()
             agr_antibody.name = antibody.antibody_name
             agr_antibody.clonality_name = antibody.clonality
-            agr_antibody.antigen_taxon_curie = antibody.antigen_taxon_curie
+            if use_term_name:
+                agr_antibody.antigen_taxon_term_name = antibody.antigen_taxon_curie
+            else:
+                agr_antibody.antigen_taxon_curie = antibody.antigen_taxon_curie
             agr_antibody.antibody_target_gene_identifiers = [f'FB:{antibody.gene_uniquename}']
             if antibody.reference_curie is not None:
                 agr_antibody.reference_curies = [antibody.reference_curie]
