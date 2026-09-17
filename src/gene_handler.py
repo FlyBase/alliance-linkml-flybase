@@ -199,25 +199,45 @@ class GeneHandler(FeatureHandler):
         for gene in self.fb_data_entities.values():
             if gene.uniquename not in self.pthr_dict.keys():
                 return
-            # Build Alliance xref DTO
+            # Build Alliance xref DTO.
+            # FTA-263: PANTHER names its resource pages after the MOD, not the data type -
+            # its declared pages are FB, HGNC, MGI, RGD, SGD, WB, ZFIN and default (verified
+            # against the resource descriptor API 2026-09-17). So "FB" is the right page area
+            # here, unlike every other external prefix; it is resolved rather than hardcoded
+            # so that a change at the Alliance is reported instead of rejecting the record.
             prefix = 'PANTHER'
-            page_area = 'FB'
             curie = f'{prefix}:{self.pthr_dict[gene.uniquename]}'
             display_name = curie
+            page_area = self.resolve_page_area(prefix, 'FB')
+            if page_area is None:
+                continue
             xref_dto = agr_datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()
             gene.linkmldto.cross_reference_dtos.append(xref_dto)
         return
 
     def add_direct_fb_links(self):
-        """Add the direct links to FB subpages."""
+        """Add the direct links to FB subpages.
+
+        FTA-263: these are real FlyBase resource pages, so they survive resolution, but
+        they are resolved rather than assumed - if the Alliance ever drops one of them,
+        the run reports it instead of the load rejecting every gene.
+        """
         page_areas = ["gene/expression",
                       "gene/expression_images",
                       "gene/references",
                       "gene/phenotypes"]
         prefix = 'FB'
+        valid_page_areas = []
+        for page_area in page_areas:
+            resolved = self.resolve_page_area(prefix, page_area)
+            if resolved == page_area:
+                valid_page_areas.append(page_area)
+            else:
+                self.log.warning(f'FlyBase does not declare the "{page_area}" resource page at the '
+                                 'Alliance; omitting that direct link from every gene.')
         for gene in self.fb_data_entities.values():
             curie = f'{prefix}:{gene.uniquename}'
-            for page_area in (page_areas):
+            for page_area in valid_page_areas:
                 xref_dto = agr_datatypes.CrossReferenceDTO(prefix, curie, page_area, curie).dict_export()
                 gene.linkmldto.cross_reference_dtos.append(xref_dto)
 
@@ -263,7 +283,9 @@ class GeneHandler(FeatureHandler):
                 # populate gcrp_cross_reference_dto, not the general xrefs - see handler.py), so
                 # hardcode its AGR prefix here rather than looking it up.
                 prefix = 'UniProtKB'
-                page_area = self.agr_page_area_dict[prefix]
+                page_area = self.resolve_page_area(prefix, self.datatype)
+                if page_area is None:
+                    continue
                 curie = f'{prefix}:{xref.dbxref.accession}'
                 display_name = curie
                 xref_dto = agr_datatypes.CrossReferenceDTO(prefix, curie, page_area, display_name).dict_export()

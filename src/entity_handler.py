@@ -1207,7 +1207,11 @@ class PrimaryEntityHandler(DataHandler):
                     display_name = fb_data_entity.curr_fb_symbol
                 else:
                     display_name = fb_data_entity.name
-            dp_xref = agr_datatypes.CrossReferenceDTO('FB', referenced_curie, page_area, display_name).dict_export()
+            # FTA-263: resolve against the Alliance resource descriptors; the data provider xref
+            # is required, so keep the requested page area if nothing valid comes back and let
+            # the resolver's report flag it, rather than emitting a DataProviderDTO with no xref.
+            resolved_page_area = self.resolve_page_area('FB', page_area) or page_area
+            dp_xref = agr_datatypes.CrossReferenceDTO('FB', referenced_curie, resolved_page_area, display_name).dict_export()
             fb_data_entity.linkmldto.data_provider_dto = agr_datatypes.DataProviderDTO(dp_xref).dict_export()
         return
 
@@ -1264,8 +1268,10 @@ class PrimaryEntityHandler(DataHandler):
                     page_area = self.page_area_conversion[self.datatype]
                 else:
                     page_area = self.datatype
-                fb_xref_dto = agr_datatypes.CrossReferenceDTO('FB', curie, page_area, display_name).dict_export()
-                cross_reference_dtos.append(fb_xref_dto)
+                resolved_page_area = self.resolve_page_area('FB', page_area)
+                if resolved_page_area is not None:
+                    fb_xref_dto = agr_datatypes.CrossReferenceDTO('FB', curie, resolved_page_area, display_name).dict_export()
+                    cross_reference_dtos.append(fb_xref_dto)
             # Second, add external xrefs.
             for xref in fb_data_entity.dbxrefs:
                 # Build Alliance xref DTO
@@ -1276,14 +1282,26 @@ class PrimaryEntityHandler(DataHandler):
                         db_list[xref.dbxref.db.name] += 1
                     continue
                 prefix = self.fb_agr_db_dict[xref.dbxref.db.name]
-                # The page_area assignment assumes that the self.datatype has a matching value in the Alliance resourceDescriptors.yaml page.
-                try:
-                    page_area = self.agr_page_area_dict[prefix]
-                except KeyError:
-                    if self.datatype in self.page_area_conversion.keys():
-                        page_area = self.page_area_conversion[self.datatype]
-                    else:
-                        page_area = self.datatype
+                # FTA-263: a page area is only valid for a prefix whose Alliance resource
+                # descriptor declares a page of that name. Ask for the data type page and let
+                # the resolver fall back to "default", which is what external resources have.
+                # A prefix the Alliance does not recognize is dropped: submitting it guarantees
+                # the record is rejected, and the resolver's report names it for fixing in
+                # fb_agr_db_dict.
+                canonical_prefix = self.page_area_resolver.canonical_prefix(prefix)
+                if canonical_prefix is None:
+                    self.page_area_resolver.note_dropped_xref(prefix)
+                    continue
+                # The Alliance validates the literal prefix string, so submit its spelling:
+                # "dgrc" is rejected where "DGRC" loads (FTA-263).
+                prefix = canonical_prefix
+                if self.datatype in self.page_area_conversion.keys():
+                    wanted_page_area = self.page_area_conversion[self.datatype]
+                else:
+                    wanted_page_area = self.datatype
+                page_area = self.resolve_page_area(prefix, wanted_page_area)
+                if page_area is None:
+                    continue
                 # Clean up cases where the db prefix is redundantly included at the start of the dbxref.accession.
                 redundant_prefix = f'{prefix}:'
                 if xref.dbxref.accession.startswith(redundant_prefix):
@@ -1306,6 +1324,7 @@ class PrimaryEntityHandler(DataHandler):
             fb_data_entity.linkmldto.cross_reference_dtos = cross_reference_dtos
         for dbname in db_list.keys():
             self.log.debug(f'XREFS: {dbname} missing from DB list found {db_list[dbname]} times')
+        self.page_area_resolver.report()
         return
 
     def map_synonyms(self):

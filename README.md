@@ -75,6 +75,19 @@ With each run, files generated are stored locally in a directory within `/data/a
     - `RELEASE` - ensure that the release matches the db used: e.g., `2022_05` (reporting) or `2022_05_EP3` (production).  
     - `ITERATION` - the date `MMMDD` on which the pipeline is run.  
     - `LINKML_VERSION` - the LinkML version for the data: e.g., `v1.3.1`.  
+2. Specify the Cognito credentials used to read Alliance resource descriptors (FTA-263).  
+  - Cross-reference `page_area` values are validated against the Alliance's own resource descriptors,
+    fetched from the A-Team curation API at export time. The old `resourceDescriptors.yaml` is obsolete.  
+  - That API does **not** accept `ALLIANCETOKEN` (the upload token), nor the `Curation API Token` from the
+    curation site profile: it validates AWS Cognito access tokens. The exporter gets one by OAuth
+    `client_credentials` exchange, exactly as `agr_cognito_py` does, so these variables are needed:  
+    - `COGNITO_ADMIN_CLIENT_ID`  
+    - `COGNITO_ADMIN_CLIENT_SECRET`  
+    - `COGNITO_TOKEN_URL` - e.g., `https://<domain>.auth.<region>.amazoncognito.com/oauth2/token`  
+    - `COGNITO_ADMIN_SCOPE` - optional, sent as the OAuth scope when set.  
+  - Without them the export still runs: it keeps FlyBase page areas, sends every other prefix to
+    `default`, and logs a warning that unrecognized prefixes were not detected. That is correct for most
+    prefixes but will not respell `dgrc` as `DGRC`, nor drop prefixes the Alliance does not know.  
 ### GoCDPipeline
 The `Alliance_LinkML_Submission` pipeline automates these steps:  
 1. Builds directory for data and log output in `/data/alliance/` folder.  
