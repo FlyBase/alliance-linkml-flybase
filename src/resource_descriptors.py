@@ -31,8 +31,13 @@ Synopsis:
     "www-authenticate: Bearer" on every endpoint, as does the "Cognito Id Token". The API
     validates AWS Cognito access tokens, so this module gets one the same way the shared
     agr_curation_api_client does, via agr_cognito_py: an OAuth client_credentials exchange
-    against COGNITO_TOKEN_URL using COGNITO_ADMIN_CLIENT_ID/COGNITO_ADMIN_CLIENT_SECRET and
-    COGNITO_ADMIN_SCOPE. The exchange is reimplemented here rather than adding the
+    against COGNITO_TOKEN_URL using COGNITO_ADMIN_CLIENT_ID/COGNITO_ADMIN_CLIENT_SECRET.
+    Those three are the only variables needed. COGNITO_ADMIN_SCOPE is optional: omitted, the
+    exchange asks for no particular scope and Cognito issues a token carrying every scope the
+    client is configured for. The COGNITO_REGION, COGNITO_USER_POOL_ID, COGNITO_CLIENT_ID and
+    COGNITO_ALLOWED_CLIENT_IDS variables are for *validating* incoming tokens in a service,
+    not for obtaining one, so this module never reads them.
+    The exchange is reimplemented here rather than adding the
     dependency, which pulls in linkml, sqlalchemy 2.x, elasticsearch and fastapi - sqlalchemy
     2.x conflicts with this repo's pin of <2.0. ALLIANCETOKEN is still honoured as a
     fallback, for a hand-exported Cognito access token during development.
@@ -101,8 +106,19 @@ def get_cognito_access_token(log: Logger):
         log.error(f'Cognito token request failed: {error}')
         return None
     if response.status_code != 200:
-        # Deliberately not logging the body: a failed token response can echo the request.
-        log.error(f'Cognito token request returned {response.status_code}.')
+        # Log only the OAuth error code and description, never the whole body: a failed token
+        # response can echo the request. "invalid_client" means the id/secret pair is wrong;
+        # "invalid_scope" means this client does require an explicit COGNITO_ADMIN_SCOPE.
+        detail = ''
+        try:
+            payload = response.json()
+            error = payload.get('error', None)
+            description = payload.get('error_description', None)
+            if error:
+                detail = f' ({error}{": " + description if description else ""})'
+        except ValueError:
+            pass
+        log.error(f'Cognito token request returned {response.status_code}{detail}.')
         return None
     try:
         access_token = response.json()['access_token']

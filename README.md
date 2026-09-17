@@ -81,10 +81,15 @@ With each run, files generated are stored locally in a directory within `/data/a
   - That API does **not** accept `ALLIANCETOKEN` (the upload token), nor the `Curation API Token` from the
     curation site profile: it validates AWS Cognito access tokens. The exporter gets one by OAuth
     `client_credentials` exchange, exactly as `agr_cognito_py` does, so these variables are needed:  
-    - `COGNITO_ADMIN_CLIENT_ID`  
-    - `COGNITO_ADMIN_CLIENT_SECRET`  
-    - `COGNITO_TOKEN_URL` - e.g., `https://<domain>.auth.<region>.amazoncognito.com/oauth2/token`  
-    - `COGNITO_ADMIN_SCOPE` - optional, sent as the OAuth scope when set.  
+    - `COGNITO_ADMIN_CLIENT_ID` - **required**  
+    - `COGNITO_ADMIN_CLIENT_SECRET` - **required**  
+    - `COGNITO_TOKEN_URL` - **required**: e.g., `https://<domain>.auth.<region>.amazoncognito.com/oauth2/token`  
+    - `COGNITO_ADMIN_SCOPE` - optional. Sent as the OAuth scope when set; when unset, Cognito issues a
+      token carrying every scope the client is configured for, which is what we want. If the exchange
+      ever fails with `invalid_scope`, this client needs it set explicitly - the error code is logged.  
+  - `COGNITO_REGION`, `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID` and `COGNITO_ALLOWED_CLIENT_IDS` are for
+    *validating* incoming tokens in a service, not for obtaining one. The exporter never reads them, so
+    they can be present or absent without effect here.  
   - Without them the export still runs: it keeps FlyBase page areas, sends every other prefix to
     `default`, and logs a warning that unrecognized prefixes were not detected. That is correct for most
     prefixes but will not respell `dgrc` as `DGRC`, nor drop prefixes the Alliance does not know.  
