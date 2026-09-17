@@ -103,7 +103,9 @@ Environment variables:
   ADD_IS_ABERRATION         Set to 'YES' to emit the 'is_aberration' boolean for FBab entities, and the
                             'is_balancer' boolean for those FBab entities flagged as balancers (FTA-235).
                             Both slots come from the same schema PR (#327), so one gate covers them.
-                            Requires a LinkML release containing the slots (absent from v2.17.0).
+                            Both slots shipped in LinkML v2.18.0, but the curation app has no aberration
+                            or balancer field on its AlleleDTO or Allele entity, so they cannot yet be
+                            stored; production also still pins LinkML 2.16.0. See FTA-222.
 
 Notes:
   FTA-236: the 38 FBba balancers carrying a "FTA: Balancer - merge with parent ..." internal note have

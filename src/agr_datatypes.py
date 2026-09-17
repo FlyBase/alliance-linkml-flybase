@@ -274,7 +274,7 @@ class TransgenicToolDTO(ReagentDTO):
         self.transgenic_tool_symbol_dto = None      # One NameSlotAnnotationDTO.
         self.transgenic_tool_full_name_dto = None   # One NameSlotAnnotationDTO.
         self.transgenic_tool_synonym_dtos = []      # Many NameSlotAnnotationDTO objects.
-        self.transgenic_tool_use_dtos = []          # TransgenicToolUseSlotAnnotationDTOs; gated by ADD_TOOL_USES (slot is agr_curation_schema main only).
+        self.transgenic_tool_use_dtos = []          # TransgenicToolUseSlotAnnotationDTOs; gated by ADD_TOOL_USES (slot shipped in LinkML v2.18.0).
         self.note_dtos = []                         # Will be NoteDTO objects.
         self.cross_reference_dtos = []
         self.required_fields.extend(['transgenic_tool_symbol_dto'])
@@ -287,7 +287,8 @@ class AntibodyDTO(ReagentDTO):
         super().__init__()
         self.name = None                            # The publicly displayed (FB-generated) name of the antibody.
         self.clonality_name = None                  # "monoclonal" or "polyclonal" (from the Antibody Clonality CV).
-        self.antigen_taxon_curie = None             # The NCBITaxon curie of the antibody's target gene organism.
+        self.antigen_taxon_curie = None             # Pre-v2.18.0 name of the antigen taxon slot; NCBITaxon curie of the target gene organism.
+        self.antigen_taxon_term_name = None         # v2.18.0 rename of 'antigen_taxon_curie'; same curie, now an "Antibody antigen taxon" vocab term name.
         self.antibody_target_gene_identifiers = []  # FB:FBgn curie(s) of the antibody's target gene(s).
         self.reference_curies = []                  # Supporting reference curies (FB:FBrf or PMID).
         self.original_reference_curie = None        # Reference describing the antibody's original generation.

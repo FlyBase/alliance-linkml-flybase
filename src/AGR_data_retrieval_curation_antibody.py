@@ -58,6 +58,12 @@ Environment variables:
   DATABASE            Database name (e.g. production_chado)
   SQL_PORT            Database port (default: 5432)
   ALT_OUTPUT          Override default output file path
+  USE_ANTIBODY_TAXON_TERM_NAME
+                      Set to 'YES' to export the antigen taxon in the LinkML v2.18.0
+                      'antigen_taxon_term_name' slot instead of the pre-v2.18.0
+                      'antigen_taxon_curie' slot (same NCBITaxon curie value). Needed for
+                      the alpha curation app (pinned to 2.18.0); leave unset for production
+                      (pinned to 2.16.0) until it upgrades.
 """,
     formatter_class=argparse.RawDescriptionHelpFormatter
 )
