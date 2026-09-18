@@ -22,6 +22,9 @@ from harvdev_utils.reporting import (
     FeatureSynonym, Featureprop, Organism, OrganismDbxref,
     Organismprop, Pub, PubDbxref, Synonym
 )
+from resource_descriptors import (
+    PageAreaResolver, fetch_resource_descriptors
+)
 
 
 class DataHandler(object):
@@ -48,6 +51,7 @@ class DataHandler(object):
         self.log = log
         self.testing = testing
         self.incremental_update = False             # If True, will export only new additions and obsoletes in chado relative to a reference db.
+        self.page_area_resolver = None               # PageAreaResolver built from Alliance resource descriptors (FTA-263).
         self.reference_session = None               # Add RefSession() object to handler (only needed when AlleleHandler runs InsertionHandler).
         self.datatype = None                        # A single word describing the datatype: e.g., 'gene'. Define for more specific handlers.
         self.fb_export_type = None                  # Will be the relevant FBExportEntity object: e.g., FBGene. Define for more specific handlers.
@@ -179,8 +183,12 @@ class DataHandler(object):
         "iBeetle-Base": "iBeetle",
     }
 
-    # Specify page_area for cross-references for specific external databases.
-    # For Alliance MODs, the page_area will be the data type: e.g., gene.s
+    # FTA-263: page areas are no longer guessed from the FlyBase data type. They are resolved
+    # against the Alliance's own resource descriptors by self.page_area_resolver, because a page
+    # area is only valid for a prefix whose descriptor declares a resource page of that name.
+    # External resources generally declare only the synthetic "default" page. This dict remains
+    # as the small set of prefixes we always knew needed "default", and is used only to seed the
+    # fallback resolver when the API is unavailable; see resource_descriptors.py.
     agr_page_area_dict = {
         'NCBI_Gene': 'default',
         'RNAcentral': 'default',
@@ -1007,7 +1015,39 @@ class DataHandler(object):
     def get_general_data(self, session):
         """Get general FlyBase chado data."""
         self.log.info('GET GENERAL FLYBASE DATA FROM CHADO.')
+        self.build_page_area_resolver()
         return
+
+    def build_page_area_resolver(self):
+        """Build the PageAreaResolver from Alliance resource descriptors (FTA-263).
+
+        Fetched once per handler and shared by every cross-reference mapping method. A
+        failed fetch is not fatal: the resolver falls back to keeping FlyBase page areas
+        and sending every other prefix to "default", which is what the FTA-263 evidence
+        shows the Alliance accepts. The fallback cannot detect unrecognized prefixes,
+        and says so in its report.
+        """
+        if self.page_area_resolver is not None:
+            return
+        descriptors = fetch_resource_descriptors(self.log)
+        self.page_area_resolver = PageAreaResolver(self.log, descriptors)
+        return
+
+    def resolve_page_area(self, prefix: str, page_area: str):
+        """Return a page area valid for this prefix at the Alliance, or None.
+
+        Args:
+            prefix (str): The Alliance prefix of the cross-reference: e.g., 'FB'.
+            page_area (str): The page area wanted, usually a FlyBase data type.
+
+        Returns:
+            A valid page area string, or None when the cross-reference has no valid page
+            area and must be dropped rather than submitted.
+
+        """
+        if self.page_area_resolver is None:
+            self.build_page_area_resolver()
+        return self.page_area_resolver.resolve(prefix, page_area)
 
     # The get_datatype_data() wrapper; sub-methods are defined and called in more specific DataHandler types.
     def get_datatype_data(self, session):
@@ -1174,6 +1214,11 @@ class DataHandler(object):
         self.get_datatype_data(session)
         self.synthesize_info()
         self.map_fb_data_to_alliance()
+        # FTA-263: report page area resolution here, not in map_xrefs(), because CassetteDTO and
+        # ConstructDTO have no cross_reference_dtos slot and so never call map_xrefs() - their
+        # data provider cross-reference is still resolved, and went unreported until now.
+        if self.page_area_resolver is not None:
+            self.page_area_resolver.report()
         # For the InsertionHandler, skip the last two steps because the AlleleHandler will take over the processing.
         if self.datatype == 'insertion':
             return
