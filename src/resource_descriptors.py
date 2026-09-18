@@ -89,15 +89,21 @@ def get_cognito_access_token(log: Logger):
     if missing:
         log.warning(f'Cannot get a Cognito token; these variables are not set: {", ".join(missing)}.')
         return None
+    # Strip surrounding whitespace from every credential. A value pasted into a CI variable
+    # or carried through "docker run -e" can pick up a trailing newline, and Cognito rejects
+    # that as invalid_client_secret - indistinguishable from a genuinely wrong secret.
+    client_id = getenv('COGNITO_ADMIN_CLIENT_ID').strip()
+    client_secret = getenv('COGNITO_ADMIN_CLIENT_SECRET').strip()
+    token_url = getenv('COGNITO_TOKEN_URL').strip()
     data = {'grant_type': 'client_credentials'}
     scope = getenv('COGNITO_ADMIN_SCOPE', None)
     if scope:
-        data['scope'] = scope
+        data['scope'] = scope.strip()
     log.info('Requesting a Cognito access token for the curation API.')
     try:
         response = requests.post(
-            getenv('COGNITO_TOKEN_URL'),
-            auth=(getenv('COGNITO_ADMIN_CLIENT_ID'), getenv('COGNITO_ADMIN_CLIENT_SECRET')),
+            token_url,
+            auth=(client_id, client_secret),
             headers={'Content-Type': 'application/x-www-form-urlencoded'},
             data=data,
             timeout=REQUEST_TIMEOUT,
@@ -119,6 +125,13 @@ def get_cognito_access_token(log: Logger):
         except ValueError:
             pass
         log.error(f'Cognito token request returned {response.status_code}{detail}.')
+        # Shape only, never values: enough to tell a mangled variable from a wrong credential.
+        log.error(f'Credentials as seen by this process: client_id {len(client_id)} chars, '
+                  f'client_secret {len(client_secret)} chars, token_url {token_url!r}, '
+                  f'scope {"set" if scope else "unset"}. Compare the lengths with the values in '
+                  'the CI configuration: a shorter length means the value was truncated or '
+                  'shell-mangled in transit (pass it as "docker run -e VAR" with no "=VAR" so '
+                  'the value is taken from the environment and never goes through the shell).')
         return None
     try:
         access_token = response.json()['access_token']
