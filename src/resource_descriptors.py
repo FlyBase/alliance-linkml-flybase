@@ -56,6 +56,21 @@ import requests
 # The synthetic page area every prefix with a default URL template resolves to.
 DEFAULT_PAGE_AREA = 'default'
 
+# The FlyBase resource pages the Alliance declares, as fetched from the resource descriptor API
+# on 2026-09-17. Used ONLY by the fallback resolver, when the API cannot be reached: it is what
+# stops the fallback trusting a FlyBase page area that does not exist. Four FlyBase data types
+# have no page here - cassette, tool, sequence_targeting_reagent (str) and functional_gene_set
+# (grp) - and their cross-references were invalid on every record until FTA-263. The API remains
+# authoritative; this snapshot only limits how wrong an offline run can be, so a page added or
+# removed at the Alliance shows up as a substitution logged by an API-backed run.
+FB_DECLARED_PAGE_AREAS = frozenset({
+    'allele', 'allele/disease', 'allele/references', 'construct', 'default', 'disease',
+    'expression_atlas', 'gene', 'gene/MODinteractions', 'gene/MODinteractions_genetic',
+    'gene/MODinteractions_molecular', 'gene/disease', 'gene/expression',
+    'gene/expression_images', 'gene/interactions', 'gene/phenotypes', 'gene/references',
+    'homepage', 'htp/dataset', 'reference', 'strain',
+})
+
 # The A-Team curation API endpoint and the view that includes resourcePages/synonyms.
 RESOURCE_DESCRIPTOR_PATH = 'api/resourcedescriptor/findForPublic'
 RESOURCE_DESCRIPTOR_VIEW = 'ResourceDescriptorView'
@@ -204,9 +219,11 @@ class PageAreaResolver(object):
     for this prefix?" and "is this prefix known at all?".
 
     Built without API data (no token, or the API is unreachable), it falls back to the
-    rule the FTA-263 evidence supports: FlyBase keeps its data type pages, every other
-    prefix gets "default". It then reports no prefix as unknown, because in that state it
-    cannot tell an unknown prefix from one it simply has no data for.
+    rule the FTA-263 evidence supports: FlyBase keeps the page areas in
+    FB_DECLARED_PAGE_AREAS and every other FlyBase or external page area becomes
+    "default". It then reports no prefix as unknown, because in that state it cannot tell
+    an unknown prefix from one it simply has no data for, so it can neither drop an
+    unrecognized prefix nor correct a misspelled one.
 
     """
     def __init__(self, log: Logger, descriptors: list = None):
@@ -295,9 +312,14 @@ class PageAreaResolver(object):
 
         """
         if not self.api_backed:
-            # Evidence-based fallback: only FlyBase has per-data-type pages.
+            # Evidence-based fallback: only FlyBase has per-data-type pages, and only those in
+            # FB_DECLARED_PAGE_AREAS. Without that check the fallback happily emitted
+            # "FB|cassette" on every cassette record, which the Alliance rejects.
             if prefix == 'FB':
-                return page_area
+                if page_area in FB_DECLARED_PAGE_AREAS:
+                    return page_area
+                self.substitutions[(prefix, page_area)] += 1
+                return DEFAULT_PAGE_AREA
             return DEFAULT_PAGE_AREA
         if page_area in self.pages_by_prefix.get(prefix, set()):
             return page_area
