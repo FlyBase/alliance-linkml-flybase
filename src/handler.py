@@ -126,12 +126,12 @@ class DataHandler(object):
         "GB": "GenBank-EMBL-DDBJ",
         "GB_protein": "GenBank-EMBL-DDBJ",
         "GDP-BG": "GDP",
-        "GDP-CRIMIC": "GDP_CRIMIC",
+        "GDP-CRIMIC": "GDP",
         "GDP-EY": "GDP",
         "GDP-KG": "GDP",
         "GDP-MB": "GDP",
         "GDP-MIMIC": "GDP",
-        "GDP-RMCE": "GDP_RMCE",
+        "GDP-RMCE": "GDP",
         "GEO": "GEO",
         "GO": "GO",
         "GtRNAdb": "GtRNAdb",
@@ -181,6 +181,20 @@ class DataHandler(object):
         "ZFIN": "ZFIN",
         "genbank": "GenBank-EMBL-DDBJ",
         "iBeetle-Base": "iBeetle",
+    }
+
+    # FTA-263: chado dbs whose Alliance resource page is not the FlyBase data type page. The key
+    # is the chado db.name, not the Alliance prefix, because fb_agr_db_dict is lossy here: both
+    # of these map to prefix "GDP", so which page they want cannot be recovered from the prefix.
+    #
+    # The Gene Disruption Project declares three pages - default, crimic and rmce - so what used
+    # to be submitted as the invented prefixes "GDP_CRIMIC" and "GDP_RMCE" (rejected by the
+    # Alliance, 2,623 allele cross-references dropped in the 18Sept run) is really prefix "GDP"
+    # with the crimic or rmce page. The accessions suit it: CR00002 and RM00001 both satisfy
+    # GDP's idPattern ^GDP:[A-Z]{2}\d{5}[A-Za-z0-9-]*$.
+    fb_db_page_area_overrides = {
+        'GDP-CRIMIC': 'crimic',
+        'GDP-RMCE': 'rmce',
     }
 
     # FTA-263: page areas are no longer guessed from the FlyBase data type. They are resolved
