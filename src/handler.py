@@ -25,6 +25,7 @@ from harvdev_utils.reporting import (
 from resource_descriptors import (
     PageAreaResolver, fetch_resource_descriptors
 )
+from alliance_vocabularies import VocabularyGuard
 
 
 class DataHandler(object):
@@ -52,6 +53,7 @@ class DataHandler(object):
         self.testing = testing
         self.incremental_update = False             # If True, will export only new additions and obsoletes in chado relative to a reference db.
         self.page_area_resolver = None               # PageAreaResolver built from Alliance resource descriptors (FTA-263).
+        self.vocabulary_guard = None                 # VocabularyGuard for slots the Alliance validates against a vocabulary.
         self.reference_session = None               # Add RefSession() object to handler (only needed when AlleleHandler runs InsertionHandler).
         self.datatype = None                        # A single word describing the datatype: e.g., 'gene'. Define for more specific handlers.
         self.fb_export_type = None                  # Will be the relevant FBExportEntity object: e.g., FBGene. Define for more specific handlers.
@@ -1045,7 +1047,28 @@ class DataHandler(object):
             return
         descriptors = fetch_resource_descriptors(self.log)
         self.page_area_resolver = PageAreaResolver(self.log, descriptors)
+        self.vocabulary_guard = VocabularyGuard(self.log)
         return
+
+    def check_vocabulary_term(self, vocabulary_label: str, value: str):
+        """Return the value if the Alliance has it in that vocabulary, else None.
+
+        Built lazily like the page area resolver, so a handler run nested inside another
+        (InsertionHandler inside AlleleHandler) cannot reach a mapping method before the
+        guard exists.
+
+        Args:
+            vocabulary_label (str): The Alliance vocabularyLabel: e.g. 'allele_collection'.
+            value (str): The value FlyBase would submit.
+
+        Returns:
+            The value, or None when the Alliance vocabulary is known and lacks it - in which
+            case the caller leaves the slot empty rather than have the load fail the record.
+
+        """
+        if self.vocabulary_guard is None:
+            self.vocabulary_guard = VocabularyGuard(self.log)
+        return self.vocabulary_guard.check(vocabulary_label, value)
 
     def resolve_page_area(self, prefix: str, page_area: str):
         """Return a page area valid for this prefix at the Alliance, or None.
@@ -1233,6 +1256,8 @@ class DataHandler(object):
         # data provider cross-reference is still resolved, and went unreported until now.
         if self.page_area_resolver is not None:
             self.page_area_resolver.report()
+        if self.vocabulary_guard is not None:
+            self.vocabulary_guard.report()
         # For the InsertionHandler, skip the last two steps because the AlleleHandler will take over the processing.
         if self.datatype == 'insertion':
             return
