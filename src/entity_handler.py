@@ -1295,7 +1295,10 @@ class PrimaryEntityHandler(DataHandler):
                 # The Alliance validates the literal prefix string, so submit its spelling:
                 # "dgrc" is rejected where "DGRC" loads (FTA-263).
                 prefix = canonical_prefix
-                if self.datatype in self.page_area_conversion.keys():
+                if xref.dbxref.db.name in self.fb_db_page_area_overrides:
+                    # This db has its own Alliance resource page, whatever the data type is.
+                    wanted_page_area = self.fb_db_page_area_overrides[xref.dbxref.db.name]
+                elif self.datatype in self.page_area_conversion.keys():
                     wanted_page_area = self.page_area_conversion[self.datatype]
                 else:
                     wanted_page_area = self.datatype
