@@ -15,6 +15,7 @@ from os import getenv
 from sqlalchemy.orm import aliased
 import agr_datatypes
 import fb_datatypes
+from alliance_vocabularies import ALLELE_COLLECTION_VOCABULARY
 from fb_datatypes import (
     FBAberration, FBAllele, FBBalancer
 )
@@ -115,7 +116,16 @@ class MetaAlleleHandler(FeatureHandler):
                 # collections[0].name is exported, the value itself could differ between runs, not just
                 # an order. Alphabetical is a stable tie-break, not a curation rule.
                 collections = sorted(set(collections), key=lambda coll: coll.name)
-                metaallele.linkmldto.in_collection_name = collections[0].name
+                # The Alliance validates in_collection_name against its "allele_collection"
+                # vocabulary and fails the whole record on an unknown term: "GV_FFL"
+                # (FBlc0008106) stopped the 2026_03 allele load at its 1,000-failure cap with
+                # 3,008 records carrying it. Leaving the slot empty loses the collection for
+                # those alleles but lets everything else about them load; the guard's report
+                # names the term so it can be registered with the Alliance (SCRUM-6568).
+                collection_name = self.check_vocabulary_term(ALLELE_COLLECTION_VOCABULARY,
+                                                             collections[0].name)
+                if collection_name is not None:
+                    metaallele.linkmldto.in_collection_name = collection_name
                 if len(collections) > 1:
                     self.log.warning(f'{metaallele} has many relevant collections: {[i.name for i in collections]}')
         return
