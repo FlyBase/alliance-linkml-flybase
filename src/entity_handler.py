@@ -1324,7 +1324,6 @@ class PrimaryEntityHandler(DataHandler):
             fb_data_entity.linkmldto.cross_reference_dtos = cross_reference_dtos
         for dbname in db_list.keys():
             self.log.debug(f'XREFS: {dbname} missing from DB list found {db_list[dbname]} times')
-        self.page_area_resolver.report()
         return
 
     def map_synonyms(self):

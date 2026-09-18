@@ -1214,6 +1214,11 @@ class DataHandler(object):
         self.get_datatype_data(session)
         self.synthesize_info()
         self.map_fb_data_to_alliance()
+        # FTA-263: report page area resolution here, not in map_xrefs(), because CassetteDTO and
+        # ConstructDTO have no cross_reference_dtos slot and so never call map_xrefs() - their
+        # data provider cross-reference is still resolved, and went unreported until now.
+        if self.page_area_resolver is not None:
+            self.page_area_resolver.report()
         # For the InsertionHandler, skip the last two steps because the AlleleHandler will take over the processing.
         if self.datatype == 'insertion':
             return
