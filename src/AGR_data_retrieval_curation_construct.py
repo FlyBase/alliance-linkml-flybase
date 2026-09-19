@@ -56,6 +56,11 @@ Environment variables:
   DATABASE            Database name (e.g. production_chado)
   ADD_CASS_TO_CONSTRUCT  Set to 'YES' to include cassette associations
   ADD_OBSOLETE        Set to 'NO' to exclude obsolete/internal rows from the TSVs only; JSON output is unaffected
+  ADD_CONSTRUCT_NOTES Set to 'YES' to emit construct 'note_dtos'. Off by default: the Alliance has no
+                      'construct_note_type' vocabulary term set, and its validator fails closed, so every
+                      construct note is rejected whatever its type - 9,649 records failed the 2026_03 load
+                      for this reason. Switching note types cannot help; the term set itself is missing
+                      (SCRUM-6572). The *_notes.tsv is written either way, so this gates the JSON only.
 """,
     formatter_class=argparse.RawDescriptionHelpFormatter
 )
@@ -135,6 +140,8 @@ def main():
         curation_tsv.write_notes_tsv(
             filename=tsv_filename.replace('.tsv', '_notes.tsv'),
             entities=export_dict['construct_ingest_set'],
+            # Keeps the TSV populated when ADD_CONSTRUCT_NOTES withholds the slot from the JSON.
+            note_dtos_by_id=cons_handler.note_dtos_by_id,
         )
         log.info(f"Generated TSV: {tsv_filename.replace('.tsv', '_notes.tsv')}")
         # FTA-211: diagnostic report of internal_notes whose text failed clean_free_text.
