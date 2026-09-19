@@ -1418,7 +1418,10 @@ class ConstructHandler(FeatureHandler):
         """
         add_notes = getenv('ADD_CONSTRUCT_NOTES', None) == 'YES'
         note_counter = 0
-        for construct in self.fb_data_entities.values():
+        # generic_ti_anon_constructs are exported from their own list, so include them: they carry
+        # no notes today, but nothing stops a later change adding some.
+        constructs = list(self.fb_data_entities.values()) + list(self.generic_ti_anon_constructs)
+        for construct in constructs:
             if construct.linkmldto is None or not construct.linkmldto.note_dtos:
                 continue
             self.note_dtos_by_id[construct.linkmldto.primary_external_id] = list(construct.linkmldto.note_dtos)
@@ -1448,7 +1451,6 @@ class ConstructHandler(FeatureHandler):
         # to Construct notes. Ungated (not behind ADD_CASS_TO_CONSTRUCT) since the free text
         # is attached directly to the FBtp in chado.
         self.map_entity_props_to_notes('construct_prop_to_note_mapping')
-        self.withhold_notes_for_alliance()
         # Note - We do not use self.map_secondary_ids('construct_secondary_id_dtos') here.
         #        This is because for reagents, we report only strings, not SecondaryIdSlotAnnotationDTOs.
         for construct in self.fb_data_entities.values():
@@ -1496,6 +1498,11 @@ class ConstructHandler(FeatureHandler):
                 self.export_generic_ti_anon_constructs()
         else:
             self.log.info('ADD_CASS_TO_CONSTRUCT not set to "YES"; skipping generic-TI anon construct pipeline.')
+        # Withhold notes LAST, after every step that can add them: map_construct_cassette_associations()
+        # appends cassette internal_notes to the construct itself (only when ADD_CASS_TO_CONSTRUCT is
+        # set, since that is what populates self.allele_internal_notes), and it runs after the prop
+        # mapping. Gating earlier would let those notes back into the JSON.
+        self.withhold_notes_for_alliance()
         # Export cassette associations LAST so anon marker rels are included.
         self.flag_unexportable_entities(
             self.construct_cassette_associations, 'construct_cassette_association_ingest_set')
