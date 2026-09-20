@@ -1078,6 +1078,9 @@ class ConstructHandler(FeatureHandler):
         """
         self.log.info('Export anonymous constructs for generic TI insertions.')
         self.flag_internal_fb_entities('generic_ti_anon_constructs')
+        # These are built after map_fb_data_to_alliance() and exported from their own list, so they
+        # need gating here. They carry no notes today; this stops a later change reintroducing them.
+        self.withhold_notes_for_alliance(self.generic_ti_anon_constructs, 'anonymous constructs')
         self.flag_unexportable_entities(
             self.generic_ti_anon_constructs,
             'construct_ingest_set')
@@ -1394,8 +1397,18 @@ class ConstructHandler(FeatureHandler):
         return
 
     # Elaborate on map_fb_data_to_alliance() for the ConstructHandler.
-    def withhold_notes_for_alliance(self):
+    def withhold_notes_for_alliance(self, constructs, label):
         """Hold construct notes out of the JSON unless ADD_CONSTRUCT_NOTES is set (SCRUM-6572).
+
+        Args:
+            constructs (iterable): FBExportEntity wrappers whose linkmldto may carry note_dtos.
+            label (str): What this collection is, for the log line.
+
+        Must run before whatever exports the collection. ConstructHandler overrides
+        query_chado_and_export(), and super() there exports construct_ingest_set, so for regular
+        constructs "before the export" means the end of map_fb_data_to_alliance() - not the end of
+        the override, which is after it. Getting that wrong produced a gated run whose log said it
+        withheld 42,314 notes while the JSON still carried all of them.
 
         The Alliance validates construct notes against a "construct_note_type" vocabulary term
         set that does not exist: checked against production on 2026-09-19, there are 49 term
@@ -1418,24 +1431,23 @@ class ConstructHandler(FeatureHandler):
         """
         add_notes = getenv('ADD_CONSTRUCT_NOTES', None) == 'YES'
         note_counter = 0
-        # generic_ti_anon_constructs are exported from their own list, so include them: they carry
-        # no notes today, but nothing stops a later change adding some.
-        constructs = list(self.fb_data_entities.values()) + list(self.generic_ti_anon_constructs)
+        entity_counter = 0
         for construct in constructs:
             if construct.linkmldto is None or not construct.linkmldto.note_dtos:
                 continue
             self.note_dtos_by_id[construct.linkmldto.primary_external_id] = list(construct.linkmldto.note_dtos)
             note_counter += len(construct.linkmldto.note_dtos)
+            entity_counter += 1
             if not add_notes:
                 construct.linkmldto.note_dtos = []
         if add_notes:
-            self.log.info(f'ADD_CONSTRUCT_NOTES set to "YES"; exporting {note_counter} construct notes. '
-                          'These fail Alliance validation unless the "construct_note_type" vocabulary '
-                          'term set now exists (SCRUM-6572).')
+            self.log.info(f'ADD_CONSTRUCT_NOTES set to "YES"; exporting {note_counter} notes on '
+                          f'{entity_counter} {label}. These fail Alliance validation unless the '
+                          '"construct_note_type" vocabulary term set now exists (SCRUM-6572).')
         else:
-            self.log.info(f'ADD_CONSTRUCT_NOTES not set to "YES"; withholding {note_counter} construct '
-                          f'notes on {len(self.note_dtos_by_id)} constructs from the JSON. They are still '
-                          'written to the notes TSV.')
+            self.log.info(f'ADD_CONSTRUCT_NOTES not set to "YES"; withholding {note_counter} notes on '
+                          f'{entity_counter} {label} from the JSON. They are still written to the '
+                          'notes TSV.')
         return
 
     def map_fb_data_to_alliance(self):
@@ -1469,6 +1481,10 @@ class ConstructHandler(FeatureHandler):
         self.flag_internal_fb_entities('construct_cassette_associations')
         # Anonymous cassette-to-construct associations (cassette DTOs now created by CassetteHandler).
         self.map_anon_cassette_to_construct_association()
+        # Withhold notes here, after every mapping step that can add them (map_construct_cassette_
+        # associations() appends cassette internal_notes to the construct itself) and before
+        # super().query_chado_and_export() exports construct_ingest_set.
+        self.withhold_notes_for_alliance(self.fb_data_entities.values(), 'constructs')
         return
 
     # Elaborate on query_chado_and_export() for the ConstructHandler.
@@ -1498,11 +1514,6 @@ class ConstructHandler(FeatureHandler):
                 self.export_generic_ti_anon_constructs()
         else:
             self.log.info('ADD_CASS_TO_CONSTRUCT not set to "YES"; skipping generic-TI anon construct pipeline.')
-        # Withhold notes LAST, after every step that can add them: map_construct_cassette_associations()
-        # appends cassette internal_notes to the construct itself (only when ADD_CASS_TO_CONSTRUCT is
-        # set, since that is what populates self.allele_internal_notes), and it runs after the prop
-        # mapping. Gating earlier would let those notes back into the JSON.
-        self.withhold_notes_for_alliance()
         # Export cassette associations LAST so anon marker rels are included.
         self.flag_unexportable_entities(
             self.construct_cassette_associations, 'construct_cassette_association_ingest_set')
