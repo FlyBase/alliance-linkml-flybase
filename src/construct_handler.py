@@ -32,9 +32,6 @@ class ConstructHandler(FeatureHandler):
         self.agr_export_type = agr_datatypes.ConstructDTO
         self.primary_export_set = 'construct_ingest_set'
         self.generic_ti_anon_constructs = []  # FBExportEntity wrappers for anonymous constructs.
-        # Notes collected whether or not ADD_CONSTRUCT_NOTES is set, so the curator TSV can
-        # report them while the JSON omits them (see withhold_notes_for_alliance()).
-        self.note_dtos_by_id = {}
         # FTA-182: caches for associated-allele tool data on generic TI insertions.
         self.ti_associated_alleles = {}       # {ti_fid: [fbal_fid, ...]}
         self.fbal_block_propagation = set()   # fbal_fids with 'propagate_transgenic_uses' featureprop
@@ -1078,9 +1075,6 @@ class ConstructHandler(FeatureHandler):
         """
         self.log.info('Export anonymous constructs for generic TI insertions.')
         self.flag_internal_fb_entities('generic_ti_anon_constructs')
-        # These are built after map_fb_data_to_alliance() and exported from their own list, so they
-        # need gating here. They carry no notes today; this stops a later change reintroducing them.
-        self.withhold_notes_for_alliance(self.generic_ti_anon_constructs, 'anonymous constructs')
         self.flag_unexportable_entities(
             self.generic_ti_anon_constructs,
             'construct_ingest_set')
@@ -1396,60 +1390,6 @@ class ConstructHandler(FeatureHandler):
         self.log.info(f'Created {counter} anon construct->cassette ConstructCassetteAssociationDTOs.')
         return
 
-    # Elaborate on map_fb_data_to_alliance() for the ConstructHandler.
-    def withhold_notes_for_alliance(self, constructs, label):
-        """Hold construct notes out of the JSON unless ADD_CONSTRUCT_NOTES is set (SCRUM-6572).
-
-        Args:
-            constructs (iterable): FBExportEntity wrappers whose linkmldto may carry note_dtos.
-            label (str): What this collection is, for the log line.
-
-        Must run before whatever exports the collection. ConstructHandler overrides
-        query_chado_and_export(), and super() there exports construct_ingest_set, so for regular
-        constructs "before the export" means the end of map_fb_data_to_alliance() - not the end of
-        the override, which is after it. Getting that wrong produced a gated run whose log said it
-        withheld 42,314 notes while the JSON still carried all of them.
-
-        The Alliance validates construct notes against a "construct_note_type" vocabulary term
-        set that does not exist: checked against production on 2026-09-19, there are 49 term
-        sets, 16 of them note types, and the construct one is absent while its siblings
-        construct_component_note_type and construct_cassette_association_note_type are present.
-        BaseDTOValidator.validateVocabularyTerm fails closed on a null lookup, so *every*
-        construct note is rejected whatever its type - the 2026_03 construct load produced 9,649
-        exceptions, all "relatedNotes - note_type_name - Not a valid entry", covering 44,826
-        notes on 37,967 constructs.
-
-        Switching to a type that exists does not help: VocabularyTermService queries the term
-        name together with the term set label, so with no such set no name can match. Until the
-        Alliance creates it (SCRUM-6572) the only way to load constructs at all is to omit the
-        notes, which is what this does.
-
-        The notes are always collected into self.note_dtos_by_id, gate or no gate, so
-        *_notes.tsv stays populated for curators while the JSON stays loadable - the same split
-        as ADD_TOOL_USES and ADD_IS_ABERRATION. Set ADD_CONSTRUCT_NOTES=YES once the term set
-        exists; the gate can then be deleted.
-        """
-        add_notes = getenv('ADD_CONSTRUCT_NOTES', None) == 'YES'
-        note_counter = 0
-        entity_counter = 0
-        for construct in constructs:
-            if construct.linkmldto is None or not construct.linkmldto.note_dtos:
-                continue
-            self.note_dtos_by_id[construct.linkmldto.primary_external_id] = list(construct.linkmldto.note_dtos)
-            note_counter += len(construct.linkmldto.note_dtos)
-            entity_counter += 1
-            if not add_notes:
-                construct.linkmldto.note_dtos = []
-        if add_notes:
-            self.log.info(f'ADD_CONSTRUCT_NOTES set to "YES"; exporting {note_counter} notes on '
-                          f'{entity_counter} {label}. These fail Alliance validation unless the '
-                          '"construct_note_type" vocabulary term set now exists (SCRUM-6572).')
-        else:
-            self.log.info(f'ADD_CONSTRUCT_NOTES not set to "YES"; withholding {note_counter} notes on '
-                          f'{entity_counter} {label} from the JSON. They are still written to the '
-                          'notes TSV.')
-        return
-
     def withhold_association_notes_for_alliance(self):
         """Hold construct-cassette association notes out of the JSON unless ADD_CASSETTE_ASSOC_NOTES is set.
 
@@ -1488,6 +1428,7 @@ class ConstructHandler(FeatureHandler):
                           f'on {assoc_counter} construct-cassette associations from the JSON.')
         return
 
+    # Elaborate on map_fb_data_to_alliance() for the ConstructHandler.
     def map_fb_data_to_alliance(self):
         """Extend the method for the ConstructHandler."""
         super().map_fb_data_to_alliance()
@@ -1519,10 +1460,6 @@ class ConstructHandler(FeatureHandler):
         self.flag_internal_fb_entities('construct_cassette_associations')
         # Anonymous cassette-to-construct associations (cassette DTOs now created by CassetteHandler).
         self.map_anon_cassette_to_construct_association()
-        # Withhold notes here, after every mapping step that can add them (map_construct_cassette_
-        # associations() appends cassette internal_notes to the construct itself) and before
-        # super().query_chado_and_export() exports construct_ingest_set.
-        self.withhold_notes_for_alliance(self.fb_data_entities.values(), 'constructs')
         return
 
     # Elaborate on query_chado_and_export() for the ConstructHandler.

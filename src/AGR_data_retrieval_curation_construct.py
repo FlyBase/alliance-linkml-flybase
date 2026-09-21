@@ -62,11 +62,6 @@ Environment variables:
                       whose only member is 'summary', and we emit 'internal_note' (the "unable to determine
                       reference" placeholder), so all of them are rejected. Either the Alliance adds
                       'internal_note' to that term set, or the placeholder is re-typed as 'summary'.
-  ADD_CONSTRUCT_NOTES Set to 'YES' to emit construct 'note_dtos'. Off by default: the Alliance has no
-                      'construct_note_type' vocabulary term set, and its validator fails closed, so every
-                      construct note is rejected whatever its type - 9,649 records failed the 2026_03 load
-                      for this reason. Switching note types cannot help; the term set itself is missing
-                      (SCRUM-6572). The *_notes.tsv is written either way, so this gates the JSON only.
 """,
     formatter_class=argparse.RawDescriptionHelpFormatter
 )
@@ -146,8 +141,6 @@ def main():
         curation_tsv.write_notes_tsv(
             filename=tsv_filename.replace('.tsv', '_notes.tsv'),
             entities=export_dict['construct_ingest_set'],
-            # Keeps the TSV populated when ADD_CONSTRUCT_NOTES withholds the slot from the JSON.
-            note_dtos_by_id=cons_handler.note_dtos_by_id,
         )
         log.info(f"Generated TSV: {tsv_filename.replace('.tsv', '_notes.tsv')}")
         # FTA-211: diagnostic report of internal_notes whose text failed clean_free_text.
