@@ -231,8 +231,14 @@ class ExperimentalToolHandler(FeatureHandler):
             # So pub_curies will be empty.
             pub_curies = self.lookup_pub_curies(all_pub_ids)
 
-            # Adjust allele-gene relation_type as needed.
-            rel_type_name = 'compatible_tool'
+            # The Alliance term is "compatible_with", not "compatible_tool": the
+            # transgenic_tool_relation vocabulary holds exactly one term, compatible_with, and a
+            # lookup for compatible_tool returns nothing (checked against production 2026-09-21).
+            # The schema's own note on TransgenicToolTransgenicToolAssociationDTO still reads
+            # "permissible_values: compatible_tool" in v2.16.0 and on main, but that is prose - the
+            # validator resolves relation_name through the vocabulary, so the vocabulary wins.
+            # "compatible_tool" remains correct for the chado relation type we query above.
+            rel_type_name = 'compatible_with'
             rel_dto = agr_datatypes.TransgenicToolAssociationDTO(
                 subject_curie, object_curie,
                 pub_curies, False, rel_type_name)
