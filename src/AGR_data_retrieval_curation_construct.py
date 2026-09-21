@@ -56,12 +56,6 @@ Environment variables:
   DATABASE            Database name (e.g. production_chado)
   ADD_CASS_TO_CONSTRUCT  Set to 'YES' to include cassette associations
   ADD_OBSOLETE        Set to 'NO' to exclude obsolete/internal rows from the TSVs only; JSON output is unaffected
-  ADD_CASSETTE_ASSOC_NOTES
-                      Set to 'YES' to emit note_dtos on construct-cassette associations. Off by default:
-                      that set's note types are validated against 'construct_cassette_association_note_type',
-                      whose only member is 'summary', and we emit 'internal_note' (the "unable to determine
-                      reference" placeholder), so all of them are rejected. Either the Alliance adds
-                      'internal_note' to that term set, or the placeholder is re-typed as 'summary'.
   ADD_CONSTRUCT_NOTES Set to 'YES' to emit construct 'note_dtos'. Off by default: the Alliance has no
                       'construct_note_type' vocabulary term set, and its validator fails closed, so every
                       construct note is rejected whatever its type - 9,649 records failed the 2026_03 load

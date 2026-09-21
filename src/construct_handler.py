@@ -1286,11 +1286,14 @@ class ConstructHandler(FeatureHandler):
                     pub_curies = self.lookup_pub_curies(filtered_pub_ids)
                 else:
                     pub_curies = []
-                    # Internal bookkeeping, not curated content: mark it internal so the
-                    # Alliance does not display it. dict_export() snapshots the attributes,
-                    # so the flag has to be set before it is called.
+                    # Machine-generated bookkeeping, not curated content. The type is "summary"
+                    # because that is the sole member of the Alliance's
+                    # construct_cassette_association_note_type term set, so "internal_note" was
+                    # rejected outright; internal=True keeps the note out of public display,
+                    # which is what the type name would otherwise have conveyed. Set before
+                    # dict_export(), which snapshots the attributes.
                     note_dto = agr_datatypes.NoteDTO(
-                        'internal_note',
+                        'summary',
                         'FTA: unable to automatically determine reference for cassette to construct association',
                         [])
                     note_dto.internal = True
@@ -1341,11 +1344,14 @@ class ConstructHandler(FeatureHandler):
             else:
                 evidence_curies = []
                 if len(unique_pub_curies) > 1:
-                    # Internal bookkeeping, not curated content: mark it internal so the
-                    # Alliance does not display it. dict_export() snapshots the attributes,
-                    # so the flag has to be set before it is called.
+                    # Machine-generated bookkeeping, not curated content. The type is "summary"
+                    # because that is the sole member of the Alliance's
+                    # construct_cassette_association_note_type term set, so "internal_note" was
+                    # rejected outright; internal=True keeps the note out of public display,
+                    # which is what the type name would otherwise have conveyed. Set before
+                    # dict_export(), which snapshots the attributes.
                     note_dto = agr_datatypes.NoteDTO(
-                        'internal_note',
+                        'summary',
                         'FTA: unable to automatically determine reference for cassette to construct association',
                         [])
                     note_dto.internal = True
@@ -1458,44 +1464,6 @@ class ConstructHandler(FeatureHandler):
                           'notes TSV.')
         return
 
-    def withhold_association_notes_for_alliance(self):
-        """Hold construct-cassette association notes out of the JSON unless ADD_CASSETTE_ASSOC_NOTES is set.
-
-        ConstructCassetteAssociationDTO notes are validated against the
-        "construct_cassette_association_note_type" term set, whose *only* member is "summary"
-        (checked against production 2026-09-19). Both sites that build these associations emit
-        "internal_note" - the "FTA: unable to automatically determine reference ..." placeholder -
-        so every one of them fails the same way construct notes did, 268 of them in the 2026_03
-        run. The term set exists here, unlike construct_note_type; it is the type that is wrong.
-
-        Off by default so the file loads. Two ways out, for whoever picks this up: ask the
-        Alliance to add "internal_note" to that term set, or re-type the placeholder as "summary",
-        which is already valid - but that makes an internal bookkeeping note public, so it is a
-        curation decision rather than a code tidy.
-
-        Runs before the export of construct_cassette_association_ingest_set, which happens in this
-        handler's query_chado_and_export() override.
-        """
-        add_notes = getenv('ADD_CASSETTE_ASSOC_NOTES', None) == 'YES'
-        note_counter = 0
-        assoc_counter = 0
-        for association in self.construct_cassette_associations:
-            if association.linkmldto is None or not association.linkmldto.note_dtos:
-                continue
-            note_counter += len(association.linkmldto.note_dtos)
-            assoc_counter += 1
-            if not add_notes:
-                association.linkmldto.note_dtos = []
-        if add_notes:
-            self.log.info(f'ADD_CASSETTE_ASSOC_NOTES set to "YES"; exporting {note_counter} notes on '
-                          f'{assoc_counter} construct-cassette associations. These fail Alliance '
-                          'validation unless "internal_note" is now a member of the '
-                          '"construct_cassette_association_note_type" term set.')
-        else:
-            self.log.info(f'ADD_CASSETTE_ASSOC_NOTES not set to "YES"; withholding {note_counter} notes '
-                          f'on {assoc_counter} construct-cassette associations from the JSON.')
-        return
-
     def map_fb_data_to_alliance(self):
         """Extend the method for the ConstructHandler."""
         super().map_fb_data_to_alliance()
@@ -1561,7 +1529,6 @@ class ConstructHandler(FeatureHandler):
         else:
             self.log.info('ADD_CASS_TO_CONSTRUCT not set to "YES"; skipping generic-TI anon construct pipeline.')
         # Export cassette associations LAST so anon marker rels are included.
-        self.withhold_association_notes_for_alliance()
         self.flag_unexportable_entities(
             self.construct_cassette_associations, 'construct_cassette_association_ingest_set')
         self.generate_export_dict(self.construct_cassette_associations, 'construct_cassette_association_ingest_set')
