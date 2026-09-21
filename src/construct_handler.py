@@ -1286,11 +1286,15 @@ class ConstructHandler(FeatureHandler):
                     pub_curies = self.lookup_pub_curies(filtered_pub_ids)
                 else:
                     pub_curies = []
+                    # Internal bookkeeping, not curated content: mark it internal so the
+                    # Alliance does not display it. dict_export() snapshots the attributes,
+                    # so the flag has to be set before it is called.
                     note_dto = agr_datatypes.NoteDTO(
                         'internal_note',
                         'FTA: unable to automatically determine reference for cassette to construct association',
-                        []).dict_export()
-                    note_dtos.append(note_dto)
+                        [])
+                    note_dto.internal = True
+                    note_dtos.append(note_dto.dict_export())
                 fb_rel = fb_datatypes.FBExportEntity()
                 rel_dto = agr_datatypes.ConstructCassetteAssociationDTO(
                     cons_curie, 'has_transcriptional_unit', cassette_curie, pub_curies)
@@ -1337,11 +1341,15 @@ class ConstructHandler(FeatureHandler):
             else:
                 evidence_curies = []
                 if len(unique_pub_curies) > 1:
+                    # Internal bookkeeping, not curated content: mark it internal so the
+                    # Alliance does not display it. dict_export() snapshots the attributes,
+                    # so the flag has to be set before it is called.
                     note_dto = agr_datatypes.NoteDTO(
                         'internal_note',
                         'FTA: unable to automatically determine reference for cassette to construct association',
-                        []).dict_export()
-                    note_dtos.append(note_dto)
+                        [])
+                    note_dto.internal = True
+                    note_dtos.append(note_dto.dict_export())
             fb_rel = fb_datatypes.FBExportEntity()
             rel_dto = agr_datatypes.ConstructCassetteAssociationDTO(
                 cons_curie, relation_name, cassette_id, evidence_curies)
