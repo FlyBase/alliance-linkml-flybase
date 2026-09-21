@@ -127,23 +127,16 @@ def write_primary_tsv(*, log, filename, entities, datatype, extra_fields=None,
                 raise
 
 
-def write_notes_tsv(*, filename, entities, note_dtos_by_id=None):
-    """Write the per-entity notes TSV (`note_dtos` column).
-
-    `note_dtos_by_id` supplies notes, keyed by primary external ID, for entities whose exported
-    dict carries no `note_dtos` key. The construct script passes the handler's collected notes so
-    this TSV stays populated while ADD_CONSTRUCT_NOTES keeps the slot out of the JSON; every other
-    script omits it and reads the exported dicts as before.
-    """
+def write_notes_tsv(*, filename, entities):
+    """Write the per-entity notes TSV (`note_dtos` column)."""
     skip = should_skip_obsolete()
-    fallback = note_dtos_by_id or {}
     with open(filename, 'w') as outfile:
         outfile.write(NOTES_TSV_HEADER)
         for entity_dict in entities:
             if skip and _is_excluded(entity_dict):
                 continue
             primary = entity_dict["primary_external_id"]
-            for note in entity_dict.get("note_dtos", None) or fallback.get(primary, []):
+            for note in entity_dict.get("note_dtos", []):
                 evidence = EVIDENCE_DELIMITER.join(note.get('evidence_curies', []))
                 # Strip tabs/newlines just before the dump so "dirty" (unmodified) note
                 # free text cannot break the TSV row; the text is otherwise left as-is.
