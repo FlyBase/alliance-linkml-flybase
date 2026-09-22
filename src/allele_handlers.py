@@ -296,15 +296,23 @@ class AlleleHandler(MetaAlleleHandler):
             filter(*filters).\
             distinct()
         counter = 0
+        skipped_counter = 0
         for result in results:
             if result.Feature.feature_id in self.ignore_list:
                 continue
             elif result.Feature.feature_id not in self.fb_data_entities:
-                self.log.error(f"entity_id:{result.Feature.feature_id} not in list of data_entities")
-                self.log.error(f"ignore_list is {self.ignore_list}")
+                # FTA-264: expected skip, not an error - the query matches features outside this
+                # handler's export set. Counted and summarised after the loop.
+                skipped_counter += 1
+                if skipped_counter < 10:
+                    self.log.debug(f"entity_id:{result.Feature.feature_id} not in the {self.datatype} "
+                                   f"export set; ignore_list holds {len(self.ignore_list)} ids.")
                 continue
             self.fb_data_entities[result.Feature.feature_id].phenstatements.append(result)
             counter += 1
+        if skipped_counter:
+            self.log.info(f'Skipped {skipped_counter} phenotype rows on features outside the '
+                          f'{self.datatype} export set (expected when the set is a subset of the query).')
         self.log.info(f'Found {counter} allele phenotypes from single locus genotypes.')
         return
 
