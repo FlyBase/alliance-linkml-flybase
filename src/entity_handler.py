@@ -678,7 +678,7 @@ class PrimaryEntityHandler(DataHandler):
                 filter(*filters).\
                 distinct()
         cvterm_prop_counter = 0
-        bad_counter = 0
+        skipped_counter = 0
         cvterm_rel_name = f'{chado_type}_cvterm'
         for cvtermprop_result in cvtermprop_results:
             entity_cvterm_id = getattr(cvtermprop_result, f'{chado_type}_cvterm_id')
@@ -689,11 +689,15 @@ class PrimaryEntityHandler(DataHandler):
             if entity_id in self.ignore_list:
                 continue
             elif entity_id not in self.fb_data_entities:
+                # FTA-264: expected whenever the export set is a subset of the features the chado
+                # query matches - the cassette datatype shares the FBal regex with alleles, so
+                # every annotation on a non-cassette allele lands here. Counted and reported once
+                # below; the per-entity lines are DEBUG because a normal run produces ~180,000.
                 if not self.testing:  # test sets have some none fb_data BIUT real data should not
-                    bad_counter += 1
-                    if bad_counter < 10:
-                        self.log.error(f"Entity_id:{entity_id} not in list of data_entities {chado_type} {entity_obj}")
-                        self.log.error(f"Ignore_list is {self.ignore_list}")
+                    skipped_counter += 1
+                    if skipped_counter < 10:
+                        self.log.debug(f"Entity_id:{entity_id} not in the {self.datatype} export set "
+                                       f"({chado_type} {entity_obj}); ignore_list holds {len(self.ignore_list)} ids.")
                 continue
 
             if entity_prop_type_name in self.fb_data_entities[entity_id].prop_data:  # only store those we are interested in
@@ -708,12 +712,13 @@ class PrimaryEntityHandler(DataHandler):
             else:
                 cvterm_annotation_dict[entity_cvterm_id].props_by_type[entity_prop_type_name] = [fb_datatypes.FBProp(cvtermprop_result)]
                 cvterm_prop_counter += 1
-        if bad_counter:
-            self.log.error(f"Bad counter is {bad_counter}")
+        if skipped_counter:
+            self.log.info(f'Skipped {skipped_counter} {chado_type}_cvtermprops on features outside the '
+                          f'{self.datatype} export set (expected when the set is a subset of the query).')
         self.log.info(f'Found {cvterm_prop_counter} {chado_type}_cvtermprops for {self.datatype}s.')
         # Phase 3. Add rel info to entities.
         assignment_counter = 0
-        bad_counter = 0
+        skipped_counter = 0
         # Assign the CVTermAnnotation to the appropriate entity.
         for cvt_anno_id, cvt_anno in cvterm_annotation_dict.items():
             # First, associate the relationship with the entity.
@@ -721,11 +726,11 @@ class PrimaryEntityHandler(DataHandler):
             if entity_id in self.ignore_list:
                 continue
             if entity_id not in self.fb_data_entities:  # (ie constructs/cassettes)
+                # FTA-264: same expected skip as above; DEBUG per entity, counted for one summary.
                 if not self.testing:  # test sets have some none fb_data
-                    bad_counter += 1
-                    if bad_counter < 10:
-                        self.log.error(f"Entity_id:{entity_id} not in list of data_entities")
-                        self.log.error(f"Ignore_list is {self.ignore_list}")
+                    skipped_counter += 1
+                    if skipped_counter < 10:
+                        self.log.debug(f"Entity_id:{entity_id} not in the {self.datatype} export set.")
                 continue
             self.fb_data_entities[entity_id].cvt_annos_by_id[cvt_anno_id] = cvt_anno
             # Second, sort the CVTermAnnotations by CV name.
@@ -747,8 +752,9 @@ class PrimaryEntityHandler(DataHandler):
                 else:
                     self.fb_data_entities[entity_id].cvt_anno_ids_by_prop[prop_type_name] = [cvt_anno_id]
             assignment_counter += 1
-        if bad_counter:
-            self.log.error(f"Bad counter is {bad_counter}")
+        if skipped_counter:
+            self.log.info(f'Skipped {skipped_counter} {chado_type}_cvterm annotations on features outside '
+                          f'the {self.datatype} export set (expected when the set is a subset of the query).')
         self.log.debug(f'Indexed {assignment_counter} {chado_type}_cvterm annotations.')
         return
 
