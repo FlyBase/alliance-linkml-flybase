@@ -622,6 +622,12 @@ class PrimaryEntityHandler(DataHandler):
         if self.datatype in self.feature_subtypes.keys():
             self.log.debug(f'Filter main table for entities of these feature_subtypes: {self.feature_subtypes[self.datatype]}')
             filters += (entity_type.name.in_((self.feature_subtypes[self.datatype])), )
+        # FTA-264: scope to the entities actually being exported, not just to everything the regex
+        # and feature_subtypes match. For gene or allele the two are the same set, so this changes
+        # nothing; for a datatype whose set is a subset of its filter - cassette shares the FBal
+        # regex with alleles - it stops fetching rows that the loop below would only skip. Safe
+        # because get_entities() runs before this method in every handler that calls it.
+        filters += (getattr(chado_table, entity_key_name).in_((self.fb_data_entities.keys())), )
         if self.testing:
             self.log.debug(f'TESTING: limit to these entities: {self.test_set}')
             if self.datatype == 'genotype':
@@ -775,15 +781,18 @@ class PrimaryEntityHandler(DataHandler):
         if self.datatype in self.feature_subtypes.keys():
             self.log.info(f'Filter main table by these feature_subtypes: {self.feature_subtypes[self.datatype]}')
             filters += (entity_type.name.in_((self.feature_subtypes[self.datatype])), )
+        # FTA-264: scope to the entities actually being exported. This filter was already here but
+        # only inside the testing branch below, despite its comment - so a production run fetched
+        # props for everything the regex matched and skipped the surplus in Python. See
+        # get_entity_cvterms() for why this is safe for every datatype.
+        fkey_col = getattr(chado_table, subject_key_name)
+        filters += (fkey_col.in_((self.fb_data_entities.keys())), )
         if self.testing:
             self.log.info(f'TESTING: limit to these entities: {self.test_set}')
             if self.datatype == 'genotype':
                 filters += (chado_table.genotype_id.in_((self.test_set.keys())), )
             else:
                 filters += (chado_table.uniquename.in_((self.test_set.keys())), )
-                # Only get for those we are interested in i.e. in self.fb_data_entities
-                fkey_col = getattr(chado_table, subject_key_name)
-                filters += (fkey_col.in_((self.fb_data_entities.keys())), )
         if filters == () and self.datatype != 'genotype':
             self.log.warning('Have no filters for the main FlyBase entity driver query.')
             raise
