@@ -21,7 +21,11 @@ Notes:
     lesions.
     Notes on usage:
     This script should be run after each epicycle proforma load.
-    This script flushes/replaces of represented_at_alliance_as relationships.
+    This script updates is_represented_at_alliance_as relationships in place:
+    existing relationships that are no longer supported are deleted, new ones
+    are created, and those still supported are left unchanged. Each deletion
+    and creation is logged as a WARNING for the specific allele, and the log
+    reports the number of relationships deleted, created and unchanged.
     One must specify "--commit" in the command line to commit the changes!
 """
 
@@ -56,7 +60,7 @@ TESTING = False                       # Here, force testing to be False to avoid
 
 # Process additional input parameters not handled by the set_up_db_reading() function above.
 parser = argparse.ArgumentParser(description='inputs')
-parser.add_argument('--commit', action='store_true', help="Commit writing of new feature_relationships")
+parser.add_argument('--commit', action='store_true', help="Commit updates to feature_relationships")
 args, extra_args = parser.parse_known_args()
 COMMIT = args.commit
 log.info(f'These args are handled by this specific script: {args}')
@@ -85,20 +89,33 @@ class AlleleMapper(AlleleHandler):
         """Create the AlleleMapper object."""
         super().__init__(log, testing)
         self.allele_name_lookup = {}    # Allele-name-keyed dict of feature dicts.
+        self.fr_type_cvterm_id = None   # The cvterm_id for "is_represented_at_alliance_as".
+        self.existing_frs = {}          # (subject_id, object_id)-keyed lists of existing "is_represented_at_alliance_as" query results.
 
-    # Method to initially flush all "is_represented_at_alliance_as" feature_relationships.
-    def initial_flush(self, session):
-        """Flush existing "is_represented_at_alliance_as" feature_relationships to create a blank slate."""
-        self.log.info('Flush existing "is_represented_at_alliance_as" feature_relationships to create a blank slate.')
+    # Method to get all existing "is_represented_at_alliance_as" feature_relationships.
+    def get_existing_feature_relationships(self, session):
+        """Get existing "is_represented_at_alliance_as" feature_relationships."""
+        self.log.info('Get existing "is_represented_at_alliance_as" feature_relationships.')
         filters = (Cvterm.name == 'is_represented_at_alliance_as', )
-        fr_type_cvterm_id = session.query(Cvterm).filter(*filters).one().cvterm_id
-        results = session.query(FeatureRelationship).filter(FeatureRelationship.type_id == fr_type_cvterm_id).distinct()
+        self.fr_type_cvterm_id = session.query(Cvterm).filter(*filters).one().cvterm_id
+        self.log.info(f'The "is_represented_at_alliance_as" CV term corresponds to cvterm.cvterm_id={self.fr_type_cvterm_id}')
+        sbj_feature = aliased(Feature, name='subject')
+        obj_feature = aliased(Feature, name='object')
+        results = session.query(FeatureRelationship, sbj_feature, obj_feature).\
+            select_from(FeatureRelationship).\
+            join(sbj_feature, (sbj_feature.feature_id == FeatureRelationship.subject_id)).\
+            join(obj_feature, (obj_feature.feature_id == FeatureRelationship.object_id)).\
+            filter(FeatureRelationship.type_id == self.fr_type_cvterm_id).\
+            distinct()
         counter = 0
         for result in results:
+            fr_key = (result.FeatureRelationship.subject_id, result.FeatureRelationship.object_id)
+            try:
+                self.existing_frs[fr_key].append(result)
+            except KeyError:
+                self.existing_frs[fr_key] = [result]
             counter += 1
         self.log.info(f'There are currently {counter} "is_represented_at_alliance_as" feature_relationships (before updating).')
-        session.query(FeatureRelationship).filter(FeatureRelationship.type_id == fr_type_cvterm_id).delete()
-        self.log.info('Flushed all "is_represented_at_alliance_as" feature_relationships before updating.')
         return
 
     # Add methods to be run by get_general_data() below.
@@ -393,29 +410,54 @@ class AlleleMapper(AlleleHandler):
         self.log.info(f'Mapped {mapped_counter}/{input_counter} current alleles to a single FBti insertion unambiguously.')
         return
 
-    def write_new_feature_relationships(self, session):
-        """Create new "is_represented_at_alliance_as" feature_relationships."""
-        self.log.info('Create new "is_represented_at_alliance_as" feature_relationships.')
-        new_counter = 0
-        filters = (Cvterm.name == 'is_represented_at_alliance_as', )
-        fr_type_cvterm_id = session.query(Cvterm).filter(*filters).one().cvterm_id
-        self.log.info(f'The "is_represented_at_alliance_as" CV term corresponds to cvterm.cvterm_id={fr_type_cvterm_id}')
+    def update_feature_relationships(self, session):
+        """Delete stale and create new "is_represented_at_alliance_as" feature_relationships."""
+        self.log.info('Delete stale and create new "is_represented_at_alliance_as" feature_relationships.')
+        deleted_counter = 0
+        created_counter = 0
+        unchanged_counter = 0
+        desired_frs = set()
         for allele in self.fb_data_entities.values():
             if allele.maps_to_feature_id:
-                _, _ = get_or_create(session, FeatureRelationship, subject_id=allele.chado_obj.feature_id,
-                                     object_id=allele.maps_to_feature_id, type_id=fr_type_cvterm_id)
-                new_counter += 1
-        self.log.info(f'Created {new_counter} new "is_represented_at_alliance_as" feature_relationships.')
+                desired_frs.add((allele.chado_obj.feature_id, allele.maps_to_feature_id))
+        # Delete stale feature_relationships (and any redundant copies of current ones).
+        for fr_key, results in self.existing_frs.items():
+            if fr_key in desired_frs:
+                unchanged_counter += 1
+                stale_results = results[1:]
+            else:
+                stale_results = results
+            for result in stale_results:
+                msg = f'DELETE: Allele {result.subject.name} ({result.subject.uniquename}) '
+                msg += f'is no longer "is_represented_at_alliance_as" {result.object.name} ({result.object.uniquename}).'
+                self.log.warning(msg)
+                session.delete(result.FeatureRelationship)
+                deleted_counter += 1
+        # Create new feature_relationships.
+        for fr_key in desired_frs:
+            if fr_key in self.existing_frs:
+                continue
+            allele = self.feature_lookup[fr_key[0]]
+            insertion = self.feature_lookup[fr_key[1]]
+            msg = f'CREATE: Allele {allele["name"]} ({allele["uniquename"]}) '
+            msg += f'is newly "is_represented_at_alliance_as" {insertion["name"]} ({insertion["uniquename"]}).'
+            self.log.warning(msg)
+            _, _ = get_or_create(session, FeatureRelationship, subject_id=fr_key[0],
+                                 object_id=fr_key[1], type_id=self.fr_type_cvterm_id)
+            created_counter += 1
+        self.log.info(f'Deleted {deleted_counter} stale "is_represented_at_alliance_as" feature_relationships.')
+        self.log.info(f'Created {created_counter} new "is_represented_at_alliance_as" feature_relationships.')
+        self.log.info(f'Kept {unchanged_counter} unchanged "is_represented_at_alliance_as" feature_relationships.')
         return
 
     def run(self, session):
         """Run all methods in sequence."""
         self.log.info('Run all methods in sequence.')
-        self.initial_flush(session)
+        self.get_existing_feature_relationships(session)
         self.get_general_data(session)
         self.get_datatype_data(session)
         self.map_alleles_to_insertions()
-        self.write_new_feature_relationships(session)
+        self.update_feature_relationships(session)
         return
 
 
