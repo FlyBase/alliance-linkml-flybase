@@ -45,6 +45,7 @@ The FBal allele is "associated_with" the FBti insertion, and the FBti feature is
 For these, there is a script "map_alleles_to_insertions_for_alliance_genotypes.py" from the "alliance-linkml-flybase" repo.  
 This script creates an "is_represented_at_alliance_as" feature_relationship between the FBal allele (subject) and the superseding FBti insertion (object).  
 This script is run every epicycle (data_validation_p2 > updateAlleleInsertionRelationships).  
+The script updates these relationships in place: stale relationships are deleted, new ones created, and those still supported are left unchanged. Each creation/deletion is logged as a WARNING for the specific allele, so the log shows exactly which FBal-FBti mappings changed in a given epicycle.  
 Upon export to the Alliance, the AlleleHandler looks for this relationship and propagates select information from the FBal allele to the FBti insertion, submitting the FBal allele as internal/obsolete.  
 
 Case 3. Constructs carrying engineered genes.  
