@@ -13,7 +13,8 @@ Example:
 
 Notes:
     The Alliance takes construct-related data as two uploads: one file of all entities
-    (Construct, Cassette, TransgenicTool) and one file of the associations between them.
+    (Construct, Cassette, TransgenicTool) and one file of their associations, both among
+    themselves and with other entities such as genes and STRs.
     This script reads the six JSON files written by the construct, cassette and
     transgenic_tool retrieval scripts and combines them, stamping the given LinkML release.
 
@@ -38,19 +39,16 @@ ENTITY_SETS = {
     'transgenic_tool_curation_': 'transgenic_tool_ingest_set',
 }
 
-# Associations among the three entity types.
-CORE_ASSOC_SETS = {
+# Association ingest sets, keyed by the stem of the retrieval script's output file: associations among
+# the three entity types, plus cassette associations to genomic entities and STRs.
+ASSOC_SETS = {
     'construct_association_curation_': ['construct_cassette_association_ingest_set'],
-    'cassette_association_curation_': ['cassette_transgenic_tool_association_ingest_set'],
-    'transgenic_tool_association_curation_': ['transgenic_tool_transgenic_tool_association_ingest_set'],
-}
-
-# Cassette associations that point outside the three entity types (genes, STRs).
-EXTERNAL_ASSOC_SETS = {
     'cassette_association_curation_': [
+        'cassette_transgenic_tool_association_ingest_set',
         'cassette_genomic_entity_association_ingest_set',
         'cassette_str_association_ingest_set',
     ],
+    'transgenic_tool_association_curation_': ['transgenic_tool_transgenic_tool_association_ingest_set'],
 }
 
 log = logging.getLogger(__name__)
@@ -93,12 +91,6 @@ def main():
     """Combine the construct-family exports into one entity file and one association file."""
     parser = argparse.ArgumentParser(
         description='Merge construct, cassette and transgenic tool exports into two combined JSON files.',
-        epilog="""
-Environment variables:
-  ADD_CASS_EXTERNAL_ASSOC  Set to 'YES' to also include the cassette-genomic entity and cassette-STR
-                           associations, which point outside the three construct-family entity types.
-""",
-        formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument('-l', '--linkml_release', required=True,
                         help='The "agr_curation_schema" LinkML release number.')
@@ -108,20 +100,12 @@ Environment variables:
     output_dir = args.output_dir or args.input_dir
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
-    assoc_sets = {stem: list(names) for stem, names in CORE_ASSOC_SETS.items()}
-    if os.getenv('ADD_CASS_EXTERNAL_ASSOC') == 'YES':
-        for stem, names in EXTERNAL_ASSOC_SETS.items():
-            assoc_sets[stem].extend(names)
-    else:
-        log.info('ADD_CASS_EXTERNAL_ASSOC not set to "YES"; leaving out cassette-genomic entity and '
-                 'cassette-STR associations.')
-
     member_releases = {}
     entity_sets = {}
     for stem, set_name in ENTITY_SETS.items():
         entity_sets.update(load_sets(find_input_file(args.input_dir, stem), [set_name], member_releases))
     association_sets = {}
-    for stem, set_names in assoc_sets.items():
+    for stem, set_names in ASSOC_SETS.items():
         association_sets.update(load_sets(find_input_file(args.input_dir, stem), set_names, member_releases))
 
     check_no_construct_components(entity_sets['construct_ingest_set'])
