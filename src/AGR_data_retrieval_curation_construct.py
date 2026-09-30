@@ -156,8 +156,11 @@ def main():
         cassettes_enabled = os.getenv('ADD_CASS_TO_CONSTRUCT') == 'YES'
         if len(association_export_dict['construct_genomic_entity_association_ingest_set']) == 0:
             if cassettes_enabled:
+                # Drop the key rather than emitting an empty ingest set: LinkML v2.19.0 removed
+                # construct_genomic_entity_association_ingest_set, so even an empty one fails validation.
+                del association_export_dict['construct_genomic_entity_association_ingest_set']
                 log.info('construct_genomic_entity_association_ingest_set is empty as expected '
-                         '(cassettes handle this data).')
+                         '(cassettes handle this data); leaving it out of the association file.')
             else:
                 log.error('The "construct_genomic_entity_association_ingest_set" is unexpectedly empty.')
                 raise ValueError('The "construct_genomic_entity_association_ingest_set" is unexpectedly empty.')
