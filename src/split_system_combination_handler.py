@@ -25,6 +25,7 @@ class SplitSystemCombinationHandler(FeatureHandler):
         self.agr_export_type = agr_datatypes.AffectedGenomicModelDTO
         self.primary_export_set = 'agm_ingest_set'
 
+    # Note - the FTA-273 retrofit makes these FBal pair-based FBco obsolete; add FBti pair-based FBco once they are in chado.
     test_set = {
         'FBco0000001': 'Scer\\GAL4[DBD.R22B12]INTERSECTIONHsap\\RELA[AD.R14E06]',    # The first FBco; has a non-current "MB012B" symbol.
         'FBco0000010': 'Scer\\GAL4[DBD.Tdc2]INTERSECTIONHsap\\RELA[AD.R24E06]',      # DBD half is a named driver, not an R-line.
@@ -51,10 +52,8 @@ class SplitSystemCombinationHandler(FeatureHandler):
         self.build_bibliography(session)
         self.build_cvterm_lookup(session)
         self.build_organism_lookup(session)
-        # Insertions are included because a component allele may be represented at the
-        # Alliance by an insertion instead of by the allele itself.
-        self.build_feature_lookup(session, feature_types=['allele', 'insertion'])
-        self.build_allele_replacement_lookup(session)
+        # FBco components reported to the Alliance are FBti insertions (FTA-276).
+        self.build_feature_lookup(session, feature_types=['insertion'])
         return
 
     # Elaborate on get_datatype_data() for the SplitSystemCombinationHandler.
@@ -62,8 +61,10 @@ class SplitSystemCombinationHandler(FeatureHandler):
         """Extend the method for the SplitSystemCombinationHandler."""
         super().get_datatype_data(session)
         self.get_entities(session)
-        self.get_entity_relationships(session, 'subject', rel_type='partially_produced_by',
-                                      entity_type='allele', entity_regex=self.regex['allele'])
+        # An FBco is defined by its pair of FBti insertions (FTA-268); it also keeps "partially_produced_by" FBal
+        # relationships (for FlyBase web pages), but those are not reported to the Alliance.
+        self.get_entity_relationships(session, 'subject', rel_type='has_insertion_component',
+                                      entity_type='insertion', entity_regex=self.regex['insertion'])
         self.get_entityprops(session)
         self.get_entity_pubs(session)
         self.get_entity_synonyms(session)
@@ -74,19 +75,18 @@ class SplitSystemCombinationHandler(FeatureHandler):
 
     # Additional sub-methods for synthesize_info().
     def synthesize_ssc_components(self):
-        """Determine the components of each split system combination to report."""
+        """Determine the components of each split system combination to report: its pair of FBti insertions."""
         self.log.info('Determine the components of each split system combination to report.')
         component_counter = 0
         obsolete_component_counter = 0
         unknown_component_counter = 0
-        replaced_component_counter = 0
-        redundant_component_counter = 0
+        no_fbti_pair_counter = 0
         for ssc in self.fb_data_entities.values():
-            rels = ssc.recall_relationships(self.log, entity_role='subject', rel_types='partially_produced_by',
-                                            rel_entity_types='allele')
+            rels = ssc.recall_relationships(self.log, entity_role='subject', rel_types='has_insertion_component',
+                                            rel_entity_types=self.feature_subtypes['insertion'])
             for rel in rels:
                 feature_id = rel.chado_obj.object_id
-                # Obsolete alleles are not exported to the Alliance, so an association to one would dangle there.
+                # Obsolete insertions are not exported to the Alliance, so an association to one would dangle there.
                 if feature_id not in self.feature_lookup.keys():
                     self.log.warning(f'{ssc} has a component (feature_id={feature_id}) missing from the feature_lookup; skipping it.')
                     unknown_component_counter += 1
@@ -96,26 +96,20 @@ class SplitSystemCombinationHandler(FeatureHandler):
                     self.log.warning(f'{ssc} has an obsolete component, {obs_curie}; skipping it.')
                     obsolete_component_counter += 1
                     continue
-                # Report the feature that represents a component allele at the Alliance, if there is one.
-                if feature_id in self.allele_replacement_lookup.keys():
-                    allele_curie = self.feature_lookup[feature_id]['curie']
-                    feature_id = self.allele_replacement_lookup[feature_id]
-                    replacement_curie = self.feature_lookup[feature_id]['curie']
-                    self.log.debug(f'{ssc} has a component, {allele_curie}, to be reported as {replacement_curie}.')
-                    replaced_component_counter += 1
-                # Distinct component alleles can share the same Alliance representative, so guard against duplicates.
-                if feature_id in ssc.component_features:
-                    dupe_curie = self.feature_lookup[feature_id]['curie']
-                    self.log.warning(f'{ssc} has many components reported as {dupe_curie}; reporting it only once.')
-                    redundant_component_counter += 1
-                    continue
-                ssc.component_features.append(feature_id)
-                component_counter += 1
-        self.log.info(f'Found {component_counter} components for {len(self.fb_data_entities)} split system combinations.')
-        self.log.info(f'Reported {replaced_component_counter} allele components as the other feature that represents them at the Alliance.')
+                if feature_id not in ssc.component_features:
+                    ssc.component_features.append(feature_id)
+                    component_counter += 1
+            # A current FBco must be defined by a pair of FBti; otherwise, it is not a valid AGM.
+            # Obsolete FBco (e.g., FBal pair-based FBco replaced in the FTA-273 retrofit) have no FBti components.
+            if ssc.chado_obj.is_obsolete is False and len(ssc.component_features) != 2:
+                ssc.for_export = False
+                ssc.export_warnings.append(f'Has {len(ssc.component_features)} current FBti components (has_insertion_component), not 2')
+                self.log.warning(f'{ssc} has {len(ssc.component_features)} current FBti components, not 2; it will not be exported.')
+                no_fbti_pair_counter += 1
+        self.log.info(f'Found {component_counter} FBti components for {len(self.fb_data_entities)} split system combinations.')
         self.log.info(f'Skipped {obsolete_component_counter} obsolete components.')
         self.log.info(f'Skipped {unknown_component_counter} components not found in the feature_lookup.')
-        self.log.info(f'Skipped {redundant_component_counter} components made redundant by these substitutions.')
+        self.log.info(f'Will not export {no_fbti_pair_counter} current split system combinations lacking a pair of current FBti components.')
         return
 
     # Elaborate on synthesize_info() for the SplitSystemCombinationHandler.
@@ -173,7 +167,7 @@ class SplitSystemCombinationHandler(FeatureHandler):
         self.log.info('Map split system combination components.')
         counter = 0
         for ssc in self.fb_data_entities.values():
-            if ssc.linkmldto is None:
+            if ssc.linkmldto is None or ssc.for_export is False:
                 continue
             for feature_id in ssc.component_features:
                 ssc_allele_rel = fb_datatypes.FBExportEntity()
