@@ -9,7 +9,6 @@ Author(s):
 """
 
 import re
-from itertools import combinations
 from logging import Logger
 from sqlalchemy.orm import aliased
 from harvdev_utils.char_conversions import clean_free_text
@@ -39,7 +38,7 @@ class ExpressionHandler(DataHandler):
         self.construct_allele_lookup = {}         # Will be FBtp ID keyed lists of related allele FBal IDs (list).
         self.hemi_drivers = []                    # Will be a list of feature_ids for hemidriver alleles that have FBco parents.
         self.split_system_combos = {}             # Will be FBco ID-keyed list of FBal IDs for hemidriver components of each split system combination.
-        self.split_system_combo_strs = set()      # Will be a set of concatenated hemidriver FBal ID pairs for split system combination features.
+        self.split_system_combo_strs = []         # Will be a list of concatenated hemidriver FBal IDs for each split system combination feature.
 
     # Key info.
 
@@ -442,11 +441,9 @@ class ExpressionHandler(DataHandler):
                 self.split_system_combos[result.split_system.uniquename] = [result.hemi_driver.uniquename]
         self.log.info(f'Found {len(self.hemi_drivers)} distinct hemi-driver alleles with FBco parents.')
         self.log.info(f'Found {len(self.split_system_combos.keys())} distinct split system combinations with hemi-driver components.')
-        # An FBco usually has two hemi-driver FBal components, but an FBti pair-based FBco (FTA-268) may have more
-        # (e.g., two AD FBal for the same FBti), so record every hemi-driver pair.
         for hemidriver_list in self.split_system_combos.values():
-            for pair_combo in combinations(sorted(set(hemidriver_list)), 2):
-                self.split_system_combo_strs.add('|'.join(pair_combo))
+            hemidriver_list.sort()
+            self.split_system_combo_strs.append('|'.join(hemidriver_list))
         return
 
     # Elaborate on get_general_data() for the ExpressionHandler.
