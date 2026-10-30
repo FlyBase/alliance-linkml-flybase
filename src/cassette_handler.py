@@ -12,6 +12,12 @@ Author(s):
 from logging import Logger
 from os import getenv
 import copy
+from sqlalchemy.orm import aliased
+from harvdev_utils.char_conversions import sub_sup_sgml_to_html
+from harvdev_utils.reporting import (
+    Cv, Cvterm, Feature, Featureloc, Featureprop, FeaturepropPub, FeatureRelationship,
+    FeatureRelationshipPub
+)
 import agr_datatypes
 import fb_datatypes
 from feature_handler import FeatureHandler
@@ -38,6 +44,8 @@ class CassetteHandler(FeatureHandler):
         self.anon_cassette_tool_associations = []
         self.anon_cassette_genomic_entity_associations = []
         self.anon_cassette_str_associations = []
+        # FTA-88: rescue regions ("partof" the cassette FBal), keyed by cassette feature_id.
+        self.cassette_rescue_regions = {}
         # NOTE: We have general alleles in here too so we can check we only get the casssettes here.
     #       Also Cassettes are in the Allele code to check we only get these once.
     test_set = {
@@ -129,6 +137,10 @@ class CassetteHandler(FeatureHandler):
         'FBal0212171': r'Avic\GFP[UAS.FRT1]',       # in vitro only
         'FBal0392043': r'Avic\GFP[EYFP.3xP3.cUa]',  # in vitro only
         'FBal0028610': 'w[+mC]',                    # Has a secondary identifier to test
+        # FTA-88: ARG cassettes with a rescue_region component.
+        'FBal0240372': 'Crag[+t12.4]',              # associated_with an FBtp; one rescue region with a "comment".
+        'FBal0093424': 'Dredd[+tCa]',               # associated_with an FBtp; one rescue region with a "comment".
+        'FBal0040113': 'w[+t10.7]',                 # in vitro only; one rescue region.
     }
 
     cassette_prop_to_note_mapping = {
@@ -145,6 +157,16 @@ class CassetteHandler(FeatureHandler):
 
     # FTA-224: the feature.type values that make an FBsf a sequence targeting reagent.
     STR_SEQFEAT_TYPES = ('RNAi_reagent', 'sgRNA')
+
+    # FTA-88: rescue regions (SO "rescue_region", a kind of reagent) are exported as free-text
+    # components of the ARG cassette they are "partof". The relation term is not yet confirmed
+    # by the Alliance (the documented terms are expresses, is_regulated_by and targets), so the
+    # whole step is gated by ADD_CASS_RESCUE_REGIONS=YES.
+    RESCUE_REGION_RELATION = 'contains'
+
+    def _export_rescue_regions(self):
+        """Whether rescue regions should be exported as cassette components (FTA-88)."""
+        return getenv('ADD_CASS_RESCUE_REGIONS', None) == 'YES'
 
     def _export_str_assocs(self):
         """Whether cassette-STR components should be exported as CassetteStrAssociationDTOs.
@@ -265,9 +287,54 @@ class CassetteHandler(FeatureHandler):
         # self.map_xrefs()    # CassetteDTO lacks cross_reference_dtos attribute (as ConstructDTO does).
         self.map_secondary_ids('secondary_identifiers')
         self.map_cassette_associations()
+        self.map_cassette_rescue_regions()
         self.map_cassette_internal_notes_fallback()
         # Cascade chado-obsolete -> internal=True (matches every other handler).
         self.flag_internal_fb_entities('fb_data_entities')
+
+    def map_cassette_rescue_regions(self):
+        """Map rescue regions to free-text cassette components (FTA-88).
+
+        The Alliance has no class for a genomic rescue fragment, so a rescue region cannot be
+        referenced by ID: it goes out as a CassetteComponentSlotAnnotationDTO on its cassette,
+        with its location and comments as notes. The symbol always carries the "rescue-" prefix,
+        which pre-retrofit names lack, so the output is the same before and after the retrofit.
+        """
+        if not self.cassette_rescue_regions:
+            return
+        self.log.info('Map rescue regions to cassette components.')
+        counter = 0
+        for cassette_id, rescue_regions in self.cassette_rescue_regions.items():
+            cassette = self.fb_data_entities[cassette_id]
+            if cassette.linkmldto is None:
+                continue
+            for rr in rescue_regions:
+                if not rr['name']:
+                    self.log.warning(f'Skipping a rescue region of {cassette} that has no name.')
+                    continue
+                symbol = rr['name']
+                if not symbol.startswith('rescue-'):
+                    symbol = f'rescue-{symbol}'
+                taxon_text = self.organism_lookup[rr['organism_id']]['full_species_name']
+                taxon_curie = self.organism_lookup[rr['organism_id']]['taxon_curie']
+                pub_curies = self.lookup_pub_curies(rr['pub_ids'])
+                component_dto = agr_datatypes.CassetteComponentSlotAnnotationDTO(
+                    self.RESCUE_REGION_RELATION, sub_sup_sgml_to_html(symbol), taxon_curie, taxon_text, pub_curies)
+                for location in sorted(rr['locations']):
+                    location_note = agr_datatypes.NoteDTO('comment', f'Genomic location (R6): {location}', [])
+                    component_dto.note_dtos.append(location_note.dict_export())
+                for comment in rr['comments']:
+                    free_text = self.clean_note_free_text(f'FB:{cassette.uniquename}', comment['text'],
+                                                          prop_type='comment', prop_id=comment['prop_id'])
+                    if free_text is None:
+                        continue
+                    comment_note = agr_datatypes.NoteDTO('comment', free_text,
+                                                         self.lookup_pub_curies(comment['pub_ids']))
+                    component_dto.note_dtos.append(comment_note.dict_export())
+                cassette.linkmldto.cassette_component_dtos.append(component_dto.dict_export())
+                counter += 1
+        self.log.info(f'Mapped {counter} rescue regions to cassette components.')
+        return
 
     def map_cassette_internal_notes_fallback(self):
         """FTA-211: route cassette FBal internal_notes that cannot be mapped to a Construct onto the Cassette.
@@ -359,6 +426,110 @@ class CassetteHandler(FeatureHandler):
         # CassetteDTO has no cross_reference_dtos attribute (see the commented map_xrefs above).
         self.get_entity_fb_xrefs(session)
         self.get_entity_relationships(session, 'subject')
+        self.get_cassette_rescue_regions(session)
+
+    def get_cassette_rescue_regions(self, session):
+        """Get the rescue regions that are "partof" the cassettes (FTA-88).
+
+        This must work on chado before and after the FTA-88 retrofit. Before it, a rescue
+        region's uniquename and name are the allele symbol (e.g., "Crag[+t12.4]") and its
+        "comment" props are in the "GenBank feature qualifier" CV. After it, the uniquename is
+        an FBsf ID, the name has a "rescue-" prefix, and the props are in the "property type"
+        CV. So rescue regions are found by feature.type and relationship alone (no FBsf
+        regex, no feature_lookup), and props are matched by cvterm name only.
+        """
+        if not self._export_rescue_regions():
+            self.log.info('ADD_CASS_RESCUE_REGIONS not set to "YES"; not exporting rescue regions.')
+            return
+        self.log.info('Get rescue regions that are "partof" cassettes.')
+        self.get_chr_info(session)
+        rescue_region = aliased(Feature, name='rescue_region')
+        allele = aliased(Feature, name='allele')
+        rr_type = aliased(Cvterm, name='rr_type')
+        rel_type = aliased(Cvterm, name='rel_type')
+        filters = (
+            rescue_region.is_obsolete.is_(False),
+            rr_type.name == 'rescue_region',
+            Cv.name == 'SO',
+            rel_type.name == 'partof',
+            allele.is_obsolete.is_(False),
+            allele.uniquename.op('~')(self.regex['allele']),
+        )
+        if self.testing:
+            filters += (allele.uniquename.in_((self.test_set.keys())), )
+        results = session.query(FeatureRelationship.feature_relationship_id, allele.feature_id,
+                                rescue_region.feature_id, rescue_region.name, rescue_region.organism_id).\
+            select_from(FeatureRelationship).\
+            join(rescue_region, (rescue_region.feature_id == FeatureRelationship.subject_id)).\
+            join(rr_type, (rr_type.cvterm_id == rescue_region.type_id)).\
+            join(Cv, (Cv.cv_id == rr_type.cv_id)).\
+            join(rel_type, (rel_type.cvterm_id == FeatureRelationship.type_id)).\
+            join(allele, (allele.feature_id == FeatureRelationship.object_id)).\
+            filter(*filters).\
+            distinct()
+        rr_by_id = {}    # rescue region feature_id-keyed dicts.
+        rel_ids = {}     # feature_relationship_id-keyed rescue region dicts.
+        found_counter = 0
+        non_cassette_counter = 0
+        for rel_id, allele_id, rr_id, rr_name, organism_id in results:
+            found_counter += 1
+            if allele_id not in self.fb_data_entities:
+                non_cassette_counter += 1
+                continue
+            rr_dict = {
+                'name': rr_name,
+                'organism_id': organism_id,
+                'pub_ids': [],
+                'comments': [],    # Dicts with "text" and "pub_ids".
+                'locations': [],   # Strings like "2L:123..456".
+            }
+            rr_by_id[rr_id] = rr_dict
+            rel_ids[rel_id] = rr_dict
+            self.cassette_rescue_regions.setdefault(allele_id, []).append(rr_dict)
+        self.log.info(f'Found {found_counter} current rescue regions "partof" current alleles; '
+                      f'{non_cassette_counter} skipped because the allele is not an exported cassette.')
+        if not rr_by_id:
+            return
+        # Pubs for the rescue region-allele relationships.
+        rel_pub_results = session.query(FeatureRelationshipPub.feature_relationship_id, FeatureRelationshipPub.pub_id).\
+            filter(FeatureRelationshipPub.feature_relationship_id.in_((rel_ids.keys()))).\
+            distinct()
+        for rel_id, pub_id in rel_pub_results:
+            rel_ids[rel_id]['pub_ids'].append(pub_id)
+        # Chromosomal locations.
+        floc_results = session.query(Featureloc).\
+            filter(Featureloc.feature_id.in_((rr_by_id.keys())),
+                   Featureloc.srcfeature_id.in_((self.chr_dict.keys()))).\
+            distinct()
+        for floc in floc_results:
+            strand = {1: '+', -1: '-'}.get(floc.strand, '')
+            location = f'{self.chr_dict[floc.srcfeature_id]}:{floc.fmin + 1}..{floc.fmax}{strand}'
+            rr_by_id[floc.feature_id]['locations'].append(location)
+        # "comment" props, in either CV (see docstring). "evidence" is deliberately not exported:
+        # it is uninformative, since rescue regions usually all have the same value.
+        prop_type = aliased(Cvterm, name='prop_type')
+        prop_results = session.query(Featureprop.featureprop_id, Featureprop.feature_id, Featureprop.value).\
+            select_from(Featureprop).\
+            join(prop_type, (prop_type.cvterm_id == Featureprop.type_id)).\
+            filter(Featureprop.feature_id.in_((rr_by_id.keys())),
+                   prop_type.name == 'comment').\
+            distinct()
+        comments_by_prop_id = {}
+        for prop_id, rr_id, value in prop_results:
+            if not value:
+                continue
+            comment = {'text': value, 'prop_id': prop_id, 'pub_ids': []}
+            comments_by_prop_id[prop_id] = comment
+            rr_by_id[rr_id]['comments'].append(comment)
+        if comments_by_prop_id:
+            prop_pub_results = session.query(FeaturepropPub.featureprop_id, FeaturepropPub.pub_id).\
+                filter(FeaturepropPub.featureprop_id.in_((comments_by_prop_id.keys()))).\
+                distinct()
+            for prop_id, pub_id in prop_pub_results:
+                comments_by_prop_id[prop_id]['pub_ids'].append(pub_id)
+        self.log.info(f'Got {len(rr_by_id)} rescue regions for {len(self.cassette_rescue_regions)} cassettes, '
+                      f'with {len(comments_by_prop_id)} "comment" props.')
+        return
 
     def cassette_dto_type(self, feature):
         """Derive association type from the feature."""
