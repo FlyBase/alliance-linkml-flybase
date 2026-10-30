@@ -90,13 +90,7 @@ class GeneSeqFeatHandler(FeatureHandler):
         for seqfeat in self.fb_data_entities.values():
             if seqfeat.linkmldto is None:
                 continue
-            feat_type = self.cvterm_lookup[seqfeat.chado_obj.type_id]
-            if feat_type['db_name'] != 'SO':
-                self.log.error(f'{seqfeat} has a non-SO feature type: {feat_type["name_plus_curie"]}')
-                seqfeat.for_export = False
-                seqfeat.export_warnings.append(f'Non-SO feature type: {feat_type["name_plus_curie"]}')
-                continue
-            seqfeat.linkmldto.gene_type_curie = feat_type['curie']
+            seqfeat.linkmldto.gene_type_curie = self.cvterm_lookup[seqfeat.chado_obj.type_id]['curie']
             counter += 1
         self.log.info(f'Mapped {counter} FBsf feature types to Alliance gene types.')
         return
