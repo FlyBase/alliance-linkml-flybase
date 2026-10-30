@@ -225,6 +225,7 @@ class DataHandler(object):
         'fb_curie': r'^FB:FB[a-z]{2}[0-9]{7,10}$',
         'fb_uniquename': r'^FB[a-z]{2}[0-9]{7,10}$',
         'gene': r'^FBgn[0-9]{7}$',
+        'gene_seqfeat': r'^FBsf[0-9]{10}$',    # FTA-88: the FBsf subset exported as Alliance Gene; distinguished by feature.type, not by ID.
         'insertion': r'^FBti[0-9]{7}$',
         'polypeptide': r'^FBpp[0-9]{7}$',
         'seqfeat': r'^FBsf[0-9]{10}$',
@@ -259,6 +260,7 @@ class DataHandler(object):
         'chemical': False,
         'construct': True,
         'gene': True,
+        'gene_seqfeat': True,    # FTA-88: the FBsf types exported as GeneDTO (see feature_subtypes['gene_seqfeat']).
         'insertion': True,
         'polypeptide': False,
         'seqfeat': False,
@@ -280,6 +282,7 @@ class DataHandler(object):
         'chemical': ['chemical entity'],
         'construct': ['engineered_transposable_element', 'engineered_region', 'transgenic_transposable_element'],
         'gene': ['gene'],
+        'gene_seqfeat': ['rescue_region'],    # FTA-88: the FBsf types exported as Alliance Gene; add more types (e.g., TSS) here.
         'insertion': ['insertion_site', 'transposable_element', 'transposable_element_insertion_site'],    # Excludes internal "match" (name=FBti ID).
         'polypeptide': None,
         'seqfeat': None,    # The list is too long, so for this case let the code be flexible.
