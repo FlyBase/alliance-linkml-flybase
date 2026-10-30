@@ -68,6 +68,9 @@ Environment variables:
   SQL_PORT            Database port (default: 5432)
   ALT_OUTPUT          Override default output file path
   ADD_OBSOLETE        Set to 'NO' to exclude obsolete/internal rows from the TSVs only; JSON output is unaffected
+  ADD_CASS_RESCUE_REGIONS
+                      Set to 'YES' to add each cassette's rescue regions as free-text cassette components
+                      (FTA-88). Off by default until the Alliance confirms the relation term ('contains').
 """,
     formatter_class=argparse.RawDescriptionHelpFormatter
 )
