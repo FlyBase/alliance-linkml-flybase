@@ -105,6 +105,7 @@ class PrimaryEntityHandler(DataHandler):
         'split system combination': 'homepage',
         'grp': 'functional_gene_set',
         'str': 'sequence_targeting_reagent',
+        'gene_seqfeat': 'gene',    # FTA-284: FBsf features exported as Alliance Gene.
     }
 
     # Mappings of main data types to chado tables with associated data
