@@ -31,10 +31,14 @@ class GeneSeqFeatHandler(FeatureHandler):
         self.primary_export_set = 'gene_ingest_set'
 
     test_set = {
-        'FBsf0000958670': 'rescue-Crag[+t12.4]',    # Current rescue_region, partof allele Crag[+t12.4].
+        'FBsf0000958670': 'rescue-Crag[+t12.4]',          # Current rescue_region, partof allele Crag[+t12.4].
+        'FBsf0000958097': 'rescue-Dredd[+tCa]',           # Current rescue_region with a "comment" prop: must export a note.
+        'FBsf0000958270': 'rescue-Amy-d[3.Xb:E3.1]',      # Obsolete rescue_region: must export as obsolete and internal.
     }
 
     # FlyBase props exported as Alliance notes.
+    # The "evidence" prop (SF10a) is deliberately not exported: it is uninformative, since
+    # rescue_region and other ARG features usually all have the same value.
     gene_seqfeat_prop_to_note_mapping = {
         'comment': ('comment', 'note_dtos'),    # SF6
     }
