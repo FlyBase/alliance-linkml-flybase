@@ -4,10 +4,11 @@ Synopsis:
     A data handler that exports FlyBase sequence features (FBsf) of selected types
     to Alliance Gene LinkML objects.
 
-    The exported FBsf types are declared in DataHandler.feature_subtypes['gene_seqfeat']
-    (FTA-88: "rescue_region" for now; other types, like TSS, can be added there). So the
-    generic PrimaryEntityHandler driver query picks them up without any bespoke SQL here.
-    The feature.type SO term is exported as the gene_type_curie.
+    The exported FBsf types are declared in DataHandler.feature_subtypes['gene_seqfeat'],
+    so the generic PrimaryEntityHandler driver query picks them up without any bespoke SQL
+    here. The feature.type SO term is exported as the gene_type_curie. No types are enabled
+    yet (FTA-88): rescue_region is an SO "reagent", so it is exported with its ARG cassette
+    instead (see CassetteHandler). Types such as TSS may be added later.
 
 Author(s):
     Gil dos Santos dossantos@morgan.harvard.edu
@@ -30,11 +31,8 @@ class GeneSeqFeatHandler(FeatureHandler):
         self.agr_export_type = agr_datatypes.GeneDTO
         self.primary_export_set = 'gene_ingest_set'
 
-    test_set = {
-        'FBsf0000958670': 'rescue-Crag[+t12.4]',          # Current rescue_region, partof allele Crag[+t12.4].
-        'FBsf0000958097': 'rescue-Dredd[+tCa]',           # Current rescue_region with a "comment" prop: must export a note.
-        'FBsf0000958270': 'rescue-Amy-d[3.Xb:E3.1]',      # Obsolete rescue_region: must export as obsolete and internal.
-    }
+    # Add examples here once a type is enabled in feature_subtypes['gene_seqfeat'].
+    test_set = {}
 
     # FlyBase props exported as Alliance notes.
     # The "evidence" prop (SF10a) is deliberately not exported: it is uninformative, since

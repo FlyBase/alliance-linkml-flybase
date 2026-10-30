@@ -16,8 +16,8 @@ Example:
 Notes:
     This script exports FlyBase gene data as a JSON file conforming to the
     Gene LinkML specs for the Alliance persistent curation database. Sequence
-    features (FBsf) of selected types (e.g., rescue_region) are included as
-    genes (FTA-88; see gene_seqfeat_handler.py). It also writes
+    features (FBsf) of the types listed in feature_subtypes['gene_seqfeat'] (none
+    yet) are included as genes (FTA-88; see gene_seqfeat_handler.py). It also writes
     companion TSV files for curators (primary identifiers and notes).
     A chado database with a full "audit_chado" table is required.
 
@@ -106,12 +106,16 @@ def main():
         export_chado_data(session, log, gene_handler, reference_session=reference_session)
     else:
         export_chado_data(session, log, gene_handler)
-    # FTA-88: FBsf features of selected types (e.g., rescue_region) are also exported as genes.
-    seqfeat_handler = GeneSeqFeatHandler(log, testing)
-    if reference_session:
-        export_chado_data(session, log, seqfeat_handler, reference_session=reference_session)
+    # FTA-88: FBsf features of the types in feature_subtypes['gene_seqfeat'] are also exported as genes.
+    seqfeat_handler = None
+    if GeneSeqFeatHandler.feature_subtypes['gene_seqfeat']:
+        seqfeat_handler = GeneSeqFeatHandler(log, testing)
+        if reference_session:
+            export_chado_data(session, log, seqfeat_handler, reference_session=reference_session)
+        else:
+            export_chado_data(session, log, seqfeat_handler)
     else:
-        export_chado_data(session, log, seqfeat_handler)
+        log.info('No FBsf types enabled for gene export; skipping the GeneSeqFeatHandler.')
 
     # Export the data.
     export_dict = {
@@ -119,7 +123,8 @@ def main():
         'alliance_member_release_version': database_release,
     }
     export_dict[gene_handler.primary_export_set] = gene_handler.export_data[gene_handler.primary_export_set]
-    export_dict[gene_handler.primary_export_set].extend(seqfeat_handler.export_data[seqfeat_handler.primary_export_set])
+    if seqfeat_handler:
+        export_dict[gene_handler.primary_export_set].extend(seqfeat_handler.export_data[seqfeat_handler.primary_export_set])
     if len(export_dict[gene_handler.primary_export_set]) == 0:
         if reference_session:
             log.info('No updates to report.')

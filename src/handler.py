@@ -282,7 +282,7 @@ class DataHandler(object):
         'chemical': ['chemical entity'],
         'construct': ['engineered_transposable_element', 'engineered_region', 'transgenic_transposable_element'],
         'gene': ['gene'],
-        'gene_seqfeat': ['rescue_region'],    # FTA-88: the FBsf types exported as Alliance Gene; add more types (e.g., TSS) here.
+        'gene_seqfeat': [],    # FTA-88: the FBsf types to export as Alliance Gene; none yet (rescue_region is a reagent).
         'insertion': ['insertion_site', 'transposable_element', 'transposable_element_insertion_site'],    # Excludes internal "match" (name=FBti ID).
         'polypeptide': None,
         'seqfeat': None,    # The list is too long, so for this case let the code be flexible.
