@@ -405,6 +405,17 @@ class FBStr(FBFeature):
         super().__init__(chado_obj)
 
 
+class FBGeneSeqFeat(FBFeature):
+    """A FlyBase sequence feature (FBsf) entity exported to the Alliance as a gene.
+
+    The subset of FBsf sequence features whose feature.type is listed in
+    DataHandler.feature_subtypes['gene_seqfeat'] (FTA-284).
+    """
+    def __init__(self, chado_obj):
+        """Create the FBGeneSeqFeat object."""
+        super().__init__(chado_obj)
+
+
 class FBStrain(FBDataEntity):
     """A FlyBase strain entity with all its related data."""
     def __init__(self, chado_obj):
