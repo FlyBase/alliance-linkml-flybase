@@ -211,6 +211,13 @@ class DataHandler(object):
         'UniProtKB': 'default',
     }
 
+    # FTA-288: pub types (pub.type_id cvterm names) that are not exported to the Alliance as references
+    # (alliance-flybase AGR_data_retrieval_references.py excludes the same types), so must never be cited.
+    excluded_pub_types = {
+        'DNA/RNA sequence record',     # FBcv:0000201
+        'protein sequence record',     # FBcv:0000202
+    }
+
     # Useful regexes.
     regex = {
         'pub': r'^(FBrf[0-9]{7}|unattributed)$',
@@ -330,14 +337,23 @@ class DataHandler(object):
             Pub.uniquename.op('~')(self.regex['pub']),
             Pub.is_obsolete.is_(False)
         )
-        results = session.query(Pub).\
+        results = session.query(Pub, Cvterm.name).\
+            join(Cvterm, (Cvterm.cvterm_id == Pub.type_id)).\
             filter(*filters).\
             distinct()
         pub_counter = 0
-        for pub in results:
+        excluded_counter = 0
+        for pub, pub_type in results:
+            # fbrf_bibliography keeps every current pub, so FBrf IDs given in input files still resolve.
             self.fbrf_bibliography[pub.uniquename] = pub
+            # FTA-288: pubs of excluded types are not sent to the Alliance, so must never be cited.
+            if pub_type in self.excluded_pub_types:
+                excluded_counter += 1
+                continue
             self.bibliography[pub.pub_id] = f'FB:{pub.uniquename}'
             pub_counter += 1
+        self.log.info(f'Excluded {excluded_counter} current FB publications from citation by pub type '
+                      f'({", ".join(sorted(self.excluded_pub_types))}).')
         # Next find PMIDs if available and replace the curie in the bibliography.
         filters = (
             Pub.uniquename.op('~')(self.regex['pub']),
@@ -353,6 +369,9 @@ class DataHandler(object):
             distinct()
         pmid_counter = 0
         for xref in pmid_xrefs:
+            # Only replace curies for pubs kept above (excluded pub types stay out).
+            if xref.Pub.pub_id not in self.bibliography:
+                continue
             self.bibliography[xref.Pub.pub_id] = f'PMID:{xref.Dbxref.accession}'
             pmid_counter += 1
         self.log.info(f'Found {pmid_counter} PMID IDs for {pub_counter} current FB publications.')
