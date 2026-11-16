@@ -377,6 +377,15 @@ class DataHandler(object):
         self.log.info(f'Found {pmid_counter} PMID IDs for {pub_counter} current FB publications.')
         return
 
+    def is_excluded_fbrf(self, fbrf):
+        """Return True if an FBrf is a current pub of an excluded type, so must not be cited (FTA-288).
+
+        For code that builds 'FB:<FBrf>' curies directly from chado data instead of using the bibliography.
+        Pubs not in fbrf_bibliography (e.g. obsolete) return False, so their handling is unchanged.
+        """
+        pub = self.fbrf_bibliography.get(fbrf)
+        return pub is not None and pub.pub_id not in self.bibliography
+
     def lookup_single_pub_curie(self, pub_id):
         """Return a single pub curie given a single internal chado pub_id."""
         try:

@@ -147,10 +147,12 @@ class ExperimentalToolHandler(FeatureHandler):
                 if prop['type'] != 'FlyBase miscellaneous CV':
                     self.log.warning(f"Unexpected CV '{prop['type']}' for a {data_key} term on {tool.uniquename}: {prop['name']}.")
                 accession = prop['accession']
-                pub_curie = f"FB:{prop['pub']}"
                 if accession not in accession_to_pubs:
                     accession_to_pubs[accession] = set()
-                accession_to_pubs[accession].add(pub_curie)
+                # FTA-288: keep the term, but never cite an excluded (sequence record) pub.
+                if self.is_excluded_fbrf(prop['pub']):
+                    continue
+                accession_to_pubs[accession].add(f"FB:{prop['pub']}")
             # Create one DTO per FBcv term.
             slot_dtos = []
             for accession, pub_curies in accession_to_pubs.items():
