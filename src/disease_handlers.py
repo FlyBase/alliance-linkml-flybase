@@ -845,6 +845,10 @@ class AGMDiseaseHandler(DataHandler):
                 self.log.error(f'Line={line_number}: could not find pub "{driver_info["pub_given"]}" in chado.')
                 prob_msg = 'bad pub id'
                 driver_info['problems'].append(prob_msg)
+            if self.is_excluded_fbrf(driver_info['pub_given']):
+                self.log.error(f'Line={line_number}: pub "{driver_info["pub_given"]}" is a sequence-record pub, not citable (FTA-288).')
+                prob_msg = 'excluded pub type'
+                driver_info['problems'].append(prob_msg)
 
             cvterm_curie = self.find_cvterm_curie_from_name(session, driver_info['do_term'])
             if cvterm_curie:
@@ -1145,6 +1149,10 @@ class AGMDiseaseHandler(DataHandler):
                 self.log.error(f'Line={line_number}: could not find pub "{aberr_info["pub_given"]}" in chado.')
                 prob_msg = 'bad pub id'
                 aberr_info['problems'].append(prob_msg)
+            if self.is_excluded_fbrf(aberr_info['pub_given']):
+                self.log.error(f'Line={line_number}: pub "{aberr_info["pub_given"]}" is a sequence-record pub, not citable (FTA-288).')
+                prob_msg = 'excluded pub type'
+                aberr_info['problems'].append(prob_msg)
 
             cvterm_curie = self.find_cvterm_curie_from_name(session, aberr_info['do_term'])
             if cvterm_curie:
@@ -1441,6 +1449,10 @@ class AGMDiseaseHandler(DataHandler):
             elif dis_anno.modifier_curie and dis_anno.modifier_curie.startswith('FBal'):
                 dis_anno.for_export = False
                 dis_anno.export_warnings.append('Could not determine modifier genotype')
+                no_export_counter += 1
+            elif self.is_excluded_fbrf(dis_anno.pub_fbrf_id):
+                dis_anno.for_export = False
+                dis_anno.export_warnings.append('Pub is a sequence-record type (FTA-288)')
                 no_export_counter += 1
         self.log.info(f'{no_export_counter} annotations flagged as unexportable in early checking.')
         return
@@ -1918,6 +1930,7 @@ class AlleleDiseaseHandler(DataHandler):
             'Not model annotation': 0,
             'Multi-allele model': 0,
             'Obsolete modifier ID': 0,
+            'Pub is a sequence-record type (FTA-288)': 0,
         }
         no_export_counter = 0
         for dis_anno in self.fb_data_entities.values():
@@ -1932,6 +1945,12 @@ class AlleleDiseaseHandler(DataHandler):
                     dis_anno.for_export = False
                     dis_anno.export_warnings.append(msg)
                     problem_counter[msg] += 1
+            # Checked on its own: export_checks has boolean keys, so another true check would overwrite it.
+            if self.is_excluded_fbrf(dis_anno.feature_cvterm.pub.uniquename):
+                msg = 'Pub is a sequence-record type (FTA-288)'
+                dis_anno.for_export = False
+                dis_anno.export_warnings.append(msg)
+                problem_counter[msg] += 1
             if dis_anno.for_export is False:
                 no_export_counter += 1
         self.log.info(f'{no_export_counter} annotations flagged as unexportable in early checking.')

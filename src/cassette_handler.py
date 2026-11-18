@@ -408,10 +408,12 @@ class CassetteHandler(FeatureHandler):
             accession_to_pubs = {}
             for prop in cassette.prop_data[data_key]:
                 accession = prop['accession']
-                pub_curie = f"FB:{prop['pub']}"
                 if accession not in accession_to_pubs:
                     accession_to_pubs[accession] = set()
-                accession_to_pubs[accession].add(pub_curie)
+                # FTA-288: keep the term, but never cite an excluded (sequence record) pub.
+                if self.is_excluded_fbrf(prop['pub']):
+                    continue
+                accession_to_pubs[accession].add(f"FB:{prop['pub']}")
             # Create one DTO per FBcv term.
             for accession, pub_curies in accession_to_pubs.items():
                 use_curies = [f'FBcv:{accession}']
@@ -499,7 +501,9 @@ class CassetteHandler(FeatureHandler):
         data_key = 'transgenic_product_class'
         if data_key in entity.prop_data.keys():
             for item in entity.prop_data[data_key]:
-                pubs.add(item['pub'])
+                # FTA-288: never cite an excluded (sequence record) pub.
+                if not self.is_excluded_fbrf(item['pub']):
+                    pubs.add(item['pub'])
         # FTA-232: sorted so the warning below reads the same across runs; comparing two runs' logs
         # otherwise needs the pub lists normalised before they match.
         pub_curies = ['FB:' + item for item in sorted(pubs)]
@@ -567,7 +571,9 @@ class CassetteHandler(FeatureHandler):
                 for trans in entity.prop_data['transgenic_product_class']:
                     if trans['name'] in ('RNAi_reagent', 'sgRNA', 'antisense'):
                         save_target = True
-                        pub_curies.append(f"FB:{trans['pub']}")
+                        # FTA-288: never cite an excluded (sequence record) pub.
+                        if not self.is_excluded_fbrf(trans['pub']):
+                            pub_curies.append(f"FB:{trans['pub']}")
                 if save_target:
                     # Because the relationship is used for both expresses and targets
                     # we want to copy that and not overwrite it.
